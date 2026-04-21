@@ -3,10 +3,10 @@
 Repository name: `oral-health-policy-pulse`  
 Project concept name: **Local Policy Oral Health Finder & Fixer**
 
-The **Local Policy Oral Health Finder & Fixer** is a multi-agent system designed to scrape and analyze thousands of local government meeting minutes and public notes across the country. It identifies where fluoridation, school dental screenings, and funding for low-income dental care are being debated—or ignored—so advocacy teams can act during high-impact policy windows.
+The **Local Policy Oral Health Finder & Fixer** is a multi-agent system designed to scrape and analyze thousands of local government meeting minutes and public notes across the country. It identifies where fluoridation, school dental screenings, and funding for low-income dental care are being debated--or ignored--so advocacy teams can act during high-impact policy windows.
 
 ## Why this matters
-- **Business applicability:** High-value for advocacy groups and lobbyists by identifying policy windows of opportunity.
+- **Business applicability:** High-value for advocacy groups and policy advocates by identifying policy windows of opportunity.
 - **Data relevance:** Built for **Lakehouse-scale** unstructured text ingestion and **Agent Bricks**-powered summarization of legislative trends.
 - **Creativity:** Focuses on legislative bottlenecks that block oral health outcomes at the policy source.
 - **Thoroughness:** Produces an **Advocacy Heatmap** to show where oral health is active on local ballots and agendas.
