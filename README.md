@@ -7,7 +7,7 @@ The **Local Policy Oral Health Finder & Fixer** is a multi-agent system designed
 
 ## Why this matters
 - **Business applicability:** High-value for advocacy groups and lobbyists by identifying policy windows of opportunity.
-- **Data relevance:** Built for **Lakehouse-scale** unstructured text ingestion (centralized analytics storage for very large, mixed-format datasets) and **Agent Bricks**-powered summarization (modular AI agent components for task-specific workflows) of legislative trends.
+- **Data relevance:** Built for **Lakehouse-scale** unstructured text ingestion and **Agent Bricks**-powered summarization of legislative trends.
 - **Creativity:** Focuses on legislative bottlenecks that block oral health outcomes at the policy source.
 - **Thoroughness:** Produces an **Advocacy Heatmap** to show where oral health is active on local ballots and agendas.
 
@@ -18,3 +18,7 @@ The **Local Policy Oral Health Finder & Fixer** is a multi-agent system designed
    Classifies sentiment and policy posture for oral-health topics (fluoridation, school screenings, and low-income care funding).
 3. **Advocacy Drafting Agent**  
    Drafts targeted advocacy emails and outreach briefs aligned to local legislative context and urgency.
+
+## Platform terms
+- **Lakehouse-scale:** Centralized analytics storage designed for very large, mixed-format datasets.
+- **Agent Bricks:** Modular AI agent components used to build task-specific workflows.
