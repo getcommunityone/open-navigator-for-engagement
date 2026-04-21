@@ -20,5 +20,6 @@ The **Local Policy Oral Health Finder & Fixer** is a multi-agent system designed
    Drafts targeted advocacy emails and outreach briefs aligned to local legislative context and urgency.
 
 ## Platform terms
+These terms are used as project-level architecture labels in this repository.
 - **Lakehouse-scale:** Centralized analytics storage designed for very large, mixed-format datasets.
 - **Agent Bricks:** Modular AI agent components used to build task-specific workflows.
