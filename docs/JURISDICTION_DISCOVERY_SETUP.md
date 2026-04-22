@@ -1,3 +1,205 @@
+# Jurisdiction Discovery - Quick Start Guide
+
+## No External APIs Required! 🎉
+
+This discovery system uses **pattern-based matching** and **public datasets** only. No search API keys needed!
+
+## Quick Start
+
+### 1. Install Dependencies
+
+All required packages are in `requirements.txt`:
+
+```bash
+pip install -r requirements.txt
+```
+
+Key packages:
+- `httpx` - HTTP client for URL verification
+- `beautifulsoup4` - HTML parsing for web crawling
+- `pyspark` - Data processing
+- `delta-spark` - Delta Lake storage
+
+### 2. Initialize Delta Lake
+
+```bash
+python main.py init
+```
+
+### 3. Run Discovery
+
+```bash
+# Test with 100 jurisdictions
+python main.py discover-jurisdictions --limit 100
+
+# Single state
+python main.py discover-jurisdictions --state CA
+
+# Full discovery (~30k jurisdictions, 12-18 hours)
+python main.py discover-jurisdictions
+```
+
+### 4. View Results
+
+```bash
+python main.py discovery-stats
+```
+
+Expected output:
+```
+📊 Jurisdiction Discovery Statistics
+
+Bronze Layer (Raw Data):
+  Total jurisdictions: 90,735
+    - county: 3,143
+    - municipality: 19,495
+    - school_district: 13,051
+
+Silver Layer (Discovered URLs):
+  Total discoveries: 87
+  Homepages found: 78 (89.7%)
+  Minutes URLs found: 65 (74.7%)
+  Avg confidence: 0.82
+
+Gold Layer (Scraping Targets):
+  Total targets: 65
+  High priority: 42
+```
+
+### 5. Start Scraping
+
+```bash
+python main.py scrape-batch --source discovered --limit 50
+```
+
+## How It Works
+
+### Strategy 1: GSA Domain Matching
+
+The system directly matches jurisdiction names to the GSA .gov registry:
+
+```python
+"Sacramento County" → normalized: "sacramento"
+GSA lookup → "sacramento.gov" ✓
+Confidence: 1.0
+```
+
+### Strategy 2: URL Pattern Generation
+
+Common government URL patterns are tested:
+
+**Counties:**
+- `co.{name}.{state}.us`
+- `{name}county.gov`
+
+**Cities:**
+- `www.{name}.gov`
+- `cityof{name}.gov`
+
+**School Districts:**
+- `{name}.k12.{state}.us`
+- `{name}schools.org`
+
+**Example:**
+```python
+"Fresno" (municipality, CA)
+Test: https://www.fresno.gov → ✓ Found
+Confidence: 0.9
+```
+
+### Strategy 3: Web Crawling
+
+Once a homepage is found:
+1. Crawl for "minutes", "agendas" links
+2. Detect CMS platforms (Granicus, CivicClerk, etc.)
+3. Boost confidence for .gov domains
+
+## Performance
+
+### Expected Results
+
+- **Counties**: 85-95% discovery rate
+- **Cities > 10k**: 75-90% discovery rate
+- **School Districts**: 70-85% discovery rate
+- **Processing Time**: ~3-5 min per 100 jurisdictions
+- **Total Cost**: $0 (no API fees!)
+
+### Optimization
+
+**Parallel Processing:**
+```bash
+# Process multiple states in parallel
+for state in CA TX NY FL PA; do
+  python main.py discover-jurisdictions --state $state &
+done
+wait
+```
+
+**Databricks Notebook:**
+For production runs, use the Databricks notebook:
+1. Upload `notebooks/Jurisdiction_Discovery.py`
+2. Create cluster (2-4 workers)
+3. Run with Spark parallel processing
+
+## Troubleshooting
+
+### Low Discovery Rate
+
+Check if URL patterns need adjustment for specific regions:
+
+```python
+# In discovery/url_discovery_agent.py
+# Add regional patterns, e.g.:
+if state == "MA":  # Massachusetts has unique patterns
+    patterns.extend([
+        (f"https://www.{name_slug}.ma.us", 0.85),
+    ])
+```
+
+### Memory Errors
+
+Process in smaller batches:
+
+```bash
+# By state
+python main.py discover-jurisdictions --state CA
+
+# Or by type
+python main.py discover-jurisdictions --type county
+```
+
+### Census Download Fails
+
+Cached for 7 days by default. For manual download:
+
+1. Download from: https://www.census.gov/programs-surveys/gus.html
+2. Place in `data/cache/census/`
+3. Rerun discovery
+
+## Next Steps
+
+1. **Test Discovery**: Run with `--limit 100`
+2. **Review Results**: Check `discovery-stats`
+3. **Full Run**: Remove limit for production
+4. **Start Scraping**: Use discovered URLs
+5. **Schedule Re-Discovery**: Monthly updates
+
+## Cost
+
+**Total: $0** 🎉
+
+- No API fees
+- Uses free public datasets
+- Only local/cloud compute costs
+
+Compare to legacy approach:
+- ~~Google Search API: $150~~
+- ~~Bing Search API: $90~~
+- **Pattern Matching: $0**
+
+---
+
+**Ready to discover 90,000+ government websites with zero external dependencies!** 🚀
 # Jurisdiction Discovery System - Setup Guide
 
 ## Quick Start

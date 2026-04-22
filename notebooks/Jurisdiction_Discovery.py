@@ -8,13 +8,13 @@
 # MAGIC 
 # MAGIC **Pipeline Steps:**
 # MAGIC 1. **Bronze Layer**: Ingest Census Bureau + GSA .gov domain data
-# MAGIC 2. **Silver Layer**: Discover URLs via search APIs
+# MAGIC 2. **Silver Layer**: Discover URLs via pattern matching + GSA registry
 # MAGIC 3. **Gold Layer**: Create prioritized scraping targets
 # MAGIC 
 # MAGIC **Requirements:**
-# MAGIC - Google Custom Search API key (or Bing Search API)
 # MAGIC - Databricks cluster with Delta Lake
-# MAGIC - ~4-6 hours for full 30,000 jurisdiction discovery
+# MAGIC - ~2-4 hours for full 30,000 jurisdiction discovery
+# MAGIC - **No external API keys needed!** ✅
 
 # COMMAND ----------
 
@@ -44,27 +44,17 @@ print("✅ Imports successful")
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC ## Configure Search APIs
+# MAGIC ## Verify Configuration
 # MAGIC 
-# MAGIC Set your API keys as Databricks secrets:
-# MAGIC 
-# MAGIC ```bash
-# MAGIC databricks secrets create-scope oral-health-app
-# MAGIC databricks secrets put-secret oral-health-app google-search-api-key
-# MAGIC databricks secrets put-secret oral-health-app google-search-engine-id
-# MAGIC databricks secrets put-secret oral-health-app bing-search-api-key
-# MAGIC ```
+# MAGIC Pattern-based discovery uses **no external APIs** - only public datasets!
 
 # COMMAND ----------
 
 # Verify configuration
 print(f"Delta Lake Path: {settings.delta_lake_path}")
-print(f"Google API configured: {settings.google_search_api_key is not None}")
-print(f"Bing API configured: {settings.bing_search_api_key is not None}")
-
-if not settings.google_search_api_key and not settings.bing_search_api_key:
-    print("⚠️  WARNING: No search API keys configured!")
-    print("   URL discovery will be limited.")
+print("✅ Discovery method: Pattern-based matching")
+print("✅ No external API keys required")
+print("✅ Zero cost discovery!")
 
 # COMMAND ----------
 

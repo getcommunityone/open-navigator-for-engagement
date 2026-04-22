@@ -354,38 +354,42 @@ results = await orchestrator.execute_pipeline(targets)
 
 ## Data Sources
 
-### Jurisdiction Discovery System (NEW!)
+### Jurisdiction Discovery System
 
-The system automatically discovers and tracks **90,000+ local government units** across the United States:
+The system automatically discovers and tracks **90,000+ local government units** across the United States using **sustainable, vendor-neutral methods**:
+
+**Approach:**
+- ✅ **Pattern Matching**: Generate URLs from jurisdiction names using common government patterns
+- ✅ **GSA .gov Registry**: Direct matching with authoritative domain list (12,000+ domains)
+- ✅ **Web Crawling**: Verify URLs and discover minutes pages
+- ✅ **Public Datasets**: Census Bureau GID (90,735 jurisdictions)
+
+**Benefits:**
+- 🆓 **Zero API costs** (no search API fees)
+- 🔒 **Reliable** (no rate limits or quotas)
+- ♻️ **Sustainable** (vendor-neutral, future-proof)
+- 📊 **Reproducible** (deterministic)
+
+**Does NOT use deprecated search APIs:**
+❌ Google Custom Search API  
+❌ Bing Search API
 
 **Data Sources:**
 - 📊 **U.S. Census Bureau** - Government Integrated Directory (GID)
-  - 3,143 counties
-  - 19,495 municipalities
-  - 16,504 townships
-  - 13,051 school districts
-  - 38,542 special districts
+  - 3,143 counties, 19,495 municipalities, 13,051 school districts, etc.
 
 - 🏛️ **GSA .gov Domain List** - Validated government domains
-  - 12,000+ official .gov domains
-  - Domain type classification
-  - Organization mapping
-
-- 🔍 **Search API Integration**
-  - Google Custom Search API
-  - Bing Search API
-  - Automated URL discovery
-  - CMS platform detection (Granicus, CivicClerk, etc.)
+  - 12,000+ official .gov domains with organization mapping
 
 **Pipeline Architecture:**
 ```
-Bronze Layer (Raw Data) → Silver Layer (URL Discovery) → Gold Layer (Scraping Targets)
+Bronze Layer (Public Datasets) → Silver Layer (Pattern Discovery) → Gold Layer (Scraping Targets)
 ```
 
 **Deployment Options:**
 1. **Local CLI** - Quick testing and development
 2. **Databricks Notebook** - Production batch processing
-3. **AgentBricks Model Serving** - API-based integration
+3. **AgentBricks Model Serving** - API-based integration (optional)
 
 See [JURISDICTION_DISCOVERY_DEPLOYMENT.md](docs/JURISDICTION_DISCOVERY_DEPLOYMENT.md) for deployment guide and [JURISDICTION_DISCOVERY.md](docs/JURISDICTION_DISCOVERY.md) for complete documentation.
 
