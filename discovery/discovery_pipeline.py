@@ -132,30 +132,51 @@ class DiscoveryPipeline:
         logger.info(f"Loaded {len(gsa_domains):,} .gov domains for validation")
         
         # Construct search patterns from jurisdiction names
-        # For each jurisdiction, create multiple search patterns:
-        # 1. Direct name match (e.g., "laramie-county" for "Laramie County")
-        # 2. State + name (e.g., "wyoming-laramie-county")
-        # 3. Abbreviated state + name (e.g., "wy-laramie-county")
+        # GSA domains typically follow patterns like:
+        # - "citystatecode.gov" (e.g., "aberdeenmd.gov" for Aberdeen, MD)
+        # - "city-state.gov" (e.g., "abingdon-va.gov")
+        # - "countystate.gov" (e.g., "alamedacountyca.gov")
+        # - "cityname.gov" (e.g., "abilenetx.gov")
         
         discovered_urls = []
         
         for row in jurisdictions_df.take(limit if limit else total_count):
-            name = row.get("name", "")
-            state_code = row.get("state_code", "")
-            fips = row.get("fips_code", "")
+            row_dict = row.asDict()
+            name = row_dict.get("name", "")
+            state_code = row_dict.get("state_code", "")
+            fips = row_dict.get("fips_code", "")
             
             if not name:
                 continue
             
-            # Generate search patterns
-            base_name = name.lower().replace(" ", "-").replace(",", "").replace(".", "")
+            # Strip common jurisdiction type suffixes
+            clean_name = name
+            for suffix in [" city", " town", " village", " borough", " CDP", " County", " municipality",
+                          " City", " Town", " Village", " Borough", " COUNTY"]:
+                clean_name = clean_name.replace(suffix, "")
             
-            # Try multiple domain patterns
+            # Normalize to lowercase and remove special characters
+            base_name = clean_name.lower().strip()
+            # Remove all spaces, periods, commas, apostrophes for compact form
+            compact_name = base_name.replace(" ", "").replace(".", "").replace(",", "").replace("'", "")
+            # Version with hyphens instead of spaces
+            hyphenated_name = base_name.replace(" ", "-").replace(".", "").replace(",", "").replace("'", "")
+            
+            state_lower = state_code.lower()
+            
+            # Try multiple domain patterns (most common first)
             candidate_domains = [
-                f"{base_name}.gov",
-                f"{state_code.lower()}{base_name}.gov",
-                f"{base_name}{state_code.lower()}.gov",
-                f"{state_code.lower()}-{base_name}.gov"
+                f"{compact_name}{state_lower}.gov",           # aberdeenmd.gov
+                f"{compact_name}-{state_lower}.gov",          # abingdon-va.gov
+                f"{state_lower}{compact_name}.gov",           # mdaberdeen.gov
+                f"{hyphenated_name}{state_lower}.gov",        # multi-word-cityal.gov
+                f"{hyphenated_name}-{state_lower}.gov",       # multi-word-city-al.gov
+                f"{compact_name}.gov",                        # abilene.gov
+                f"{hyphenated_name}.gov",                     # multi-word.gov
+                f"cityof{compact_name}.gov",                  # cityofabilene.gov
+                f"{compact_name}city.gov",                    # aberdeencity.gov
+                f"{compact_name}county.gov",                  # alamedacounty.gov
+                f"{compact_name}county{state_lower}.gov",     # alamedacountyca.gov
             ]
             
             # Check if any candidate matches GSA domains
@@ -166,6 +187,7 @@ class DiscoveryPipeline:
                         "state_code": state_code,
                         "fips_code": fips,
                         "url": f"https://{domain}",
+                        "domain": domain,
                         "source": "gsa_match",
                         "confidence": "high"
                     })
@@ -211,42 +233,22 @@ class DiscoveryPipeline:
             logger.info("Skipping Gold layer - requires Silver layer URL data")
             return {"status": "skipped", "reason": "no_silver_layer"}
         
-        # Load discovered URLs
+        # Load discovered URLs - these already have jurisdiction details
         urls_df = self.spark.read.format("delta").load(silver_path)
         
-        # Join with jurisdiction details
-        bronze_path = f"{settings.delta_lake_path}/bronze/jurisdictions/unified"
-        jurisdictions_df = self.spark.read.format("delta").load(bronze_path)
-        
-        # Create scraping targets
+        # Create scraping targets from discovered URLs
+        # Silver layer already has: jurisdiction_name, state_code, fips_code, url, domain, source, confidence
         targets_df = urls_df \
-            .join(jurisdictions_df, "jurisdiction_id", "left") \
-            .filter(col("minutes_url").isNotNull()) \
-            .filter(col("confidence_score") > 0.6) \
-            .select(
-                col("jurisdiction_id"),
-                col("jurisdiction_name"),
-                col("jurisdiction_type"),
-                col("state"),
-                col("county_name"),
-                col("population"),
-                col("homepage_url"),
-                col("minutes_url"),
-                col("cms_platform"),
-                col("is_gov_domain"),
-                col("confidence_score"),
-                lit("pending").alias("scraping_status"),
-                lit(None).alias("last_scraped"),
-                lit(0).alias("documents_found"),
-                lit(datetime.now().isoformat()).alias("created_at")
-            )
+            .withColumn("scraping_status", lit("pending")) \
+            .withColumn("last_scraped", lit(None).cast("timestamp")) \
+            .withColumn("documents_found", lit(0)) \
+            .withColumn("created_at", lit(datetime.now().isoformat()))
         
-        # Prioritization score
+        # Prioritization score based on confidence and source
         targets_df = targets_df.withColumn(
             "priority_score",
-            when(col("is_gov_domain"), 100).otherwise(50) +
-            when(col("cms_platform").isNotNull(), 50).otherwise(0) +
-            (col("confidence_score") * 100).cast("int")
+            when(col("source") == "gsa_match", 100).otherwise(50) +
+            when(col("confidence") == "high", 50).otherwise(25)
         )
         
         # Write to Gold layer
@@ -254,25 +256,20 @@ class DiscoveryPipeline:
         targets_df.write \
             .format("delta") \
             .mode("overwrite") \
-            .partitionBy("jurisdiction_type", "state") \
+            .partitionBy("state_code") \
             .save(gold_path)
         
-        # Statistics by type
+        # Statistics
         logger.success("✓ Scraping targets created:")
         
-        high_priority = targets_df.filter(col("priority_score") > 150).count()
-        medium_priority = targets_df.filter((col("priority_score") >= 100) & (col("priority_score") <= 150)).count()
+        total = targets_df.count()
+        high_priority = targets_df.filter(col("priority_score") >= 150).count()
+        medium_priority = targets_df.filter((col("priority_score") >= 100) & (col("priority_score") < 150)).count()
         low_priority = targets_df.filter(col("priority_score") < 100).count()
         
-        for jtype in ["counties", "municipalities", "school_districts", "special_districts"]:
-            count = targets_df.filter(col("jurisdiction_type") == jtype).count()
-            if count > 0:
-                logger.info(f"  {jtype}: {count:,} targets")
-        
-        total = targets_df.count()
         logger.info(f"\n  TOTAL: {total:,} ready for scraping")
-        logger.info(f"  High priority (>150): {high_priority:,}")
-        logger.info(f"  Medium priority (100-150): {medium_priority:,}")
+        logger.info(f"  High priority (≥150): {high_priority:,}")
+        logger.info(f"  Medium priority (100-149): {medium_priority:,}")
         logger.info(f"  Low priority (<100): {low_priority:,}")
         
         return {
