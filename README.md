@@ -519,6 +519,81 @@ oral-health-policy-pulse/
 └── docker-compose.yml  # Multi-container setup
 ```
 
+---
+
+## 🔌 Open-Source Integrations
+
+This project leverages proven patterns from the civic tech community:
+
+### Integrated Projects
+
+| Project | Integration | Status |
+|---------|-------------|--------|
+| [**Civic Scraper**](https://github.com/biglocalnews/civic-scraper) | Platform detection, document downloading | ✅ Patterns integrated |
+| [**City Scrapers**](https://github.com/city-scrapers/city-scrapers) | Event schema, testing framework | ✅ Schema implemented |
+| [**Council Data Project**](https://github.com/CouncilDataProject/cookiecutter-cdp-deployment) | Ingestion pipeline, transcript processing | 📋 Roadmapped |
+| [**Engagic**](https://github.com/Engagic/engagic) | Matter tracking, LLM parsing | ✅ Model created |
+| [**Councilmatic**](https://github.com/datamade/councilmatic-starter-template) | Person/vote tracking, search UX | 📋 Planned |
+
+### What We've Built
+
+#### 1. Platform Detection (`discovery/platform_detector.py`)
+Automatically identifies which CMS/platform a municipality uses:
+```python
+from discovery.platform_detector import detect_platform
+
+platform = detect_platform("https://chicago.legistar.com/Calendar.aspx")
+# Returns: "legistar"
+```
+
+Supports: Legistar, Granicus, CivicPlus, Municode, and more.
+
+#### 2. Standardized Event Model (`models/meeting_event.py`)
+City Scrapers-compatible meeting representation:
+```python
+from models.meeting_event import MeetingEvent, Classification
+
+event = MeetingEvent(
+    title="City Council Meeting",
+    classification=Classification.COUNCIL,
+    start=datetime(2026, 4, 21, 18, 0),
+    jurisdiction_name="Birmingham",
+    state_code="AL"
+)
+
+# Extended with oral health tracking
+event.oral_health_relevant = True
+event.keywords_found = ["fluoridation", "dental"]
+event.confidence_score = 0.85
+```
+
+#### 3. Matter Tracking (`models/meeting_event.py`)
+Track legislative items across multiple meetings:
+```python
+from models.meeting_event import Matter
+
+matter = Matter(
+    matter_id="BHM-2024-FL001",
+    title="Community Water Fluoridation Ordinance",
+    type="Ordinance",
+    status="Committee Review",
+    is_health_policy=True
+)
+```
+
+### Attribution
+
+We're grateful to these open-source projects and their communities:
+- **Civic Scraper** (Apache 2.0) - Big Local News / Stanford Journalism
+- **City Scrapers** (MIT) - City Bureau / Pat Sier
+- **Council Data Project** (MIT) - Eva Maxfield Brown, Isaac Na, et al.
+- **Engagic** - Check repository for license
+- **Councilmatic** (MIT) - DataMade
+
+See [`docs/INTEGRATION_GUIDE.md`](docs/INTEGRATION_GUIDE.md) for detailed integration documentation.
+
+---
+
 ## Contributing
 
 Contributions are welcome! Please:
