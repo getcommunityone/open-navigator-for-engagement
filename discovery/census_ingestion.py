@@ -293,6 +293,11 @@ class CensusGovernmentIngestion:
         
         total_records = sum(df.count() for df in dataframes.values())
         logger.success(f"Bronze layer complete: {len(dataframes)} tables with {total_records} total records")
+        
+        return {
+            "total_records": total_records,
+            "tables": len(dataframes)
+        }
 
 
 async def main():

@@ -69,15 +69,22 @@ class DiscoveryPipeline:
         # Step 1: Census data
         logger.info("\n[1/2] Downloading Census Bureau data...")
         census_dfs = await self.census.ingest_all_jurisdictions()
-        self.census.write_to_bronze_layer(census_dfs)
+        census_result = self.census.write_to_bronze_layer(census_dfs)
         
         # Step 2: GSA domains
         logger.info("\n[2/2] Downloading GSA .gov domain list...")
         gsa_csv = await self.gsa.download_domain_list()
         gsa_df = self.gsa.parse_domains(gsa_csv)
-        self.gsa.write_to_bronze_layer(gsa_df)
+        gsa_result = self.gsa.write_to_bronze_layer(gsa_df)
         
         logger.success("✓ Bronze layer ingestion complete")
+        
+        return {
+            "status": "complete",
+            "total_records": census_result.get("total_records", 0) + gsa_result.get("total_records", 0),
+            "census_records": census_result.get("total_records", 0),
+            "gsa_domains": gsa_result.get("total_records", 0)
+        }
     
     async def run_url_discovery(self, limit: Optional[int] = None):
         """

@@ -163,7 +163,13 @@ class GSADomainList:
                 .mode("overwrite") \
                 .save(bronze_path)
         
+        total_records = df.count()
         logger.success(f"Wrote domains to {bronze_path}")
+        
+        return {
+            "total_records": total_records,
+            "tables": 1
+        }
 
 
 async def main():
