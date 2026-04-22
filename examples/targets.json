@@ -1,0 +1,32 @@
+[
+  {
+    "url": "https://san-francisco.legistar.com/Calendar.aspx",
+    "municipality": "San Francisco",
+    "state": "CA",
+    "platform": "legistar"
+  },
+  {
+    "url": "https://lacity.legistar.com/Calendar.aspx",
+    "municipality": "Los Angeles",
+    "state": "CA",
+    "platform": "legistar"
+  },
+  {
+    "url": "https://nyc.legistar.com/Calendar.aspx",
+    "municipality": "New York City",
+    "state": "NY",
+    "platform": "legistar"
+  },
+  {
+    "url": "https://chicago.legistar.com/Calendar.aspx",
+    "municipality": "Chicago",
+    "state": "IL",
+    "platform": "legistar"
+  },
+  {
+    "url": "https://houston.legistar.com/Calendar.aspx",
+    "municipality": "Houston",
+    "state": "TX",
+    "platform": "legistar"
+  }
+]

@@ -1,0 +1,59 @@
+version: '3.8'
+
+services:
+  api:
+    build: .
+    container_name: oral-health-policy-pulse-api
+    ports:
+      - "8000:8000"
+    environment:
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - DATABRICKS_HOST=${DATABRICKS_HOST}
+      - DATABRICKS_TOKEN=${DATABRICKS_TOKEN}
+      - QDRANT_HOST=qdrant
+      - LOG_LEVEL=INFO
+    env_file:
+      - .env
+    volumes:
+      - ./logs:/app/logs
+    depends_on:
+      - qdrant
+    restart: unless-stopped
+    networks:
+      - oral-health-network
+
+  qdrant:
+    image: qdrant/qdrant:latest
+    container_name: oral-health-qdrant
+    ports:
+      - "6333:6333"
+      - "6334:6334"
+    volumes:
+      - qdrant_storage:/qdrant/storage
+    restart: unless-stopped
+    networks:
+      - oral-health-network
+
+  # Optional: Jupyter notebook for analysis
+  notebook:
+    build: .
+    container_name: oral-health-notebook
+    command: jupyter lab --ip=0.0.0.0 --port=8888 --no-browser --allow-root
+    ports:
+      - "8888:8888"
+    environment:
+      - JUPYTER_ENABLE_LAB=yes
+    env_file:
+      - .env
+    volumes:
+      - ./notebooks:/app/notebooks
+      - ./data:/app/data
+    networks:
+      - oral-health-network
+
+volumes:
+  qdrant_storage:
+
+networks:
+  oral-health-network:
+    driver: bridge

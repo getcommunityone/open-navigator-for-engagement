@@ -1,0 +1,71 @@
+# Core Dependencies
+python-dotenv==1.0.0
+pydantic==2.5.0
+pydantic-settings==2.1.0
+
+# Web Scraping & Data Collection
+beautifulsoup4==4.12.2
+selenium==4.16.0
+playwright==1.40.0
+httpx==0.25.2
+aiohttp==3.9.1
+
+# AI & LLM
+openai==1.6.1
+anthropic==0.8.0
+langchain==0.1.0
+langchain-openai==0.0.2
+langchain-community==0.0.10
+tiktoken==0.5.2
+
+# Data Processing & Lakehouse
+databricks-sdk==0.18.0
+delta-spark==3.0.0
+pyspark==3.5.0
+pandas==2.1.4
+polars==0.20.2
+pyarrow==14.0.2
+
+# NLP & Text Analysis
+spacy==3.7.2
+transformers==4.36.2
+sentence-transformers==2.2.2
+nltk==3.8.1
+
+# Database & Storage
+sqlalchemy==2.0.25
+chromadb==0.4.22
+qdrant-client==1.7.0
+
+# API & Web Framework
+fastapi==0.109.0
+uvicorn[standard]==0.25.0
+pydantic[email]==2.5.0
+python-multipart==0.0.6
+
+# Visualization
+plotly==5.18.0
+folium==0.15.1
+matplotlib==3.8.2
+seaborn==0.13.1
+
+# Utilities
+python-dateutil==2.8.2
+pytz==2023.3
+tenacity==8.2.3
+loguru==0.7.2
+click==8.1.7
+tqdm==4.66.1
+
+# Testing
+pytest==7.4.3
+pytest-asyncio==0.21.1
+pytest-cov==4.1.0
+pytest-mock==3.12.0
+httpx-mock==0.11.0
+
+# Development
+black==23.12.1
+ruff==0.1.9
+mypy==1.8.0
+pre-commit==3.6.0
