@@ -382,7 +382,12 @@ The system automatically discovers and tracks **90,000+ local government units**
 Bronze Layer (Raw Data) → Silver Layer (URL Discovery) → Gold Layer (Scraping Targets)
 ```
 
-See [JURISDICTION_DISCOVERY.md](docs/JURISDICTION_DISCOVERY.md) for complete documentation.
+**Deployment Options:**
+1. **Local CLI** - Quick testing and development
+2. **Databricks Notebook** - Production batch processing
+3. **AgentBricks Model Serving** - API-based integration
+
+See [JURISDICTION_DISCOVERY_DEPLOYMENT.md](docs/JURISDICTION_DISCOVERY_DEPLOYMENT.md) for deployment guide and [JURISDICTION_DISCOVERY.md](docs/JURISDICTION_DISCOVERY.md) for complete documentation.
 
 ### Meeting Minutes Sources
 

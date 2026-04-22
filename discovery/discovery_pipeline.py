@@ -101,12 +101,16 @@ class DiscoveryPipeline:
         # Load GSA domains for validation
         gsa_path = f"{settings.delta_lake_path}/bronze/gov_domains"
         gsa_df = self.spark.read.format("delta").load(gsa_path)
-        gsa_domains = set(row["Domain Name"] for row in gsa_df.collect())
+        gsa_rows = gsa_df.collect()
+        
+        # Extract domain set and full data
+        gsa_domains = set(row["Domain Name"] for row in gsa_rows)
+        gsa_domain_data = [row.asDict() for row in gsa_rows]
         
         logger.info(f"Loaded {len(gsa_domains):,} .gov domains for validation")
         
-        # Initialize discovery agent
-        agent = URLDiscoveryAgent(gsa_domains)
+        # Initialize discovery agent with full domain data for matching
+        agent = URLDiscoveryAgent(gsa_domains, gsa_domain_data)
         
         # Process in batches for efficiency
         batch_size = 10

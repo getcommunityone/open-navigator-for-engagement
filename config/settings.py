@@ -40,11 +40,6 @@ class Settings(BaseSettings):
     sentiment_model_llm: str = Field("gpt-3.5-turbo", description="LLM model for sentiment analysis")
     advocacy_model: str = Field("gpt-4-turbo-preview", description="LLM model for advocacy generation")
     
-    # Search API Configuration (for jurisdiction discovery)
-    google_search_api_key: Optional[str] = Field(None, description="Google Custom Search API key")
-    google_search_engine_id: Optional[str] = Field(None, description="Google Custom Search Engine ID")
-    bing_search_api_key: Optional[str] = Field(None, description="Bing Search API key")
-    
     # Agent Configuration
     max_concurrent_agents: int = Field(5, description="Maximum concurrent agent operations")
     scraper_timeout: int = Field(30, description="Scraper timeout in seconds")
