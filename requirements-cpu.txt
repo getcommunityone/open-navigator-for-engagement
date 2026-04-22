@@ -17,10 +17,15 @@ anthropic>=0.8.0
 langchain>=0.1.0
 langchain-openai>=0.0.2
 langchain-community>=0.0.10
+langgraph>=0.0.20
+langchain-core>=0.1.0
 tiktoken>=0.5.0
 
-# Databricks & Data Processing
+# Databricks Agent Framework (Mosaic AI)
 databricks-sdk>=0.18.0
+mlflow>=2.10.0
+databricks-agents>=0.1.0
+databricks-vectorsearch>=0.22.0
 delta-spark>=3.0.0
 # PySpark is large but needed for Delta Lake - consider removing if not using Databricks
 pyspark>=3.5.0

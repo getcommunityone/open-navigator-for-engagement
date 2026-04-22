@@ -21,6 +21,19 @@ The **Oral Health Policy Pulse** is a sophisticated multi-agent system designed 
 
 ## Architecture
 
+### Deployment Options
+
+**🏠 Standalone Mode**: Run agents locally with custom Python implementation
+
+**☁️ Databricks Agent Bricks Mode**: Production-ready deployment with:
+- MLflow-based agents with automatic tracing
+- Unity Catalog governance and lineage
+- Model Serving endpoints with auto-scaling
+- Built-in evaluation framework
+- Enterprise monitoring and observability
+
+See [`databricks/README.md`](databricks/README.md) for Agent Bricks setup.
+
 ### Multi-Agent System
 
 ```
