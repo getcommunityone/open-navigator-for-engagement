@@ -18,7 +18,8 @@ from agents.classifier import ClassifierAgent
 from agents.sentiment import SentimentAnalyzerAgent
 from agents.advocacy import AdvocacyWriterAgent
 from pipeline.delta_lake import DeltaLakePipeline
-from visualization.heatmap import AdvocacyHeatmap
+# Lazy import for visualization to avoid requiring folium in local mode
+# from visualization.heatmap import AdvocacyHeatmap
 from config import settings
 
 
@@ -129,6 +130,14 @@ def analyze(targets_file: str):
 def generate_heatmap(output: str, urgency: Optional[str]):
     """Generate advocacy heatmap visualization."""
     logger.info(f"Generating heatmap (urgency={urgency})")
+    
+    # Lazy import - only load when generating heatmap
+    try:
+        from visualization.heatmap import AdvocacyHeatmap
+    except ImportError:
+        click.echo("❌ Visualization dependencies not installed!")
+        click.echo("   Install with: pip install folium plotly")
+        return
     
     # Query opportunities
     pipeline = DeltaLakePipeline()
