@@ -196,42 +196,37 @@ class CensusGovernmentIngestion:
         """
         Parse Census CSV into Spark DataFrame.
         
+        Note: Census 2022 data is aggregated counts, not individual jurisdiction listings.
+        This method preserves the original Census schema and adds metadata.
+        
         Args:
             csv_path: Path to CSV file
             jurisdiction_type: Type of jurisdiction
         
         Returns:
-            Spark DataFrame with standardized schema
+            Spark DataFrame with Census data + metadata
         """
         logger.info(f"Parsing {csv_path} into DataFrame...")
         
-        # Define standardized schema
-        schema = StructType([
-            StructField("jurisdiction_id", StringType(), False),  # FIPS code
-            StructField("jurisdiction_type", StringType(), False),
-            StructField("jurisdiction_name", StringType(), False),
-            StructField("state_fips", StringType(), False),
-            StructField("state_name", StringType(), True),
-            StructField("county_fips", StringType(), True),
-            StructField("county_name", StringType(), True),
-            StructField("population", IntegerType(), True),
-            StructField("functional_status", StringType(), True),
-            StructField("ingestion_date", StringType(), False)
-        ])
-        
-        # Read CSV with Spark
+        # Read CSV with Spark (preserve original Census schema)
         df = self.spark.read.csv(
             str(csv_path),
             header=True,
             inferSchema=True
         )
         
+        # Clean column names (Delta Lake doesn't allow spaces or special chars)
+        for col_name in df.columns:
+            clean_name = col_name.replace(" ", "_").replace("(", "").replace(")", "").replace(",", "_")
+            if clean_name != col_name:
+                df = df.withColumnRenamed(col_name, clean_name)
+        
         # Add metadata columns
         df = df.withColumn("jurisdiction_type", lit(jurisdiction_type))
         df = df.withColumn("ingestion_date", lit(datetime.now().isoformat()))
         
-        # Standardize column names (Census CSVs vary by type)
-        # This is a simplified version - real implementation would need mapping logic
+        # Census data has columns like: GEO_ID, GEO_TTL, YEAR, AMOUNT, AGG_DESC_TTL, ST (state), etc.
+        # We preserve this as-is for Bronze layer (raw data)
         
         logger.success(f"Parsed {df.count()} records from {csv_path}")
         return df
@@ -267,6 +262,8 @@ class CensusGovernmentIngestion:
         """
         Write jurisdiction data to Delta Lake Bronze layer.
         
+        Bronze layer stores raw Census data as-is with minimal transformation.
+        
         Args:
             dataframes: Dictionary of jurisdiction DataFrames
         """
@@ -274,28 +271,24 @@ class CensusGovernmentIngestion:
         
         bronze_path = f"{settings.delta_lake_path}/bronze/jurisdictions"
         
+        # Write individual tables
         for jurisdiction_type, df in dataframes.items():
             table_path = f"{bronze_path}/{jurisdiction_type}"
             
+            # Write without partitioning for Bronze (raw data)
             df.write \
                 .format("delta") \
                 .mode("overwrite") \
-                .partitionBy("state_fips") \
                 .save(table_path)
             
             logger.success(f"Wrote {jurisdiction_type} to {table_path}")
         
-        # Create unified view
-        from functools import reduce
-        unified_df = reduce(DataFrame.union, dataframes.values())
+        # Note: Skip unified view creation because Census tables have different schemas
+        # (Some tables are summaries with 4 columns, others are detailed with 14 columns)
+        # Silver layer will standardize these into a common schema
         
-        unified_df.write \
-            .format("delta") \
-            .mode("overwrite") \
-            .partitionBy("jurisdiction_type", "state_fips") \
-            .save(f"{bronze_path}/unified")
-        
-        logger.success(f"Created unified jurisdiction table with {unified_df.count()} total records")
+        total_records = sum(df.count() for df in dataframes.values())
+        logger.success(f"Bronze layer complete: {len(dataframes)} tables with {total_records} total records")
 
 
 async def main():

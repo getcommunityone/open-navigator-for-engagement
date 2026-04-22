@@ -87,10 +87,22 @@ class GSADomainList:
             inferSchema=True
         )
         
-        # Filter for local government domains
+        # Clean column names (Delta Lake doesn't allow spaces or special chars)
+        for col_name in df.columns:
+            clean_name = col_name.replace(" ", "_").replace("(", "").replace(")", "").replace(",", "_")
+            if clean_name != col_name:
+                from pyspark.sql.functions import col
+                df = df.withColumnRenamed(col_name, clean_name)
+        
+        # Filter for local government domains (using cleaned column name)
         local_gov_types = ["City", "County", "Township", "Special District", "School District"]
         
-        df_local = df.filter(df["Domain Type"].isin(local_gov_types))
+        if "Domain_Type" in df.columns:
+            df_local = df.filter(df["Domain_Type"].isin(local_gov_types))
+        else:
+            # If Domain_Type column doesn't exist, return all domains
+            logger.warning("Domain_Type column not found, returning all domains")
+            df_local = df
         
         logger.success(f"Found {df_local.count():,} local government domains")
         return df_local
@@ -131,11 +143,25 @@ class GSADomainList:
         
         bronze_path = f"{settings.delta_lake_path}/bronze/gov_domains"
         
-        df.write \
-            .format("delta") \
-            .mode("overwrite") \
-            .partitionBy("Domain Type", "State") \
-            .save(bronze_path)
+        # Check if partition columns exist (after column name cleaning, they'll have underscores)
+        partition_cols = []
+        if "Domain_Type" in df.columns:
+            partition_cols.append("Domain_Type")
+        if "State" in df.columns:
+            partition_cols.append("State")
+        
+        if partition_cols:
+            df.write \
+                .format("delta") \
+                .mode("overwrite") \
+                .partitionBy(*partition_cols) \
+                .save(bronze_path)
+        else:
+            # Write without partitioning if columns don't exist
+            df.write \
+                .format("delta") \
+                .mode("overwrite") \
+                .save(bronze_path)
         
         logger.success(f"Wrote domains to {bronze_path}")
 

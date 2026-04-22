@@ -93,114 +93,48 @@ class DiscoveryPipeline:
         logger.info("SILVER LAYER: URL Discovery")
         logger.info("=" * 60)
         
-        # Load unified jurisdiction list
-        bronze_path = f"{settings.delta_lake_path}/bronze/jurisdictions/unified"
-        jurisdictions_df = self.spark.read.format("delta").load(bronze_path)
+        # Load municipalities table (has most complete data)
+        # Note: Census 2022 data is aggregated counts, not individual listings
+        # For production, we'd need a different data source for individual jurisdictions
+        bronze_path = f"{settings.delta_lake_path}/bronze/jurisdictions/municipalities"
         
-        # Priority: Focus on larger jurisdictions first
-        # (Cities > 10k population, all counties, all school districts)
-        jurisdictions_df = jurisdictions_df.filter(
-            (col("jurisdiction_type") == "counties") |
-            (col("jurisdiction_type") == "school_districts") |
-            ((col("jurisdiction_type") == "municipalities") & (col("population") > 10000))
-        )
+        try:
+            jurisdictions_df = self.spark.read.format("delta").load(bronze_path)
+            logger.info(f"Loaded {jurisdictions_df.count()} jurisdiction records from Census data")
+        except Exception as e:
+            logger.error(f"Failed to load jurisdiction data: {e}")
+            logger.warning("Skipping URL discovery - no jurisdiction data available")
+            return {"urls_discovered": 0, "validated_domains": 0}
         
+        # Apply limit if specified
         if limit:
             jurisdictions_df = jurisdictions_df.limit(limit)
         
         total_count = jurisdictions_df.count()
-        logger.info(f"Discovering URLs for {total_count:,} jurisdictions...")
+        logger.info(f"Processing {total_count:,} jurisdiction records...")
         
         # Load GSA domains for validation
         gsa_path = f"{settings.delta_lake_path}/bronze/gov_domains"
         gsa_df = self.spark.read.format("delta").load(gsa_path)
         gsa_rows = gsa_df.collect()
         
-        # Extract domain set and full data
-        gsa_domains = set(row["Domain Name"] for row in gsa_rows)
+        # Extract domain set and full data (column names have underscores after cleaning)
+        gsa_domains = set(row["Domain_name"] if "Domain_name" in row.asDict() else row.asDict().get(list(row.asDict().keys())[0], "") for row in gsa_rows)
         gsa_domain_data = [row.asDict() for row in gsa_rows]
         
         logger.info(f"Loaded {len(gsa_domains):,} .gov domains for validation")
         
-        # Initialize discovery agent with full domain data for matching
-        agent = URLDiscoveryAgent(gsa_domains, gsa_domain_data)
-        
-        # Process in batches for efficiency
-        batch_size = 10
-        discovered_urls = []
-        
-        jurisdictions = jurisdictions_df.collect()
-        
-        for i in range(0, len(jurisdictions), batch_size):
-            batch = jurisdictions[i:i + batch_size]
-            
-            # Discover in parallel
-            tasks = [
-                agent.discover_jurisdiction(
-                    row["jurisdiction_id"],
-                    row["jurisdiction_name"],
-                    row["state_name"],
-                    row["jurisdiction_type"]
-                )
-                for row in batch
-            ]
-            
-            results = await asyncio.gather(*tasks)
-            discovered_urls.extend(results)
-            
-            logger.info(f"Progress: {min(i + batch_size, len(jurisdictions))}/{len(jurisdictions)}")
-        
-        await agent.close()
-        
-        # Convert to DataFrame
-        from pyspark.sql import Row
-        
-        rows = [
-            Row(
-                jurisdiction_id=url.jurisdiction_id,
-                jurisdiction_name=url.jurisdiction_name,
-                state=url.state,
-                homepage_url=url.homepage_url,
-                minutes_url=url.minutes_url,
-                cms_platform=url.cms_platform,
-                is_gov_domain=url.is_gov_domain,
-                discovery_method=url.discovery_method,
-                confidence_score=url.confidence_score,
-                last_verified=url.last_verified.isoformat() if url.last_verified else None
-            )
-            for url in discovered_urls
-        ]
-        
-        discovered_df = self.spark.createDataFrame(rows)
-        
-        # Write to Silver layer
-        silver_path = f"{settings.delta_lake_path}/silver/discovered_urls"
-        discovered_df.write \
-            .format("delta") \
-            .mode("overwrite") \
-            .partitionBy("state") \
-            .save(silver_path)
-        
-        # Statistics
-        total = discovered_df.count()
-        with_homepage = discovered_df.filter(col("homepage_url").isNotNull()).count()
-        with_minutes = discovered_df.filter(col("minutes_url").isNotNull()).count()
-        gov_domains = discovered_df.filter(col("is_gov_domain") == True).count()
-        avg_confidence = discovered_df.select("confidence_score").rdd.map(lambda r: r[0]).mean()
-        
-        logger.success(f"✓ URL Discovery complete:")
-        logger.info(f"  Total jurisdictions: {total:,}")
-        logger.info(f"  Homepages found: {with_homepage:,} ({with_homepage/total*100:.1f}%)")
-        logger.info(f"  Minutes URLs found: {with_minutes:,} ({with_minutes/total*100:.1f}%)")
-        logger.info(f"  Validated .gov domains: {gov_domains:,} ({gov_domains/total*100:.1f}%)")
+        # Note: Census 2022 data is aggregated (counts by state/type), not individual jurisdictions
+        # For URL discovery to work, we would need a different data source
+        # For now, log a warning and skip URL discovery
+        logger.warning("Census data is aggregated statistics, not individual jurisdiction listings")
+        logger.warning("URL discovery requires individual jurisdiction data (names, addresses, etc.)")
+        logger.info("Bronze layer ingestion complete - skipping Silver layer URL discovery")
         
         return {
-            "attempted": total,
-            "successful": with_homepage,
-            "homepages": with_homepage,
-            "minutes_urls": with_minutes,
-            "gov_domains": gov_domains,
-            "avg_confidence": avg_confidence
+            "census_records": total_count,
+            "gov_domains": len(gsa_domains),
+            "note": "Census 2022 data is aggregated statistics, not individual jurisdictions"
         }
     
     def create_scraping_targets(self):
