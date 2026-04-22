@@ -30,6 +30,16 @@ class Settings(BaseSettings):
     catalog_name: str = Field("oral_health", description="Unity Catalog name")
     schema_name: str = Field("policy_analysis", description="Schema name")
     
+    # MLflow Configuration (for Databricks Agent Bricks)
+    mlflow_tracking_uri: str = Field("databricks", description="MLflow tracking URI")
+    mlflow_experiment_name: str = Field("/Users/shared/oral-health-agents", description="MLflow experiment")
+    mlflow_model_name_prefix: str = Field("oral_health", description="Model name prefix in Unity Catalog")
+    
+    # Agent LLM Configuration
+    classifier_model: str = Field("gpt-4-turbo-preview", description="LLM model for classification")
+    sentiment_model_llm: str = Field("gpt-3.5-turbo", description="LLM model for sentiment analysis")
+    advocacy_model: str = Field("gpt-4-turbo-preview", description="LLM model for advocacy generation")
+    
     # Agent Configuration
     max_concurrent_agents: int = Field(5, description="Maximum concurrent agent operations")
     scraper_timeout: int = Field(30, description="Scraper timeout in seconds")

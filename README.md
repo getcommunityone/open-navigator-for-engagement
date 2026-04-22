@@ -1,14 +1,23 @@
 # 🦷 Oral Health Policy Pulse
 
-> *A multi-agent system for analyzing local government oral health policy discussions and empowering advocacy*
+> *AI-powered advocacy opportunity finder with React + FastAPI web interface*
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
+[![React](https://img.shields.io/badge/React-18.2-61DAFB.svg)](https://reactjs.org)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.109.0-009688.svg)](https://fastapi.tiangolo.com)
+[![Databricks](https://img.shields.io/badge/Databricks-Apps-FF3621.svg)](https://www.databricks.com)
 
 ## Overview
 
-The **Oral Health Policy Pulse** is a sophisticated multi-agent system designed to scrape and analyze thousands of municipal meeting minutes from across the country. It identifies where fluoridation, school dental screenings, or funding for low-income dental care is being debated or ignored, providing advocacy groups with a real-time "Advocacy Heatmap" and automated policy outreach drafts.
+The **Oral Health Policy Pulse** is a full-stack AI application that analyzes thousands of municipal meeting minutes across the country to identify policy opportunities for oral health advocacy. It features a **modern React web interface**, **FastAPI backend**, and **multi-agent AI system** powered by Databricks.
+
+**✨ New in v2.0:**
+- 🎨 **React Frontend** - Modern, responsive UI with interactive visualizations
+- 🚀 **Databricks Apps** - One-click deployment to Databricks workspace
+- 📊 **Live Dashboard** - Real-time analytics and opportunity tracking
+- 🗺️ **Interactive Heatmap** - Geographic visualization of advocacy opportunities
+- 📧 **Automated Generation** - AI-powered advocacy emails and materials
 
 ### Key Features
 
@@ -21,18 +30,46 @@ The **Oral Health Policy Pulse** is a sophisticated multi-agent system designed 
 
 ## Architecture
 
-### Deployment Options
+### Deployment Architecture
 
-**🏠 Standalone Mode**: Run agents locally with custom Python implementation
+```
+┌─────────────────────────────────────────────────────────┐
+│              Databricks Workspace (Cloud)                │
+├─────────────────────────────────────────────────────────┤
+│                                                          │
+│  ┌──────────────────────────────────────────────────┐  │
+│  │   React + FastAPI Databricks App                 │  │
+│  │                                                   │  │
+│  │   ┌──────────────┐      ┌──────────────────┐    │  │
+│  │   │   React UI   │ ───▶ │  FastAPI Backend │    │  │
+│  │   │ (Dashboard,  │      │  (REST API +     │    │  │
+│  │   │  Heatmap,    │      │   Multi-Agent    │    │  │
+│  │   │  Docs, etc.) │      │   Orchestration) │    │  │
+│  │   └──────────────┘      └──────────────────┘    │  │
+│  └───────────────────┬──────────────────────────────┘  │
+│                      │                                  │
+│  ┌───────────────────▼─────────────────────────────┐   │
+│  │      Unity Catalog & Delta Lake                 │   │
+│  │  • Policy documents & classifications           │   │
+│  │  • Advocacy opportunities                       │   │
+│  │  • Analytics & reporting                        │   │
+│  └─────────────────────────────────────────────────┘   │
+│                                                          │
+│  ┌─────────────────────────────────────────────────┐   │
+│  │         Model Serving (AI Agents)                │   │
+│  │  • Policy Classifier                            │   │
+│  │  • Sentiment Analyzer                           │   │
+│  └─────────────────────────────────────────────────┘   │
+└─────────────────────────────────────────────────────────┘
+```
 
-**☁️ Databricks Agent Bricks Mode**: Production-ready deployment with:
-- MLflow-based agents with automatic tracing
-- Unity Catalog governance and lineage
-- Model Serving endpoints with auto-scaling
-- Built-in evaluation framework
-- Enterprise monitoring and observability
+**🎯 Three Deployment Options:**
 
-See [`databricks/README.md`](databricks/README.md) for Agent Bricks setup.
+1. **Databricks Apps (Recommended)** - Full-stack web app hosted in Databricks
+2. **Standalone Mode** - Local development with custom agents
+3. **Docker** - Containerized deployment
+
+See [`DATABRICKS_APP_GUIDE.md`](DATABRICKS_APP_GUIDE.md) for full deployment guide.
 
 ### Multi-Agent System
 
@@ -47,7 +84,38 @@ See [`databricks/README.md`](databricks/README.md) for Agent Bricks setup.
    ┌─────────┐  ┌─────────┐  ┌──────────┐  ┌──────────┐
    │ SCRAPER │  │ PARSER  │  │CLASSIFIER│  │SENTIMENT │
    │  AGENT  │──▶  AGENT  │──▶  AGENT   │──▶  AGENT   │
-   └─────────┘  └─────────┘  └──────────┘  └──────────┘
+   └────────Deploy to Databricks Apps (Production)**
+
+```bash
+# Set credentials
+export DATABRICKS_HOST=https://your-workspace.cloud.databricks.com
+export DATABRICKS_TOKEN=dapi...
+export OPENAI_API_KEY=sk-...
+
+# Deploy (builds frontend + backend)
+./scripts/deploy-databricks-app.sh
+
+# Access at: https://your-workspace.cloud.databricks.com/apps/oral-health-policy-pulse
+```
+
+**Option 2: Local Development**
+
+```bash
+# Setup environment
+./scripts/setup-local.sh
+
+# Terminal 1 - Backend
+source venv/bin/activate
+uvicorn api.app:app --reload
+
+# Terminal 2 - Frontend
+cd frontend
+npm run dev
+
+# Open: http://localhost:3000
+```
+
+**Option 3: Automated Installation (Legacy Standalone Mode───────┘
                                                   │
                                                   ▼
                                            ┌──────────┐
@@ -420,7 +488,7 @@ MIT License - see LICENSE file for details
 
 For questions or support:
 - GitHub Issues: [github.com/getcommunityone/oral-health-policy-pulse/issues](https://github.com/getcommunityone/oral-health-policy-pulse/issues)
-- Email: support@communityone.org
+- Email: support@communityone.com
 
 ---
 
