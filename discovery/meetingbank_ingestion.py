@@ -83,6 +83,38 @@ def load_meetingbank_dataset() -> dict:
         raise
 
 
+def extract_video_urls_from_instance(instance: dict) -> Dict[str, str]:
+    """
+    Extract YouTube/Vimeo URLs from MeetingBank's 'urls' dictionary.
+    
+    MeetingBank stores video URLs in multiple formats:
+    - urls['youtube_id'] -> https://www.youtube.com/watch?v=ID
+    - urls['vimeo_id'] -> https://vimeo.com/ID
+    - urls['archive_url'] -> https://archive.org/details/...
+    - video_url field -> Direct URL
+    """
+    urls_dict = instance.get('urls', {})
+    video_urls = {}
+    
+    # Extract YouTube URL
+    if 'youtube_id' in urls_dict and urls_dict['youtube_id']:
+        video_urls['youtube_url'] = f"https://www.youtube.com/watch?v={urls_dict['youtube_id']}"
+    
+    # Extract Vimeo URL
+    if 'vimeo_id' in urls_dict and urls_dict['vimeo_id']:
+        video_urls['vimeo_url'] = f"https://vimeo.com/{urls_dict['vimeo_id']}"
+    
+    # Extract Archive.org URL
+    if 'archive_url' in urls_dict and urls_dict['archive_url']:
+        video_urls['archive_url'] = urls_dict['archive_url']
+    
+    # Fallback to top-level video_url field
+    if not video_urls and instance.get('video_url'):
+        video_urls['video_url'] = instance['video_url']
+    
+    return video_urls
+
+
 def parse_meetingbank_to_dataframe(
     meetingbank: dict,
     spark: SparkSession
@@ -96,6 +128,7 @@ def parse_meetingbank_to_dataframe(
     - Full transcript
     - Human summary (ground truth)
     - Source URL (if available)
+    - Video URLs (YouTube, Vimeo, Archive.org)
     - Metadata
     """
     logger.info("Parsing MeetingBank meetings to DataFrame")
@@ -108,6 +141,9 @@ def parse_meetingbank_to_dataframe(
         for instance in meetingbank[split]:
             # Extract city info from meeting ID
             city_info = extract_city_from_id(instance['id'])
+            
+            # Extract video URLs from urls dictionary
+            video_urls = extract_video_urls_from_instance(instance)
             
             # Parse meeting data
             meeting = {
@@ -125,9 +161,14 @@ def parse_meetingbank_to_dataframe(
                 "transcript_length": len(instance.get('transcript', '')),
                 "summary_length": len(instance.get('summary', '')),
                 
+                # Video URLs (NEW - extracts from urls dictionary)
+                "youtube_url": video_urls.get('youtube_url', ''),
+                "vimeo_url": video_urls.get('vimeo_url', ''),
+                "archive_url": video_urls.get('archive_url', ''),
+                
                 # Additional fields from MeetingBank
                 "source_url": instance.get('url', ''),
-                "video_url": instance.get('video_url', ''),
+                "video_url": video_urls.get('video_url', instance.get('video_url', '')),
                 "agenda_url": instance.get('agenda_url', ''),
                 "minutes_url": instance.get('minutes_url', ''),
                 
@@ -191,6 +232,8 @@ def extract_meetingbank_urls(
     Extract unique URLs from MeetingBank for URL discovery.
     
     Creates table: bronze/meetingbank_urls
+    
+    Includes YouTube, Vimeo, Archive.org video URLs from urls dictionary.
     """
     logger.info("Extracting URLs from MeetingBank meetings")
     
@@ -208,8 +251,38 @@ def extract_meetingbank_urls(
                 "source": "meetingbank"
             })
         
-        # Add video URLs
-        if row.video_url:
+        # Add YouTube URLs (from urls dictionary)
+        if row.youtube_url:
+            urls.append({
+                "url": row.youtube_url,
+                "url_type": "video_youtube",
+                "jurisdiction_name": row.jurisdiction_name,
+                "state_code": row.state_code,
+                "source": "meetingbank"
+            })
+        
+        # Add Vimeo URLs (from urls dictionary)
+        if row.vimeo_url:
+            urls.append({
+                "url": row.vimeo_url,
+                "url_type": "video_vimeo",
+                "jurisdiction_name": row.jurisdiction_name,
+                "state_code": row.state_code,
+                "source": "meetingbank"
+            })
+        
+        # Add Archive.org URLs (from urls dictionary)
+        if row.archive_url:
+            urls.append({
+                "url": row.archive_url,
+                "url_type": "video_archive",
+                "jurisdiction_name": row.jurisdiction_name,
+                "state_code": row.state_code,
+                "source": "meetingbank"
+            })
+        
+        # Add generic video URLs
+        if row.video_url and row.video_url not in [row.youtube_url, row.vimeo_url, row.archive_url]:
             urls.append({
                 "url": row.video_url,
                 "url_type": "video",
@@ -244,6 +317,18 @@ def extract_meetingbank_urls(
     
     # Deduplicate URLs
     unique_urls = {url['url']: url for url in urls}.values()
+    
+    logger.info(f"✅ Found {len(unique_urls)} unique URLs from MeetingBank")
+    
+    # Count by URL type
+    url_types = {}
+    for url in unique_urls:
+        url_type = url['url_type']
+        url_types[url_type] = url_types.get(url_type, 0) + 1
+    
+    logger.info("\nURLs by type:")
+    for url_type, count in sorted(url_types.items()):
+        logger.info(f"  • {url_type}: {count} URLs")
     
     # Convert to DataFrame
     urls_df = spark.createDataFrame(list(unique_urls))
