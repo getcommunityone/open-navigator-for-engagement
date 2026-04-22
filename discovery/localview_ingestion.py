@@ -7,14 +7,16 @@ This dataset contains 1,000+ municipalities with meeting video archives.
 Source: Harvard Mellon Urbanism Initiative
 URL: https://dataverse.harvard.edu/dataset.xhtml?persistentId=doi:10.7910/DVN/NJTBEM
 
-NOTE: This dataset requires manual download due to JavaScript/CAPTCHA on Harvard Dataverse.
-      Download the CSV files to data/cache/localview/ before running this script.
+USAGE OPTIONS:
+1. **API Download (Recommended)**: Set DATAVERSE_API_KEY in .env and run script
+2. **Manual Download**: Download CSV files to data/cache/localview/ and run script
       
-See docs/LOCALVIEW_INTEGRATION_GUIDE.md for download instructions.
+See docs/LOCALVIEW_INTEGRATION_GUIDE.md for detailed instructions.
 """
 import sys
 from pathlib import Path
 import csv
+import asyncio
 from typing import List, Dict, Any, Optional
 from datetime import datetime
 from loguru import logger
@@ -38,6 +40,14 @@ except ImportError:
     logger.warning("PySpark not available - install with: pip install pyspark delta-spark")
 
 from config import settings
+
+# Import Dataverse client for API downloads
+try:
+    from discovery.dataverse_client import DataverseClient
+    DATAVERSE_CLIENT_AVAILABLE = True
+except ImportError:
+    DATAVERSE_CLIENT_AVAILABLE = False
+    logger.warning("Dataverse client not available - will use manual download only")
 
 
 class LocalViewIngestion:
@@ -352,25 +362,86 @@ class LocalViewIngestion:
         return stats
 
 
+async def try_api_download() -> bool:
+    """
+    Try to download dataset using Dataverse API.
+    
+    Returns:
+        True if successful, False otherwise
+    """
+    if not DATAVERSE_CLIENT_AVAILABLE:
+        logger.info("Dataverse API client not available - skipping API download")
+        return False
+    
+    # Check if API key is available
+    api_key = settings.dataverse_api_key
+    
+    if api_key and api_key != "your_dataverse_api_key":
+        logger.info("🔑 Dataverse API key found - attempting API download")
+        logger.info("This may take 5-10 minutes for large datasets...")
+        
+        try:
+            client = DataverseClient(api_key=api_key)
+            result = await client.download_dataset(
+                persistent_id="doi:10.7910/DVN/NJTBEM",
+                output_dir=Path("data/cache/localview"),
+                file_types=[".parquet", ".csv", ".tab", ".tsv"]  # Data files (parquet is primary format)
+            )
+            
+            if result["status"] == "success" or result["status"] == "partial":
+                logger.success("✓ API download completed!")
+                return True
+            else:
+                logger.warning("⚠ API download failed - falling back to manual download")
+                return False
+        
+        except Exception as e:
+            logger.warning(f"⚠ API download failed: {e}")
+            logger.info("Falling back to manual download method")
+            return False
+    else:
+        logger.info("No Dataverse API key configured (optional)")
+        logger.info("Set DATAVERSE_API_KEY in .env to enable automatic downloads")
+        logger.info("Get your key at: https://dataverse.harvard.edu/loginpage.xhtml")
+        return False
+
+
 def main():
     """Main execution function."""
     logger.info("=" * 60)
     logger.info("LocalView Dataset Ingestion")
     logger.info("=" * 60)
     
-    # Check if files exist
+    # Try API download first
+    logger.info("\n[Step 1/2] Checking for API download option...")
+    api_success = asyncio.run(try_api_download())
+    
+    # Check if files exist (either from API or manual download)
     cache_dir = Path("data/cache/localview")
     if not cache_dir.exists() or not list(cache_dir.glob("*.*")):
-        logger.error("❌ No files found in data/cache/localview/")
-        logger.error("")
-        logger.error("Please download LocalView CSV files from Harvard Dataverse:")
-        logger.error("  https://dataverse.harvard.edu/dataset.xhtml?persistentId=doi:10.7910/DVN/NJTBEM")
-        logger.error("")
-        logger.error("See docs/LOCALVIEW_INTEGRATION_GUIDE.md for detailed instructions.")
-        logger.error("")
-        return 1
+        if not api_success:
+            logger.error("")
+            logger.error("=" * 60)
+            logger.error("❌ No files found in data/cache/localview/")
+            logger.error("=" * 60)
+            logger.error("")
+            logger.error("OPTION 1 - API Download (Recommended):")
+            logger.error("  1. Get free API key: https://dataverse.harvard.edu/loginpage.xhtml")
+            logger.error("  2. Add to .env: DATAVERSE_API_KEY=your_key")
+            logger.error("  3. Re-run this script")
+            logger.error("")
+            logger.error("OPTION 2 - Manual Download:")
+            logger.error("  1. Visit: https://dataverse.harvard.edu/dataset.xhtml?persistentId=doi:10.7910/DVN/NJTBEM")
+            logger.error("  2. Download CSV/TAB files")
+            logger.error("  3. Save to: data/cache/localview/")
+            logger.error("  4. Re-run this script")
+            logger.error("")
+            logger.error("See docs/LOCALVIEW_INTEGRATION_GUIDE.md for detailed instructions.")
+            logger.error("")
+            return 1
     
     # Initialize ingestion
+    logger.info("\n[Step 2/2] Processing downloaded files...")
     ingestion = LocalViewIngestion()
     
     # Load data

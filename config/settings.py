@@ -20,6 +20,8 @@ class Settings(BaseSettings):
     openai_api_key: Optional[str] = Field(None, description="OpenAI API key (optional for local mode)")
     anthropic_api_key: Optional[str] = Field(None, description="Anthropic API key")
     huggingface_token: Optional[str] = Field(None, description="HuggingFace API token for dataset uploads")
+    dataverse_api_key: Optional[str] = Field(None, description="Harvard Dataverse API key (optional, improves rate limits)")
+    openstates_api_key: Optional[str] = Field(None, description="Open States API key (free tier: 50k requests/month)")
     
     # HuggingFace Configuration
     hf_organization: Optional[str] = Field(None, description="HuggingFace organization name (e.g., 'CommunityOne')")
@@ -56,9 +58,9 @@ class Settings(BaseSettings):
         description="HuggingFace sentiment model"
     )
     
-    # Data Sources
-    municode_api_key: Optional[str] = Field(None, description="Municode API key")
-    legistar_api_key: Optional[str] = Field(None, description="Legistar API key")
+    # Data Sources (these are FREE public data - no API keys needed)
+    municode_api_key: Optional[str] = Field(None, description="Municode API key (not required - public data)")
+    legistar_api_key: Optional[str] = Field(None, description="Legistar API key (not required - public data)")
     
     # Logging
     log_level: str = Field("INFO", description="Logging level")
