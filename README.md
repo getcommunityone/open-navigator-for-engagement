@@ -366,8 +366,11 @@ The system automatically discovers and tracks **90,000+ local government units**
 
 **Data Sources (All Free!):**
 - 🏛️ **CISA .gov Domain Master List** - 15,000+ validated .gov domains ([cisagov/dotgov-data](https://github.com/cisagov/dotgov-data))
-- 📊 **Census Bureau GID** - 90,735 total government units ([Census.gov](https://www.census.gov/programs-surveys/gus.html))
+- 📊 **Census Bureau Gazetteer Files 2024** - 85,302 individual jurisdictions with names, FIPS codes ([Census.gov](https://www.census.gov/geographies/reference-files/time-series/geo/gazetteer-files.html))
 - 🎓 **NCES Common Core of Data** - 13,000+ school districts ([NCES](https://nces.ed.gov/ccd/))
+- 🎯 **MeetingBank (HuggingFace)** - 1,366 city council meetings with transcripts & summaries ([huggingface.co/datasets/huuuyeah/meetingbank](https://huggingface.co/datasets/huuuyeah/meetingbank))
+- 📚 **LocalView (Harvard)** - 1,000+ municipalities with meeting videos & transcripts ([Harvard Dataverse](https://dataverse.harvard.edu/dataset.xhtml?persistentId=doi:10.7910/DVN/NJTBEM))
+- 🏛️ **Council Data Project** - 20+ cities with full pipelines, transcripts, voting records ([councildataproject.org](https://councildataproject.org))
 
 **Discovery Methods:**
 - ✅ **GSA Domain Matching**: Direct lookup in CISA registry (confidence: 0.95-1.0)
@@ -393,16 +396,28 @@ Bronze (Raw Data) → Silver (URL Discovery) → Gold (Scraping Targets)
 
 See [DATA_SOURCES.md](docs/DATA_SOURCES.md) for complete source documentation and [JURISDICTION_DISCOVERY_DEPLOYMENT.md](docs/JURISDICTION_DISCOVERY_DEPLOYMENT.md) for deployment guide.
 
-### Meeting Minutes Sources
+### Meeting Minutes & Transcript Sources
 
-The system supports scraping from:
+The system collects meeting data from multiple sources:
 
-- **Legistar**: Widely used city council meeting management platform
-- **Granicus**: Government meeting and agenda management
-- **CivicClerk**: Municipal meeting management
-- **Municode**: Municipal code and meeting platform
-- **Generic Municipal Websites**: Custom scrapers for various formats
-- **PDF Documents**: Extracts text from meeting minute PDFs
+**Pre-Existing Datasets (Download & Use):**
+- 📚 **MeetingBank** - 1,366 meetings from 6 major cities with full transcripts, human-written summaries, and academic benchmark quality ([HuggingFace](https://huggingface.co/datasets/huuuyeah/meetingbank))
+- 🎓 **LocalView** - 1,000+ municipalities with meeting videos, automated transcripts, continuous collection ([Harvard Dataverse](https://dataverse.harvard.edu/dataset.xhtml?persistentId=doi:10.7910/DVN/NJTBEM))
+- 🏛️ **Council Data Project** - 20+ cities with full data pipelines: transcripts, videos, voting records, legislation tracking ([councildataproject.org](https://councildataproject.org))
+
+**Public Website Scrapers (Free Access):**
+- **Legistar** (FREE public data): Meeting management platform used by ~1,000-3,000 cities. All meeting data is publicly accessible (e.g., chicago.legistar.com)
+- **Granicus** (FREE public data): Government meeting platform (ViewPublisher, MetaViewer). Public meetings are freely accessible
+- **CivicPlus** (FREE public data): Municipal website platform with public meeting sections
+- **Municode** (FREE public data): Municipal code and meeting platform with public access
+- **Generic Municipal Websites** (FREE public data): Custom scrapers for .gov sites
+- **PDF Documents** (FREE public data): Extract text from publicly posted meeting minutes
+
+⚠️ **Important**: All these are FREE public data sources. Municipalities pay for these platforms, but the meeting data is publicly accessible by law. We don't pay for any data access.
+
+**Strategy**: Download existing datasets first (2,000-10,000 URLs from MeetingBank/LocalView/CDP), then scrape public platforms to fill gaps. Total cost: $0.
+
+See [`docs/URL_DATASETS_CONFIRMED.md`](docs/URL_DATASETS_CONFIRMED.md) for complete analysis and [`docs/HUGGINGFACE_DATASETS_ANALYSIS.md`](docs/HUGGINGFACE_DATASETS_ANALYSIS.md) for HuggingFace dataset details.
 
 ## Policy Topics Monitored
 
@@ -556,7 +571,7 @@ platform = detect_platform("https://chicago.legistar.com/Calendar.aspx")
 # Returns: "legistar"
 ```
 
-Supports: Legistar, Granicus, CivicPlus, Municode, and more.
+Detects public meeting platforms: Legistar, Granicus, CivicPlus, Municode (all FREE public data sources).
 
 #### 2. Standardized Event Model (`models/meeting_event.py`)
 City Scrapers-compatible meeting representation:
