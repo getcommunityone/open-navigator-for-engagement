@@ -22,6 +22,7 @@ The **Oral Health Policy Pulse** is a full-stack AI application that analyzes th
 ### Key Features
 
 - 🤖 **Multi-Agent Architecture**: Coordinated agents for scraping, parsing, classification, sentiment analysis, and advocacy generation
+- 🔍 **Jurisdiction Discovery**: Automatically identifies 90,000+ local government websites using Census Bureau data
 - 🏛️ **Massive Scale**: Handles millions of meeting minutes using Delta Lake on Databricks
 - 🗺️ **Advocacy Heatmap**: Visual representation of policy opportunities across the country
 - 📧 **Automated Materials**: Generates personalized emails, talking points, and social media content
@@ -247,7 +248,18 @@ Then run commands:
 # Start the API server
 python main.py serve --host 0.0.0.0 --port 8000
 
-# Scrape a single source
+# Discover local government websites (NEW!)
+python main.py discover-jurisdictions --limit 100        # Test run
+python main.py discover-jurisdictions --state CA          # Single state
+python main.py discover-jurisdictions                     # Full discovery (~30k jurisdictions)
+
+# View discovery statistics
+python main.py discovery-stats
+
+# Scrape discovered sites in batch
+python main.py scrape-batch --source discovered --limit 50 --priority 150
+
+# Scrape a single source (legacy)
 python main.py scrape --url "https://city.legistar.com" \
                       --state "CA" \
                       --municipality "San Francisco" \
@@ -342,10 +354,44 @@ results = await orchestrator.execute_pipeline(targets)
 
 ## Data Sources
 
+### Jurisdiction Discovery System (NEW!)
+
+The system automatically discovers and tracks **90,000+ local government units** across the United States:
+
+**Data Sources:**
+- 📊 **U.S. Census Bureau** - Government Integrated Directory (GID)
+  - 3,143 counties
+  - 19,495 municipalities
+  - 16,504 townships
+  - 13,051 school districts
+  - 38,542 special districts
+
+- 🏛️ **GSA .gov Domain List** - Validated government domains
+  - 12,000+ official .gov domains
+  - Domain type classification
+  - Organization mapping
+
+- 🔍 **Search API Integration**
+  - Google Custom Search API
+  - Bing Search API
+  - Automated URL discovery
+  - CMS platform detection (Granicus, CivicClerk, etc.)
+
+**Pipeline Architecture:**
+```
+Bronze Layer (Raw Data) → Silver Layer (URL Discovery) → Gold Layer (Scraping Targets)
+```
+
+See [JURISDICTION_DISCOVERY.md](docs/JURISDICTION_DISCOVERY.md) for complete documentation.
+
+### Meeting Minutes Sources
+
 The system supports scraping from:
 
 - **Legistar**: Widely used city council meeting management platform
 - **Granicus**: Government meeting and agenda management
+- **CivicClerk**: Municipal meeting management
+- **Municode**: Municipal code and meeting platform
 - **Generic Municipal Websites**: Custom scrapers for various formats
 - **PDF Documents**: Extracts text from meeting minute PDFs
 

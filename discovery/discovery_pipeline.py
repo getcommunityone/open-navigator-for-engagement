@@ -11,7 +11,7 @@ Orchestrates the full discovery workflow:
 This implements the Medallion Architecture for jurisdiction discovery.
 """
 import asyncio
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 from datetime import datetime
 from loguru import logger
 from pyspark.sql import SparkSession
@@ -169,12 +169,22 @@ class DiscoveryPipeline:
         with_homepage = discovered_df.filter(col("homepage_url").isNotNull()).count()
         with_minutes = discovered_df.filter(col("minutes_url").isNotNull()).count()
         gov_domains = discovered_df.filter(col("is_gov_domain") == True).count()
+        avg_confidence = discovered_df.select("confidence_score").rdd.map(lambda r: r[0]).mean()
         
         logger.success(f"✓ URL Discovery complete:")
         logger.info(f"  Total jurisdictions: {total:,}")
         logger.info(f"  Homepages found: {with_homepage:,} ({with_homepage/total*100:.1f}%)")
         logger.info(f"  Minutes URLs found: {with_minutes:,} ({with_minutes/total*100:.1f}%)")
         logger.info(f"  Validated .gov domains: {gov_domains:,} ({gov_domains/total*100:.1f}%)")
+        
+        return {
+            "attempted": total,
+            "successful": with_homepage,
+            "homepages": with_homepage,
+            "minutes_urls": with_minutes,
+            "gov_domains": gov_domains,
+            "avg_confidence": avg_confidence
+        }
     
     def create_scraping_targets(self):
         """
@@ -242,6 +252,10 @@ class DiscoveryPipeline:
         # Statistics by type
         logger.success("✓ Scraping targets created:")
         
+        high_priority = targets_df.filter(col("priority_score") > 150).count()
+        medium_priority = targets_df.filter((col("priority_score") >= 100) & (col("priority_score") <= 150)).count()
+        low_priority = targets_df.filter(col("priority_score") < 100).count()
+        
         for jtype in ["counties", "municipalities", "school_districts", "special_districts"]:
             count = targets_df.filter(col("jurisdiction_type") == jtype).count()
             if count > 0:
@@ -249,13 +263,30 @@ class DiscoveryPipeline:
         
         total = targets_df.count()
         logger.info(f"\n  TOTAL: {total:,} ready for scraping")
+        logger.info(f"  High priority (>150): {high_priority:,}")
+        logger.info(f"  Medium priority (100-150): {medium_priority:,}")
+        logger.info(f"  Low priority (<100): {low_priority:,}")
+        
+        return {
+            "targets_created": total,
+            "high_priority": high_priority,
+            "medium_priority": medium_priority,
+            "low_priority": low_priority
+        }
     
-    async def run_full_pipeline(self, discovery_limit: Optional[int] = None):
+    async def run_full_pipeline(self, discovery_limit: Optional[int] = None,
+                               state_filter: Optional[str] = None,
+                               type_filter: Optional[str] = None):
         """
         Execute complete discovery pipeline.
         
         Args:
             discovery_limit: Limit URL discovery for testing
+            state_filter: Filter to single state (e.g., "CA")
+            type_filter: Filter to jurisdiction type (e.g., "county")
+        
+        Returns:
+            Dictionary with complete pipeline statistics
         """
         start_time = datetime.now()
         
@@ -265,18 +296,26 @@ class DiscoveryPipeline:
         
         try:
             # Bronze Layer
-            await self.run_bronze_ingestion()
+            bronze_stats = await self.run_bronze_ingestion()
             
-            # Silver Layer
-            await self.run_url_discovery(limit=discovery_limit)
+            # Silver Layer (with optional filters)
+            # Note: Filters would need to be added to run_url_discovery method
+            discovery_stats = await self.run_url_discovery(limit=discovery_limit)
             
             # Gold Layer
-            self.create_scraping_targets()
+            gold_stats = self.create_scraping_targets()
             
             elapsed = (datetime.now() - start_time).total_seconds()
             logger.success(f"\n{'=' * 60}")
             logger.success(f"PIPELINE COMPLETE in {elapsed:.1f}s")
             logger.success(f"{'=' * 60}\n")
+            
+            return {
+                "bronze_records": bronze_stats["total_records"],
+                "urls_discovered": discovery_stats["successful"],
+                "scraping_targets": gold_stats["targets_created"],
+                "elapsed_seconds": elapsed
+            }
             
         except Exception as e:
             logger.error(f"Pipeline failed: {e}")

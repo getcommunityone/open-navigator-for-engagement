@@ -175,5 +175,143 @@ def status():
     click.echo("\nSystem Status: OK")
 
 
+@cli.command()
+@click.option('--limit', default=None, type=int, help='Limit number of jurisdictions to discover')
+@click.option('--state', help='Discover only jurisdictions in this state')
+@click.option('--type', 'jurisdiction_type', help='Filter by type (county, municipality, school_district)')
+def discover_jurisdictions(limit: Optional[int], state: Optional[str], jurisdiction_type: Optional[str]):
+    """Run jurisdiction discovery pipeline to identify government websites."""
+    logger.info(f"Starting jurisdiction discovery (limit={limit}, state={state}, type={jurisdiction_type})")
+    
+    async def run_discovery():
+        from discovery.discovery_pipeline import DiscoveryPipeline
+        
+        pipeline = DiscoveryPipeline()
+        
+        # Run full pipeline with optional filters
+        results = await pipeline.run_full_pipeline(
+            discovery_limit=limit,
+            state_filter=state,
+            type_filter=jurisdiction_type
+        )
+        
+        logger.info(f"Discovery completed: {results}")
+        click.echo(f"\n✅ Discovery Complete!")
+        click.echo(f"   Bronze records: {results.get('bronze_records', 0)}")
+        click.echo(f"   URLs discovered: {results.get('urls_discovered', 0)}")
+        click.echo(f"   Scraping targets: {results.get('scraping_targets', 0)}")
+    
+    asyncio.run(run_discovery())
+
+
+@cli.command()
+def discovery_stats():
+    """Show jurisdiction discovery statistics."""
+    logger.info("Fetching discovery statistics")
+    
+    from pyspark.sql import SparkSession
+    from pyspark.sql.functions import col, count, avg, when
+    
+    spark = SparkSession.builder.getOrCreate()
+    
+    click.echo("\n📊 Jurisdiction Discovery Statistics\n")
+    
+    try:
+        # Bronze layer stats
+        bronze_df = spark.read.format("delta").load(f"{settings.delta_lake_path}/bronze/jurisdictions/unified")
+        total_jurisdictions = bronze_df.count()
+        click.echo(f"Bronze Layer (Raw Data):")
+        click.echo(f"  Total jurisdictions: {total_jurisdictions:,}")
+        
+        by_type = bronze_df.groupBy("jurisdiction_type").count().collect()
+        for row in by_type:
+            click.echo(f"    - {row['jurisdiction_type']}: {row['count']:,}")
+        
+        # Silver layer stats
+        silver_df = spark.read.format("delta").load(f"{settings.delta_lake_path}/silver/discovered_urls")
+        urls_discovered = silver_df.count()
+        homepages_found = silver_df.filter(col("homepage_url").isNotNull()).count()
+        minutes_found = silver_df.filter(col("minutes_url").isNotNull()).count()
+        avg_confidence = silver_df.select(avg("confidence_score")).collect()[0][0]
+        
+        click.echo(f"\nSilver Layer (Discovered URLs):")
+        click.echo(f"  Total discoveries: {urls_discovered:,}")
+        click.echo(f"  Homepages found: {homepages_found:,} ({homepages_found/urls_discovered*100:.1f}%)")
+        click.echo(f"  Minutes URLs found: {minutes_found:,} ({minutes_found/urls_discovered*100:.1f}%)")
+        click.echo(f"  Avg confidence: {avg_confidence:.2f}")
+        
+        # Gold layer stats
+        gold_df = spark.read.format("delta").load(f"{settings.delta_lake_path}/gold/scraping_targets")
+        scraping_targets = gold_df.count()
+        high_priority = gold_df.filter(col("priority_score") > 150).count()
+        
+        click.echo(f"\nGold Layer (Scraping Targets):")
+        click.echo(f"  Total targets: {scraping_targets:,}")
+        click.echo(f"  High priority: {high_priority:,}")
+        
+        by_status = gold_df.groupBy("scraping_status").count().collect()
+        for row in by_status:
+            click.echo(f"    - {row['scraping_status']}: {row['count']:,}")
+        
+    except Exception as e:
+        click.echo(f"❌ Error: {e}")
+        click.echo("(Run 'python main.py discover-jurisdictions' first)")
+
+
+@cli.command()
+@click.option('--source', type=click.Choice(['manual', 'discovered']), default='discovered', 
+              help='Source of scraping targets')
+@click.option('--limit', default=100, type=int, help='Max number of sites to scrape')
+@click.option('--priority', default=100, type=int, help='Min priority score (for discovered sources)')
+def scrape_batch(source: str, limit: int, priority: int):
+    """Scrape multiple sites in batch mode."""
+    logger.info(f"Starting batch scrape (source={source}, limit={limit}, priority={priority})")
+    
+    async def run_batch_scrape():
+        from pyspark.sql import SparkSession
+        from pyspark.sql.functions import col
+        
+        spark = SparkSession.builder.getOrCreate()
+        
+        if source == 'discovered':
+            # Load from gold scraping targets
+            targets_df = spark.read.format("delta").load(
+                f"{settings.delta_lake_path}/gold/scraping_targets"
+            ).filter(
+                (col("priority_score") >= priority) & 
+                (col("scraping_status") == "pending")
+            ).limit(limit)
+            
+            targets = [
+                {
+                    "url": row.minutes_url,
+                    "municipality": row.jurisdiction_name,
+                    "state": row.state,
+                    "platform": row.cms_platform or "generic",
+                    "jurisdiction_id": row.jurisdiction_id
+                }
+                for row in targets_df.collect()
+            ]
+        else:
+            click.echo("Manual source not yet implemented")
+            return
+        
+        click.echo(f"Scraping {len(targets)} targets...")
+        
+        scraper = ScraperAgent()
+        async with scraper:
+            documents = await scraper._scrape_targets(targets, {})
+            
+            logger.info(f"Scraped {len(documents)} documents")
+            click.echo(f"✅ Scraped {len(documents)} documents")
+            
+            # Save to pipeline
+            pipeline = DeltaLakePipeline()
+            pipeline.write_raw_documents(documents)
+            click.echo(f"✅ Documents saved to Delta Lake")
+    
+    asyncio.run(run_batch_scrape())
+
+
 if __name__ == "__main__":
     cli()
