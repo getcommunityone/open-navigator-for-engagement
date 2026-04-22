@@ -523,9 +523,9 @@ oral-health-policy-pulse/
 
 ## 🔌 Open-Source Integrations
 
-This project leverages proven patterns from the civic tech community:
+This project leverages proven patterns from **11 civic tech projects** to build a production-grade system:
 
-### Integrated Projects
+### Core Scraping & Data Projects
 
 | Project | Integration | Status |
 |---------|-------------|--------|
@@ -534,6 +534,16 @@ This project leverages proven patterns from the civic tech community:
 | [**Council Data Project**](https://github.com/CouncilDataProject/cookiecutter-cdp-deployment) | Ingestion pipeline, transcript processing | 📋 Roadmapped |
 | [**Engagic**](https://github.com/Engagic/engagic) | Matter tracking, LLM parsing | ✅ Model created |
 | [**Councilmatic**](https://github.com/datamade/councilmatic-starter-template) | Person/vote tracking, search UX | 📋 Planned |
+
+### End-to-End Platforms & Scale Projects
+
+| Project | Integration | Status |
+|---------|-------------|--------|
+| [**OpenTowns**](https://opentowns.org) | AI summarization, keyword alerts | ✅ **Implemented** |
+| [**LocalView**](https://www.localview.net) | Scale patterns, quality metrics | ✅ **Implemented** |
+| [**MeetingBank**](https://meetingbank.github.io) | Summarization benchmarks | ✅ **Implemented** |
+| [**CivicBand**](https://civic.band) | Multi-jurisdiction search | 📋 Architecture designed |
+| [**OpenCouncil**](https://github.com/schemalabz/opencouncil) | International adaptability | 📋 Patterns documented |
 
 ### What We've Built
 
@@ -581,16 +591,86 @@ matter = Matter(
 )
 ```
 
+#### 4. AI Summarization (`extraction/summarizer.py`) 🆕
+OpenTowns-style human-readable summaries:
+```python
+from extraction.summarizer import MeetingSummarizer
+
+summarizer = MeetingSummarizer()
+summary = summarizer.summarize(event, full_transcript)
+
+print(summary.executive_summary)
+# "The council voted 7-2 to schedule a public hearing on community
+#  water fluoridation for April 10th..."
+
+print(summary.health_policy_items)
+# ["Water fluoridation program approved for public hearing",
+#  "Budget allocation of $120,000 annually discussed"]
+```
+
+#### 5. Keyword Alerts (`alerts/keyword_monitor.py`) 🆕
+Real-time monitoring for oral health keywords:
+```python
+from alerts.keyword_monitor import KeywordAlertSystem
+
+alert_system = KeywordAlertSystem()
+alerts = alert_system.scan_meeting(event, full_text)
+
+for alert in alerts:
+    print(f"🔔 {alert.priority.value.upper()}: {alert.meeting_title}")
+    print(f"   Keywords: {', '.join(alert.keywords_found)}")
+    print(f"   Categories: {', '.join(alert.categories_matched)}")
+```
+
+Features:
+- **6 keyword categories**: fluoridation, dental access, water systems, public health, health policy, children's health
+- **Priority levels**: Critical, High, Medium, Low
+- **Context extraction**: Relevant snippets around keywords
+- **Email generation**: HTML alert emails ready to send
+
+#### 6. Batch Processing & Quality Metrics (`discovery/batch_processor.py`) 🆕
+LocalView-style scale handling for 1,000+ jurisdictions:
+```python
+from discovery.batch_processor import BatchProcessor
+
+processor = BatchProcessor(batch_size=100)
+
+# Process all jurisdictions in batches
+for batch_result in processor.process_all_jurisdictions():
+    print(f"Batch {batch_result.batch_number}: "
+          f"{batch_result.success_rate:.1f}% success")
+    print(f"  Meetings found: {batch_result.meetings_found}")
+```
+
+Quality tracking per jurisdiction:
+- **Completeness score**: Meeting discovery rate, agenda/minutes coverage
+- **Reliability score**: Success rate over time
+- **Freshness score**: How recently scraped
+- **Health status**: Healthy, degraded, failed
+- **Automatic retry**: Exponential backoff for failed jurisdictions
+
+### Documentation
+
+- **Core Integration Guide**: [`docs/INTEGRATION_GUIDE.md`](docs/INTEGRATION_GUIDE.md) - First 5 projects (Civic Scraper, City Scrapers, CDP, Engagic, Councilmatic)
+- **Scale & Search Patterns**: [`docs/SCALE_AND_SEARCH_PATTERNS.md`](docs/SCALE_AND_SEARCH_PATTERNS.md) 🆕 - Next 6 projects (OpenTowns, LocalView, MeetingBank, CivicBand, OpenCouncil)
+
 ### Attribution
 
 We're grateful to these open-source projects and their communities:
+
+**Core Projects**:
 - **Civic Scraper** (Apache 2.0) - Big Local News / Stanford Journalism
 - **City Scrapers** (MIT) - City Bureau / Pat Sier
 - **Council Data Project** (MIT) - Eva Maxfield Brown, Isaac Na, et al.
 - **Engagic** - Check repository for license
 - **Councilmatic** (MIT) - DataMade
 
-See [`docs/INTEGRATION_GUIDE.md`](docs/INTEGRATION_GUIDE.md) for detailed integration documentation.
+**Scale & End-to-End Projects**:
+- **OpenTowns** - Open civic tech project
+- **LocalView** - Harvard Mellon Urbanism Initiative
+- **MeetingBank** - Open dataset for summarization research
+- **CivicBand** - Raft Foundation
+- **OpenCouncil** (MIT) - Schemalab
 
 ---
 
