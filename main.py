@@ -192,6 +192,20 @@ def discover_jurisdictions(limit: Optional[int], state: Optional[str], jurisdict
     """Run jurisdiction discovery pipeline to identify government websites."""
     logger.info(f"Starting jurisdiction discovery (limit={limit}, state={state}, type={jurisdiction_type})")
     
+    # Check for PySpark
+    try:
+        from discovery.discovery_pipeline import PYSPARK_AVAILABLE
+        if not PYSPARK_AVAILABLE:
+            click.echo("❌ PySpark not installed!")
+            click.echo("   For full discovery with data storage, install:")
+            click.echo("   pip install pyspark delta-spark")
+            click.echo("")
+            click.echo("   PySpark can run locally without Databricks for data processing.")
+            return
+    except ImportError:
+        click.echo("❌ Discovery modules not available!")
+        return
+    
     async def run_discovery():
         from discovery.discovery_pipeline import DiscoveryPipeline
         

@@ -14,8 +14,15 @@ import asyncio
 from typing import List, Dict, Any, Optional
 from datetime import datetime
 from loguru import logger
-from pyspark.sql import SparkSession
-from pyspark.sql.functions import col, lit, when
+
+try:
+    from pyspark.sql import SparkSession
+    from pyspark.sql.functions import col, lit, when
+    PYSPARK_AVAILABLE = True
+except ImportError:
+    PYSPARK_AVAILABLE = False
+    SparkSession = None
+
 from config import settings
 
 from discovery.census_ingestion import CensusGovernmentIngestion
@@ -28,11 +35,17 @@ class DiscoveryPipeline:
     
     def __init__(self):
         """Initialize pipeline components."""
-        self.spark = SparkSession.builder \
+        # Configure Spark with Delta Lake support
+        # For local mode, we need to explicitly add delta-spark JARs
+        import delta
+        
+        builder = SparkSession.builder \
             .appName("JurisdictionDiscovery") \
             .config("spark.sql.extensions", "io.delta.sql.DeltaSparkSessionExtension") \
-            .config("spark.sql.catalog.spark_catalog", "org.apache.spark.sql.delta.catalog.DeltaCatalog") \
-            .getOrCreate()
+            .config("spark.sql.catalog.spark_catalog", "org.apache.spark.sql.delta.catalog.DeltaCatalog")
+        
+        # Use delta-spark's configure_spark_with_delta_pip to add JARs
+        self.spark = delta.configure_spark_with_delta_pip(builder).getOrCreate()
         
         self.census = CensusGovernmentIngestion(self.spark)
         self.gsa = GSADomainList(self.spark)

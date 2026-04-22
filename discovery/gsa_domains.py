@@ -7,14 +7,22 @@ to identify official government websites.
 Data Source: https://github.com/cisagov/dotgov-data
 """
 import asyncio
-from typing import List, Dict, Any, Set
+from typing import List, Dict, Any, Set, Optional
 from datetime import datetime
 from pathlib import Path
 import httpx
 import csv
 from loguru import logger
-from pyspark.sql import SparkSession, DataFrame
-from pyspark.sql.types import StructType, StructField, StringType, BooleanType
+
+try:
+    from pyspark.sql import SparkSession, DataFrame
+    from pyspark.sql.types import StructType, StructField, StringType, BooleanType
+    PYSPARK_AVAILABLE = True
+except ImportError:
+    PYSPARK_AVAILABLE = False
+    SparkSession = None
+    DataFrame = None
+
 from config import settings
 
 

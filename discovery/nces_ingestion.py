@@ -26,9 +26,17 @@ except ImportError:
     httpx = None
 
 from loguru import logger
-from pyspark.sql import SparkSession, DataFrame
-from pyspark.sql.types import StructType, StructField, StringType, IntegerType
-from pyspark.sql.functions import col, trim, lower, regexp_replace
+
+try:
+    from pyspark.sql import SparkSession, DataFrame
+    from pyspark.sql.types import StructType, StructField, StringType, IntegerType
+    from pyspark.sql.functions import col, trim, lower, regexp_replace
+    PYSPARK_AVAILABLE = True
+except ImportError:
+    PYSPARK_AVAILABLE = False
+    SparkSession = None
+    DataFrame = None
+
 from config import settings
 
 
