@@ -163,8 +163,12 @@ class CensusGovernmentIngestion:
                     extract_dir.mkdir(exist_ok=True)
                     zip_ref.extractall(extract_dir)
                     
-                    # Find Excel file
-                    excel_files = list(extract_dir.glob("*.xlsx")) + list(extract_dir.glob("*.xls"))
+                    # Find Excel file - prioritize *_Data.xlsx files (actual data)
+                    # Census ZIPs contain multiple Excel files: Data, Column Descriptions, Aggregate Descriptions
+                    excel_files = list(extract_dir.glob("*_Data.xlsx")) + list(extract_dir.glob("*_Data.xls"))
+                    if not excel_files:
+                        # Fallback to any Excel file
+                        excel_files = list(extract_dir.glob("*.xlsx")) + list(extract_dir.glob("*.xls"))
                     if excel_files:
                         excel_file = excel_files[0]
                         logger.info(f"Found Excel file: {excel_file.name}")
