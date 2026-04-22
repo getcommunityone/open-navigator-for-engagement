@@ -37,20 +37,21 @@ class CensusGovernmentIngestion:
     # Census Bureau API endpoint
     CENSUS_API_BASE = "https://api.census.gov/data"
     
-    # Government Integrated Directory URLs - Updated for 2022 Census of Governments
-    # These are the actual available tables from the Census Bureau
+    # Census Gazetteer Files 2024 - Actual individual jurisdiction listings with names, FIPS, coordinates, population
+    # These provide complete listings of all government entities, not summary statistics
     GID_URLS = {
-        # Table 2: Local Governments by Type and State: 2022
-        "all_governments": "https://www2.census.gov/programs-surveys/gus/tables/2022/cog2022_cg2200org02.zip",
-        # Table 5: County Governments by Population-Size Group and State: 2022
-        "counties": "https://www2.census.gov/programs-surveys/gus/tables/2022/cog2022_cg2200org05.zip",
-        # Table 6: Subcounty General-Purpose Governments (municipalities & townships)
-        "municipalities": "https://www2.census.gov/programs-surveys/gus/tables/2022/cog2022_cg2200org06.zip",
-        "townships": "https://www2.census.gov/programs-surveys/gus/tables/2022/cog2022_cg2200org06.zip",
-        # Table 9: Public School Systems by Type of Organization and State: 2022
-        "school_districts": "https://www2.census.gov/programs-surveys/gus/tables/2022/cog2022_cg2200org09.zip",
-        # Table 8: Special District Governments by Function and State: 2022
-        "special_districts": "https://www2.census.gov/programs-surveys/gus/tables/2022/cog2022_cg2200org08.zip"
+        # All 3,144 counties with names, FIPS codes, lat/lon, land area, water area
+        "counties": "https://www2.census.gov/geo/docs/maps-data/data/gazetteer/2024_Gazetteer/2024_Gaz_counties_national.zip",
+        # All 19,502+ incorporated places (cities, towns, villages, boroughs)
+        "municipalities": "https://www2.census.gov/geo/docs/maps-data/data/gazetteer/2024_Gazetteer/2024_Gaz_place_national.zip",
+        # All 36,011+ county subdivisions (townships, boroughs, census county divisions, unorganized territories)
+        "townships": "https://www2.census.gov/geo/docs/maps-data/data/gazetteer/2024_Gazetteer/2024_Gaz_cousubs_national.zip",
+        # Elementary school districts
+        "school_districts_elem": "https://www2.census.gov/geo/docs/maps-data/data/gazetteer/2024_Gazetteer/2024_Gaz_elsd_national.zip",
+        # Secondary school districts  
+        "school_districts_sec": "https://www2.census.gov/geo/docs/maps-data/data/gazetteer/2024_Gazetteer/2024_Gaz_scsd_national.zip",
+        # Unified school districts
+        "school_districts_unified": "https://www2.census.gov/geo/docs/maps-data/data/gazetteer/2024_Gazetteer/2024_Gaz_unsd_national.zip",
     }
     
     # Set to False to use real Census data
@@ -119,14 +120,14 @@ class CensusGovernmentIngestion:
     
     async def download_census_data(self, jurisdiction_type: str) -> Path:
         """
-        Download Census government data for a jurisdiction type.
+        Download Census Gazetteer data for a jurisdiction type.
         
-        The Census Bureau provides data as ZIP files containing Excel files.
-        This method downloads, extracts, and converts to CSV.
+        Census Gazetteer files are tab-delimited text files inside ZIP archives.
+        These contain actual jurisdiction listings with names, FIPS codes, coordinates, and population.
         
         Args:
             jurisdiction_type: One of 'counties', 'municipalities', 'townships', 
-                             'school_districts', 'special_districts'
+                             'school_districts', 'census_places'
         
         Returns:
             Path to extracted CSV file
@@ -145,7 +146,7 @@ class CensusGovernmentIngestion:
         logger.info(f"Downloading {jurisdiction_type} data from Census Bureau...")
         logger.info(f"URL: {url}")
         
-        async with httpx.AsyncClient(timeout=60.0, follow_redirects=True) as client:
+        async with httpx.AsyncClient(timeout=120.0, follow_redirects=True) as client:
             try:
                 response = await client.get(url)
                 response.raise_for_status()
@@ -163,56 +164,78 @@ class CensusGovernmentIngestion:
                     extract_dir.mkdir(exist_ok=True)
                     zip_ref.extractall(extract_dir)
                     
-                    # Find Excel file - prioritize *_Data.xlsx files (actual data)
-                    # Census ZIPs contain multiple Excel files: Data, Column Descriptions, Aggregate Descriptions
-                    excel_files = list(extract_dir.glob("*_Data.xlsx")) + list(extract_dir.glob("*_Data.xls"))
-                    if not excel_files:
-                        # Fallback to any Excel file
-                        excel_files = list(extract_dir.glob("*.xlsx")) + list(extract_dir.glob("*.xls"))
-                    if excel_files:
-                        excel_file = excel_files[0]
-                        logger.info(f"Found Excel file: {excel_file.name}")
+                    # Find tab-delimited text file (.txt) for Gazetteer files
+                    # or CSV/Excel for school districts
+                    txt_files = list(extract_dir.glob("*.txt"))
+                    csv_files = list(extract_dir.glob("*.csv"))
+                    excel_files = list(extract_dir.glob("*.xlsx")) + list(extract_dir.glob("*.xls"))
+                    
+                    data_file = None
+                    if txt_files:
+                        # Gazetteer files (tab-delimited)
+                        data_file = txt_files[0]
+                        logger.info(f"Found Gazetteer file: {data_file.name}")
                         
-                        # Convert Excel to CSV using pandas
+                        # Convert tab-delimited to CSV using pandas
                         import pandas as pd
-                        df = pd.read_excel(excel_file, engine='openpyxl')
+                        df = pd.read_csv(data_file, sep='\t', encoding='latin-1', low_memory=False)
                         df.to_csv(cache_file, index=False)
                         logger.success(f"Converted to CSV: {cache_file}")
                         
-                        # Clean up
-                        zip_file.unlink()
+                    elif csv_files:
+                        # Already CSV (some sources)
+                        data_file = csv_files[0]
+                        logger.info(f"Found CSV file: {data_file.name}")
                         import shutil
-                        shutil.rmtree(extract_dir)
+                        shutil.copy(data_file, cache_file)
+                        logger.success(f"Copied to cache: {cache_file}")
                         
-                        return cache_file
+                    elif excel_files:
+                        # Excel files (school districts)
+                        data_file = excel_files[0]
+                        logger.info(f"Found Excel file: {data_file.name}")
+                        
+                        import pandas as pd
+                        df = pd.read_excel(data_file, engine='openpyxl')
+                        df.to_csv(cache_file, index=False)
+                        logger.success(f"Converted to CSV: {cache_file}")
+                        
                     else:
-                        raise FileNotFoundError(f"No Excel file found in ZIP for {jurisdiction_type}")
+                        raise FileNotFoundError(f"No data file found in ZIP for {jurisdiction_type}")
+                    
+                    # Clean up
+                    zip_file.unlink()
+                    import shutil
+                    shutil.rmtree(extract_dir)
+                    
+                    return cache_file
                 
             except httpx.HTTPError as e:
                 logger.error(f"Failed to download {jurisdiction_type} data: {e}")
                 logger.error(f"URL that failed: {url}")
                 raise
             except Exception as e:
-                logge
+                logger.error(f"Error processing {jurisdiction_type} data: {e}")
+                raise
                 return await self.download_census_data(jurisdiction_type)
     
     def parse_csv_to_dataframe(self, csv_path: Path, jurisdiction_type: str) -> DataFrame:
         """
-        Parse Census CSV into Spark DataFrame.
+        Parse Census Gazetteer CSV into Spark DataFrame.
         
-        Note: Census 2022 data is aggregated counts, not individual jurisdiction listings.
-        This method preserves the original Census schema and adds metadata.
+        Gazetteer files contain actual jurisdiction listings with names, FIPS codes,
+        coordinates, land area, and population (when available).
         
         Args:
             csv_path: Path to CSV file
             jurisdiction_type: Type of jurisdiction
         
         Returns:
-            Spark DataFrame with Census data + metadata
+            Spark DataFrame with standardized columns
         """
         logger.info(f"Parsing {csv_path} into DataFrame...")
         
-        # Read CSV with Spark (preserve original Census schema)
+        # Read CSV with Spark 
         df = self.spark.read.csv(
             str(csv_path),
             header=True,
@@ -221,16 +244,33 @@ class CensusGovernmentIngestion:
         
         # Clean column names (Delta Lake doesn't allow spaces or special chars)
         for col_name in df.columns:
-            clean_name = col_name.replace(" ", "_").replace("(", "").replace(")", "").replace(",", "_")
+            clean_name = col_name.replace(" ", "_").replace("(", "").replace(")", "").replace(",", "_").replace(".", "_")
             if clean_name != col_name:
                 df = df.withColumnRenamed(col_name, clean_name)
         
-        # Add metadata columns
+        # Add standardized metadata columns
         df = df.withColumn("jurisdiction_type", lit(jurisdiction_type))
         df = df.withColumn("ingestion_date", lit(datetime.now().isoformat()))
         
-        # Census data has columns like: GEO_ID, GEO_TTL, YEAR, AMOUNT, AGG_DESC_TTL, ST (state), etc.
-        # We preserve this as-is for Bronze layer (raw data)
+        # Gazetteer files have columns like:
+        # - USPS (state abbreviation)
+        # - GEOID (FIPS code)
+        # - NAME (jurisdiction name)
+        # - INTPTLAT, INTPTLONG (coordinates)
+        # - ALAND, AWATER (land and water area in sq meters)
+        # - ALAND_SQMI, AWATER_SQMI (in square miles)
+        
+        # Add aliases for common columns (if they exist)
+        if "USPS" in df.columns:
+            df = df.withColumnRenamed("USPS", "state_code")
+        if "GEOID" in df.columns:
+            df = df.withColumnRenamed("GEOID", "fips_code")
+        if "NAME" in df.columns:
+            df = df.withColumnRenamed("NAME", "name")
+        if "INTPTLAT" in df.columns:
+            df = df.withColumnRenamed("INTPTLAT", "latitude")
+        if "INTPTLONG" in df.columns:
+            df = df.withColumnRenamed("INTPTLONG", "longitude")
         
         logger.success(f"Parsed {df.count()} records from {csv_path}")
         return df
@@ -266,7 +306,8 @@ class CensusGovernmentIngestion:
         """
         Write jurisdiction data to Delta Lake Bronze layer.
         
-        Bronze layer stores raw Census data as-is with minimal transformation.
+        Bronze layer stores raw Census Gazetteer data with individual jurisdiction listings.
+        Each jurisdiction has name, FIPS code, state, coordinates, and area information.
         
         Args:
             dataframes: Dictionary of jurisdiction DataFrames
@@ -287,12 +328,12 @@ class CensusGovernmentIngestion:
             
             logger.success(f"Wrote {jurisdiction_type} to {table_path}")
         
-        # Note: Skip unified view creation because Census tables have different schemas
-        # (Some tables are summaries with 4 columns, others are detailed with 14 columns)
-        # Silver layer will standardize these into a common schema
+        # Note: Each jurisdiction type is stored separately in Bronze layer
+        # Gazetteer files have similar schemas (name, FIPS, state, coordinates)
+        # Silver layer will create a unified view with standardized columns
         
         total_records = sum(df.count() for df in dataframes.values())
-        logger.success(f"Bronze layer complete: {len(dataframes)} tables with {total_records} total records")
+        logger.success(f"Bronze layer complete: {len(dataframes)} tables with {total_records:,} total records")
         
         return {
             "total_records": total_records,

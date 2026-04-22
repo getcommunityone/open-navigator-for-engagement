@@ -131,17 +131,60 @@ class DiscoveryPipeline:
         
         logger.info(f"Loaded {len(gsa_domains):,} .gov domains for validation")
         
-        # Note: Census 2022 data is aggregated (counts by state/type), not individual jurisdictions
-        # For URL discovery to work, we would need a different data source
-        # For now, log a warning and skip URL discovery
-        logger.warning("Census data is aggregated statistics, not individual jurisdiction listings")
-        logger.warning("URL discovery requires individual jurisdiction data (names, addresses, etc.)")
-        logger.info("Bronze layer ingestion complete - skipping Silver layer URL discovery")
+        # Construct search patterns from jurisdiction names
+        # For each jurisdiction, create multiple search patterns:
+        # 1. Direct name match (e.g., "laramie-county" for "Laramie County")
+        # 2. State + name (e.g., "wyoming-laramie-county")
+        # 3. Abbreviated state + name (e.g., "wy-laramie-county")
+        
+        discovered_urls = []
+        
+        for row in jurisdictions_df.take(limit if limit else total_count):
+            name = row.get("name", "")
+            state_code = row.get("state_code", "")
+            fips = row.get("fips_code", "")
+            
+            if not name:
+                continue
+            
+            # Generate search patterns
+            base_name = name.lower().replace(" ", "-").replace(",", "").replace(".", "")
+            
+            # Try multiple domain patterns
+            candidate_domains = [
+                f"{base_name}.gov",
+                f"{state_code.lower()}{base_name}.gov",
+                f"{base_name}{state_code.lower()}.gov",
+                f"{state_code.lower()}-{base_name}.gov"
+            ]
+            
+            # Check if any candidate matches GSA domains
+            for domain in candidate_domains:
+                if domain in gsa_domains:
+                    discovered_urls.append({
+                        "jurisdiction_name": name,
+                        "state_code": state_code,
+                        "fips_code": fips,
+                        "url": f"https://{domain}",
+                        "source": "gsa_match",
+                        "confidence": "high"
+                    })
+                    break
+        
+        logger.info(f"Discovered {len(discovered_urls):,} URLs from GSA domain matching")
+        
+        # Write discovered URLs to Silver layer
+        if discovered_urls:
+            from pyspark.sql import Row
+            urls_df = self.spark.createDataFrame([Row(**url) for url in discovered_urls])
+            silver_path = f"{settings.delta_lake_path}/silver/discovered_urls"
+            urls_df.write.format("delta").mode("overwrite").save(silver_path)
+            logger.success(f"Wrote {len(discovered_urls):,} discovered URLs to Silver layer")
         
         return {
             "census_records": total_count,
             "gov_domains": len(gsa_domains),
-            "note": "Census 2022 data is aggregated statistics, not individual jurisdictions"
+            "discovered_urls": len(discovered_urls)
         }
     
     def create_scraping_targets(self):
