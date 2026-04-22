@@ -313,5 +313,70 @@ def scrape_batch(source: str, limit: int, priority: int):
     asyncio.run(run_batch_scrape())
 
 
+@cli.command()
+@click.option('--dataset', type=click.Choice(['census', 'gov-domains', 'nces-schools', 'discovered-urls', 'scraping-targets', 'all']), default='all', help='Dataset to publish')
+@click.option('--private', is_flag=True, help='Make dataset private')
+@click.option('--sample', is_flag=True, help='Sample census data (faster for testing)')
+def publish_to_hf(dataset: str, private: bool, sample: bool):
+    """
+    Publish datasets to HuggingFace Hub for sharing.
+    
+    Examples:
+        python main.py publish-to-hf --dataset all
+        python main.py publish-to-hf --dataset discovered-urls --private
+        python main.py publish-to-hf --dataset census --sample
+    """
+    from pipeline.huggingface_publisher import HuggingFacePublisher, HF_AVAILABLE
+    
+    if not HF_AVAILABLE:
+        click.echo("❌ HuggingFace libraries not installed!")
+        click.echo("   Install with: pip install datasets huggingface-hub")
+        return
+    
+    click.echo("🚀 Publishing datasets to HuggingFace Hub...")
+    
+    try:
+        publisher = HuggingFacePublisher()
+        
+        if dataset == 'all':
+            results = publisher.publish_all(private=private, sample_census=sample)
+            
+            click.echo("\n📊 Published Datasets:")
+            for name, info in results.items():
+                if "url" in info:
+                    click.echo(f"  ✓ {name}: {info['url']}")
+                else:
+                    click.echo(f"  ✗ {name}: {info.get('error', 'Unknown error')}")
+        
+        elif dataset == 'census':
+            result = publisher.publish_census_data(private=private, sample_size=1000 if sample else None)
+            click.echo(f"✅ Published to: {result['url']}")
+        
+        elif dataset == 'gov-domains':
+            result = publisher.publish_gov_domains(private=private)
+            click.echo(f"✅ Published {result['records']:,} domains to: {result['url']}")
+        
+        elif dataset == 'nces-schools':
+            result = publisher.publish_nces_schools(private=private)
+            click.echo(f"✅ Published {result['records']:,} schools to: {result['url']}")
+        
+        elif dataset == 'discovered-urls':
+            result = publisher.publish_discovered_urls(private=private)
+            click.echo(f"✅ Published {result['records']:,} URLs to: {result['url']}")
+        
+        elif dataset == 'scraping-targets':
+            result = publisher.publish_scraping_targets(private=private)
+            click.echo(f"✅ Published {result['records']:,} targets to: {result['url']}")
+        
+        click.echo("\n🎉 Publishing complete!")
+        
+    except ValueError as e:
+        click.echo(f"❌ Configuration error: {e}")
+        click.echo("   Set HUGGINGFACE_TOKEN in .env file")
+    except Exception as e:
+        click.echo(f"❌ Publishing failed: {e}")
+        logger.exception("HuggingFace publishing error")
+
+
 if __name__ == "__main__":
     cli()

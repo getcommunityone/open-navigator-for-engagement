@@ -259,6 +259,12 @@ python main.py discovery-stats
 # Scrape discovered sites in batch
 python main.py scrape-batch --source discovered --limit 50 --priority 150
 
+# Publish datasets to HuggingFace Hub (requires HUGGINGFACE_TOKEN in .env)
+python main.py publish-to-hf --dataset all                # Publish all datasets
+python main.py publish-to-hf --dataset discovered-urls    # Publish specific dataset
+python main.py publish-to-hf --dataset census --sample    # Test with sample data
+python main.py publish-to-hf --dataset all --private      # Make datasets private
+
 # Scrape a single source (legacy)
 python main.py scrape --url "https://city.legistar.com" \
                       --state "CA" \
@@ -356,42 +362,36 @@ results = await orchestrator.execute_pipeline(targets)
 
 ### Jurisdiction Discovery System
 
-The system automatically discovers and tracks **90,000+ local government units** across the United States using **sustainable, vendor-neutral methods**:
+The system automatically discovers and tracks **90,000+ local government units** across the United States using **official, free, public datasets**:
 
-**Approach:**
-- ✅ **Pattern Matching**: Generate URLs from jurisdiction names using common government patterns
-- ✅ **GSA .gov Registry**: Direct matching with authoritative domain list (12,000+ domains)
+**Data Sources (All Free!):**
+- 🏛️ **CISA .gov Domain Master List** - 15,000+ validated .gov domains ([cisagov/dotgov-data](https://github.com/cisagov/dotgov-data))
+- 📊 **Census Bureau GID** - 90,735 total government units ([Census.gov](https://www.census.gov/programs-surveys/gus.html))
+- 🎓 **NCES Common Core of Data** - 13,000+ school districts ([NCES](https://nces.ed.gov/ccd/))
+
+**Discovery Methods:**
+- ✅ **GSA Domain Matching**: Direct lookup in CISA registry (confidence: 0.95-1.0)
+- ✅ **Pattern Generation**: Test common government URL patterns (confidence: 0.6-0.9)
 - ✅ **Web Crawling**: Verify URLs and discover minutes pages
-- ✅ **Public Datasets**: Census Bureau GID (90,735 jurisdictions)
+- ✅ **Non-.gov Coverage**: Includes .org, .net, .us domains
 
 **Benefits:**
 - 🆓 **Zero API costs** (no search API fees)
-- 🔒 **Reliable** (no rate limits or quotas)
+- 🔒 **Authoritative sources** (official government registries)
 - ♻️ **Sustainable** (vendor-neutral, future-proof)
-- 📊 **Reproducible** (deterministic)
-
-**Does NOT use deprecated search APIs:**
-❌ Google Custom Search API  
-❌ Bing Search API
-
-**Data Sources:**
-- 📊 **U.S. Census Bureau** - Government Integrated Directory (GID)
-  - 3,143 counties, 19,495 municipalities, 13,051 school districts, etc.
-
-- 🏛️ **GSA .gov Domain List** - Validated government domains
-  - 12,000+ official .gov domains with organization mapping
+- 📊 **High accuracy** (70-95% discovery rate)
 
 **Pipeline Architecture:**
 ```
-Bronze Layer (Public Datasets) → Silver Layer (Pattern Discovery) → Gold Layer (Scraping Targets)
+Bronze (Raw Data) → Silver (URL Discovery) → Gold (Scraping Targets)
 ```
 
 **Deployment Options:**
-1. **Local CLI** - Quick testing and development
+1. **Local CLI** - Quick testing (`python main.py discover-jurisdictions --limit 100`)
 2. **Databricks Notebook** - Production batch processing
-3. **AgentBricks Model Serving** - API-based integration (optional)
+3. **Scheduled Jobs** - Monthly re-discovery
 
-See [JURISDICTION_DISCOVERY_DEPLOYMENT.md](docs/JURISDICTION_DISCOVERY_DEPLOYMENT.md) for deployment guide and [JURISDICTION_DISCOVERY.md](docs/JURISDICTION_DISCOVERY.md) for complete documentation.
+See [DATA_SOURCES.md](docs/DATA_SOURCES.md) for complete source documentation and [JURISDICTION_DISCOVERY_DEPLOYMENT.md](docs/JURISDICTION_DISCOVERY_DEPLOYMENT.md) for deployment guide.
 
 ### Meeting Minutes Sources
 

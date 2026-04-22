@@ -19,7 +19,12 @@ import zipfile
 from typing import List, Dict, Any, Optional
 from datetime import datetime
 from pathlib import Path
-import httpx
+
+try:
+    import httpx
+except ImportError:
+    httpx = None
+
 from loguru import logger
 from pyspark.sql import SparkSession, DataFrame
 from pyspark.sql.types import StructType, StructField, StringType, IntegerType

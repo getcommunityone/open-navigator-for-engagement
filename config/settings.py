@@ -19,6 +19,11 @@ class Settings(BaseSettings):
     # API Keys
     openai_api_key: str = Field(..., description="OpenAI API key")
     anthropic_api_key: Optional[str] = Field(None, description="Anthropic API key")
+    huggingface_token: Optional[str] = Field(None, description="HuggingFace API token for dataset uploads")
+    
+    # HuggingFace Configuration
+    hf_organization: Optional[str] = Field(None, description="HuggingFace organization name (e.g., 'CommunityOne')")
+    hf_dataset_prefix: str = Field("oral-health-policy-pulse", description="Prefix for dataset names")
     
     # Databricks Configuration
     databricks_host: str = Field(..., description="Databricks workspace URL")
