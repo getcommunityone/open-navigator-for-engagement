@@ -401,9 +401,14 @@ See [DATA_SOURCES.md](docs/DATA_SOURCES.md) for complete source documentation an
 The system collects meeting data from multiple sources:
 
 **Pre-Existing Datasets (Download & Use):**
-- 📚 **MeetingBank** - 1,366 meetings from 6 major cities with full transcripts, human-written summaries, and academic benchmark quality ([HuggingFace](https://huggingface.co/datasets/huuuyeah/meetingbank))
+- 📚 **MeetingBank** - 1,366 meetings from 6 major cities with full transcripts, human-written summaries, **YouTube/Vimeo video URLs**, and academic benchmark quality ([HuggingFace](https://huggingface.co/datasets/huuuyeah/meetingbank))
+  - ✅ **NOW EXTRACTS VIDEO URLs**: YouTube IDs, Vimeo links, Archive.org videos from urls dictionary
 - 🎓 **LocalView** - 1,000+ municipalities with meeting videos, automated transcripts, continuous collection ([Harvard Dataverse](https://dataverse.harvard.edu/dataset.xhtml?persistentId=doi:10.7910/DVN/NJTBEM))
 - 🏛️ **Council Data Project** - 20+ cities with full data pipelines: transcripts, videos, voting records, legislation tracking ([councildataproject.org](https://councildataproject.org))
+- 📹 **City Scrapers** - 100-500 validated agency URLs with video links from 5 cities (Chicago, Pittsburgh, Detroit, Cleveland, LA) ([cityscrapers.org](https://cityscrapers.org))
+  - ✅ **NEW INTEGRATION**: Extracts start_urls from GitHub spider files, includes Granicus video pages with YouTube embeds
+- 🏛️ **Open States** - 50+ state legislature YouTube channels, expanding to local jurisdictions ([openstates.org](https://openstates.org))
+  - ✅ **NEW INTEGRATION**: API integration extracts YouTube/Vimeo sources from jurisdiction metadata
 
 **Public Website Scrapers (Free Access):**
 - **Legistar** (FREE public data): Meeting management platform used by ~1,000-3,000 cities. All meeting data is publicly accessible (e.g., chicago.legistar.com)
@@ -417,7 +422,12 @@ The system collects meeting data from multiple sources:
 
 **Strategy**: Download existing datasets first (2,000-10,000 URLs from MeetingBank/LocalView/CDP), then scrape public platforms to fill gaps. Total cost: $0.
 
-See [`docs/URL_DATASETS_CONFIRMED.md`](docs/URL_DATASETS_CONFIRMED.md) for complete analysis and [`docs/HUGGINGFACE_DATASETS_ANALYSIS.md`](docs/HUGGINGFACE_DATASETS_ANALYSIS.md) for HuggingFace dataset details.
+**📊 NEW: All Three Video URL Sources Now Integrated!**
+- ✅ MeetingBank: 1,366 meetings with YouTube/Vimeo URLs extracted
+- ✅ City Scrapers: 100-500 agency URLs from GitHub repos
+- ✅ Open States: 50+ legislative video channels via API
+
+See [`docs/INTEGRATION_STATUS.md`](docs/INTEGRATION_STATUS.md) for complete integration details, [`docs/URL_DATASETS_CONFIRMED.md`](docs/URL_DATASETS_CONFIRMED.md) for URL analysis, [`docs/HUGGINGFACE_DATASETS_ANALYSIS.md`](docs/HUGGINGFACE_DATASETS_ANALYSIS.md) for HuggingFace datasets, and [`docs/VIDEO_URL_SOURCES.md`](docs/VIDEO_URL_SOURCES.md) for video URL integration guide.
 
 ## Policy Topics Monitored
 
