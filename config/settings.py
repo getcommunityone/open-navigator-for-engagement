@@ -17,7 +17,7 @@ class Settings(BaseSettings):
     )
     
     # API Keys
-    openai_api_key: str = Field(..., description="OpenAI API key")
+    openai_api_key: Optional[str] = Field(None, description="OpenAI API key (optional for local mode)")
     anthropic_api_key: Optional[str] = Field(None, description="Anthropic API key")
     huggingface_token: Optional[str] = Field(None, description="HuggingFace API token for dataset uploads")
     
@@ -26,12 +26,14 @@ class Settings(BaseSettings):
     hf_dataset_prefix: str = Field("oral-health-policy-pulse", description="Prefix for dataset names")
     
     # Databricks Configuration
-    databricks_host: str = Field(..., description="Databricks workspace URL")
-    databricks_token: str = Field(..., description="Databricks access token")
-    databricks_warehouse_id: str = Field(..., description="SQL warehouse ID")
+    databricks_host: Optional[str] = Field(None, description="Databricks workspace URL")
+    databricks_token: Optional[str] = Field(None, description="Databricks access token")
+    databricks_warehouse_id: Optional[str] = Field(None, description="SQL warehouse ID")
     
     # Delta Lake Configuration
-    delta_lake_path: str = Field("dbfs:/oral-health-policy-pulse", description="Delta Lake base path")
+    # For local mode: use "data/delta" 
+    # For Databricks: use "dbfs:/oral-health-policy-pulse"
+    delta_lake_path: str = Field("data/delta", description="Delta Lake base path")
     catalog_name: str = Field("oral_health", description="Unity Catalog name")
     schema_name: str = Field("policy_analysis", description="Schema name")
     
