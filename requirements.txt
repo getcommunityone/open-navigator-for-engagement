@@ -7,16 +7,16 @@ pydantic-settings==2.1.0
 beautifulsoup4==4.12.2
 selenium==4.16.0
 playwright==1.40.0
-httpx==0.25.2
+httpx>=0.25.0
 aiohttp==3.9.1
 
 # AI & LLM
-openai==1.6.1
-anthropic==0.8.0
-langchain==0.1.0
-langchain-openai==0.0.2
-langchain-community==0.0.10
-tiktoken==0.5.2
+openai>=1.6.0
+anthropic>=0.8.0
+langchain>=0.1.0
+langchain-openai>=0.0.2
+langchain-community>=0.0.10
+tiktoken>=0.5.0
 
 # Data Processing & Lakehouse
 databricks-sdk==0.18.0
@@ -33,9 +33,9 @@ sentence-transformers==2.2.2
 nltk==3.8.1
 
 # Database & Storage
-sqlalchemy==2.0.25
-chromadb==0.4.22
-qdrant-client==1.7.0
+sqlalchemy>=2.0.0
+chromadb>=0.4.0
+qdrant-client>=1.7.0
 
 # API & Web Framework
 fastapi==0.109.0
@@ -58,14 +58,14 @@ click==8.1.7
 tqdm==4.66.1
 
 # Testing
-pytest==7.4.3
-pytest-asyncio==0.21.1
-pytest-cov==4.1.0
-pytest-mock==3.12.0
-httpx-mock==0.11.0
+pytest>=7.4.0
+pytest-asyncio>=0.21.0
+pytest-cov>=4.1.0
+pytest-mock>=3.12.0
+pytest-httpx>=0.27.0
 
 # Development
-black==23.12.1
-ruff==0.1.9
-mypy==1.8.0
-pre-commit==3.6.0
+black>=23.0.0
+ruff>=0.1.0
+mypy>=1.8.0
+pre-commit>=3.6.0

@@ -1,0 +1,72 @@
+# CPU-Only Requirements (No GPU/CUDA needed)
+# Core Configuration
+python-dotenv>=1.0.0
+pydantic>=2.5.0
+pydantic-settings>=2.1.0
+
+# Web Scraping & Data Collection
+beautifulsoup4>=4.12.0
+selenium>=4.16.0
+playwright>=1.40.0
+httpx>=0.25.0
+aiohttp>=3.9.0
+
+# AI & LLM (CPU versions)
+openai>=1.6.0
+anthropic>=0.8.0
+langchain>=0.1.0
+langchain-openai>=0.0.2
+langchain-community>=0.0.10
+tiktoken>=0.5.0
+
+# Databricks & Data Processing
+databricks-sdk>=0.18.0
+delta-spark>=3.0.0
+# PySpark is large but needed for Delta Lake - consider removing if not using Databricks
+pyspark>=3.5.0
+pandas>=2.1.0
+polars>=0.20.0
+pyarrow>=14.0.0
+
+# NLP - CPU-only versions (much lighter)
+# Note: Omitting spacy, transformers, sentence-transformers, torch to save ~2GB
+# You can add them back if needed: torch --index-url https://download.pytorch.org/whl/cpu
+nltk>=3.8.0
+
+# Database & Storage
+sqlalchemy>=2.0.0
+chromadb>=0.4.0
+qdrant-client>=1.7.0
+
+# API Framework
+fastapi>=0.109.0
+uvicorn[standard]>=0.25.0
+# Removed fastapi-cache2 - not strictly required
+python-multipart>=0.0.6
+
+# Visualization
+plotly>=5.18.0
+folium>=0.15.0
+matplotlib>=3.8.0
+seaborn>=0.13.0
+
+# Utilities
+python-dateutil>=2.8.0
+pytz>=2023.3
+tenacity>=8.2.0
+loguru>=0.7.0
+click>=8.1.0
+tqdm>=4.66.0
+
+# Testing
+pytest>=7.4.0
+pytest-asyncio>=0.21.0
+pytest-cov>=4.1.0
+pytest-mock>=3.12.0
+pytest-httpx>=0.27.0
+
+# Development
+black>=23.0.0
+ruff>=0.1.0
+mypy>=1.8.0
+pre-commit>=3.6.0

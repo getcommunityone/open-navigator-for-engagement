@@ -41,7 +41,13 @@ echo "✓ pip upgraded"
 # Install dependencies
 echo ""
 echo "Installing dependencies (this may take a few minutes)..."
-pip install -r requirements.txt
+# Use CPU-only requirements if available, otherwise use full requirements
+if [ -f "requirements-cpu.txt" ]; then
+    echo "Using CPU-only requirements (no GPU needed)..."
+    pip install -r requirements-cpu.txt
+else
+    pip install -r requirements.txt
+fi
 echo "✓ Dependencies installed"
 
 # Create .env file if it doesn't exist
