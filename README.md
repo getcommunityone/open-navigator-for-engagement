@@ -427,6 +427,20 @@ The system collects meeting data from multiple sources:
 - ✅ City Scrapers: 100-500 agency URLs from GitHub repos
 - ✅ Open States: 50+ legislative video channels via API
 
+**To run the integrations:**
+```bash
+cd /home/developer/projects/oral-health-policy-pulse
+source venv/bin/activate
+
+# Install dependencies
+pip install datasets requests
+
+# Run each integration
+python discovery/meetingbank_ingestion.py
+python discovery/city_scrapers_urls.py
+python discovery/openstates_sources.py  # Optional: add OPENSTATES_API_KEY to .env first
+```
+
 See [`docs/INTEGRATION_STATUS.md`](docs/INTEGRATION_STATUS.md) for complete integration details, [`docs/URL_DATASETS_CONFIRMED.md`](docs/URL_DATASETS_CONFIRMED.md) for URL analysis, [`docs/HUGGINGFACE_DATASETS_ANALYSIS.md`](docs/HUGGINGFACE_DATASETS_ANALYSIS.md) for HuggingFace datasets, and [`docs/VIDEO_URL_SOURCES.md`](docs/VIDEO_URL_SOURCES.md) for video URL integration guide.
 
 ## Policy Topics Monitored
@@ -554,11 +568,11 @@ This project leverages proven patterns from **11 civic tech projects** to build 
 
 | Project | Integration | Status |
 |---------|-------------|--------|
-| [**Civic Scraper**](https://github.com/biglocalnews/civic-scraper) | Platform detection, document downloading | ✅ Patterns integrated |
-| [**City Scrapers**](https://github.com/city-scrapers/city-scrapers) | Event schema, testing framework | ✅ Schema implemented |
-| [**Council Data Project**](https://github.com/CouncilDataProject/cookiecutter-cdp-deployment) | Ingestion pipeline, transcript processing | 📋 Roadmapped |
-| [**Engagic**](https://github.com/Engagic/engagic) | Matter tracking, LLM parsing | ✅ Model created |
-| [**Councilmatic**](https://github.com/datamade/councilmatic-starter-template) | Person/vote tracking, search UX | 📋 Planned |
+| [**Civic Scraper**](https://github.com/biglocalnews/civic-scraper) | Platform detection, document downloading | ✅ Patterns integrated (no URL list) |
+| [**City Scrapers**](https://github.com/city-scrapers/city-scrapers) | Event schema, URL extraction | ✅ **URLs integrated** (100-500 agencies) |
+| [**Council Data Project**](https://github.com/CouncilDataProject/cookiecutter-cdp-deployment) | Ingestion pipeline, transcript processing | ⏳ 20 cities identified, URLs pending |
+| [**Engagic**](https://github.com/Engagic/engagic) | Matter tracking, LLM parsing | ✅ Model created (research project) |
+| [**Councilmatic**](https://github.com/datamade/councilmatic-starter-template) | Person/vote tracking, search UX | 📋 6 deployments, could extract URLs |
 
 ### End-to-End Platforms & Scale Projects
 

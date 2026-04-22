@@ -20,6 +20,14 @@ The 'sources' field frequently contains:
 - Granicus video portals
 - Archive.org collections
 """
+import sys
+from pathlib import Path
+
+# Add project root to Python path for standalone execution
+project_root = Path(__file__).parent.parent
+if str(project_root) not in sys.path:
+    sys.path.insert(0, str(project_root))
+
 import requests
 from typing import List, Dict, Optional
 from datetime import datetime

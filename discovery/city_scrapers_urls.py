@@ -19,6 +19,7 @@ Each spider file contains:
 Website: https://cityscrapers.org
 GitHub: https://github.com/city-scrapers
 """
+import sys
 import re
 import subprocess
 import tempfile
@@ -28,6 +29,11 @@ from datetime import datetime
 from loguru import logger
 from pyspark.sql import SparkSession
 from pyspark.sql.functions import lit
+
+# Add project root to Python path for standalone execution
+project_root = Path(__file__).parent.parent
+if str(project_root) not in sys.path:
+    sys.path.insert(0, str(project_root))
 
 from config.settings import settings
 

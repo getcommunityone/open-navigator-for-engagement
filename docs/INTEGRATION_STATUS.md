@@ -165,18 +165,28 @@ python discovery/openstates_sources.py
 ```bash
 cd /home/developer/projects/oral-health-policy-pulse
 source venv/bin/activate
-pip install datasets requests  # HuggingFace + HTTP client
+
+# Install HuggingFace datasets library and requests (if not already installed)
+pip install datasets requests
+
+# Optional: Install loguru if you get import errors
+pip install loguru
 ```
 
-### Step 2: Get Open States API Key
+### Step 2: Get Open States API Key (Optional)
 ```bash
 # Sign up at: https://openstates.org/accounts/signup/
-# Add to .env:
+# Add to .env (create if doesn't exist):
 echo "OPENSTATES_API_KEY=your-key-here" >> .env
+
+# Or edit .env manually and add:
+# OPENSTATES_API_KEY=your-actual-key
 ```
 
 ### Step 3: Run MeetingBank Integration
 ```bash
+cd /home/developer/projects/oral-health-policy-pulse
+source venv/bin/activate
 python discovery/meetingbank_ingestion.py
 ```
 
@@ -184,17 +194,25 @@ python discovery/meetingbank_ingestion.py
 
 ### Step 4: Run City Scrapers Integration
 ```bash
+cd /home/developer/projects/oral-health-policy-pulse
+source venv/bin/activate
 python discovery/city_scrapers_urls.py
 ```
 
 **Expected**: 100-500 agency URLs loaded to Bronze layer (2-5 minutes, depends on git clone speed)
 
+**Note**: Requires `git` command to be available in your PATH for cloning repos
+
 ### Step 5: Run Open States Integration
 ```bash
+cd /home/developer/projects/oral-health-policy-pulse
+source venv/bin/activate
 python discovery/openstates_sources.py
 ```
 
 **Expected**: 50-100 video sources loaded to Bronze layer (1 minute)
+
+**Note**: If you don't have an Open States API key, the script will warn you but won't crash
 
 ---
 

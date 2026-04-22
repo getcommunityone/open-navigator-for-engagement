@@ -16,6 +16,14 @@ What you get:
 - 3,579 hours of video
 - 6,892 segment-level summarization instances
 """
+import sys
+from pathlib import Path
+
+# Add project root to Python path for standalone execution
+project_root = Path(__file__).parent.parent
+if str(project_root) not in sys.path:
+    sys.path.insert(0, str(project_root))
+
 from datasets import load_dataset
 from pyspark.sql import SparkSession
 from pyspark.sql.functions import lit
