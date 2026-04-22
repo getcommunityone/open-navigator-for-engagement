@@ -153,8 +153,15 @@ class DiscoveryPipeline:
         logger.info("GOLD LAYER: Creating scraping targets")
         logger.info("=" * 60)
         
-        # Load discovered URLs
+        # Check if Silver layer exists
+        from pathlib import Path
         silver_path = f"{settings.delta_lake_path}/silver/discovered_urls"
+        if not Path(silver_path).exists():
+            logger.warning("Silver layer (discovered URLs) does not exist")
+            logger.info("Skipping Gold layer - requires Silver layer URL data")
+            return {"status": "skipped", "reason": "no_silver_layer"}
+        
+        # Load discovered URLs
         urls_df = self.spark.read.format("delta").load(silver_path)
         
         # Join with jurisdiction details
@@ -262,10 +269,13 @@ class DiscoveryPipeline:
             logger.success(f"{'=' * 60}\n")
             
             return {
-                "bronze_records": bronze_stats["total_records"],
-                "urls_discovered": discovery_stats["successful"],
-                "scraping_targets": gold_stats["targets_created"],
-                "elapsed_seconds": elapsed
+                "bronze_records": bronze_stats.get("total_records", 0),
+                "urls_discovered": discovery_stats.get("successful", 0) if discovery_stats else 0,
+                "scraping_targets": gold_stats.get("targets_created", 0) if gold_stats else 0,
+                "elapsed_seconds": elapsed,
+                "bronze_status": bronze_stats.get("status", "complete"),
+                "silver_status": discovery_stats.get("status", "skipped") if discovery_stats else "skipped",
+                "gold_status": gold_stats.get("status", "skipped") if gold_stats else "skipped"
             }
             
         except Exception as e:
