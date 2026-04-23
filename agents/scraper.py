@@ -214,6 +214,8 @@ class ScraperAgent(BaseAgent):
                 tasks.append(self._scrape_granicus(target, date_range))
             elif platform == "suiteonemedia" or "suiteonemedia" in url.lower():
                 tasks.append(self._scrape_suiteonemedia(target, date_range))
+            elif platform == "eboard" or "eboardsolutions.com" in url.lower() or "simbli.eboardsolutions" in url.lower():
+                tasks.append(self._scrape_eboard(target, date_range))
             elif platform == "youtube":
                 tasks.append(self._scrape_youtube_source(target))
             elif platform == "facebook":
@@ -1052,6 +1054,357 @@ class ScraperAgent(BaseAgent):
             logger.error(f"Error scraping SuiteOne portal {url}: {e}")
 
         logger.info(f"SuiteOne scrape complete: {len(documents)} documents from {municipality}")
+        return documents
+
+    async def _scrape_eboard(
+        self,
+        target: Dict[str, Any],
+        date_range: Dict[str, str]
+    ) -> List[Dict[str, Any]]:
+        """
+        Scrape eBoard Solutions platform (used by many school districts).
+        
+        eBoard uses ASP.NET with JavaScript and Incapsula bot protection.
+        This implementation uses Playwright Stealth + optional manual cookies.
+        
+        To bypass Incapsula:
+        1. Run without cookies first (will likely get blocked)
+        2. Manually visit the site in browser, solve any CAPTCHA
+        3. Export cookies using browser extension (EditThisCookie)
+        4. Save to eboard_cookies.json
+        5. Re-run scraper (will use cookies automatically)
+        
+        Args:
+            target: Scraping target with URL, municipality, state
+            date_range: Date range for filtering meetings
+            
+        Returns:
+            List of meeting documents
+        """
+        url = target.get("url", "")
+        municipality = target.get("municipality", "Unknown")
+        state = target.get("state", "")
+        
+        logger.info(f"Scraping eBoard platform: {url} for {municipality}")
+        
+        documents = []
+        
+        try:
+            from playwright.async_api import async_playwright
+            from playwright_stealth import Stealth
+            import random
+            from pathlib import Path
+            
+            # Extract school ID from URL (S=xxxx parameter)
+            import re
+            school_id_match = re.search(r'[?&]s=(\d+)', url, re.IGNORECASE)
+            school_id = school_id_match.group(1) if school_id_match else None
+            
+            if not school_id:
+                logger.error(f"Could not extract school ID from URL: {url}")
+                return []
+            
+            # Target the Meeting Listing page directly (bypasses some Incapsula triggers)
+            base_url = "https://simbli.eboardsolutions.com"
+            meetings_url = f"{base_url}/SB_Meetings/SB_MeetingListing.aspx?S={school_id}"
+            
+            # Check for manual cookies file
+            cookie_file = Path("eboard_cookies.json")
+            cookies = None
+            if cookie_file.exists():
+                try:
+                    import json
+                    with open(cookie_file, 'r') as f:
+                        cookies = json.load(f)
+                    logger.success(f"✓ Loaded {len(cookies)} cookies from eboard_cookies.json")
+                    logger.info("Using manual session cookies to bypass Incapsula")
+                except Exception as e:
+                    logger.warning(f"Could not load cookies: {e}")
+            else:
+                logger.info("No cookie file found. Will attempt without cookies (may be blocked)")
+                logger.info(f"To bypass Incapsula: Create {cookie_file.absolute()}")
+                logger.info("See docs/EBOARD_MANUAL_DOWNLOAD.md for instructions")
+            
+            logger.info(f"Targeting Meeting Listing: {meetings_url}")
+            
+            async with async_playwright() as p:
+                # Launch browser with anti-detection settings
+                logger.info("Launching browser with stealth settings to bypass Incapsula")
+                browser = await p.chromium.launch(
+                    headless=True,  # Stealth makes headless work
+                    args=[
+                        '--disable-blink-features=AutomationControlled',
+                        '--disable-dev-shm-usage',
+                        '--no-sandbox'
+                    ]
+                )
+                
+                # CRITICAL: User-Agent must match the browser used to generate cookies
+                # If cookies were from Chrome 123, use Chrome 123 UA
+                user_agent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36'
+                
+                context = await browser.new_context(
+                    viewport={'width': 1920, 'height': 1080},
+                    user_agent=user_agent,
+                    locale='en-US',
+                    timezone_id='America/Chicago',
+                    # Additional fingerprinting evasion
+                    geolocation={'latitude': 33.2098, 'longitude': -87.5692},  # Tuscaloosa, AL
+                    permissions=['geolocation']
+                )
+                
+                page = await context.new_page()
+                
+                # Apply stealth to bypass Incapsula fingerprinting
+                stealth = Stealth()
+                await stealth.apply_stealth_async(page)
+                logger.info("Stealth mode activated")
+                
+                # Inject cookies if available (CRITICAL for bypassing Incapsula)
+                if cookies:
+                    await context.add_cookies(cookies)
+                    logger.success("✓ Cookies injected into browser session")
+                
+                # Navigate to Meeting Listing
+                logger.info(f"Loading Meeting Listing page...")
+                try:
+                    # Simulate human behavior - move mouse before navigation
+                    await page.mouse.move(random.randint(100, 500), random.randint(100, 500))
+                    
+                    response = await page.goto(meetings_url, wait_until='networkidle', timeout=60000)
+                    logger.info(f"Response status: {response.status if response else 'No response'}")
+                except Exception as e:
+                    logger.warning(f"Navigation timeout/error: {e}, continuing anyway...")
+                
+                # Wait for Incapsula JavaScript challenge to complete
+                # CRITICAL: Use randomized delay (not flat sleep) to avoid pattern detection
+                wait_time = random.uniform(5.0, 7.0)
+                logger.info(f"Waiting {wait_time:.1f}s for Incapsula JavaScript challenge...")
+                await page.wait_for_timeout(int(wait_time * 1000))
+                
+                # Check if we got through
+                content = await page.content()
+                
+                if 'Incapsula' in content or len(content) < 5000:
+                    logger.error(f"Still blocked by Incapsula ({len(content)} bytes)")
+                    logger.warning(f"Try running with headless=False or use manual session cookies")
+                    logger.info(f"See docs/EBOARD_MANUAL_DOWNLOAD.md for manual download guide")
+                    await browser.close()
+                    return []
+                
+                logger.success(f"✓ Bypassed Incapsula! Got {len(content)} bytes")
+                
+                # Parse the page
+                soup = BeautifulSoup(content, 'html.parser')
+                
+                # Extract meeting links - eBoard uses MID parameter
+                # Look for links containing "MID=" (Meeting ID)
+                meeting_links = []
+                
+                for link in soup.find_all('a', href=True):
+                    href = link.get('href', '')
+                    text = link.get_text().strip()
+                    
+                    # eBoard meeting detail links contain MID parameter
+                    if 'MID=' in href.upper() or 'meetingdetail' in href.lower():
+                        full_url = urljoin(base_url, href)
+                        meeting_links.append({
+                            'url': full_url,
+                            'text': text,
+                            'mid': re.search(r'MID=(\d+)', href, re.IGNORECASE).group(1) if re.search(r'MID=(\d+)', href, re.IGNORECASE) else None
+                        })
+                
+                # Also look for direct PDF links (agendas/minutes)
+                for link in soup.find_all('a', href=True):
+                    href = link.get('href', '')
+                    text = link.get_text().strip()
+                    
+                    if href.lower().endswith('.pdf') and any(word in text.lower() for word in ['agenda', 'minutes', 'packet']):
+                        full_url = urljoin(base_url, href)
+                        meeting_links.append({
+                            'url': full_url,
+                            'text': text,
+                            'type': 'pdf'
+                        })
+                
+                logger.info(f"Found {len(meeting_links)} meeting/document links")
+                
+                # Process each meeting (limit to prevent overwhelming)
+                for idx, meeting_info in enumerate(meeting_links[:50]):
+                    try:
+                        meeting_url = meeting_info['url']
+                        meeting_title = meeting_info['text']
+                        
+                        if idx > 0 and idx % 10 == 0:
+                            logger.info(f"  Progress: {idx}/{min(50, len(meeting_links))} meetings processed")
+                        
+                        # CRITICAL: Randomized rate limiting to prevent Advanced Mode trigger
+                        # Never use flat sleep - Incapsula detects patterns
+                        wait_time = random.uniform(3.0, 7.0)
+                        await asyncio.sleep(wait_time)
+                        
+                        # Simulate human mouse movement before each action
+                        await page.mouse.move(random.randint(200, 800), random.randint(200, 600))
+                        
+                        # Handle PDF links directly
+                        if meeting_info.get('type') == 'pdf':
+                            try:
+                                # Download PDF
+                                pdf_content = await self._scrape_pdf_document(meeting_url)
+                                
+                                if pdf_content and len(pdf_content.strip()) > 100:
+                                    # Extract date from title/text
+                                    meeting_date = None
+                                    try:
+                                        from dateutil import parser as date_parser
+                                        date_match = re.search(r'(\d{1,2}[-/]\d{1,2}[-/]\d{2,4})', meeting_title)
+                                        if not date_match:
+                                            date_match = re.search(r'(January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{1,2},?\s+\d{4}', meeting_title, re.IGNORECASE)
+                                        
+                                        if date_match:
+                                            meeting_date = date_parser.parse(date_match.group(0))
+                                    except:
+                                        meeting_date = datetime.now()
+                                    
+                                    if not meeting_date:
+                                        meeting_date = datetime.now()
+                                    
+                                    document_id = hashlib.md5(f"{meeting_url}{municipality}".encode()).hexdigest()
+                                    
+                                    doc = MeetingDocument(
+                                        document_id=document_id,
+                                        source_url=meeting_url,
+                                        municipality=municipality,
+                                        state=state,
+                                        meeting_date=meeting_date,
+                                        meeting_type='Board Meeting',
+                                        title=meeting_title,
+                                        content=pdf_content[:50000],
+                                        metadata={
+                                            'platform': 'eboard',
+                                            'school_id': school_id,
+                                            'scraped_with': 'playwright_stealth'
+                                        }
+                                    )
+                                    
+                                    documents.append(doc)
+                                    logger.success(f"    ✓ Scraped PDF: {meeting_title[:50]}")
+                            
+                            except Exception as e:
+                                logger.error(f"    Error downloading PDF: {e}")
+                                continue
+                        
+                        # Handle meeting detail pages
+                        else:
+                            logger.debug(f"  Loading meeting detail: {meeting_title[:50]}")
+                            
+                            try:
+                                # Simulate clicking on link (human-like behavior)
+                                await page.mouse.move(random.randint(300, 700), random.randint(200, 500))
+                                await page.goto(meeting_url, wait_until='domcontentloaded', timeout=30000)
+                                
+                                # Random wait to appear human
+                                await page.wait_for_timeout(random.randint(1500, 3000))
+                                
+                                meeting_content = await page.content()
+                                meeting_soup = BeautifulSoup(meeting_content, 'html.parser')
+                                
+                                # Extract meeting date
+                                meeting_date = None
+                                for elem in meeting_soup.find_all(['h1', 'h2', 'h3', 'div', 'span']):
+                                    text = elem.get_text().strip()
+                                    date_match = re.search(r'(\d{1,2}[-/]\d{1,2}[-/]\d{2,4})', text)
+                                    if not date_match:
+                                        date_match = re.search(r'(January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{1,2},?\s+\d{4}', text, re.IGNORECASE)
+                                    
+                                    if date_match:
+                                        try:
+                                            from dateutil import parser as date_parser
+                                            meeting_date = date_parser.parse(date_match.group(0))
+                                            break
+                                        except:
+                                            pass
+                                
+                                if not meeting_date:
+                                    meeting_date = datetime.now()
+                                
+                                # Find document links (PDFs)
+                                doc_links = []
+                                for link in meeting_soup.find_all('a', href=True):
+                                    href = link.get('href', '')
+                                    link_text = link.get_text().strip()
+                                    
+                                    if (href.lower().endswith('.pdf') or 
+                                        'agenda' in link_text.lower() or 
+                                        'minutes' in link_text.lower() or
+                                        'packet' in link_text.lower()):
+                                        
+                                        doc_url = urljoin(base_url, href)
+                                        doc_links.append({
+                                            'url': doc_url,
+                                            'text': link_text
+                                        })
+                                
+                                logger.info(f"    Found {len(doc_links)} documents for {meeting_title[:40]}")
+                                
+                                # Download each document
+                                for doc_info in doc_links[:5]:  # Limit per meeting
+                                    try:
+                                        doc_url = doc_info['url']
+                                        doc_title = doc_info['text']
+                                        
+                                        if doc_url.lower().endswith('.pdf'):
+                                            doc_content = await self._scrape_pdf_document(doc_url)
+                                            
+                                            if doc_content and len(doc_content.strip()) > 100:
+                                                document_id = hashlib.md5(f"{doc_url}{municipality}".encode()).hexdigest()
+                                                
+                                                doc = MeetingDocument(
+                                                    document_id=document_id,
+                                                    source_url=doc_url,
+                                                    municipality=municipality,
+                                                    state=state,
+                                                    meeting_date=meeting_date,
+                                                    meeting_type='Board Meeting',
+                                                    title=doc_title or meeting_title,
+                                                    content=doc_content[:50000],
+                                                    metadata={
+                                                        'platform': 'eboard',
+                                                        'meeting_page': meeting_url,
+                                                        'school_id': school_id,
+                                                        'meeting_id': meeting_info.get('mid'),
+                                                        'scraped_with': 'playwright_stealth'
+                                                    }
+                                                )
+                                                
+                                                documents.append(doc)
+                                                logger.success(f"      ✓ Scraped: {doc_title[:50]}")
+                                    
+                                    except Exception as e:
+                                        logger.error(f"      Error scraping document: {e}")
+                                        continue
+                            
+                            except Exception as e:
+                                logger.error(f"  Error processing meeting {meeting_title[:40]}: {e}")
+                                continue
+                    
+                    except Exception as e:
+                        logger.error(f"Error processing meeting link: {e}")
+                        continue
+                
+                # Close browser
+                await browser.close()
+        
+        except ImportError as e:
+            logger.error(f"Missing dependency: {e}")
+            logger.error("Install with: pip install playwright-stealth && playwright install chromium")
+            return []
+        except Exception as e:
+            logger.error(f"Error scraping eBoard {url}: {e}")
+            import traceback
+            logger.error(traceback.format_exc())
+        
+        logger.success(f"eBoard scrape complete: {len(documents)} documents from {municipality}")
         return documents
 
     async def _scrape_generic(

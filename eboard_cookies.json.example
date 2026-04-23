@@ -1,0 +1,20 @@
+[
+  {
+    "name": "incap_ses_XXXXX_2088",
+    "value": "YOUR_SESSION_COOKIE_VALUE_HERE",
+    "domain": ".eboardsolutions.com",
+    "path": "/"
+  },
+  {
+    "name": "visid_incap_XXXXX_2088",
+    "value": "YOUR_VISITOR_ID_COOKIE_VALUE_HERE",
+    "domain": ".eboardsolutions.com",
+    "path": "/"
+  },
+  {
+    "name": "nlbi_XXXXX",
+    "value": "YOUR_NLBI_COOKIE_VALUE_HERE",
+    "domain": ".eboardsolutions.com",
+    "path": "/"
+  }
+]
