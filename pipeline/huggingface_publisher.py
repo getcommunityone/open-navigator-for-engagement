@@ -27,7 +27,15 @@ except ImportError:
     HF_AVAILABLE = False
     logger.warning("HuggingFace libraries not installed. Run: pip install datasets huggingface-hub")
 
-from pyspark.sql import SparkSession, DataFrame
+try:
+    from pyspark.sql import SparkSession, DataFrame
+    PYSPARK_AVAILABLE = True
+except ImportError:
+    PYSPARK_AVAILABLE = False
+    SparkSession = None
+    DataFrame = None
+    logger.warning("PySpark not available. Will use pandas DataFrames only.")
+
 from config import settings
 
 
@@ -64,14 +72,21 @@ class HuggingFacePublisher:
         login(token=self.token)
         self.api = HfApi()
         
-        # Initialize Spark
-        self.spark = SparkSession.builder \
-            .appName("HFPublisher") \
-            .config("spark.sql.extensions", "io.delta.sql.DeltaSparkSessionExtension") \
-            .config("spark.sql.catalog.spark_catalog", "org.apache.spark.sql.delta.catalog.DeltaCatalog") \
-            .getOrCreate()
-        
-        logger.info("✅ HuggingFace publisher initialized")
+        # Initialize Spark (optional - only if available)
+        if PYSPARK_AVAILABLE:
+            try:
+                self.spark = SparkSession.builder \
+                    .appName("HFPublisher") \
+                    .config("spark.sql.extensions", "io.delta.sql.DeltaSparkSessionExtension") \
+                    .config("spark.sql.catalog.spark_catalog", "org.apache.spark.sql.delta.catalog.DeltaCatalog") \
+                    .getOrCreate()
+                logger.info("✅ HuggingFace publisher initialized with PySpark support")
+            except Exception as e:
+                logger.warning(f"PySpark initialization failed: {e}. Will use pandas only.")
+                self.spark = None
+        else:
+            self.spark = None
+            logger.info("✅ HuggingFace publisher initialized (pandas mode - no PySpark)")
     
     def _get_repo_id(self, dataset_name: str) -> str:
         """

@@ -20,8 +20,15 @@
 # Go to https://huggingface.co/settings/tokens
 # Click "New token"
 # Name it "oral-health-upload"
+# Token Type: Write (required for publishing datasets)
+# Repository permissions: All repositories
 # Copy the token (hf_xxxxxxxxxxxx)
 ```
+
+**⚠️ Important: Token Permissions**
+- **Write** access required for publishing datasets
+- **Read** access sufficient for downloading public datasets only
+- For this project: Use **Write** token to publish your scraped data
 
 ### 3. Install & Login (1 minute)
 ```bash

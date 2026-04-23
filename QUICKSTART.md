@@ -54,6 +54,10 @@ OPENAI_API_KEY=your_openai_api_key_here
 DATABRICKS_HOST=https://your-workspace.cloud.databricks.com
 DATABRICKS_TOKEN=your_databricks_token_here
 DATABRICKS_WAREHOUSE_ID=your_warehouse_id_here
+
+# Optional: HuggingFace (for publishing datasets)
+HUGGINGFACE_TOKEN=hf_your_write_token_here  # Needs Write permissions
+HF_ORGANIZATION=YourOrgName  # Optional
 ```
 
 ## Running the System

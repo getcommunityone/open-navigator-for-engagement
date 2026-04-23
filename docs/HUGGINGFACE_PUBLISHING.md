@@ -26,7 +26,18 @@ Share your jurisdiction discovery datasets and run outputs on HuggingFace Hub fo
 
 Visit: https://huggingface.co/settings/tokens
 
-Create a **Write** token (needed for dataset uploads)
+**Create a Write Token:**
+1. Click "New token"
+2. **Name:** "oral-health-policy-pulse-upload"
+3. **Token type:** Write ⚠️ (required for publishing)
+4. **Repository permissions:** All repositories
+5. Copy the token (starts with `hf_`)
+
+**Why Write Access?**
+- Creates dataset repositories on HuggingFace
+- Uploads Parquet files with your scraped data
+- Updates dataset cards and metadata
+- Read-only tokens cannot publish datasets
 
 ### 2. Configure Environment
 
