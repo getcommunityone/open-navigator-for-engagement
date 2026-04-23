@@ -101,6 +101,23 @@ class ScraperAgent(BaseAgent):
         self._ocr_missing_tesseract_warned = False
         self.social_source_limit = 8
         
+        # Policy and meeting-focused keywords for social media filtering
+        self.policy_meeting_keywords = (
+            # Meetings
+            "council meeting", "city council", "town council", "board meeting",
+            "commission meeting", "public meeting", "town hall", "session",
+            "special meeting", "regular meeting", "work session", "workshop",
+            # Documents
+            "agenda", "minutes", "ordinance", "resolution", "public hearing",
+            "hearing", "vote", "voting", "motion", "legislation",
+            # Policy topics
+            "policy", "budget", "zoning", "planning", "development",
+            "public comment", "community meeting", "civic", "government",
+            # Video/meeting specific
+            "live stream", "livestream", "recorded meeting", "meeting video",
+            "council session", "board session", "official meeting"
+        )
+        
     async def __aenter__(self):
         """Async context manager entry."""
         self.http_client = httpx.AsyncClient(
@@ -337,8 +354,41 @@ class ScraperAgent(BaseAgent):
         discovered["facebook"] = list(dict.fromkeys(discovered["facebook"]))
         return discovered
 
+    def _is_policy_meeting_content(self, text: str) -> bool:
+        """Check if text content is related to policy or meetings."""
+        if not text:
+            return False
+        text_lower = text.lower()
+        return any(keyword in text_lower for keyword in self.policy_meeting_keywords)
+    
+    def _extract_youtube_video_metadata(self, html: str, video_id: str) -> Dict[str, str]:
+        """Extract title and description from YouTube video page HTML."""
+        metadata = {"title": "", "description": ""}
+        
+        try:
+            # Extract title from various possible patterns
+            title_match = re.search(r'"title":"([^"]+)"', html)
+            if title_match:
+                metadata["title"] = title_match.group(1)
+            else:
+                # Fallback to meta tags
+                title_match = re.search(r'<title>([^<]+)</title>', html)
+                if title_match:
+                    metadata["title"] = title_match.group(1).replace(" - YouTube", "")
+            
+            # Extract description
+            desc_match = re.search(r'"description":"([^"]+)"', html)
+            if desc_match:
+                # Unescape and limit description length
+                metadata["description"] = desc_match.group(1)[:500]
+        
+        except Exception as err:
+            logger.debug(f"Error extracting metadata for video {video_id}: {err}")
+        
+        return metadata
+
     async def _scrape_youtube_source(self, target: Dict[str, Any]) -> List[Dict[str, Any]]:
-        """Scrape recent YouTube videos and transcripts from a channel URL."""
+        """Scrape recent YouTube videos and transcripts from a channel URL, focusing on policy and meeting content."""
         url = target.get("url", "")
         municipality = target.get("municipality", "")
         state = target.get("state", "")
@@ -361,33 +411,72 @@ class ScraperAgent(BaseAgent):
         for vid in re.findall(r'watch\?v=([A-Za-z0-9_-]{11})', text):
             if vid not in video_ids:
                 video_ids.append(vid)
-        video_ids = video_ids[: self.social_source_limit]
-
+        
+        # Process more videos initially to filter for relevant content
+        video_ids = video_ids[: self.social_source_limit * 3]
+        
+        policy_videos = []
+        
         for vid in video_ids:
+            video_url = f"https://www.youtube.com/watch?v={vid}"
+            
+            # Fetch video page to extract metadata
+            try:
+                video_resp = await self.http_client.get(video_url)
+                video_metadata = self._extract_youtube_video_metadata(video_resp.text, vid)
+                
+                # Filter: Only keep videos with policy/meeting-related titles or descriptions
+                if not self._is_policy_meeting_content(video_metadata["title"]) and \
+                   not self._is_policy_meeting_content(video_metadata["description"]):
+                    logger.debug(f"Skipping non-policy video: {video_metadata['title']}")
+                    continue
+                
+                logger.info(f"Found policy/meeting video: {video_metadata['title']}")
+                
+            except Exception as err:
+                logger.debug(f"Could not fetch metadata for video {vid}: {err}")
+                video_metadata = {"title": f"Video {vid}", "description": ""}
+            
+            # Fetch transcript
             transcript_text = self._fetch_youtube_transcript(vid)
             if not transcript_text:
+                logger.debug(f"No transcript available for video {vid}")
+                continue
+            
+            # Double-check transcript content for policy/meeting keywords
+            if not self._is_policy_meeting_content(transcript_text):
+                logger.debug(f"Transcript doesn't contain policy/meeting content: {vid}")
                 continue
 
-            video_url = f"https://www.youtube.com/watch?v={vid}"
             doc_id = hashlib.md5(f"youtube-{municipality}-{vid}".encode()).hexdigest()
-            documents.append(MeetingDocument(
+            policy_videos.append(MeetingDocument(
                 document_id=doc_id,
                 source_url=video_url,
                 municipality=municipality,
                 state=state,
                 meeting_date=datetime.utcnow().isoformat(),
-                meeting_type="YouTube Video",
-                title=f"YouTube Transcript {vid}",
+                meeting_type="YouTube Video - Policy/Meeting",
+                title=video_metadata["title"] or f"YouTube Video {vid}",
                 content=transcript_text,
                 metadata={
                     "platform": "youtube",
                     "channel_url": url,
                     "video_id": vid,
                     "has_transcript": True,
+                    "description": video_metadata["description"],
+                    "filtered_for_policy": True,
                 }
             ))
+            
+            # Limit to configured number of policy videos
+            if len(policy_videos) >= self.social_source_limit:
+                break
+            
+            # Rate limiting
+            await asyncio.sleep(0.5)
 
-        return documents
+        logger.info(f"Found {len(policy_videos)} policy/meeting videos from {url}")
+        return policy_videos
 
     async def _scrape_facebook_source(self, target: Dict[str, Any]) -> List[Dict[str, Any]]:
         """Scrape publicly accessible Facebook page/post text snippets."""
