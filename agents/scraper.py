@@ -1056,6 +1056,303 @@ class ScraperAgent(BaseAgent):
         logger.info(f"SuiteOne scrape complete: {len(documents)} documents from {municipality}")
         return documents
 
+    async def _scrape_eboard_undetected(
+        self,
+        target: Dict[str, Any],
+        date_range: Dict[str, str]
+    ) -> List[Dict[str, Any]]:
+        """
+        Scrape eBoard using undetected-chromedriver to bypass Incapsula automatically.
+        
+        This method uses undetected-chromedriver which patches Selenium to avoid detection:
+        - Removes navigator.webdriver flag
+        - Uses real Chrome binary
+        - Randomizes browser fingerprints
+        
+        Args:
+            target: Scraping target with URL, municipality, state
+            date_range: Date range for filtering meetings
+            
+        Returns:
+            List of meeting documents
+        """
+        url = target.get("url", "")
+        municipality = target.get("municipality", "Unknown")
+        state = target.get("state", "")
+        
+        import undetected_chromedriver as uc
+        from selenium.webdriver.common.by import By
+        from selenium.webdriver.support.ui import WebDriverWait
+        from selenium.webdriver.support import expected_conditions as EC
+        import time
+        import random
+        import re
+        from pathlib import Path
+        
+        # Extract school ID from URL
+        school_id_match = re.search(r'[?&]s=(\d+)', url, re.IGNORECASE)
+        school_id = school_id_match.group(1) if school_id_match else None
+        
+        if not school_id:
+            logger.error(f"Could not extract school ID from URL: {url}")
+            return []
+        
+        base_url = "https://simbli.eboardsolutions.com"
+        meetings_url = f"{base_url}/SB_Meetings/SB_MeetingListing.aspx?S={school_id}"
+        
+        logger.info(f"Using undetected-chromedriver for: {meetings_url}")
+        
+        documents = []
+        driver = None
+        
+        try:
+            # Create undetected Chrome instance
+            options = uc.ChromeOptions()
+            # Try headless mode (may work better with newer Chrome)
+            options.add_argument('--headless=new')  # New headless mode
+            options.add_argument('--no-sandbox')
+            options.add_argument('--disable-dev-shm-usage')
+            options.add_argument('--disable-blink-features=AutomationControlled')
+            options.add_argument('--window-size=1920,1080')
+            
+            logger.info("Launching Chrome with anti-detection patches...")
+            
+            # Let undetected-chromedriver auto-download matching ChromeDriver
+            # Specify version_main to match system Chrome (147)
+            try:
+                driver = uc.Chrome(
+                    options=options,
+                    version_main=147,  # Match Chromium version
+                    use_subprocess=True
+                )
+            except Exception as e:
+                logger.warning(f"Headless mode failed: {e}, trying with visible browser...")
+                # Try without headless as fallback
+                options = uc.ChromeOptions()
+                options.add_argument('--no-sandbox')
+                options.add_argument('--disable-dev-shm-usage')
+                driver = uc.Chrome(options=options, version_main=147, use_subprocess=True)
+            
+            # Navigate to meetings page
+            logger.info("Loading meeting listing page...")
+            driver.get(meetings_url)
+            
+            # Wait for Incapsula challenge to complete
+            wait_time = random.uniform(6.0, 9.0)
+            logger.info(f"Waiting {wait_time:.1f}s for Incapsula challenge...")
+            time.sleep(wait_time)
+            
+            # Check if we bypassed Incapsula
+            page_source = driver.page_source
+            
+            if 'Incapsula incident ID' in page_source or ('Incapsula' in page_source and len(page_source) < 10000):
+                logger.error(f"Still blocked by Incapsula ({len(page_source)} bytes)")
+                logger.error("Incapsula detection triggered despite undetected-chromedriver")
+                raise Exception("Incapsula block detected")
+            
+            logger.success(f"✓ Bypassed Incapsula! Page size: {len(page_source)} bytes")
+            
+            # Parse the page
+            soup = BeautifulSoup(page_source, 'html.parser')
+            
+            # Extract meeting links
+            meeting_links = []
+            
+            # Look for links with MID parameter or PDFs
+            for link in soup.find_all('a', href=True):
+                href = link.get('href', '')
+                text = link.get_text().strip()
+                
+                if 'MID=' in href.upper() or 'meetingdetail' in href.lower():
+                    full_url = urljoin(base_url, href)
+                    meeting_links.append({
+                        'url': full_url,
+                        'text': text,
+                        'type': 'meeting'
+                    })
+                elif href.lower().endswith('.pdf') and any(word in text.lower() for word in ['agenda', 'minutes', 'packet', 'meeting']):
+                    full_url = urljoin(base_url, href)
+                    meeting_links.append({
+                        'url': full_url,
+                        'text': text,
+                        'type': 'pdf'
+                    })
+            
+            logger.info(f"Found {len(meeting_links)} meeting/document links")
+            
+            # If no links found, try waiting for JavaScript-rendered content
+            if len(meeting_links) == 0:
+                logger.warning("No links found initially, waiting for JavaScript...")
+                try:
+                    WebDriverWait(driver, 10).until(
+                        EC.presence_of_element_located((By.TAG_NAME, "a"))
+                    )
+                    time.sleep(3)
+                    
+                    # Re-parse
+                    page_source = driver.page_source
+                    soup = BeautifulSoup(page_source, 'html.parser')
+                    
+                    for link in soup.find_all('a', href=True):
+                        href = link.get('href', '')
+                        text = link.get_text().strip()
+                        
+                        if 'MID=' in href.upper() or href.lower().endswith('.pdf'):
+                            full_url = urljoin(base_url, href)
+                            meeting_links.append({
+                                'url': full_url,
+                                'text': text,
+                                'type': 'pdf' if href.lower().endswith('.pdf') else 'meeting'
+                            })
+                    
+                    logger.info(f"After JS wait: {len(meeting_links)} links")
+                except Exception as e:
+                    logger.warning(f"JS content wait failed: {e}")
+            
+            # Save page HTML for debugging
+            debug_file = Path("/tmp/eboard_meeting_list_undetected.html")
+            with open(debug_file, 'w', encoding='utf-8') as f:
+                f.write(page_source)
+            logger.info(f"Saved page HTML to {debug_file} for debugging")
+            
+            # Process meeting links (limit to prevent overwhelming)
+            for idx, meeting_info in enumerate(meeting_links[:50]):
+                if idx > 0 and idx % 10 == 0:
+                    logger.info(f"Progress: {idx}/{min(50, len(meeting_links))}")
+                
+                # Human-like delay
+                time.sleep(random.uniform(2.0, 4.0))
+                
+                try:
+                    meeting_url = meeting_info['url']
+                    meeting_title = meeting_info['text']
+                    
+                    if meeting_info['type'] == 'pdf':
+                        # Record PDF link for later download
+                        logger.debug(f"  Found PDF: {meeting_title[:50]}")
+                        
+                        # Try to extract date from title
+                        meeting_date = datetime.now()
+                        try:
+                            from dateutil import parser as date_parser
+                            date_match = re.search(r'(\d{1,2}[-/]\d{1,2}[-/]\d{2,4})', meeting_title)
+                            if date_match:
+                                meeting_date = date_parser.parse(date_match.group(0))
+                        except:
+                            pass
+                        
+                        # Download and extract PDF content
+                        try:
+                            pdf_content = await self._scrape_pdf_document(meeting_url)
+                            if pdf_content and len(pdf_content.strip()) > 100:
+                                doc = MeetingDocument(
+                                    document_id=hashlib.md5(f"{meeting_url}{municipality}".encode()).hexdigest(),
+                                    source_url=meeting_url,
+                                    municipality=municipality,
+                                    state=state,
+                                    meeting_date=meeting_date,
+                                    meeting_type='Board Meeting',
+                                    title=meeting_title,
+                                    content=pdf_content[:50000],
+                                    metadata={
+                                        'platform': 'eboard',
+                                        'school_id': school_id,
+                                        'scraped_with': 'undetected_chromedriver'
+                                    }
+                                )
+                                documents.append(doc)
+                                logger.success(f"    ✓ Scraped PDF: {meeting_title[:50]}")
+                        except Exception as e:
+                            logger.error(f"    Error downloading PDF: {e}")
+                    
+                    else:
+                        # Navigate to meeting detail page
+                        logger.debug(f"  Loading meeting: {meeting_title[:50]}")
+                        driver.get(meeting_url)
+                        time.sleep(random.uniform(2.0, 4.0))
+                        
+                        meeting_soup = BeautifulSoup(driver.page_source, 'html.parser')
+                        
+                        # Extract meeting date
+                        meeting_date = datetime.now()
+                        try:
+                            from dateutil import parser as date_parser
+                            for elem in meeting_soup.find_all(['h1', 'h2', 'h3', 'div', 'span']):
+                                text = elem.get_text().strip()
+                                date_match = re.search(r'(\d{1,2}[-/]\d{1,2}[-/]\d{2,4})', text)
+                                if date_match:
+                                    meeting_date = date_parser.parse(date_match.group(0))
+                                    break
+                        except:
+                            pass
+                        
+                        # Find document links (PDFs)
+                        doc_links = []
+                        for link in meeting_soup.find_all('a', href=True):
+                            href = link.get('href', '')
+                            link_text = link.get_text().strip()
+                            
+                            if href.lower().endswith('.pdf') or any(word in link_text.lower() for word in ['agenda', 'minutes', 'packet']):
+                                doc_url = urljoin(base_url, href)
+                                doc_links.append({
+                                    'url': doc_url,
+                                    'text': link_text
+                                })
+                        
+                        logger.info(f"    Found {len(doc_links)} documents")
+                        
+                        # Download each document
+                        for doc_info in doc_links[:5]:
+                            try:
+                                doc_url = doc_info['url']
+                                doc_title = doc_info['text']
+                                
+                                if doc_url.lower().endswith('.pdf'):
+                                    doc_content = await self._scrape_pdf_document(doc_url)
+                                    
+                                    if doc_content and len(doc_content.strip()) > 100:
+                                        doc = MeetingDocument(
+                                            document_id=hashlib.md5(f"{doc_url}{municipality}".encode()).hexdigest(),
+                                            source_url=doc_url,
+                                            municipality=municipality,
+                                            state=state,
+                                            meeting_date=meeting_date,
+                                            meeting_type='Board Meeting',
+                                            title=doc_title or meeting_title,
+                                            content=doc_content[:50000],
+                                            metadata={
+                                                'platform': 'eboard',
+                                                'meeting_page': meeting_url,
+                                                'school_id': school_id,
+                                                'scraped_with': 'undetected_chromedriver'
+                                            }
+                                        )
+                                        documents.append(doc)
+                                        logger.success(f"      ✓ Scraped: {doc_title[:50]}")
+                            
+                            except Exception as e:
+                                logger.error(f"      Error scraping document: {e}")
+                
+                except Exception as e:
+                    logger.error(f"Error processing {meeting_info.get('text', 'unknown')}: {e}")
+                    continue
+            
+        except Exception as e:
+            logger.error(f"Error in undetected scraper: {e}")
+            import traceback
+            logger.error(traceback.format_exc())
+            raise  # Re-raise to trigger fallback
+        
+        finally:
+            if driver:
+                try:
+                    driver.quit()
+                except:
+                    pass
+        
+        logger.success(f"Undetected scraper complete: {len(documents)} documents")
+        return documents
+
     async def _scrape_eboard(
         self,
         target: Dict[str, Any],
@@ -1065,14 +1362,11 @@ class ScraperAgent(BaseAgent):
         Scrape eBoard Solutions platform (used by many school districts).
         
         eBoard uses ASP.NET with JavaScript and Incapsula bot protection.
-        This implementation uses Playwright Stealth + optional manual cookies.
+        This implementation uses undetected-chromedriver for automatic bypass.
         
-        To bypass Incapsula:
-        1. Run without cookies first (will likely get blocked)
-        2. Manually visit the site in browser, solve any CAPTCHA
-        3. Export cookies using browser extension (EditThisCookie)
-        4. Save to eboard_cookies.json
-        5. Re-run scraper (will use cookies automatically)
+        Bypass methods (in order):
+        1. Undetected ChromeDriver - automatic bot detection evasion
+        2. Playwright with manual cookies (fallback)
         
         Args:
             target: Scraping target with URL, municipality, state
@@ -1086,6 +1380,19 @@ class ScraperAgent(BaseAgent):
         state = target.get("state", "")
         
         logger.info(f"Scraping eBoard platform: {url} for {municipality}")
+        
+        # Try undetected-chromedriver first (automatic bypass)
+        try:
+            import undetected_chromedriver as uc
+            logger.info("Attempting with undetected-chromedriver (automatic bot evasion)")
+            return await self._scrape_eboard_undetected(target, date_range)
+        except ImportError:
+            logger.warning("undetected-chromedriver not available, falling back to Playwright")
+        except Exception as e:
+            logger.warning(f"Undetected ChromeDriver failed: {e}, falling back to Playwright")
+        
+        # Fallback to Playwright with cookies
+        logger.info("Using Playwright with manual cookies (if available)")
         
         documents = []
         
