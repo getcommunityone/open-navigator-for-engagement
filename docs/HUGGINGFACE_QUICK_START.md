@@ -2,6 +2,8 @@
 
 **TL;DR: Store unlimited data for FREE on Hugging Face!**
 
+**⚠️ IMPORTANT: Use Parquet format, NOT individual PDFs! See [file limits guide](HUGGINGFACE_FILE_LIMITS.md)**
+
 ---
 
 ## ⚡ 3-MINUTE SETUP
@@ -31,9 +33,30 @@ export HF_TOKEN="hf_YOUR_TOKEN_HERE"
 
 ---
 
+## ⚠️ CRITICAL: FILE LIMITS
+
+**Hugging Face Limits:**
+- Files per folder: <10,000
+- Total files per repo: <100,000
+- For large datasets: Use Parquet or WebDataset format
+
+**Your Scale:**
+- 22,000 jurisdictions × 1,000 docs = 22 MILLION files ❌
+
+**Solution:**
+- Extract text from PDFs
+- Store in Parquet format
+- Result: 50 files instead of 22 million ✅
+
+**See detailed guide:** [HUGGINGFACE_FILE_LIMITS.md](HUGGINGFACE_FILE_LIMITS.md)
+
+---
+
 ## 📤 UPLOAD YOUR DATA
 
-### Option 1: Use the Upload Script
+### Option 1: Use the Upload Script (Recommended)
+
+**For discovery data:**
 
 ```bash
 # Go to your project
@@ -51,7 +74,31 @@ python scripts/upload_to_huggingface.py \
 # https://huggingface.co/datasets/YOUR_USERNAME/oral-health-policy-data
 ```
 
-### Option 2: Manual Upload (Python)
+**For meeting PDFs (extract text first!):**
+
+```bash
+# DON'T upload individual PDFs!
+# Instead, extract text and save as Parquet
+
+# 1. Create a file with PDF URLs (one per line)
+cat > pdf_urls.txt << EOF
+https://tuscaloosaal.suiteonemedia.com/agenda1.pdf
+https://tuscaloosaal.suiteonemedia.com/agenda2.pdf
+...
+EOF
+
+# 2. Process PDFs to Parquet (extracts text, deletes PDFs)
+python scripts/upload_to_huggingface.py \
+    --repo "YOUR_USERNAME/oral-health-policy-data" \
+    --process-pdfs pdf_urls.txt
+
+# 3. Upload the Parquet file (1 file, not thousands!)
+python scripts/upload_to_huggingface.py \
+    --repo "YOUR_USERNAME/oral-health-policy-data" \
+    --meetings meetings_processed.parquet
+```
+
+---
 
 ```python
 from datasets import Dataset

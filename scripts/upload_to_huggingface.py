@@ -72,7 +72,10 @@ class HuggingFaceUploader:
     
     def upload_discovery_results(self, data_dir: str = "data/bronze/discovered_sources"):
         """
-        Upload discovery results to Hugging Face.
+        Upload discovery results to Hugging Face as Parquet.
+        
+        IMPORTANT: This uploads 1 Parquet file (not thousands of individual files).
+        This keeps you under Hugging Face's 100k file limit.
         
         Args:
             data_dir: Directory containing discovery CSV files
@@ -107,28 +110,51 @@ class HuggingFaceUploader:
         logger.info(f"  Total jurisdictions: {len(combined)}")
         logger.info(f"  Columns: {', '.join(combined.columns)}")
         
-        # Convert to Dataset
+        # Save as Parquet locally first (compressed)
+        parquet_file = Path("discovery_all.parquet")
+        combined.to_parquet(parquet_file, compression='snappy', index=False)
+        file_size_mb = parquet_file.stat().st_size / (1024 * 1024)
+        logger.info(f"  Parquet file size: {file_size_mb:.2f} MB")
+        
+        # Convert to Dataset (will be stored as Parquet on HF)
         dataset = Dataset.from_pandas(combined)
         
-        # Upload
-        logger.info(f"  Uploading to Hugging Face...")
+        # Upload (Hugging Face stores as Parquet internally)
+        logger.info(f"  Uploading to Hugging Face as Parquet...")
         dataset.push_to_hub(
             self.repo_name,
             split="discovery",
             commit_message="Update discovery results"
         )
         
-        logger.success(f"✅ Uploaded {len(combined)} jurisdictions!")
+        # Clean up local Parquet
+        parquet_file.unlink()
+        
+        logger.success(f"✅ Uploaded {len(combined)} jurisdictions in 1 Parquet file!")
+        logger.success(f"   File size: {file_size_mb:.2f} MB (not {len(combined)} individual files)")
         logger.success(f"   View at: https://huggingface.co/datasets/{self.repo_name}")
         
         return dataset
     
     def upload_meeting_data(self, meetings_file: str):
         """
-        Upload meeting data to Hugging Face.
+        Upload meeting data to Hugging Face as Parquet.
+        
+        IMPORTANT: Pass a CSV/JSON with extracted text, NOT individual PDF files.
+        This keeps you under Hugging Face's 100k file limit.
+        
+        Expected columns:
+        - jurisdiction: City/county name
+        - state: State code
+        - date: Meeting date
+        - title: Meeting title
+        - agenda_text: Extracted text from agenda PDF
+        - minutes_text: Extracted text from minutes PDF
+        - source_url: Link to original PDF
+        - video_url: Link to YouTube (optional)
         
         Args:
-            meetings_file: CSV/JSON file with meeting data
+            meetings_file: CSV/JSON file with meeting data (text extracted, not PDF bytes)
         """
         logger.info(f"📤 Uploading meeting data from {meetings_file}")
         
@@ -142,23 +168,44 @@ class HuggingFaceUploader:
             df = pd.read_csv(file_path)
         elif file_path.suffix == '.json':
             df = pd.read_json(file_path)
+        elif file_path.suffix == '.parquet':
+            df = pd.read_parquet(file_path)
         else:
-            logger.error(f"Unsupported file type: {file_path.suffix}")
+            logger.error(f"Unsupported file type: {file_path.suffix}. Use .csv, .json, or .parquet")
             return
         
         logger.info(f"  Meetings: {len(df)}")
+        logger.info(f"  Columns: {', '.join(df.columns)}")
         
-        # Convert to Dataset
+        # Validate expected columns
+        required_cols = ['jurisdiction', 'state', 'date']
+        missing = [col for col in required_cols if col not in df.columns]
+        if missing:
+            logger.warning(f"  Missing recommended columns: {missing}")
+        
+        # Save as Parquet locally first
+        parquet_file = Path("meetings_all.parquet")
+        df.to_parquet(parquet_file, compression='snappy', index=False)
+        file_size_mb = parquet_file.stat().st_size / (1024 * 1024)
+        logger.info(f"  Parquet file size: {file_size_mb:.2f} MB")
+        
+        # Convert to Dataset (stored as Parquet on HF)
         dataset = Dataset.from_pandas(df)
         
         # Upload
+        logger.info(f"  Uploading {len(df):,} meetings as 1 Parquet file...")
         dataset.push_to_hub(
             self.repo_name,
             split="meetings",
             commit_message="Update meeting data"
         )
         
-        logger.success(f"✅ Uploaded {len(df)} meetings!")
+        # Clean up
+        parquet_file.unlink()
+        
+        logger.success(f"✅ Uploaded {len(df):,} meetings in 1 Parquet file!")
+        logger.success(f"   File size: {file_size_mb:.2f} MB")
+        logger.success(f"   NOT {len(df):,} individual PDF files (would exceed limits)")
         
         return dataset
     
@@ -349,6 +396,90 @@ Last updated: {pd.Timestamp.now().strftime('%Y-%m-%d')}
         logger.success(f"✅ Dataset card created!")
 
 
+def process_pdfs_to_parquet(pdf_urls: list, output_file: str = "meetings_processed.parquet"):
+    """
+    CORRECT WAY: Extract text from PDFs and save as Parquet (not individual files).
+    
+    This function demonstrates the proper workflow:
+    1. Download PDF temporarily
+    2. Extract text
+    3. Store metadata + text in DataFrame
+    4. Delete PDF
+    5. Save all as single Parquet file
+    
+    This avoids uploading millions of individual files to Hugging Face.
+    
+    Args:
+        pdf_urls: List of PDF URLs to process
+        output_file: Output Parquet file path
+    
+    Returns:
+        DataFrame with processed meetings
+    """
+    try:
+        import httpx
+        from PyPDF2 import PdfReader
+        import io
+        from datetime import datetime
+    except ImportError:
+        logger.error("Install required packages: pip install httpx PyPDF2")
+        return None
+    
+    logger.info(f"Processing {len(pdf_urls)} PDFs to Parquet format...")
+    
+    all_meetings = []
+    client = httpx.Client(timeout=30)
+    
+    for i, pdf_url in enumerate(pdf_urls, 1):
+        try:
+            logger.info(f"  [{i}/{len(pdf_urls)}] Processing {pdf_url}...")
+            
+            # Download PDF temporarily (don't save to disk)
+            response = client.get(pdf_url)
+            pdf_bytes = response.content
+            
+            # Extract text from PDF
+            pdf_reader = PdfReader(io.BytesIO(pdf_bytes))
+            text = ""
+            for page in pdf_reader.pages:
+                text += page.extract_text() + "\n"
+            
+            # Store metadata + text (NOT PDF bytes)
+            all_meetings.append({
+                'source_url': pdf_url,
+                'text': text,
+                'page_count': len(pdf_reader.pages),
+                'file_size_kb': len(pdf_bytes) // 1024,
+                'processed_at': datetime.now().isoformat(),
+                # Add your metadata extraction here:
+                # 'jurisdiction': extract_jurisdiction(text),
+                # 'date': extract_date(text),
+                # 'title': extract_title(text),
+            })
+            
+            # Delete PDF bytes immediately (free memory!)
+            del pdf_bytes
+            
+        except Exception as e:
+            logger.warning(f"  Failed to process {pdf_url}: {e}")
+            continue
+    
+    client.close()
+    
+    # Convert to DataFrame
+    df = pd.DataFrame(all_meetings)
+    logger.info(f"Successfully processed {len(df)} PDFs")
+    
+    # Save as Parquet (compressed)
+    df.to_parquet(output_file, compression='snappy', index=False)
+    
+    file_size_mb = Path(output_file).stat().st_size / (1024 * 1024)
+    logger.success(f"✅ Saved to {output_file} ({file_size_mb:.2f} MB)")
+    logger.success(f"   This is 1 file, not {len(df)} individual PDFs!")
+    
+    return df
+
+
 def main():
     """Main entry point."""
     
@@ -378,8 +509,28 @@ def main():
         action="store_true",
         help="Create dataset README card"
     )
+    parser.add_argument(
+        "--process-pdfs",
+        help="Process PDF URLs from file and save as Parquet (CORRECT way to handle PDFs)"
+    )
     
     args = parser.parse_args()
+    
+    # Special case: Process PDFs to Parquet first
+    if args.process_pdfs:
+        logger.info("Processing PDFs to Parquet format (not uploading individual files)...")
+        # Load PDF URLs from file
+        pdf_urls = []
+        with open(args.process_pdfs) as f:
+            pdf_urls = [line.strip() for line in f if line.strip()]
+        
+        # Process to Parquet
+        df = process_pdfs_to_parquet(pdf_urls, "meetings_processed.parquet")
+        
+        if df is not None:
+            logger.success("✅ PDFs processed! Now upload the Parquet file:")
+            logger.success(f"   python {__file__} --meetings meetings_processed.parquet")
+        return
     
     # Initialize uploader
     uploader = HuggingFaceUploader(args.repo)

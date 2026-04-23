@@ -27,6 +27,19 @@
 5. **🤝 Shareable** - Public datasets help research community
 6. **⚡ Fast** - Optimized for large datasets
 
+### ⚠️ CRITICAL: File Limits
+
+**Hugging Face has repository limits:**
+- Files per folder: <10,000
+- Total files per repo: <100,000
+- Large datasets: Use Parquet or WebDataset format
+
+**Your scale (22M files) exceeds limits!**
+
+**Solution: Use Parquet format**
+- 22 million PDFs → 50 Parquet files ✅
+- See detailed guide: [HUGGINGFACE_FILE_LIMITS.md](HUGGINGFACE_FILE_LIMITS.md)
+
 ### What to Store
 
 **Store ONLY processed/filtered data, not raw content:**
