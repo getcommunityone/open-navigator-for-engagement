@@ -71,8 +71,11 @@ def serve(host: str, port: int, reload: bool):
 @click.option('--platform', default='generic', help='Platform type (legistar, granicus, suiteonemedia, generic)')
 @click.option('--max-events', default=500, show_default=True, help='Max events to scrape (0=unlimited, SuiteOne only)')
 @click.option('--start-year', default=0, show_default=True, help='Only include events on/after this year (0=all, SuiteOne only)')
+@click.option('--include-social/--no-include-social', default=True, show_default=True,
+              help='Also scrape discovered YouTube transcripts and Facebook post text')
 @click.option('--output', default=None, help='Output JSON file path (default: output/<municipality>_<platform>.json)')
-def scrape(state: str, municipality: str, url: str, platform: str, max_events: int, start_year: int, output: str):
+def scrape(state: str, municipality: str, url: str, platform: str, max_events: int, start_year: int,
+           include_social: bool, output: str):
     """Scrape meeting minutes from a single source."""
     import json
     from datetime import datetime
@@ -92,6 +95,15 @@ def scrape(state: str, municipality: str, url: str, platform: str, max_events: i
             }]
             
             documents = await scraper._scrape_targets(targets, {})
+
+            if include_social:
+                social_docs = await scraper.scrape_social_sources(
+                    municipality=municipality,
+                    state=state,
+                    seed_url=url,
+                )
+                documents.extend(social_docs)
+                logger.info(f"Scraped {len(social_docs)} social media documents")
             
             logger.info(f"Scraped {len(documents)} documents")
             

@@ -4,6 +4,7 @@ Scraper Agent for collecting government meeting minutes from various sources.
 import asyncio
 import hashlib
 import io
+import json
 import re
 from typing import List, Dict, Any, Optional
 from datetime import datetime, timedelta
@@ -33,6 +34,11 @@ try:
     from PIL import Image
 except Exception:
     Image = None
+
+try:
+    from youtube_transcript_api import YouTubeTranscriptApi
+except Exception:
+    YouTubeTranscriptApi = None
 
 from agents.base import BaseAgent, AgentRole, AgentMessage, MessageType, AgentStatus
 
@@ -93,6 +99,7 @@ class ScraperAgent(BaseAgent):
         )
         self.ocr_max_pages = 10
         self._ocr_missing_tesseract_warned = False
+        self.social_source_limit = 8
         
     async def __aenter__(self):
         """Async context manager entry."""
@@ -190,6 +197,10 @@ class ScraperAgent(BaseAgent):
                 tasks.append(self._scrape_granicus(target, date_range))
             elif platform == "suiteonemedia" or "suiteonemedia" in url.lower():
                 tasks.append(self._scrape_suiteonemedia(target, date_range))
+            elif platform == "youtube":
+                tasks.append(self._scrape_youtube_source(target))
+            elif platform == "facebook":
+                tasks.append(self._scrape_facebook_source(target))
             else:
                 tasks.append(self._scrape_generic(target, date_range))
         
@@ -205,6 +216,270 @@ class ScraperAgent(BaseAgent):
                 documents.extend(result)
         
         return documents
+
+    async def scrape_social_sources(
+        self,
+        municipality: str,
+        state: str,
+        seed_url: str,
+        max_sources: int = 8
+    ) -> List[Dict[str, Any]]:
+        """Discover and scrape YouTube/Facebook sources for a jurisdiction."""
+        social_documents: List[Dict[str, Any]] = []
+
+        homepage_url = await self._resolve_homepage_url(municipality, state, seed_url)
+        if not homepage_url:
+            logger.warning(f"Could not resolve homepage URL for social scraping: {municipality}, {state}")
+            return social_documents
+
+        logger.info(f"Discovering social sources from homepage: {homepage_url}")
+        social_urls = await self._discover_social_urls(homepage_url, municipality, state)
+
+        youtube_urls = list(dict.fromkeys(social_urls.get("youtube", [])))[:max_sources]
+        facebook_urls = list(dict.fromkeys(social_urls.get("facebook", [])))[:max_sources]
+
+        logger.info(
+            f"Social discovery for {municipality}: "
+            f"{len(youtube_urls)} YouTube, {len(facebook_urls)} Facebook"
+        )
+
+        tasks = []
+        for y_url in youtube_urls:
+            tasks.append(self._scrape_youtube_source({
+                "url": y_url,
+                "municipality": municipality,
+                "state": state,
+            }))
+        for f_url in facebook_urls:
+            tasks.append(self._scrape_facebook_source({
+                "url": f_url,
+                "municipality": municipality,
+                "state": state,
+            }))
+
+        if not tasks:
+            return social_documents
+
+        results = await asyncio.gather(*tasks, return_exceptions=True)
+        for result in results:
+            if isinstance(result, Exception):
+                logger.warning(f"Social scraping error: {result}")
+                continue
+            if isinstance(result, list):
+                social_documents.extend(result)
+
+        return social_documents
+
+    async def _resolve_homepage_url(self, municipality: str, state: str, seed_url: str) -> str:
+        """Resolve an official website homepage used for social discovery."""
+        if seed_url and "suiteonemedia" not in seed_url.lower():
+            parsed = urlparse(seed_url)
+            return f"{parsed.scheme}://{parsed.netloc}" if parsed.scheme and parsed.netloc else seed_url
+
+        city = (municipality or "").lower().replace(" ", "").replace("'", "")
+        st = (state or "").lower()
+        candidates = [
+            f"https://www.{city}{st}.gov",
+            f"https://{city}{st}.gov",
+            f"https://www.cityof{city}.com",
+            f"https://www.{city}.gov",
+            f"https://www.{city}.com",
+            f"https://{city}.com",
+        ]
+
+        for candidate in candidates:
+            try:
+                resp = await self.http_client.get(candidate, timeout=8)
+                if resp.status_code < 400:
+                    parsed = urlparse(str(resp.url))
+                    return f"{parsed.scheme}://{parsed.netloc}"
+            except Exception:
+                continue
+
+        return ""
+
+    async def _discover_social_urls(self, homepage_url: str, municipality: str, state: str) -> Dict[str, List[str]]:
+        """Discover social media URLs from homepage and YouTube pattern matching."""
+        discovered = {"youtube": [], "facebook": []}
+
+        try:
+            from discovery.social_media_discovery import SocialMediaDiscovery
+
+            async with SocialMediaDiscovery() as discovery:
+                social = await discovery.discover_from_website(
+                    homepage_url=homepage_url,
+                    jurisdiction_name=municipality,
+                    state=state,
+                )
+                discovered["youtube"] = social.get("youtube", [])
+                discovered["facebook"] = social.get("facebook", [])
+        except Exception as err:
+            logger.debug(f"SocialMediaDiscovery unavailable/failed: {err}")
+
+        # Augment YouTube discovery using handle pattern search for better recall.
+        try:
+            from discovery.youtube_channel_discovery import YouTubeChannelDiscovery
+
+            async with YouTubeChannelDiscovery() as ydisc:
+                channels = await ydisc.discover_channels(
+                    city_name=municipality,
+                    state_code=state,
+                    homepage_url=homepage_url,
+                )
+                for channel in channels:
+                    url = channel.get("channel_url")
+                    if url:
+                        discovered["youtube"].append(url)
+        except Exception as err:
+            logger.debug(f"YouTubeChannelDiscovery unavailable/failed: {err}")
+
+        discovered["youtube"] = list(dict.fromkeys(discovered["youtube"]))
+        discovered["facebook"] = list(dict.fromkeys(discovered["facebook"]))
+        return discovered
+
+    async def _scrape_youtube_source(self, target: Dict[str, Any]) -> List[Dict[str, Any]]:
+        """Scrape recent YouTube videos and transcripts from a channel URL."""
+        url = target.get("url", "")
+        municipality = target.get("municipality", "")
+        state = target.get("state", "")
+
+        documents: List[Dict[str, Any]] = []
+        if not url:
+            return documents
+
+        videos_url = url.rstrip("/") + "/videos"
+        try:
+            resp = await self.http_client.get(videos_url)
+            if resp.status_code >= 400:
+                resp = await self.http_client.get(url)
+            text = resp.text
+        except Exception as err:
+            logger.debug(f"Could not fetch YouTube page {url}: {err}")
+            return documents
+
+        video_ids = []
+        for vid in re.findall(r'watch\?v=([A-Za-z0-9_-]{11})', text):
+            if vid not in video_ids:
+                video_ids.append(vid)
+        video_ids = video_ids[: self.social_source_limit]
+
+        for vid in video_ids:
+            transcript_text = self._fetch_youtube_transcript(vid)
+            if not transcript_text:
+                continue
+
+            video_url = f"https://www.youtube.com/watch?v={vid}"
+            doc_id = hashlib.md5(f"youtube-{municipality}-{vid}".encode()).hexdigest()
+            documents.append(MeetingDocument(
+                document_id=doc_id,
+                source_url=video_url,
+                municipality=municipality,
+                state=state,
+                meeting_date=datetime.utcnow().isoformat(),
+                meeting_type="YouTube Video",
+                title=f"YouTube Transcript {vid}",
+                content=transcript_text,
+                metadata={
+                    "platform": "youtube",
+                    "channel_url": url,
+                    "video_id": vid,
+                    "has_transcript": True,
+                }
+            ))
+
+        return documents
+
+    async def _scrape_facebook_source(self, target: Dict[str, Any]) -> List[Dict[str, Any]]:
+        """Scrape publicly accessible Facebook page/post text snippets."""
+        url = target.get("url", "")
+        municipality = target.get("municipality", "")
+        state = target.get("state", "")
+
+        documents: List[Dict[str, Any]] = []
+        if not url:
+            return documents
+
+        normalized = url.replace("www.facebook.com", "m.facebook.com")
+        try:
+            resp = await self.http_client.get(normalized)
+            if resp.status_code >= 400:
+                return documents
+            soup = BeautifulSoup(resp.content, "html.parser")
+        except Exception as err:
+            logger.debug(f"Could not fetch Facebook page {url}: {err}")
+            return documents
+
+        # Try to extract links to individual post pages first.
+        post_links: List[str] = []
+        for a in soup.find_all("a", href=True):
+            href = a["href"]
+            if "/posts/" in href or "/videos/" in href:
+                full = urljoin(normalized, href)
+                if full not in post_links:
+                    post_links.append(full)
+        post_links = post_links[: self.social_source_limit]
+
+        # If direct post links are unavailable, use page text as fallback content.
+        if not post_links:
+            page_text = soup.get_text(" ", strip=True)
+            if len(page_text) > 200:
+                doc_id = hashlib.md5(f"facebook-page-{municipality}-{url}".encode()).hexdigest()
+                documents.append(MeetingDocument(
+                    document_id=doc_id,
+                    source_url=url,
+                    municipality=municipality,
+                    state=state,
+                    meeting_date=datetime.utcnow().isoformat(),
+                    meeting_type="Facebook Page",
+                    title="Facebook Page Content",
+                    content=page_text[:8000],
+                    metadata={
+                        "platform": "facebook",
+                        "content_source": "page_fallback",
+                    }
+                ))
+            return documents
+
+        for post_url in post_links:
+            try:
+                p_resp = await self.http_client.get(post_url)
+                if p_resp.status_code >= 400:
+                    continue
+                p_soup = BeautifulSoup(p_resp.content, "html.parser")
+                post_text = p_soup.get_text(" ", strip=True)
+                if len(post_text) < 120:
+                    continue
+
+                doc_id = hashlib.md5(f"facebook-post-{municipality}-{post_url}".encode()).hexdigest()
+                documents.append(MeetingDocument(
+                    document_id=doc_id,
+                    source_url=post_url,
+                    municipality=municipality,
+                    state=state,
+                    meeting_date=datetime.utcnow().isoformat(),
+                    meeting_type="Facebook Post",
+                    title="Facebook Post",
+                    content=post_text[:8000],
+                    metadata={
+                        "platform": "facebook",
+                        "content_source": "post",
+                    }
+                ))
+            except Exception as err:
+                logger.debug(f"Could not parse Facebook post {post_url}: {err}")
+
+        return documents
+
+    def _fetch_youtube_transcript(self, video_id: str) -> str:
+        """Return concatenated YouTube transcript text when available."""
+        if YouTubeTranscriptApi is None:
+            return ""
+
+        try:
+            transcript = YouTubeTranscriptApi.get_transcript(video_id, languages=["en"])
+            return " ".join(chunk.get("text", "") for chunk in transcript if chunk.get("text")).strip()
+        except Exception:
+            return ""
     
     async def _scrape_legistar(
         self,
