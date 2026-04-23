@@ -17,6 +17,23 @@ try:
 except Exception:
     PdfReader = None
 
+try:
+    import pdfplumber
+except Exception:
+    pdfplumber = None
+
+try:
+    import pytesseract
+    from pytesseract import TesseractNotFoundError
+except Exception:
+    pytesseract = None
+    TesseractNotFoundError = Exception
+
+try:
+    from PIL import Image
+except Exception:
+    Image = None
+
 from agents.base import BaseAgent, AgentRole, AgentMessage, MessageType, AgentStatus
 
 
@@ -74,6 +91,8 @@ class ScraperAgent(BaseAgent):
             "agendafile",
             "minutesfile",
         )
+        self.ocr_max_pages = 10
+        self._ocr_missing_tesseract_warned = False
         
     async def __aenter__(self):
         """Async context manager entry."""
@@ -649,8 +668,12 @@ class ScraperAgent(BaseAgent):
             content_type = (response.headers.get("content-type") or "").lower()
             url_lower = url.lower()
             is_pdf = ".pdf" in url_lower or "application/pdf" in content_type
+            is_image = any(ext in url_lower for ext in [".png", ".jpg", ".jpeg", ".tif", ".tiff"]) or content_type.startswith("image/")
 
             content = "[Document content extraction unavailable]"
+            ocr_used = False
+            ocr_pages = 0
+
             if is_pdf and PdfReader is not None:
                 try:
                     reader = PdfReader(io.BytesIO(response.content))
@@ -665,6 +688,21 @@ class ScraperAgent(BaseAgent):
                 except Exception as parse_error:
                     logger.debug(f"PDF parse failed for {url}: {parse_error}")
                     content = "[PDF parsing failed]"
+
+            # OCR fallback for scanned/image-based PDFs.
+            if is_pdf and content in ["[PDF has no extractable text]", "[PDF parsing failed]"]:
+                ocr_text, ocr_pages = self._ocr_pdf_bytes(response.content)
+                if ocr_text:
+                    content = ocr_text
+                    ocr_used = True
+
+            # OCR for image documents.
+            if is_image and content == "[Document content extraction unavailable]":
+                image_text = self._ocr_image_bytes(response.content)
+                if image_text:
+                    content = image_text
+                    ocr_used = True
+                    ocr_pages = 1
             
             doc_id = hashlib.md5(f"{url}{municipality}".encode()).hexdigest()
             
@@ -682,6 +720,9 @@ class ScraperAgent(BaseAgent):
                     "file_size": len(response.content),
                     "content_type": response.headers.get("content-type"),
                     "is_pdf": is_pdf,
+                    "is_image": is_image,
+                    "ocr_used": ocr_used,
+                    "ocr_pages": ocr_pages,
                     "text_extracted": content not in [
                         "[Document content extraction unavailable]",
                         "[PDF has no extractable text]",
@@ -698,6 +739,52 @@ class ScraperAgent(BaseAgent):
             else:
                 logger.error(f"Error downloading document {url}: {e}")
             return None
+
+    def _ocr_pdf_bytes(self, pdf_bytes: bytes) -> tuple[str, int]:
+        """OCR PDF pages when direct PDF text extraction fails."""
+        if pdfplumber is None or pytesseract is None:
+            return "", 0
+
+        try:
+            extracted_pages = []
+            with pdfplumber.open(io.BytesIO(pdf_bytes)) as pdf:
+                for page in pdf.pages[:self.ocr_max_pages]:
+                    try:
+                        image = page.to_image(resolution=200).original
+                        text = pytesseract.image_to_string(image).strip()
+                        if text:
+                            extracted_pages.append(text)
+                    except TesseractNotFoundError:
+                        if not self._ocr_missing_tesseract_warned:
+                            logger.warning("Tesseract binary not found. Install 'tesseract-ocr' to enable OCR.")
+                            self._ocr_missing_tesseract_warned = True
+                        return "", 0
+                    except Exception as page_err:
+                        logger.debug(f"OCR page failed: {page_err}")
+
+            if not extracted_pages:
+                return "", 0
+            return "\n\n".join(extracted_pages), len(extracted_pages)
+        except Exception as err:
+            logger.debug(f"OCR PDF fallback failed: {err}")
+            return "", 0
+
+    def _ocr_image_bytes(self, image_bytes: bytes) -> str:
+        """OCR text from image-based documents."""
+        if pytesseract is None or Image is None:
+            return ""
+
+        try:
+            image = Image.open(io.BytesIO(image_bytes))
+            return pytesseract.image_to_string(image).strip()
+        except TesseractNotFoundError:
+            if not self._ocr_missing_tesseract_warned:
+                logger.warning("Tesseract binary not found. Install 'tesseract-ocr' to enable OCR.")
+                self._ocr_missing_tesseract_warned = True
+            return ""
+        except Exception as err:
+            logger.debug(f"Image OCR failed: {err}")
+            return ""
 
     async def _scrape_pdf_document(
         self,
