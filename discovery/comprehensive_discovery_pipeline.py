@@ -1,0 +1,630 @@
+"""
+Comprehensive Discovery Pipeline for ALL U.S. Cities and Counties
+
+Automates discovery of:
+- Government websites
+- YouTube channels (with statistics)
+- Vimeo channels
+- Meeting platforms (Legistar, SuiteOne, Granicus, etc.)
+- Agenda portals and document systems
+- Social media accounts
+- Meeting schedules and archives
+
+Scale: 3,143 counties + 19,000+ cities = ~22,000 jurisdictions
+
+Usage:
+    # Run for all jurisdictions
+    python discovery/comprehensive_discovery_pipeline.py --all
+    
+    # Run for specific state
+    python discovery/comprehensive_discovery_pipeline.py --state AL
+    
+    # Run for top 100 cities
+    python discovery/comprehensive_discovery_pipeline.py --top 100
+"""
+import asyncio
+import argparse
+from typing import List, Dict, Optional
+from datetime import datetime
+import json
+from pathlib import Path
+
+from loguru import logger
+from tqdm.asyncio import tqdm
+import pandas as pd
+
+from discovery.url_discovery_agent import URLDiscoveryAgent
+from discovery.youtube_channel_discovery import YouTubeChannelDiscovery
+from discovery.social_media_discovery import SocialMediaDiscovery
+from discovery.platform_detector import detect_platform
+import httpx
+
+
+class ComprehensiveDiscoveryPipeline:
+    """
+    Master pipeline for discovering all data sources for U.S. jurisdictions.
+    
+    Designed to scale to 22,000+ cities and counties nationwide.
+    """
+    
+    def __init__(
+        self,
+        youtube_api_key: Optional[str] = None,
+        max_concurrent: int = 10,
+        output_dir: str = "data/bronze/discovered_sources"
+    ):
+        """
+        Initialize discovery pipeline.
+        
+        Args:
+            youtube_api_key: YouTube Data API v3 key (optional but recommended)
+            max_concurrent: Max concurrent requests (rate limiting)
+            output_dir: Where to save discovered data
+        """
+        self.youtube_api_key = youtube_api_key
+        self.max_concurrent = max_concurrent
+        self.output_dir = Path(output_dir)
+        self.output_dir.mkdir(parents=True, exist_ok=True)
+        
+        # Initialize discovery agents
+        # Note: URLDiscoveryAgent is optional - we use direct pattern matching
+        self.semaphore = asyncio.Semaphore(max_concurrent)
+    
+    async def discover_jurisdiction(
+        self,
+        jurisdiction: Dict
+    ) -> Dict:
+        """
+        Comprehensive discovery for a single jurisdiction.
+        
+        Args:
+            jurisdiction: Dict with keys: name, state_code, type (city/county), population
+            
+        Returns:
+            Complete discovery results
+        """
+        async with self.semaphore:
+            name = jurisdiction['name']
+            state = jurisdiction['state_code']
+            jtype = jurisdiction.get('type', 'city')
+            
+            logger.info(f"Discovering: {name}, {state} ({jtype})")
+            
+            results = {
+                'jurisdiction': jurisdiction,
+                'discovery_timestamp': datetime.now().isoformat(),
+                'websites': [],
+                'youtube_channels': [],
+                'other_video': [],
+                'meeting_platforms': [],
+                'social_media': {},
+                'agenda_portals': [],
+                'status': 'success'
+            }
+            
+            try:
+                # Step 1: Discover official website
+                logger.debug(f"  Step 1/6: Finding website for {name}")
+                website = await self._discover_website(name, state, jtype)
+                
+                if website:
+                    results['websites'].append(website)
+                    homepage_url = website.get('url')
+                else:
+                    logger.warning(f"  No website found for {name}, {state}")
+                    results['status'] = 'partial'
+                    homepage_url = None
+                
+                # Step 2: Discover YouTube channels
+                logger.debug(f"  Step 2/6: Finding YouTube channels")
+                youtube_channels = await self._discover_youtube(
+                    name, state, jtype, homepage_url
+                )
+                results['youtube_channels'] = youtube_channels
+                
+                # Step 3: Discover other video platforms (Vimeo, etc.)
+                if homepage_url:
+                    logger.debug(f"  Step 3/6: Finding other video platforms")
+                    other_video = await self._discover_other_video(homepage_url)
+                    results['other_video'] = other_video
+                
+                # Step 4: Detect meeting platforms
+                if homepage_url:
+                    logger.debug(f"  Step 4/6: Detecting meeting platforms")
+                    platforms = await self._detect_meeting_platforms(
+                        name, state, homepage_url
+                    )
+                    results['meeting_platforms'] = platforms
+                
+                # Step 5: Discover social media
+                if homepage_url:
+                    logger.debug(f"  Step 5/6: Finding social media accounts")
+                    social = await self._discover_social_media(homepage_url, name)
+                    results['social_media'] = social
+                
+                # Step 6: Find agenda portals
+                if homepage_url:
+                    logger.debug(f"  Step 6/6: Finding agenda portals")
+                    agendas = await self._find_agenda_portals(homepage_url, name)
+                    results['agenda_portals'] = agendas
+                
+                # Calculate completeness score
+                results['completeness_score'] = self._calculate_completeness(results)
+                
+                logger.success(f"✓ {name}: {results['completeness_score']:.0%} complete")
+                
+            except Exception as e:
+                logger.error(f"  Error discovering {name}: {e}")
+                results['status'] = 'error'
+                results['error'] = str(e)
+            
+            return results
+    
+    async def _discover_website(
+        self,
+        name: str,
+        state: str,
+        jtype: str
+    ) -> Optional[Dict]:
+        """Discover official government website."""
+        # Try common URL patterns
+        name_clean = name.lower().replace(' ', '').replace("'", '')
+        
+        if jtype == 'county':
+            name_clean = name_clean.replace('county', '')
+        
+        patterns = [
+            f'https://www.{name_clean}{state.lower()}.gov',
+            f'https://{name_clean}{state.lower()}.gov',
+            f'https://www.{name_clean}.gov',
+            f'https://{name_clean}.gov',
+            f'https://www.{name_clean}.{state.lower()}.gov',
+            f'https://www.cityof{name_clean}.com',
+            f'https://www.{name_clean}.com',
+        ]
+        
+        if jtype == 'county':
+            patterns.extend([
+                f'https://www.{name_clean}co.com',
+                f'https://{name_clean}county.com',
+                f'https://www.{name_clean}county.gov',
+            ])
+        
+        client = httpx.AsyncClient(timeout=10, follow_redirects=True)
+        
+        for url in patterns:
+            try:
+                response = await client.get(url)
+                if response.status_code == 200:
+                    await client.aclose()
+                    return {
+                        'url': url,
+                        'final_url': str(response.url),
+                        'status': 'active',
+                        'discovery_method': 'pattern_match'
+                    }
+            except:
+                continue
+        
+        await client.aclose()
+        return None
+    
+    async def _discover_youtube(
+        self,
+        name: str,
+        state: str,
+        jtype: str,
+        homepage_url: Optional[str]
+    ) -> List[Dict]:
+        """Discover YouTube channels."""
+        async with YouTubeChannelDiscovery(self.youtube_api_key) as discovery:
+            channels = await discovery.discover_channels(
+                city_name=name if jtype == 'city' else None,
+                county_name=name if jtype == 'county' else None,
+                state_code=state,
+                homepage_url=homepage_url
+            )
+        return channels
+    
+    async def _discover_other_video(self, homepage_url: str) -> List[Dict]:
+        """Discover Vimeo and other video platforms."""
+        video_platforms = []
+        
+        async with SocialMediaDiscovery() as discovery:
+            social = await discovery._scrape_page_for_social(homepage_url)
+            
+            if social.get('vimeo'):
+                for vimeo_url in social['vimeo']:
+                    video_platforms.append({
+                        'platform': 'vimeo',
+                        'url': vimeo_url,
+                        'discovery_method': 'website_scrape'
+                    })
+            
+            if social.get('archive_org'):
+                for archive_url in social['archive_org']:
+                    video_platforms.append({
+                        'platform': 'archive.org',
+                        'url': archive_url,
+                        'discovery_method': 'website_scrape'
+                    })
+        
+        return video_platforms
+    
+    async def _detect_meeting_platforms(
+        self,
+        name: str,
+        state: str,
+        homepage_url: str
+    ) -> List[Dict]:
+        """Detect meeting platforms (Legistar, SuiteOne, Granicus, etc.)."""
+        platforms = []
+        
+        client = httpx.AsyncClient(timeout=15, follow_redirects=True)
+        
+        # Check website for platform
+        try:
+            response = await client.get(homepage_url)
+            if response.status_code == 200:
+                platform_type = detect_platform(homepage_url, response.text)
+                
+                if platform_type:
+                    platforms.append({
+                        'type': platform_type,
+                        'detected_on': homepage_url,
+                        'method': 'html_analysis'
+                    })
+        except:
+            pass
+        
+        # Check for Legistar API
+        name_clean = name.lower().replace(' ', '').replace("'", '')
+        legistar_slugs = [
+            name_clean,
+            f'{name_clean}{state.lower()}',
+            f'{name_clean}county' if 'county' not in name_clean else name_clean
+        ]
+        
+        for slug in legistar_slugs:
+            try:
+                url = f'https://webapi.legistar.com/v1/{slug}/events'
+                response = await client.get(url, params={'$top': 1}, timeout=5)
+                
+                if response.status_code == 200:
+                    platforms.append({
+                        'type': 'legistar',
+                        'api_url': url,
+                        'slug': slug,
+                        'method': 'api_test'
+                    })
+                    break
+            except:
+                continue
+        
+        # Check for SuiteOne (like Tuscaloosa)
+        suiteone_patterns = [
+            f'https://{name_clean}{state.lower()}.suiteonemedia.com',
+            f'https://{name_clean}.suiteonemedia.com',
+        ]
+        
+        for url in suiteone_patterns:
+            try:
+                response = await client.get(url, timeout=5)
+                if response.status_code == 200 and 'suiteonemedia' in response.text.lower():
+                    platforms.append({
+                        'type': 'suiteone',
+                        'url': url,
+                        'method': 'url_test'
+                    })
+                    break
+            except:
+                continue
+        
+        # Check for Granicus
+        granicus_patterns = [
+            f'https://{name_clean}.granicus.com',
+            f'https://{name_clean}{state.lower()}.granicus.com',
+        ]
+        
+        for url in granicus_patterns:
+            try:
+                response = await client.get(url, timeout=5)
+                if response.status_code == 200:
+                    platforms.append({
+                        'type': 'granicus',
+                        'url': url,
+                        'method': 'url_test'
+                    })
+                    break
+            except:
+                continue
+        
+        await client.aclose()
+        return platforms
+    
+    async def _discover_social_media(
+        self,
+        homepage_url: str,
+        name: str
+    ) -> Dict[str, List[str]]:
+        """Discover all social media accounts."""
+        async with SocialMediaDiscovery() as discovery:
+            social = await discovery.discover_from_website(
+                homepage_url=homepage_url,
+                jurisdiction_name=name
+            )
+        return social
+    
+    async def _find_agenda_portals(
+        self,
+        homepage_url: str,
+        name: str
+    ) -> List[Dict]:
+        """Find agenda/document portals."""
+        portals = []
+        
+        client = httpx.AsyncClient(timeout=15, follow_redirects=True)
+        
+        # Check main page for agenda links
+        try:
+            response = await client.get(homepage_url)
+            if response.status_code == 200:
+                from bs4 import BeautifulSoup
+                soup = BeautifulSoup(response.content, 'html.parser')
+                
+                # Look for agenda-related links
+                for link in soup.find_all('a', href=True):
+                    text = link.get_text().lower()
+                    href = link.get('href', '')
+                    
+                    if any(word in text for word in ['agenda', 'minutes', 'meeting']):
+                        # Check if it's an external portal
+                        if any(domain in href for domain in ['suiteonemedia', 'granicus', 'civicclerk', 'municode']):
+                            from urllib.parse import urljoin
+                            full_url = urljoin(homepage_url, href)
+                            
+                            portals.append({
+                                'url': full_url,
+                                'link_text': text,
+                                'discovery_method': 'homepage_scrape'
+                            })
+        except:
+            pass
+        
+        await client.aclose()
+        return portals
+    
+    def _calculate_completeness(self, results: Dict) -> float:
+        """Calculate how complete the discovery is (0.0 to 1.0)."""
+        score = 0.0
+        total = 6.0  # 6 data categories
+        
+        if results['websites']:
+            score += 1.0
+        if results['youtube_channels']:
+            score += 1.0
+        if results['meeting_platforms']:
+            score += 1.0
+        if results['social_media'] and any(results['social_media'].values()):
+            score += 1.0
+        if results['other_video']:
+            score += 0.5
+        if results['agenda_portals']:
+            score += 1.5
+        
+        return min(score / total, 1.0)
+    
+    async def discover_batch(
+        self,
+        jurisdictions: List[Dict],
+        save_interval: int = 100
+    ) -> List[Dict]:
+        """
+        Discover data for a batch of jurisdictions with progress tracking.
+        
+        Args:
+            jurisdictions: List of jurisdiction dicts
+            save_interval: Save results every N jurisdictions
+            
+        Returns:
+            List of discovery results
+        """
+        results = []
+        
+        logger.info(f"Starting batch discovery for {len(jurisdictions)} jurisdictions")
+        
+        # Process with progress bar
+        tasks = [
+            self.discover_jurisdiction(j)
+            for j in jurisdictions
+        ]
+        
+        for i, task in enumerate(tqdm.as_completed(tasks, total=len(tasks))):
+            result = await task
+            results.append(result)
+            
+            # Save intermediate results
+            if (i + 1) % save_interval == 0:
+                self._save_results(results, f'batch_{i+1}')
+                logger.info(f"Saved {i+1} results")
+        
+        # Final save
+        self._save_results(results, 'final')
+        
+        return results
+    
+    def _save_results(self, results: List[Dict], suffix: str = ''):
+        """Save results to JSON and CSV."""
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        
+        # Save detailed JSON
+        json_file = self.output_dir / f'discovery_results_{suffix}_{timestamp}.json'
+        with open(json_file, 'w') as f:
+            json.dump(results, f, indent=2)
+        
+        logger.info(f"Saved JSON: {json_file}")
+        
+        # Save summary CSV
+        summary = []
+        for r in results:
+            j = r['jurisdiction']
+            summary.append({
+                'name': j['name'],
+                'state': j['state_code'],
+                'type': j.get('type', 'city'),
+                'population': j.get('population', 0),
+                'website': results[0]['websites'][0]['url'] if r['websites'] else '',
+                'youtube_channels': len(r['youtube_channels']),
+                'meeting_platforms': len(r['meeting_platforms']),
+                'agenda_portals': len(r['agenda_portals']),
+                'completeness': r.get('completeness_score', 0.0),
+                'status': r['status']
+            })
+        
+        csv_file = self.output_dir / f'discovery_summary_{suffix}_{timestamp}.csv'
+        pd.DataFrame(summary).to_csv(csv_file, index=False)
+        
+        logger.info(f"Saved CSV: {csv_file}")
+    
+    def load_jurisdictions(
+        self,
+        state_filter: Optional[str] = None,
+        top_n: Optional[int] = None
+    ) -> List[Dict]:
+        """
+        Load jurisdiction list from Census/NACo data.
+        
+        Args:
+            state_filter: Filter to specific state (e.g., 'AL')
+            top_n: Limit to top N by population
+            
+        Returns:
+            List of jurisdiction dicts
+        """
+        logger.info("Loading jurisdiction list...")
+        
+        # Check if we have Census data
+        census_file = Path('data/cache/census_jurisdictions.parquet')
+        
+        if census_file.exists():
+            # Load from cached Census data
+            df = pd.read_parquet(census_file)
+            
+            if state_filter:
+                df = df[df['state_code'] == state_filter]
+            
+            if top_n:
+                df = df.nlargest(top_n, 'population')
+            
+            jurisdictions = df.to_dict('records')
+            logger.info(f"Loaded {len(jurisdictions)} jurisdictions from Census data")
+            
+        else:
+            # Generate sample list from NACo/known data
+            logger.warning("Census data not found, using sample list")
+            jurisdictions = self._generate_sample_list(state_filter, top_n)
+        
+        return jurisdictions
+    
+    def _generate_sample_list(
+        self,
+        state_filter: Optional[str],
+        top_n: Optional[int]
+    ) -> List[Dict]:
+        """Generate sample jurisdiction list."""
+        # Top 100 U.S. cities by population (sample)
+        sample_cities = [
+            {'name': 'New York', 'state_code': 'NY', 'type': 'city', 'population': 8336817},
+            {'name': 'Los Angeles', 'state_code': 'CA', 'type': 'city', 'population': 3979576},
+            {'name': 'Chicago', 'state_code': 'IL', 'type': 'city', 'population': 2693976},
+            {'name': 'Houston', 'state_code': 'TX', 'type': 'city', 'population': 2320268},
+            {'name': 'Phoenix', 'state_code': 'AZ', 'type': 'city', 'population': 1680992},
+            {'name': 'Philadelphia', 'state_code': 'PA', 'type': 'city', 'population': 1584064},
+            {'name': 'San Antonio', 'state_code': 'TX', 'type': 'city', 'population': 1547253},
+            {'name': 'San Diego', 'state_code': 'CA', 'type': 'city', 'population': 1423851},
+            {'name': 'Dallas', 'state_code': 'TX', 'type': 'city', 'population': 1343573},
+            {'name': 'San Jose', 'state_code': 'CA', 'type': 'city', 'population': 1021795},
+            {'name': 'Tuscaloosa', 'state_code': 'AL', 'type': 'city', 'population': 99600},
+            # Add more...
+        ]
+        
+        if state_filter:
+            sample_cities = [c for c in sample_cities if c['state_code'] == state_filter]
+        
+        if top_n:
+            sample_cities = sample_cities[:top_n]
+        
+        return sample_cities
+
+
+async def main():
+    """Command-line interface for discovery pipeline."""
+    parser = argparse.ArgumentParser(
+        description='Discover data sources for all U.S. cities and counties'
+    )
+    parser.add_argument(
+        '--state',
+        type=str,
+        help='Filter to specific state (e.g., AL, CA, TX)'
+    )
+    parser.add_argument(
+        '--top',
+        type=int,
+        help='Limit to top N jurisdictions by population'
+    )
+    parser.add_argument(
+        '--all',
+        action='store_true',
+        help='Process all jurisdictions (warning: 20,000+)'
+    )
+    parser.add_argument(
+        '--youtube-api-key',
+        type=str,
+        help='YouTube Data API v3 key for accurate statistics'
+    )
+    parser.add_argument(
+        '--max-concurrent',
+        type=int,
+        default=10,
+        help='Maximum concurrent requests (default: 10)'
+    )
+    
+    args = parser.parse_args()
+    
+    # Initialize pipeline
+    pipeline = ComprehensiveDiscoveryPipeline(
+        youtube_api_key=args.youtube_api_key,
+        max_concurrent=args.max_concurrent
+    )
+    
+    # Load jurisdictions
+    jurisdictions = pipeline.load_jurisdictions(
+        state_filter=args.state,
+        top_n=args.top if not args.all else None
+    )
+    
+    logger.info(f"Will process {len(jurisdictions)} jurisdictions")
+    
+    if len(jurisdictions) > 100 and not args.all:
+        logger.warning(f"Large batch ({len(jurisdictions)}). Use --all to confirm.")
+        return
+    
+    # Run discovery
+    results = await pipeline.discover_batch(jurisdictions)
+    
+    # Summary statistics
+    successful = sum(1 for r in results if r['status'] == 'success')
+    avg_completeness = sum(r.get('completeness_score', 0) for r in results) / len(results)
+    
+    print("\n" + "="*80)
+    print("DISCOVERY COMPLETE!")
+    print("="*80)
+    print(f"Total jurisdictions: {len(results)}")
+    print(f"Successful: {successful} ({successful/len(results):.1%})")
+    print(f"Average completeness: {avg_completeness:.1%}")
+    print(f"\nResults saved to: {pipeline.output_dir}")
+    print("="*80)
+
+
+if __name__ == '__main__':
+    asyncio.run(main())
