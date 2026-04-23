@@ -174,11 +174,14 @@ class ScraperAgent(BaseAgent):
         date_range: Dict[str, str]
     ) -> List[Dict[str, Any]]:
         """
-        Scrape meeting minutes from Legistar platform.
+        Scrape meeting minutes from Legistar platform using the official API.
+        
+        Legistar provides a REST API at https://webapi.legistar.com/v1/{city}/
+        This is much more reliable than HTML scraping.
         
         Args:
-            target: Target configuration
-            date_range: Date range for filtering
+            target: Target configuration with 'url' and 'municipality'
+            date_range: Date range for filtering (optional)
             
         Returns:
             List of meeting documents
@@ -187,43 +190,153 @@ class ScraperAgent(BaseAgent):
         municipality = target["municipality"]
         state = target["state"]
         
+        # Extract city slug from URL (e.g., "chicago" from "chicago.legistar.com")
+        parsed = urlparse(base_url)
+        hostname = parsed.hostname or ""
+        city_slug = hostname.split('.')[0] if '.' in hostname else municipality.lower().replace(' ', '')
+        
+        # Use the official Legistar API
+        api_base = f"https://webapi.legistar.com/v1/{city_slug}"
+        
         documents = []
         
         try:
-            # Legistar typically has a calendar endpoint
-            calendar_url = urljoin(base_url, "Calendar.aspx")
+            # Build OData filter for date range
+            params = {
+                "$top": 100,  # Limit to 100 most recent meetings
+                "$orderby": "EventDate desc"
+            }
             
-            response = await self.http_client.get(calendar_url)
+            if date_range and "start" in date_range:
+                params["$filter"] = f"EventDate ge datetime'{date_range['start']}'"
+            
+            # Get events (meetings)
+            events_url = f"{api_base}/events"
+            logger.info(f"Fetching Legistar events from {events_url}")
+            
+            response = await self.http_client.get(events_url, params=params)
             response.raise_for_status()
+            events = response.json()
             
-            soup = BeautifulSoup(response.content, "html.parser")
+            logger.info(f"Found {len(events)} events for {municipality}")
             
-            # Find meeting links (this is a simplified example - actual Legistar HTML varies)
-            meeting_links = soup.find_all("a", class_="meeting-link")
-            
-            for link in meeting_links[:50]:  # Limit to 50 meetings per target
-                meeting_url = urljoin(base_url, link.get("href"))
+            # Process each event
+            for event in events[:50]:  # Limit to 50 meetings
+                event_id = event.get("EventId")
+                event_guid = event.get("EventGuid")
                 
-                if meeting_url in self.scraped_urls:
+                if not event_id:
                     continue
                 
-                doc = await self._scrape_meeting_page(
-                    meeting_url,
-                    municipality,
-                    state
-                )
-                
-                if doc:
-                    documents.append(doc)
-                    self.scraped_urls.add(meeting_url)
-                
-                # Rate limiting
-                await asyncio.sleep(0.5)
+                # Get agenda items for this event
+                try:
+                    items_url = f"{api_base}/events/{event_id}/EventItems"
+                    items_response = await self.http_client.get(items_url, timeout=10)
+                    
+                    if items_response.status_code == 200:
+                        items = items_response.json()
+                        
+                        # Create document from event and items
+                        doc = self._create_legistar_document(
+                            event,
+                            items,
+                            municipality,
+                            state,
+                            base_url
+                        )
+                        
+                        if doc:
+                            documents.append(doc)
+                    
+                    # Rate limiting - be respectful
+                    await asyncio.sleep(0.3)
+                    
+                except Exception as item_error:
+                    logger.warning(f"Error fetching items for event {event_id}: {item_error}")
+                    continue
         
         except Exception as e:
-            logger.error(f"Error scraping Legistar {base_url}: {e}")
+            logger.error(f"Error scraping Legistar API for {municipality}: {e}")
         
         return documents
+    
+    def _create_legistar_document(
+        self,
+        event: Dict[str, Any],
+        items: List[Dict[str, Any]],
+        municipality: str,
+        state: str,
+        base_url: str
+    ) -> Optional[Dict[str, Any]]:
+        """
+        Create a meeting document from Legistar API data.
+        
+        Args:
+            event: Event data from API
+            items: Agenda items from API
+            municipality: Municipality name
+            state: State code
+            base_url: Base URL for constructing links
+            
+        Returns:
+            Meeting document dict or None
+        """
+        try:
+            event_id = event.get("EventId")
+            event_date = event.get("EventDate", "")
+            event_body = event.get("EventBodyName", "Unknown Body")
+            
+            # Combine agenda items into content
+            content_parts = [f"Meeting: {event_body}", f"Date: {event_date}", "\n=== AGENDA ===\n"]
+            
+            for item in items:
+                agenda_num = item.get("EventItemAgendaNumber", "")
+                title = item.get("EventItemTitle", "")
+                matter_file = item.get("EventItemMatterFile", "")
+                
+                if title:
+                    item_text = f"\n{agenda_num}. {title}"
+                    if matter_file:
+                        item_text += f" (File: {matter_file})"
+                    content_parts.append(item_text)
+            
+            content = "\n".join(content_parts)
+            
+            # Generate document ID
+            doc_id = hashlib.md5(
+                f"{municipality}-{state}-{event_id}".encode()
+            ).hexdigest()
+            
+            # Create meeting detail URL
+            parsed = urlparse(base_url)
+            hostname = parsed.hostname or base_url
+            meeting_url = f"https://{hostname}/MeetingDetail.aspx?ID={event_id}"
+            
+            return MeetingDocument(
+                document_id=doc_id,
+                source_url=meeting_url,
+                municipality=municipality,
+                state=state,
+                meeting_date=event_date,
+                meeting_type=event_body,
+                title=f"{event_body} - {event_date}",
+                content=content,
+                metadata={
+                    "event_id": event_id,
+                    "event_guid": event.get("EventGuid"),
+                    "event_time": event.get("EventTime"),
+                    "event_location": event.get("EventLocation"),
+                    "video_status": event.get("EventVideoStatus"),
+                    "agenda_status": event.get("EventAgendaStatusName"),
+                    "minutes_status": event.get("EventMinutesStatusName"),
+                    "item_count": len(items),
+                    "platform": "legistar_api"
+                }
+            )
+        
+        except Exception as e:
+            logger.error(f"Error creating document from Legistar data: {e}")
+            return None
     
     async def _scrape_granicus(
         self,
