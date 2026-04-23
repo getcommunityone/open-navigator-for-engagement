@@ -75,14 +75,18 @@ class HuggingFacePublisher:
         # Initialize Spark (optional - only if available)
         if PYSPARK_AVAILABLE:
             try:
-                self.spark = SparkSession.builder \
+                # Use Delta Lake's helper to configure Spark with Delta JARs
+                from delta import configure_spark_with_delta_pip
+                
+                builder = SparkSession.builder \
                     .appName("HFPublisher") \
                     .config("spark.sql.extensions", "io.delta.sql.DeltaSparkSessionExtension") \
-                    .config("spark.sql.catalog.spark_catalog", "org.apache.spark.sql.delta.catalog.DeltaCatalog") \
-                    .getOrCreate()
-                logger.info("✅ HuggingFace publisher initialized with PySpark support")
+                    .config("spark.sql.catalog.spark_catalog", "org.apache.spark.sql.delta.catalog.DeltaCatalog")
+                
+                self.spark = configure_spark_with_delta_pip(builder).getOrCreate()
+                logger.info("✅ HuggingFace publisher initialized with Delta Lake support")
             except Exception as e:
-                logger.warning(f"PySpark initialization failed: {e}. Will use pandas only.")
+                logger.warning(f"PySpark/Delta initialization failed: {e}. Will use pandas only.")
                 self.spark = None
         else:
             self.spark = None
@@ -186,7 +190,8 @@ class HuggingFacePublisher:
                 logger.warning(f"  ⚠ Skipping {jtype}: {e}")
         
         if not datasets:
-            raise ValueError("No census data found to publish")
+            logger.warning("No census data found to publish")
+            return {"error": "No census data found to publish"}
         
         # Create DatasetDict and push
         dataset_dict = DatasetDict(datasets)
