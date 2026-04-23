@@ -144,6 +144,27 @@ You need to activate the virtual environment first:
 source venv/bin/activate
 ```
 
+### "Tesseract binary not found" or OCR errors
+
+The `install.sh` script automatically installs tesseract-ocr on Linux (via apt) and macOS (via brew). If it failed or you're on a different system, install manually:
+
+**Linux (Debian/Ubuntu):**
+```bash
+sudo apt-get update && sudo apt-get install -y tesseract-ocr
+```
+
+**macOS:**
+```bash
+brew install tesseract
+```
+
+**Verify installation:**
+```bash
+tesseract --version
+```
+
+OCR is optional but enables text extraction from scanned PDFs and images.
+
 ### "error: externally-managed-environment"
 
 Don't use `pip install` directly. Use the virtual environment:
