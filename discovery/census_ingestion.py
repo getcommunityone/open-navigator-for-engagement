@@ -145,8 +145,10 @@ class CensusGovernmentIngestion:
         
         logger.info(f"Downloading {jurisdiction_type} data from Census Bureau...")
         logger.info(f"URL: {url}")
+        logger.info(f"This may take 2-5 minutes for large files...")
         
-        async with httpx.AsyncClient(timeout=120.0, follow_redirects=True) as client:
+        # Increase timeout for large Census files (some are 100MB+)
+        async with httpx.AsyncClient(timeout=300.0, follow_redirects=True) as client:
             try:
                 response = await client.get(url)
                 response.raise_for_status()
@@ -210,14 +212,20 @@ class CensusGovernmentIngestion:
                     
                     return cache_file
                 
+            except httpx.TimeoutException as e:
+                logger.error(f"Timeout downloading {jurisdiction_type} data after 5 minutes")
+                logger.error(f"URL: {url}")
+                logger.warning(f"Census server may be slow or file is very large. Try again later or skip {jurisdiction_type}.")
+                raise
             except httpx.HTTPError as e:
-                logger.error(f"Failed to download {jurisdiction_type} data: {e}")
+                logger.error(f"HTTP error downloading {jurisdiction_type} data: {e}")
                 logger.error(f"URL that failed: {url}")
+                logger.warning(f"Check if Census Bureau website is accessible or file exists.")
                 raise
             except Exception as e:
                 logger.error(f"Error processing {jurisdiction_type} data: {e}")
+                logger.error(f"File: {url}")
                 raise
-                return await self.download_census_data(jurisdiction_type)
     
     def parse_csv_to_dataframe(self, csv_path: Path, jurisdiction_type: str) -> DataFrame:
         """
@@ -275,9 +283,12 @@ class CensusGovernmentIngestion:
         logger.success(f"Parsed {df.count()} records from {csv_path}")
         return df
     
-    async def ingest_all_jurisdictions(self) -> Dict[str, DataFrame]:
+    async def ingest_all_jurisdictions(self, skip_school_districts: bool = False) -> Dict[str, DataFrame]:
         """
         Download and parse all jurisdiction types.
+        
+        Args:
+            skip_school_districts: If True, skip school districts (they're large and optional)
         
         Returns:
             Dictionary mapping jurisdiction type to DataFrame
@@ -286,7 +297,14 @@ class CensusGovernmentIngestion:
         
         dataframes = {}
         
-        for jurisdiction_type in self.GID_URLS.keys():
+        jurisdiction_types = list(self.GID_URLS.keys())
+        
+        # Optionally skip school districts (they're very large files and optional for core functionality)
+        if skip_school_districts:
+            jurisdiction_types = [jt for jt in jurisdiction_types if not jt.startswith('school_districts')]
+            logger.info("Skipping school districts (use skip_school_districts=False to include)")
+        
+        for jurisdiction_type in jurisdiction_types:
             try:
                 # Download
                 csv_path = await self.download_census_data(jurisdiction_type)
@@ -297,6 +315,11 @@ class CensusGovernmentIngestion:
                 
             except Exception as e:
                 logger.error(f"Failed to ingest {jurisdiction_type}: {e}")
+                
+                # School districts are optional - warn but continue
+                if jurisdiction_type.startswith('school_districts'):
+                    logger.warning(f"Skipping {jurisdiction_type} (optional). Counties, municipalities, and townships are sufficient for most use cases.")
+                
                 continue
         
         logger.success(f"Ingested {len(dataframes)} jurisdiction types")
@@ -346,7 +369,9 @@ async def main():
     ingestion = CensusGovernmentIngestion()
     
     # Download and parse all data
-    dataframes = await ingestion.ingest_all_jurisdictions()
+    # Skip school districts by default (very large files, optional for core functionality)
+    # Set skip_school_districts=False if you specifically need school district data
+    dataframes = await ingestion.ingest_all_jurisdictions(skip_school_districts=True)
     
     # Write to Delta Lake
     ingestion.write_to_bronze_layer(dataframes)
