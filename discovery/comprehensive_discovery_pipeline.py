@@ -139,7 +139,7 @@ class ComprehensiveDiscoveryPipeline:
                 # Step 5: Discover social media
                 if homepage_url:
                     logger.debug(f"  Step 5/6: Finding social media accounts")
-                    social = await self._discover_social_media(homepage_url, name)
+                    social = await self._discover_social_media(homepage_url, name, state)
                     results['social_media'] = social
                 
                 # Step 6: Find agenda portals
@@ -217,10 +217,13 @@ class ComprehensiveDiscoveryPipeline:
         homepage_url: Optional[str]
     ) -> List[Dict]:
         """Discover YouTube channels."""
+        city_name = name if jtype == 'city' else name.replace(' County', '').strip()
+        county_name = name if jtype == 'county' else None
+
         async with YouTubeChannelDiscovery(self.youtube_api_key) as discovery:
             channels = await discovery.discover_channels(
-                city_name=name if jtype == 'city' else None,
-                county_name=name if jtype == 'county' else None,
+                city_name=city_name,
+                county_name=county_name,
                 state_code=state,
                 homepage_url=homepage_url
             )
@@ -345,13 +348,15 @@ class ComprehensiveDiscoveryPipeline:
     async def _discover_social_media(
         self,
         homepage_url: str,
-        name: str
+        name: str,
+        state: str
     ) -> Dict[str, List[str]]:
         """Discover all social media accounts."""
         async with SocialMediaDiscovery() as discovery:
             social = await discovery.discover_from_website(
                 homepage_url=homepage_url,
-                jurisdiction_name=name
+                jurisdiction_name=name,
+                state=state
             )
         return social
     
@@ -473,7 +478,7 @@ class ComprehensiveDiscoveryPipeline:
                 'state': j['state_code'],
                 'type': j.get('type', 'city'),
                 'population': j.get('population', 0),
-                'website': results[0]['websites'][0]['url'] if r['websites'] else '',
+                'website': r['websites'][0]['url'] if r['websites'] else '',
                 'youtube_channels': len(r['youtube_channels']),
                 'meeting_platforms': len(r['meeting_platforms']),
                 'agenda_portals': len(r['agenda_portals']),

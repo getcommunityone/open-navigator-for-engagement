@@ -3,12 +3,19 @@ Scraper Agent for collecting government meeting minutes from various sources.
 """
 import asyncio
 import hashlib
+import io
+import re
 from typing import List, Dict, Any, Optional
 from datetime import datetime, timedelta
 from urllib.parse import urljoin, urlparse
 import httpx
 from bs4 import BeautifulSoup
 from loguru import logger
+
+try:
+    from PyPDF2 import PdfReader
+except Exception:
+    PdfReader = None
 
 from agents.base import BaseAgent, AgentRole, AgentMessage, MessageType, AgentStatus
 
@@ -58,6 +65,15 @@ class ScraperAgent(BaseAgent):
         super().__init__(agent_id, AgentRole.SCRAPER)
         self.http_client: Optional[httpx.AsyncClient] = None
         self.scraped_urls: set = set()
+        self.document_extensions = (".pdf", ".doc", ".docx", ".ppt", ".pptx", ".xls", ".xlsx")
+        self.meeting_keywords = ("minutes", "agenda", "meeting", "council", "commission", "board")
+        self.document_route_keywords = (
+            "getagendafile",
+            "getminutesfile",
+            "download",
+            "agendafile",
+            "minutesfile",
+        )
         
     async def __aenter__(self):
         """Async context manager entry."""
@@ -419,39 +435,139 @@ class ScraperAgent(BaseAgent):
             response.raise_for_status()
             
             soup = BeautifulSoup(response.content, "html.parser")
-            
-            # Look for common patterns in municipal websites
-            # This is a heuristic approach - would need refinement per site
-            
-            # Find PDF links
-            pdf_links = soup.find_all("a", href=lambda h: h and ".pdf" in h.lower())
-            
-            for link in pdf_links[:30]:
-                pdf_url = urljoin(url, link.get("href"))
-                
-                if pdf_url in self.scraped_urls:
-                    continue
-                
-                # Check if link text suggests it's meeting minutes
-                link_text = link.get_text().lower()
-                if any(keyword in link_text for keyword in ["minutes", "agenda", "meeting"]):
-                    doc = await self._scrape_pdf_document(
-                        pdf_url,
-                        municipality,
-                        state,
-                        link_text
+
+            candidate_documents = self._extract_document_candidates(
+                page_url=url,
+                html=response.text,
+                soup=soup
+            )
+
+            # Crawl a few likely meeting pages because many sites (including JS-heavy portals)
+            # keep document links off the landing page.
+            meeting_pages = self._extract_meeting_pages(page_url=url, soup=soup)
+            for meeting_page in meeting_pages[:8]:
+                try:
+                    page_response = await self.http_client.get(meeting_page)
+                    if page_response.status_code >= 400:
+                        continue
+
+                    page_soup = BeautifulSoup(page_response.content, "html.parser")
+                    page_candidates = self._extract_document_candidates(
+                        page_url=meeting_page,
+                        html=page_response.text,
+                        soup=page_soup
                     )
-                    
-                    if doc:
-                        documents.append(doc)
-                        self.scraped_urls.add(pdf_url)
-                
-                await asyncio.sleep(0.5)
+                    candidate_documents.extend(page_candidates)
+                    await asyncio.sleep(0.2)
+                except Exception as page_err:
+                    logger.debug(f"Could not scrape meeting page {meeting_page}: {page_err}")
+
+            # De-duplicate while preserving order
+            seen_urls = set()
+            deduped_candidates = []
+            for doc_url, doc_label in candidate_documents:
+                if doc_url not in seen_urls:
+                    seen_urls.add(doc_url)
+                    deduped_candidates.append((doc_url, doc_label))
+
+            for doc_url, doc_label in deduped_candidates[:50]:
+                if doc_url in self.scraped_urls:
+                    continue
+
+                # Prioritize meeting-related labels but still allow document URL heuristics.
+                label = (doc_label or "").lower()
+                if label and not any(keyword in label for keyword in self.meeting_keywords):
+                    if not any(keyword in doc_url.lower() for keyword in self.meeting_keywords):
+                        continue
+
+                doc = await self._scrape_document(
+                    url=doc_url,
+                    municipality=municipality,
+                    state=state,
+                    title=doc_label or "meeting document"
+                )
+
+                if doc:
+                    documents.append(doc)
+                    self.scraped_urls.add(doc_url)
+
+                await asyncio.sleep(0.2)
         
         except Exception as e:
             logger.error(f"Error scraping generic site {url}: {e}")
         
         return documents
+
+    def _extract_document_candidates(
+        self,
+        page_url: str,
+        html: str,
+        soup: BeautifulSoup
+    ) -> List[tuple[str, str]]:
+        """Extract document URLs from anchors and script text."""
+        candidates: List[tuple[str, str]] = []
+
+        # Anchor/link extraction
+        for anchor in soup.find_all("a", href=True):
+            href = anchor.get("href", "")
+            if not href:
+                continue
+            full_url = urljoin(page_url, href)
+            full_url = self._normalize_document_url(full_url)
+            lowered = full_url.lower()
+            if any(ext in lowered for ext in self.document_extensions) or any(k in lowered for k in self.document_route_keywords):
+                text = anchor.get_text(" ", strip=True) or anchor.get("title", "") or "document"
+                candidates.append((full_url, text))
+
+        # Script extraction for JS-driven portals that embed links in JSON blobs.
+        url_pattern = r'(https?://[^"\'\s)]+\.(?:pdf|docx?|pptx?|xlsx?)(?:\?[^"\'\s)]*)?)'
+        rel_pattern = r'([\w/\-.]+\.(?:pdf|docx?|pptx?|xlsx?)(?:\?[^"\'\s)]*)?)'
+
+        for raw in re.findall(url_pattern, html, flags=re.IGNORECASE):
+            candidates.append((self._normalize_document_url(raw), "document"))
+
+        route_pattern = r'(["\'](?:/event/Get(?:Agenda|Minutes)File/[^"\']+)["\'])'
+        for raw in re.findall(route_pattern, html, flags=re.IGNORECASE):
+            cleaned = raw.strip("\"'")
+            candidates.append((self._normalize_document_url(urljoin(page_url, cleaned)), "document"))
+
+        for raw in re.findall(rel_pattern, html, flags=re.IGNORECASE):
+            if raw.startswith("http"):
+                continue
+            if raw.startswith("/") or "/" in raw:
+                candidates.append((self._normalize_document_url(urljoin(page_url, raw)), "document"))
+
+        return candidates
+
+    def _normalize_document_url(self, url: str) -> str:
+        """Clean common malformed URL artifacts found in embedded portal markup."""
+        normalized = url.strip()
+        normalized = normalized.replace(" %20?", "?")
+        normalized = normalized.replace("%20?", "?")
+        normalized = normalized.replace(" ?", "?")
+        return normalized
+
+    def _extract_meeting_pages(self, page_url: str, soup: BeautifulSoup) -> List[str]:
+        """Find likely meeting-related subpages to expand document discovery."""
+        pages = []
+        for anchor in soup.find_all("a", href=True):
+            href = anchor.get("href", "")
+            text = anchor.get_text(" ", strip=True).lower()
+            if not href:
+                continue
+
+            full_url = urljoin(page_url, href)
+            combined = f"{text} {full_url.lower()}"
+            if "/event/?id=" in full_url.lower() or any(keyword in combined for keyword in self.meeting_keywords):
+                pages.append(full_url)
+
+        seen = set()
+        deduped = []
+        for p in pages:
+            if p not in seen:
+                seen.add(p)
+                deduped.append(p)
+        return deduped
     
     async def _scrape_meeting_page(
         self,
@@ -507,7 +623,7 @@ class ScraperAgent(BaseAgent):
             logger.error(f"Error scraping meeting page {url}: {e}")
             return None
     
-    async def _scrape_pdf_document(
+    async def _scrape_document(
         self,
         url: str,
         municipality: str,
@@ -515,7 +631,7 @@ class ScraperAgent(BaseAgent):
         title: str
     ) -> Optional[Dict[str, Any]]:
         """
-        Download and extract text from PDF document.
+        Download and extract text from a document URL.
         
         Args:
             url: PDF URL
@@ -530,8 +646,25 @@ class ScraperAgent(BaseAgent):
             response = await self.http_client.get(url)
             response.raise_for_status()
             
-            # Note: Actual PDF parsing would require pypdf or similar
-            # For now, store PDF metadata with a placeholder for content
+            content_type = (response.headers.get("content-type") or "").lower()
+            url_lower = url.lower()
+            is_pdf = ".pdf" in url_lower or "application/pdf" in content_type
+
+            content = "[Document content extraction unavailable]"
+            if is_pdf and PdfReader is not None:
+                try:
+                    reader = PdfReader(io.BytesIO(response.content))
+                    pages = []
+                    for page in reader.pages[:30]:
+                        pages.append(page.extract_text() or "")
+                    extracted = "\n".join(pages).strip()
+                    if extracted:
+                        content = extracted
+                    else:
+                        content = "[PDF has no extractable text]"
+                except Exception as parse_error:
+                    logger.debug(f"PDF parse failed for {url}: {parse_error}")
+                    content = "[PDF parsing failed]"
             
             doc_id = hashlib.md5(f"{url}{municipality}".encode()).hexdigest()
             
@@ -543,16 +676,35 @@ class ScraperAgent(BaseAgent):
                 meeting_date=datetime.utcnow(),
                 meeting_type="Unknown",
                 title=title,
-                content="[PDF content - requires parsing]",
+                content=content,
                 metadata={
-                    "platform": "pdf",
+                    "platform": "document",
                     "file_size": len(response.content),
-                    "content_type": response.headers.get("content-type")
+                    "content_type": response.headers.get("content-type"),
+                    "is_pdf": is_pdf,
+                    "text_extracted": content not in [
+                        "[Document content extraction unavailable]",
+                        "[PDF has no extractable text]",
+                        "[PDF parsing failed]"
+                    ]
                 }
             )
             
             return document
         
         except Exception as e:
-            logger.error(f"Error downloading PDF {url}: {e}")
+            if isinstance(e, httpx.HTTPStatusError) and e.response.status_code == 404:
+                logger.debug(f"Document not found (404): {url}")
+            else:
+                logger.error(f"Error downloading document {url}: {e}")
             return None
+
+    async def _scrape_pdf_document(
+        self,
+        url: str,
+        municipality: str,
+        state: str,
+        title: str
+    ) -> Optional[Dict[str, Any]]:
+        """Backward-compatible wrapper for existing call sites."""
+        return await self._scrape_document(url, municipality, state, title)

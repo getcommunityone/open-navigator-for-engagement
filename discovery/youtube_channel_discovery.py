@@ -71,7 +71,7 @@ class YouTubeChannelDiscovery:
     
     async def discover_channels(
         self,
-        city_name: str,
+        city_name: Optional[str],
         state_code: str,
         county_name: Optional[str] = None,
         homepage_url: Optional[str] = None
@@ -102,14 +102,21 @@ class YouTubeChannelDiscovery:
                 ...
             ]
         """
-        logger.info(f"Discovering YouTube channels for {city_name}, {state_code}")
+        resolved_city_name = city_name
+        if not resolved_city_name and county_name:
+            resolved_city_name = county_name.replace(" County", "").strip()
+        if not resolved_city_name:
+            logger.warning("No city or county name provided for YouTube discovery")
+            return []
+
+        logger.info(f"Discovering YouTube channels for {resolved_city_name}, {state_code}")
         
         discovered = []
         tested_urls = set()
         
         # Strategy 1: Test common handle patterns
         patterns_to_test = self._generate_handle_patterns(
-            city_name, state_code, county_name
+            resolved_city_name, state_code, county_name
         )
         
         logger.info(f"Testing {len(patterns_to_test)} common handle patterns...")
@@ -144,8 +151,8 @@ class YouTubeChannelDiscovery:
         
         # Strategy 3: YouTube API search (if key available)
         if self.api_key:
-            logger.info(f"Searching YouTube API for '{city_name}'...")
-            api_channels = await self._search_youtube_api(city_name, state_code)
+            logger.info(f"Searching YouTube API for '{resolved_city_name}'...")
+            api_channels = await self._search_youtube_api(resolved_city_name, state_code)
             
             for channel in api_channels:
                 url = channel['channel_url']
