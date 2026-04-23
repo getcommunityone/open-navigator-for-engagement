@@ -142,6 +142,8 @@ Heatmap Visualization
 - Databricks workspace (for production lakehouse)
 - OpenAI API key (for LLM capabilities)
 
+Note: `./install.sh` now attempts to install `tesseract-ocr` automatically (Linux via `apt-get`, macOS via `brew`) so OCR parsing works out of the box.
+
 ### Quick Start
 
 **Option 1: Automated Installation (Recommended)**

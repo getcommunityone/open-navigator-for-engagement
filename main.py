@@ -68,9 +68,14 @@ def serve(host: str, port: int, reload: bool):
 @click.option('--state', help='State to analyze')
 @click.option('--municipality', help='Municipality to analyze')
 @click.option('--url', required=True, help='URL to scrape')
-@click.option('--platform', default='generic', help='Platform type (legistar, granicus, generic)')
-def scrape(state: str, municipality: str, url: str, platform: str):
+@click.option('--platform', default='generic', help='Platform type (legistar, granicus, suiteonemedia, generic)')
+@click.option('--max-events', default=500, show_default=True, help='Max events to scrape (0=unlimited, SuiteOne only)')
+@click.option('--start-year', default=0, show_default=True, help='Only include events on/after this year (0=all, SuiteOne only)')
+@click.option('--output', default=None, help='Output JSON file path (default: output/<municipality>_<platform>.json)')
+def scrape(state: str, municipality: str, url: str, platform: str, max_events: int, start_year: int, output: str):
     """Scrape meeting minutes from a single source."""
+    import json
+    from datetime import datetime
     logger.info(f"Scraping {url} for {municipality}, {state}")
     
     async def run_scrape():
@@ -81,7 +86,9 @@ def scrape(state: str, municipality: str, url: str, platform: str):
                 "url": url,
                 "municipality": municipality,
                 "state": state,
-                "platform": platform
+                "platform": platform,
+                "max_events": max_events,
+                "start_year": start_year,
             }]
             
             documents = await scraper._scrape_targets(targets, {})
@@ -91,6 +98,27 @@ def scrape(state: str, municipality: str, url: str, platform: str):
             # Save to pipeline
             pipeline = DeltaLakePipeline()
             pipeline.write_raw_documents(documents)
+
+            # Persist to JSON
+            out_path = output
+            if not out_path:
+                safe_name = (municipality or "unknown").replace(" ", "_").lower()
+                out_dir = Path("output") / safe_name
+                out_dir.mkdir(parents=True, exist_ok=True)
+                timestamp = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
+                out_path = str(out_dir / f"{platform}_{timestamp}.json")
+
+            # Make metadata JSON-serializable
+            serializable = []
+            for doc in documents:
+                d = dict(doc)
+                if "metadata" in d and isinstance(d["metadata"], dict):
+                    d["metadata"] = {k: (str(v) if not isinstance(v, (str, int, float, bool, type(None))) else v)
+                                     for k, v in d["metadata"].items()}
+                serializable.append(d)
+
+            Path(out_path).write_text(json.dumps(serializable, indent=2, default=str))
+            logger.info(f"Saved {len(serializable)} documents to {out_path}")
     
     asyncio.run(run_scrape())
 

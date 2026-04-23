@@ -182,11 +182,14 @@ class ScraperAgent(BaseAgent):
         
         for target in targets:
             platform = target.get("platform", "generic")
+            url = target.get("url", "")
             
             if platform == "legistar":
                 tasks.append(self._scrape_legistar(target, date_range))
             elif platform == "granicus":
                 tasks.append(self._scrape_granicus(target, date_range))
+            elif platform == "suiteonemedia" or "suiteonemedia" in url.lower():
+                tasks.append(self._scrape_suiteonemedia(target, date_range))
             else:
                 tasks.append(self._scrape_generic(target, date_range))
         
@@ -427,7 +430,244 @@ class ScraperAgent(BaseAgent):
             logger.error(f"Error scraping Granicus {base_url}: {e}")
         
         return documents
-    
+
+    async def _scrape_suiteonemedia(
+        self,
+        target: Dict[str, Any],
+        date_range: Dict[str, str]
+    ) -> List[Dict[str, Any]]:
+        """
+        Scrape meeting events from a SuiteOne Media portal.
+
+        Strategy:
+        1. Fetch the portal homepage — it renders ALL current-year events as
+           /event/?id=XXXX anchor links.
+          2. Parse each <tr> in the eventTable to get: event ID, title, date,
+              agenda/minutes PDF links, and whether a media recording exists.
+          3. For events with media (or missing title/date), fetch the event page
+              to extract the S3 MP4 video recording URL from jwplayer setup.
+          4. Download PDFs for text extraction.
+          5. Extend backwards through historical event IDs when max_events > homepage count.
+
+        Parameters via target dict:
+          max_events  - maximum events to process (default 500, 0 = unlimited)
+          start_year  - only include events on/after this year (0 = all)
+                  fetch_videos - whether to fetch event pages for S3 video URLs (default True)
+        """
+        url = target["url"]
+        municipality = target.get("municipality", "")
+        state = target.get("state", "")
+        max_events: int = int(target.get("max_events", 500))
+        start_year: int = int(target.get("start_year", 0))
+        fetch_videos: bool = bool(target.get("fetch_videos", True))
+
+        parsed = urlparse(url)
+        base_url = f"{parsed.scheme}://{parsed.netloc}"
+
+        documents: List[Dict[str, Any]] = []
+
+        try:
+            # ---- Step 1: fetch homepage and parse event table rows ----
+            logger.info(f"Fetching SuiteOne homepage: {base_url}/Web/Home.aspx")
+            home_resp = await self.http_client.get(f"{base_url}/Web/Home.aspx")
+            home_resp.raise_for_status()
+            home_soup = BeautifulSoup(home_resp.content, "html.parser")
+
+            # Each <tr> in an eventTable contains: event link, agenda/minutes PDF links, date text
+            events: list[dict] = []
+            seen_event_ids: set[int] = set()
+
+            for table in home_soup.find_all("table", class_=re.compile("eventTable", re.I)):
+                for tr in table.find_all("tr"):
+                    row_links = [(a["href"], a.get_text(" ", strip=True)) for a in tr.find_all("a", href=True)]
+                    row_text = tr.get_text(" ", strip=True)
+
+                    event_id = None
+                    event_title = ""
+                    agenda_url = ""
+                    minutes_url = ""
+                    has_media = False
+
+                    for href, text in row_links:
+                        m = re.match(r'/event/\?id=(\d+)', href)
+                        if m:
+                            eid = int(m.group(1))
+                            if event_id is None:
+                                event_id = eid
+                                event_title = re.sub(r'\(opens in new window\)', '', text).strip()
+                        elif "getagendafile" in href.lower():
+                            agenda_url = self._normalize_document_url(urljoin(base_url, href))
+                        elif "getminutesfile" in href.lower():
+                            minutes_url = self._normalize_document_url(urljoin(base_url, href))
+                        if "media" in text.lower():
+                            has_media = True
+
+                    if event_id is None or event_id in seen_event_ids:
+                        continue
+                    seen_event_ids.add(event_id)
+
+                    date_m = re.search(
+                        r'((?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\w*'
+                        r'\s+\d{1,2},?\s*\d{4}(?:\s*\|\s*\d{2}:\d{2}\s*[AP]M)?)',
+                        row_text, re.I
+                    )
+                    meeting_date = date_m.group(1).strip() if date_m else ""
+
+                    year_m = re.search(r'\b(20\d{2})\b', meeting_date)
+                    if start_year and year_m and int(year_m.group(1)) < start_year:
+                        continue
+
+                    events.append({
+                        "id": event_id,
+                        "title": event_title,
+                        "date": meeting_date,
+                        "agenda_url": agenda_url,
+                        "minutes_url": minutes_url,
+                        "has_media": has_media,
+                    })
+
+            logger.info(
+                f"Parsed {len(events)} events from SuiteOne homepage table "
+                f"({len([e for e in events if e['agenda_url']])} with agenda, "
+                f"{len([e for e in events if e['minutes_url']])} with minutes, "
+                f"{len([e for e in events if e['has_media']])} with media)"
+            )
+
+            # ---- Step 2: extend with historical events if needed ----
+            if events and (max_events == 0 or max_events > len(events)):
+                lowest_id = min(e["id"] for e in events)
+                logger.info(f"Probing historical events below ID {lowest_id}")
+                for eid in range(lowest_id - 1, max(1, lowest_id - 5000), -1):
+                    if eid not in seen_event_ids:
+                        seen_event_ids.add(eid)
+                        events.append({
+                            "id": eid, "title": "", "date": "", "agenda_url": "",
+                            "minutes_url": "", "has_media": True,
+                        })
+                logger.info(f"Expanded to {len(events)} total events (including historical)")
+
+            events.sort(key=lambda e: e["id"], reverse=True)
+            if max_events > 0:
+                events = events[:max_events]
+
+            logger.info(f"Processing {len(events)} SuiteOne events for {municipality}")
+
+            # ---- Step 3 & 4: for each event, fetch video URL + download PDFs ----
+            for i, ev in enumerate(events):
+                eid = ev["id"]
+                event_url = f"{base_url}/event/?id={eid}"
+
+                meeting_date = ev["date"]
+                meeting_title = ev["title"]
+                meeting_type = re.sub(r'^\d+:\d+\s*[ap]\.m\.\s*', '', meeting_title, flags=re.I).strip() or "Meeting"
+                video_url = ""
+
+                # Fetch event page when: has media flag, or missing title/date
+                if ev["has_media"] or not meeting_title or not meeting_date:
+                    try:
+                        ev_resp = await self.http_client.get(event_url)
+                        if ev_resp.status_code == 404:
+                            continue
+                        ev_resp.raise_for_status()
+                        ev_text = ev_resp.text
+                        ev_soup = BeautifulSoup(ev_resp.content, "html.parser")
+
+                        title_tag = ev_soup.find("title")
+                        if title_tag:
+                            page_title = title_tag.get_text(strip=True).replace("Meeting:", "").strip()
+                            if "upcoming meetings" in page_title.lower():
+                                continue
+                            if not meeting_title:
+                                meeting_title = page_title
+                                meeting_type = re.sub(r'^\d+:\d+\s*[ap]\.m\.\s*', '', meeting_title, flags=re.I).strip() or "Meeting"
+
+                        if not meeting_date:
+                            dm = re.search(
+                                r'((?:January|February|March|April|May|June|July|August|'
+                                r'September|October|November|December)\s+\d{1,2},?\s*\d{4})',
+                                ev_text
+                            )
+                            meeting_date = dm.group(1) if dm else ""
+
+                        year_m = re.search(r'\b(20\d{2})\b', meeting_date)
+                        if start_year and year_m and int(year_m.group(1)) < start_year:
+                            continue
+
+                        if fetch_videos:
+                            src_m = re.search(r"var src\s*=\s*'([^']+)';", ev_text)
+                            if src_m and src_m.group(1):
+                                video_url = src_m.group(1)
+
+                        for a in ev_soup.find_all("a", href=True):
+                            href = a["href"]
+                            full = self._normalize_document_url(urljoin(base_url, href))
+                            if "getagendafile" in full.lower() and not ev["agenda_url"]:
+                                ev["agenda_url"] = full
+                            elif "getminutesfile" in full.lower() and not ev["minutes_url"]:
+                                ev["minutes_url"] = full
+
+                        await asyncio.sleep(0.2)
+
+                    except Exception as fetch_err:
+                        logger.debug(f"Could not fetch event page {eid}: {fetch_err}")
+
+                doc_urls = [(ev["agenda_url"], "Agenda"), (ev["minutes_url"], "Minutes")]
+                produced = 0
+                for doc_url, doc_type in doc_urls:
+                    if not doc_url or doc_url in self.scraped_urls:
+                        continue
+                    doc = await self._scrape_document(
+                        url=doc_url,
+                        municipality=municipality,
+                        state=state,
+                        title=f"{meeting_title} — {doc_type}",
+                    )
+                    if doc:
+                        doc["meeting_date"] = meeting_date
+                        doc["meeting_type"] = meeting_type
+                        meta = doc.setdefault("metadata", {})
+                        meta["platform"] = "suiteonemedia"
+                        meta["event_id"] = eid
+                        meta["doc_type"] = doc_type.lower()
+                        if video_url:
+                            meta["video_url"] = video_url
+                        documents.append(doc)
+                        self.scraped_urls.add(doc_url)
+                        produced += 1
+
+                if produced == 0 and meeting_title and "upcoming meetings" not in meeting_title.lower():
+                    doc_id = hashlib.md5(event_url.encode()).hexdigest()
+                    documents.append(MeetingDocument(
+                        document_id=doc_id,
+                        source_url=event_url,
+                        municipality=municipality,
+                        state=state,
+                        meeting_date=meeting_date or datetime.utcnow().isoformat(),
+                        meeting_type=meeting_type,
+                        title=meeting_title,
+                        content="",
+                        metadata={
+                            "platform": "suiteonemedia",
+                            "event_id": eid,
+                            "video_url": video_url,
+                            "has_pdf": False,
+                        }
+                    ))
+
+                if (i + 1) % 50 == 0:
+                    logger.info(
+                        f"  SuiteOne: {i+1}/{len(events)} events processed, "
+                        f"{len(documents)} docs so far"
+                    )
+
+                await asyncio.sleep(0.3)
+
+        except Exception as e:
+            logger.error(f"Error scraping SuiteOne portal {url}: {e}")
+
+        logger.info(f"SuiteOne scrape complete: {len(documents)} documents from {municipality}")
+        return documents
+
     async def _scrape_generic(
         self,
         target: Dict[str, Any],

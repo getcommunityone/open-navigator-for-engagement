@@ -5,6 +5,35 @@ echo "🦷 Oral Health Policy Pulse - Installation Script"
 echo "=================================================="
 echo ""
 
+# Install system-level OCR dependency when possible
+echo "Checking for Tesseract OCR..."
+if command -v tesseract &> /dev/null; then
+    echo "✓ Tesseract already installed: $(tesseract --version | head -n 1)"
+else
+    echo "Tesseract not found. Attempting automatic install..."
+    if command -v apt-get &> /dev/null; then
+        if [ "$(id -u)" -eq 0 ]; then
+            apt-get update && apt-get install -y tesseract-ocr
+        elif command -v sudo &> /dev/null; then
+            sudo apt-get update && sudo apt-get install -y tesseract-ocr
+        else
+            echo "⚠ Could not auto-install Tesseract (no root/sudo)."
+            echo "  Install manually: apt-get install -y tesseract-ocr"
+        fi
+    elif command -v brew &> /dev/null; then
+        brew install tesseract || true
+    else
+        echo "⚠ Unsupported package manager for automatic Tesseract install."
+        echo "  Install manually, then re-run setup."
+    fi
+
+    if command -v tesseract &> /dev/null; then
+        echo "✓ Tesseract installed: $(tesseract --version | head -n 1)"
+    else
+        echo "⚠ Tesseract is still missing. OCR fallback will remain disabled."
+    fi
+fi
+
 # Check Python version
 echo "Checking Python version..."
 if ! command -v python3 &> /dev/null; then
