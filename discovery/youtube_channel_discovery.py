@@ -68,6 +68,51 @@ class YouTubeChannelDiscovery:
             follow_redirects=True,
             headers={"User-Agent": "Mozilla/5.0 (compatible; OralHealthPolicyBot/2.0)"}
         )
+        
+        # Keywords for identifying policy/meeting-focused channels
+        self.policy_channel_keywords = (
+            'city council', 'town council', 'county commission', 'board meeting',
+            'government', 'official', 'meetings', 'public meetings', 'city tv',
+            'municipal', 'civic', 'city clerk', 'legislative', 'session'
+        )
+    
+    def _score_channel_for_policy_content(self, channel_title: str) -> int:
+        """
+        Score a channel based on how likely it is to contain policy/meeting content.
+        
+        Higher scores indicate more relevant channels.
+        
+        Args:
+            channel_title: Channel title to score
+            
+        Returns:
+            Score from 0-10
+        """
+        if not channel_title:
+            return 0
+        
+        title_lower = channel_title.lower()
+        score = 0
+        
+        # High relevance keywords (5 points each)
+        high_priority = ['city council', 'town council', 'board meeting', 'city tv', 'county commission']
+        for keyword in high_priority:
+            if keyword in title_lower:
+                score += 5
+        
+        # Medium relevance keywords (3 points each)
+        medium_priority = ['government', 'official', 'meetings', 'municipal', 'public']
+        for keyword in medium_priority:
+            if keyword in title_lower:
+                score += 3
+        
+        # Low relevance keywords (1 point each)
+        low_priority = ['civic', 'city', 'town', 'county']
+        for keyword in low_priority:
+            if keyword in title_lower:
+                score += 1
+        
+        return min(score, 10)  # Cap at 10
     
     async def discover_channels(
         self,
@@ -171,10 +216,26 @@ class YouTubeChannelDiscovery:
             elif not channel.get('channel_id'):  # No ID extracted
                 unique_channels.append(channel)
         
-        # Sort by video count (descending)
-        unique_channels.sort(key=lambda x: x.get('video_count', 0), reverse=True)
+        # Add policy relevance score to each channel
+        for channel in unique_channels:
+            channel['policy_score'] = self._score_channel_for_policy_content(
+                channel.get('channel_title', '')
+            )
         
+        # Sort by policy score first (descending), then by video count (descending)
+        unique_channels.sort(
+            key=lambda x: (x.get('policy_score', 0), x.get('video_count', 0)),
+            reverse=True
+        )
+        
+        # Log channel rankings
         logger.success(f"✓ Total channels found: {len(unique_channels)}")
+        for i, channel in enumerate(unique_channels[:5], 1):
+            logger.info(
+                f"  #{i}: {channel.get('channel_title', 'Unknown')} "
+                f"(policy score: {channel.get('policy_score', 0)}, "
+                f"videos: {channel.get('video_count', 0)})"
+            )
         
         return unique_channels
     

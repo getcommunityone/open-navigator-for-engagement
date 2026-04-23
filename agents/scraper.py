@@ -479,7 +479,7 @@ class ScraperAgent(BaseAgent):
         return policy_videos
 
     async def _scrape_facebook_source(self, target: Dict[str, Any]) -> List[Dict[str, Any]]:
-        """Scrape publicly accessible Facebook page/post text snippets."""
+        """Scrape publicly accessible Facebook page/post text snippets, focusing on policy and meeting content."""
         url = target.get("url", "")
         municipality = target.get("municipality", "")
         state = target.get("state", "")
@@ -506,12 +506,13 @@ class ScraperAgent(BaseAgent):
                 full = urljoin(normalized, href)
                 if full not in post_links:
                     post_links.append(full)
-        post_links = post_links[: self.social_source_limit]
+        post_links = post_links[: self.social_source_limit * 2]  # Check more posts to filter
 
         # If direct post links are unavailable, use page text as fallback content.
         if not post_links:
             page_text = soup.get_text(" ", strip=True)
-            if len(page_text) > 200:
+            # Filter: Only use page content if it contains policy/meeting keywords
+            if len(page_text) > 200 and self._is_policy_meeting_content(page_text):
                 doc_id = hashlib.md5(f"facebook-page-{municipality}-{url}".encode()).hexdigest()
                 documents.append(MeetingDocument(
                     document_id=doc_id,
@@ -519,16 +520,20 @@ class ScraperAgent(BaseAgent):
                     municipality=municipality,
                     state=state,
                     meeting_date=datetime.utcnow().isoformat(),
-                    meeting_type="Facebook Page",
-                    title="Facebook Page Content",
+                    meeting_type="Facebook Page - Policy/Meeting",
+                    title="Facebook Page Content (Policy-Related)",
                     content=page_text[:8000],
                     metadata={
                         "platform": "facebook",
                         "content_source": "page_fallback",
+                        "filtered_for_policy": True,
                     }
                 ))
+            else:
+                logger.debug(f"Facebook page content doesn't contain policy/meeting keywords: {url}")
             return documents
 
+        policy_posts = []
         for post_url in post_links:
             try:
                 p_resp = await self.http_client.get(post_url)
@@ -538,26 +543,43 @@ class ScraperAgent(BaseAgent):
                 post_text = p_soup.get_text(" ", strip=True)
                 if len(post_text) < 120:
                     continue
+                
+                # Filter: Only keep posts that mention policy/meeting keywords
+                if not self._is_policy_meeting_content(post_text):
+                    logger.debug(f"Skipping non-policy Facebook post: {post_url[:80]}...")
+                    continue
+                
+                logger.info(f"Found policy/meeting Facebook post: {post_url[:80]}...")
 
                 doc_id = hashlib.md5(f"facebook-post-{municipality}-{post_url}".encode()).hexdigest()
-                documents.append(MeetingDocument(
+                policy_posts.append(MeetingDocument(
                     document_id=doc_id,
                     source_url=post_url,
                     municipality=municipality,
                     state=state,
                     meeting_date=datetime.utcnow().isoformat(),
-                    meeting_type="Facebook Post",
-                    title="Facebook Post",
+                    meeting_type="Facebook Post - Policy/Meeting",
+                    title="Facebook Post (Policy-Related)",
                     content=post_text[:8000],
                     metadata={
                         "platform": "facebook",
                         "content_source": "post",
+                        "filtered_for_policy": True,
                     }
                 ))
+                
+                # Limit to configured number of policy posts
+                if len(policy_posts) >= self.social_source_limit:
+                    break
+                    
+                # Rate limiting
+                await asyncio.sleep(0.5)
+                
             except Exception as err:
                 logger.debug(f"Could not parse Facebook post {post_url}: {err}")
 
-        return documents
+        logger.info(f"Found {len(policy_posts)} policy/meeting Facebook posts from {url}")
+        return policy_posts
 
     def _fetch_youtube_transcript(self, video_id: str) -> str:
         """Return concatenated YouTube transcript text when available."""

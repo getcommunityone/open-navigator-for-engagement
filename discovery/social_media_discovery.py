@@ -93,6 +93,43 @@ class SocialMediaDiscovery:
                 "User-Agent": "Mozilla/5.0 (compatible; OralHealthPolicyBot/2.0)"
             }
         )
+        
+        # Keywords that indicate official government channels likely to have policy/meeting content
+        self.official_keywords = (
+            'city', 'town', 'county', 'government', 'gov', 'official', 
+            'municipal', 'municipality', 'council', 'city council', 
+            'town council', 'board', 'commission', 'public', 'clerk',
+            'meeting', 'session', 'chamber'
+        )
+    
+    def _is_likely_official_channel(self, url: str, jurisdiction_name: str) -> bool:
+        """
+        Check if a social media URL is likely an official government channel.
+        
+        Prioritizes channels with:
+        - Jurisdiction name in the URL
+        - Official government keywords (city, council, government, etc.)
+        - Meeting/policy related terms
+        
+        Args:
+            url: Social media URL to check
+            jurisdiction_name: Name of the jurisdiction
+            
+        Returns:
+            True if likely an official government channel
+        """
+        url_lower = url.lower()
+        jurisdiction_lower = jurisdiction_name.lower().replace(' ', '')
+        
+        # High priority: URL contains jurisdiction name
+        if jurisdiction_lower in url_lower:
+            return True
+        
+        # Medium priority: URL contains official government keywords
+        if any(keyword in url_lower for keyword in self.official_keywords):
+            return True
+        
+        return False
     
     async def discover_from_website(
         self,
@@ -153,17 +190,25 @@ class SocialMediaDiscovery:
             except Exception as e:
                 logger.debug(f"Could not check {contact_url}: {e}")
         
-        # 3. Deduplicate
+        # 3. Deduplicate and prioritize official channels
         for platform in discovered:
-            discovered[platform] = list(set(discovered[platform]))
+            unique_urls = list(set(discovered[platform]))
+            
+            # Separate official and non-official channels
+            official = [url for url in unique_urls if self._is_likely_official_channel(url, jurisdiction_name)]
+            non_official = [url for url in unique_urls if not self._is_likely_official_channel(url, jurisdiction_name)]
+            
+            # Prioritize official channels
+            discovered[platform] = official + non_official
         
-        # 4. Log findings
+        # 4. Log findings with official channel indicators
         total = sum(len(urls) for urls in discovered.values())
         if total > 0:
             logger.success(f"✓ Found {total} social media links for {jurisdiction_name}")
             for platform, urls in discovered.items():
                 if urls:
-                    logger.info(f"  {platform}: {len(urls)} URLs")
+                    official_count = sum(1 for url in urls if self._is_likely_official_channel(url, jurisdiction_name))
+                    logger.info(f"  {platform}: {len(urls)} URLs ({official_count} official)")
         else:
             logger.debug(f"No social media found for {jurisdiction_name}")
         
