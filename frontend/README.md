@@ -2,6 +2,19 @@
 
 React + TypeScript web interface for the Oral Health Policy Pulse application.
 
+## Projects
+
+### Main Application
+React + TypeScript web interface with maps, charts, and data visualization.
+
+**Location:** `frontend/` (this directory)
+
+### Policy Accountability Dashboards
+Evidence-based accountability dashboards for policy advocacy.
+
+**Location:** `frontend/policy-dashboards/`  
+**Documentation:** [Policy Dashboards README](policy-dashboards/README.md)
+
 ## Tech Stack
 
 - **React 18.2** - UI framework

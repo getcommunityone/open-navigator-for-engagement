@@ -1492,8 +1492,22 @@ class ScraperAgent(BaseAgent):
                 # Check if we got through
                 content = await page.content()
                 
-                if 'Incapsula' in content or len(content) < 5000:
-                    logger.error(f"Still blocked by Incapsula ({len(content)} bytes)")
+                # More sophisticated Incapsula detection
+                is_blocked = False
+                if len(content) < 5000:
+                    is_blocked = True
+                    logger.error(f"Still blocked by Incapsula (page too small: {len(content)} bytes)")
+                elif 'Incapsula incident ID' in content:
+                    is_blocked = True  
+                    logger.error(f"Still blocked by Incapsula (incident ID found)")
+                elif 'Request unsuccessful. Incapsula' in content:
+                    is_blocked = True
+                    logger.error(f"Still blocked by Incapsula (request unsuccessful message)")
+                elif '<title>Access Denied</title>' in content or '<title>Blocked</title>' in content:
+                    is_blocked = True
+                    logger.error(f"Still blocked by Incapsula (access denied title)")
+                
+                if is_blocked:
                     logger.warning(f"Try running with headless=False or use manual session cookies")
                     logger.info(f"See docs/EBOARD_MANUAL_DOWNLOAD.md for manual download guide")
                     await browser.close()
