@@ -1,9 +1,10 @@
 import React from 'react';
 import { summaryData as d } from '../data/dashboardData';
+import { DashboardGrid } from './shared/DashboardTile';
 
 /**
  * Summary Dashboard
- * Overview of all four findings with navigation
+ * Overview of all four findings with tile-based navigation
  */
 export default function Summary({ onNavigate }) {
   return (
@@ -18,38 +19,52 @@ export default function Summary({ onNavigate }) {
         </p>
       </div>
 
-      {/* Finding Cards - Clickable */}
-      <div style={{ 
-        display: 'grid', 
-        gap: 12, 
-        marginBottom: 24 
-      }}>
-        {d.findings.map((finding, i) => (
-          <div 
-            key={finding.id}
-            onClick={() => onNavigate && onNavigate(finding.id)}
-            style={{ 
-              background: '#fff',
-              border: '1px solid #eee',
-              borderLeft: `4px solid ${finding.discomfort >= 9 ? '#D85A30' : '#BA7517'}`,
-              borderRadius: 8,
-              padding: 16,
-              cursor: onNavigate ? 'pointer' : 'default',
-              transition: 'all 0.2s ease'
-            }}
-            onMouseEnter={(e) => {
-              if (onNavigate) {
-                e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.1)';
-                e.currentTarget.style.borderLeftWidth = '6px';
-              }
-            }}
-            onMouseLeave={(e) => {
-              if (onNavigate) {
-                e.currentTarget.style.boxShadow = 'none';
-                e.currentTarget.style.borderLeftWidth = '4px';
-              }
-            }}
-          >
+      {/* Dashboard Tiles */}
+      <DashboardGrid 
+        dashboards={d.findings} 
+        onNavigate={onNavigate}
+      />
+
+      {/* Legacy Finding Cards - Keep for compact view */}
+      <details style={{ marginBottom: 24 }}>
+        <summary style={{ 
+          cursor: 'pointer', 
+          fontSize: 13, 
+          color: '#888',
+          marginBottom: 12
+        }}>
+          Show compact list view
+        </summary>
+        <div style={{ 
+          display: 'grid', 
+          gap: 12
+        }}>
+          {d.findings.map((finding, i) => (
+            <div 
+              key={finding.id}
+              onClick={() => onNavigate && onNavigate(finding.id)}
+              style={{ 
+                background: '#fff',
+                border: '1px solid #eee',
+                borderLeft: `4px solid ${finding.discomfort >= 9 ? '#D85A30' : '#BA7517'}`,
+                borderRadius: 8,
+                padding: 16,
+                cursor: onNavigate ? 'pointer' : 'default',
+                transition: 'all 0.2s ease'
+              }}
+              onMouseEnter={(e) => {
+                if (onNavigate) {
+                  e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.1)';
+                  e.currentTarget.style.borderLeftWidth = '6px';
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (onNavigate) {
+                  e.currentTarget.style.boxShadow = 'none';
+                  e.currentTarget.style.borderLeftWidth = '4px';
+                }
+              }}
+            >
             <div style={{ 
               display: 'flex', 
               justifyContent: 'space-between', 
@@ -98,7 +113,8 @@ export default function Summary({ onNavigate }) {
             )}
           </div>
         ))}
-      </div>
+        </div>
+      </details>
 
       {/* How to Use Section */}
       <div style={{
