@@ -1501,8 +1501,24 @@ class ScraperAgent(BaseAgent):
                 
                 logger.success(f"✓ Bypassed Incapsula! Got {len(content)} bytes")
                 
+                # Save HTML for debugging
+                debug_file = Path("/tmp/eboard_success.html")
+                with open(debug_file, 'w', encoding='utf-8') as f:
+                    f.write(content)
+                logger.info(f"Saved successful page to {debug_file}")
+                
                 # Parse the page
                 soup = BeautifulSoup(content, 'html.parser')
+                
+                # Debug: Log all links found on page
+                all_links = soup.find_all('a', href=True)
+                logger.info(f"Total <a> tags with href found: {len(all_links)}")
+                if len(all_links) > 0:
+                    logger.info(f"Sample links (first 10):")
+                    for i, link in enumerate(all_links[:10]):
+                        href = link.get('href', '')[:100]
+                        text = link.get_text().strip()[:50]
+                        logger.info(f"  {i+1}. {text} -> {href}")
                 
                 # Extract meeting links - eBoard uses MID parameter
                 # Look for links containing "MID=" (Meeting ID)
