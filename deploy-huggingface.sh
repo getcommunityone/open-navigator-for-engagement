@@ -40,6 +40,12 @@ echo "  Space: $SPACE_NAME"
 echo "  URL: $HF_REPO"
 echo ""
 
+# Activate virtual environment if it exists
+if [ -d ".venv" ]; then
+    echo "🔧 Activating virtual environment..."
+    source .venv/bin/activate
+fi
+
 # Check if huggingface-cli is installed
 if ! command -v huggingface-cli &> /dev/null; then
     echo "📦 Installing huggingface-hub..."
