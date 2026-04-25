@@ -4,6 +4,7 @@ import Dashboard from './pages/Dashboard'
 import Heatmap from './pages/Heatmap'
 import Documents from './pages/Documents'
 import Opportunities from './pages/Opportunities'
+import Nonprofits from './pages/Nonprofits'
 import Settings from './pages/Settings'
 
 function App() {
@@ -14,6 +15,7 @@ function App() {
         <Route path="heatmap" element={<Heatmap />} />
         <Route path="documents" element={<Documents />} />
         <Route path="opportunities" element={<Opportunities />} />
+        <Route path="nonprofits" element={<Nonprofits />} />
         <Route path="settings" element={<Settings />} />
       </Route>
     </Routes>

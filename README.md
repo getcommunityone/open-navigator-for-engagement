@@ -10,7 +10,21 @@
 
 ## Overview
 
-The **Open Navigator for Engagement** is a full-stack AI application that analyzes thousands of municipal meeting minutes across the country to identify policy opportunities for oral health advocacy. It features a **modern React web interface**, **FastAPI backend**, and **multi-agent AI system** powered by Databricks.
+The **Open Navigator for Engagement** is a full-stack AI application that analyzes thousands of **municipal meeting minutes and financial documents** across the country to identify policy opportunities for oral health advocacy. It features a **modern React web interface**, **FastAPI backend**, and **multi-agent AI system** powered by Databricks.
+
+### What It Analyzes
+
+**📄 Meeting Minutes & Transcripts**
+- City council meetings, school board sessions, health department discussions
+- Public hearings, budget meetings, committee sessions
+- Automatically scraped from 90,000+ local government websites
+
+**💰 Financial Documents**
+- Municipal budgets and budget amendments
+- School district financial reports
+- Department expenditure summaries
+- Revenue allocations and funding proposals
+- Correlates spending with meeting rhetoric to reveal true priorities
 
 **✨ New in v2.0:**
 - 🎨 **React Frontend** - Modern, responsive UI with interactive visualizations
@@ -23,10 +37,12 @@ The **Open Navigator for Engagement** is a full-stack AI application that analyz
 
 - 🤖 **Multi-Agent Architecture**: Coordinated agents for scraping, parsing, classification, sentiment analysis, and advocacy generation
 - 🔍 **Jurisdiction Discovery**: Automatically identifies 90,000+ local government websites using Census Bureau data
-- 🏛️ **Massive Scale**: Handles millions of meeting minutes using Delta Lake on Databricks
+- 🏛️ **Massive Scale**: Handles millions of meeting minutes and financial documents using Delta Lake on Databricks
+- 💰 **Budget-to-Minutes Analysis**: Correlates meeting rhetoric with actual spending to reveal true priorities
+- 📊 **Financial Document Extraction**: Automatically parses budgets, expenditure reports, and funding allocations
 - 🗺️ **Advocacy Heatmap**: Visual representation of policy opportunities across the country
 - 📧 **Automated Materials**: Generates personalized emails, talking points, and social media content
-- 📊 **Real-Time Analytics**: Identifies windows of opportunity for policy change
+- 📈 **Real-Time Analytics**: Identifies windows of opportunity for policy change based on both discussion and funding
 - 🎯 **Topic-Focused**: Monitors water fluoridation, school dental programs, Medicaid dental, and more
 
 ## 💰 Free Nonprofit Data Sources
@@ -35,11 +51,23 @@ Access comprehensive nonprofit data without expensive subscriptions. The platfor
 
 ### Why This Matters
 
-When officials reject policy proposals with technical objections ("We can't do dental screenings - legal liability"), you can instantly show citizens the nonprofits **already doing it successfully**. This:
+**Direct Community Impact:**
+- **Discover Local Solutions** - Find nonprofits and community organizations already providing dental care, health screenings, and education programs in your area
+- **Connect Citizens to Services** - Provide direct pathways for people to access care, volunteer, or donate to organizations making a difference
+- **Partnership Opportunities** - Identify potential partners for advocacy campaigns, service expansion, or collaborative initiatives
+- **Resource Mapping** - Understand the full landscape of oral health services available in each community
 
-- **Bypasses technocratic vetoes** - Shows working alternatives exist
-- **Creates accountability pressure** - Exposes inefficiency ("$5K legal review vs $25 screening")  
-- **Mobilizes citizens** - Provides direct volunteer/donation pathways
+**Government Accountability & Advocacy:**
+- **Challenge "Impossibility" Claims** - When officials say "We can't do dental screenings - legal liability," show the nonprofits already doing it successfully
+- **Expose Resource Gaps** - Reveal where government funding falls short and community organizations are filling the void
+- **Opportunity Cost Analysis** - Compare government spending priorities with nonprofit service provision ("City spent $200K on landscaping while nonprofits struggle to fund children's dental care")
+- **Policy Precedents** - Demonstrate proven models that government could replicate or support
+
+**Strategic Advocacy:**
+- **Evidence-Based Campaigns** - Ground advocacy in real data about who's serving communities and what's working
+- **Coalition Building** - Identify natural allies and stakeholders for policy campaigns
+- **Alternative Pathways** - When government action stalls, direct people to existing nonprofit solutions
+- **Mobilization** - Turn "government should do X" into "help organization Y expand what they're already doing"
 
 ### Integrated Data Sources
 
@@ -106,14 +134,192 @@ nonprofits = discovery.search_everyorg(
 - **Access**: State/region-specific (e.g., [Alabama 211](https://www.211connects.org/))
 - **Note**: Each region has different systems; scraping may be required
 
-### Implementation
+### Nonprofit Data Ingestion
 
-See [`discovery/nonprofit_discovery.py`](discovery/nonprofit_discovery.py) for full implementation and [`discovery/README_NONPROFIT_DISCOVERY.md`](discovery/README_NONPROFIT_DISCOVERY.md) for detailed documentation.
+The system can **bulk ingest nonprofit data** into the Delta Lake for analysis:
 
-Access via API:
 ```bash
-GET /api/nonprofits?location=Tuscaloosa,AL&keyword=dental
+# Ingest nonprofits for specific location
+python -c "
+from discovery.nonprofit_discovery import NonprofitDiscovery
+discovery = NonprofitDiscovery()
+
+# Bulk search and cache
+orgs = discovery.search_propublica(state='AL', ntee_code='E')
+print(f'Cached {len(orgs)} health nonprofits in Alabama')
+"
 ```
+
+**API Access:**
+```bash
+# Search nonprofits
+GET /api/nonprofits?location=Tuscaloosa,AL&keyword=dental
+
+# Trigger bulk ingestion (admin)
+POST /api/data/ingest/nonprofits
+{
+  "state": "AL",
+  "ntee_codes": ["E", "E20", "E30"],
+  "cache_only": false
+}
+```
+
+See [`discovery/nonprofit_discovery.py`](discovery/nonprofit_discovery.py) for implementation and [`discovery/README_NONPROFIT_DISCOVERY.md`](discovery/README_NONPROFIT_DISCOVERY.md) for documentation.
+
+## 📊 Reference Data & Jurisdiction Discovery
+
+The platform ingests comprehensive reference datasets to identify and enrich 90,000+ government jurisdictions nationwide. All data sources are **100% free and public**.
+
+### Census Bureau Data Ingestion
+
+**Source:** [U.S. Census Bureau Government Integrated Directory (GID)](https://www.census.gov/programs-surveys/gid.html)
+
+Provides complete listings of all government entities with standardized FIPS codes, geographic coordinates, and population data.
+
+**Coverage:**
+- 🏛️ **3,144 Counties** - All U.S. counties with FIPS, lat/lon, population
+- 🏘️ **19,500+ Municipalities** - Cities, towns, villages, boroughs
+- 📍 **36,000+ Townships** - County subdivisions, census divisions
+- 🏫 **13,000+ School Districts** - Elementary, secondary, and unified districts
+
+**Data Files:** Census Gazetteer 2024
+```bash
+# Ingest all Census jurisdiction data
+python -c "
+from discovery.census_ingestion import CensusGovernmentIngestion
+ingestor = CensusGovernmentIngestion()
+
+# Download and process all jurisdiction types
+await ingestor.ingest_all_jurisdictions()
+# Saved to: data/bronze/census_jurisdictions/
+"
+```
+
+**Implementation:** [`discovery/census_ingestion.py`](discovery/census_ingestion.py)
+
+### NCES School District Data
+
+**Source:** [NCES Common Core of Data (CCD)](https://nces.ed.gov/ccd/)
+
+Complete directory of all U.S. school districts with contact information and enrollment data.
+
+**Coverage:**
+- 13,000+ school districts nationwide
+- District names, addresses, phone numbers
+- NCES IDs for standardized identification
+- Enrollment counts and demographic data
+- Website URLs (when available)
+
+```bash
+# Ingest NCES school district data
+python -c "
+from discovery.nces_ingestion import NCESSchoolDistrictIngestion
+ingestor = NCESSchoolDistrictIngestion()
+
+districts = await ingestor.download_and_process()
+# Saved to: data/bronze/nces_school_districts/
+"
+```
+
+**Why This Matters:** School boards control dental screening programs, nutrition policy, and health education. This provides complete contact info for all 13,000+ districts.
+
+**Implementation:** [`discovery/nces_ingestion.py`](discovery/nces_ingestion.py)
+
+### Harvard Dataverse Integration
+
+**Source:** [Harvard Dataverse](https://dataverse.harvard.edu/)
+
+Academic research datasets including LocalView (1,000+ municipalities with video archives).
+
+**Available Datasets:**
+- 📹 **LocalView** - Municipal meeting videos and transcripts from 1,000+ cities
+- 🎓 **Research Collections** - Curated government datasets from Harvard, MIT, etc.
+
+```bash
+# Configure Dataverse API access (optional but recommended)
+echo "DATAVERSE_API_KEY=your-api-key" >> .env
+
+# Ingest LocalView dataset
+python discovery/localview_ingestion.py
+```
+
+**Implementation:** [`discovery/dataverse_client.py`](discovery/dataverse_client.py) and [`discovery/localview_ingestion.py`](discovery/localview_ingestion.py)
+
+### Pre-Built Meeting & Video Datasets
+
+**Already Integrated Sources:**
+
+1. **MeetingBank** (1,366 meetings from 6 cities)
+   - Full transcripts, human-written summaries
+   - YouTube/Vimeo video URLs extracted
+   - Run: `python discovery/meetingbank_ingestion.py`
+
+2. **City Scrapers** (100-500 validated agency URLs)
+   - Curated from 5 major cities
+   - Includes Granicus video pages
+   - Run: `python discovery/city_scrapers_urls.py`
+
+3. **Open States** (50+ state legislature channels)
+   - YouTube/Vimeo sources via API
+   - Run: `python discovery/openstates_sources.py`
+
+**All ingested data flows to Delta Lake** for unified querying and analysis.
+
+### Complete Data Ingestion Pipeline
+
+```bash
+# Full ingestion workflow (run once to populate reference data)
+cd /home/developer/projects/oral-health-policy-pulse
+source .venv/bin/activate
+
+# 1. Census jurisdictions (90,000+ entities)
+python -m discovery.census_ingestion
+
+# 2. NCES school districts (13,000+)
+python -m discovery.nces_ingestion
+
+# 3. Pre-built meeting datasets
+python discovery/meetingbank_ingestion.py
+python discovery/city_scrapers_urls.py
+python discovery/openstates_sources.py
+
+# 4. LocalView (requires Dataverse API key)
+python discovery/localview_ingestion.py
+
+# 5. Nonprofit organizations (on-demand by location)
+python -c "
+from discovery.nonprofit_discovery import NonprofitDiscovery
+discovery = NonprofitDiscovery()
+orgs = discovery.search_propublica(state='AL', ntee_code='E')
+"
+```
+
+**Result:** Comprehensive reference database of:
+- ✅ 90,000+ government jurisdictions with geo-coordinates
+- ✅ 13,000+ school districts with contact info
+- ✅ 3,000+ meeting video URLs from pre-built datasets
+- ✅ 3,000,000+ nonprofit organizations (searchable on-demand)
+
+### API Endpoints for Data Management
+
+```bash
+# Check ingestion status
+GET /api/data/status
+
+# Trigger specific ingestion (admin only)
+POST /api/data/ingest/census
+POST /api/data/ingest/nces
+POST /api/data/ingest/nonprofits
+
+# Query ingested jurisdictions
+GET /api/jurisdictions?state=AL&type=municipality
+GET /api/school-districts?state=AL&limit=100
+```
+
+**All reference data stored in Delta Lake** with medallion architecture:
+- **Bronze**: Raw downloaded data
+- **Silver**: Cleaned and standardized
+- **Gold**: Enriched with URLs and analysis
 
 ## Architecture
 
@@ -137,9 +343,10 @@ GET /api/nonprofits?location=Tuscaloosa,AL&keyword=dental
 │                      │                                  │
 │  ┌───────────────────▼─────────────────────────────┐   │
 │  │      Unity Catalog & Delta Lake                 │   │
-│  │  • Policy documents & classifications           │   │
-│  │  • Advocacy opportunities                       │   │
-│  │  • Analytics & reporting                        │   │
+│  │  • Meeting minutes & transcripts                │   │
+│  │  • Budget documents & financial data            │   │
+│  │  • Policy classifications & sentiment           │   │
+│  │  • Advocacy opportunities & analytics           │   │
 │  └─────────────────────────────────────────────────┘   │
 │                                                          │
 │  ┌─────────────────────────────────────────────────┐   │
@@ -214,9 +421,36 @@ npm run dev
 ### Data Pipeline
 
 ```
-Meeting Minutes → Scraping → Parsing → Classification → 
-Sentiment Analysis → Advocacy Generation → Delta Lake Storage →
-Heatmap Visualization
+┌─────────────────────────────────────────────────────────────┐
+│                    DATA INGESTION                            │
+├─────────────────────────────────────────────────────────────┤
+│  Meeting Minutes          │  Financial Documents            │
+│  • City Council           │  • Municipal Budgets            │
+│  • School Boards          │  • Expenditure Reports          │
+│  • Public Hearings        │  • Revenue Allocations          │
+│  • Committee Sessions     │  • Department Spending          │
+└──────────┬────────────────┴────────────┬───────────────────┘
+           │                             │
+           ▼                             ▼
+      Scraping & OCR                Scraping & OCR
+           │                             │
+           ▼                             ▼
+      Text Parsing                  Budget Extraction
+           │                             │
+           ▼                             ▼
+      Classification              Line Item Analysis
+           │                             │
+           ▼                             ▼
+    Sentiment Analysis            Budget-to-Minutes
+           │                      Delta Analysis
+           └──────────┬────────────────┘
+                      ▼
+              Delta Lake Storage
+                      │
+           ┌──────────┼──────────┐
+           ▼          ▼          ▼
+      Heatmap   Dashboard   Advocacy
+                            Materials
 ```
 
 ## Installation
@@ -530,6 +764,58 @@ python discovery/openstates_sources.py  # Optional: add OPENSTATES_API_KEY to .e
 ```
 
 See [`docs/INTEGRATION_STATUS.md`](docs/INTEGRATION_STATUS.md) for complete integration details, [`docs/URL_DATASETS_CONFIRMED.md`](docs/URL_DATASETS_CONFIRMED.md) for URL analysis, [`docs/HUGGINGFACE_DATASETS_ANALYSIS.md`](docs/HUGGINGFACE_DATASETS_ANALYSIS.md) for HuggingFace datasets, and [`docs/VIDEO_URL_SOURCES.md`](docs/VIDEO_URL_SOURCES.md) for video URL integration guide.
+
+### Financial Documents & Budget Sources
+
+The system analyzes municipal financial documents to correlate rhetoric (meeting minutes) with reality (actual spending):
+
+**Municipal Budget Documents (Free Public Data):**
+- 💰 **City & County Budgets** - Annual budgets, mid-year amendments, departmental allocations
+- 📊 **School District Financials** - K-12 budgets, per-pupil spending, categorical funding
+- 🏥 **Health Department Budgets** - Public health spending, program-specific allocations
+- 📈 **Budget Amendments** - Real-time changes that reveal shifting priorities
+- 📉 **Expenditure Reports** - Actual spending vs. budgeted amounts
+
+**Key Data Sources:**
+- 🏛️ **Municipal Finance Officer Association (GFOA)** - Standardized budget formats from 17,000+ governments
+- 🎓 **NCES Common Core of Data (CCD)** - School district financial data for all 13,000+ U.S. districts ([NCES Data](https://nces.ed.gov/ccd/))
+- 📚 **U.S. Census Annual Survey of State & Local Government Finances** - Comprehensive revenue/expenditure data ([Census Finance Data](https://www.census.gov/programs-surveys/gov-finances.html))
+- 🏙️ **Comprehensive Annual Financial Reports (CAFRs)** - Detailed municipal financial statements (publicly posted on .gov sites)
+- 📄 **OpenGov Platforms** - Many cities use OpenGov, OpenBudget, or similar transparency portals
+
+**Budget-to-Minutes Analysis Framework:**
+
+The system implements **political economy forensics** by correlating discussion with funding:
+
+```
+Meeting Rhetoric          Budget Reality          Analysis
+──────────────────────────────────────────────────────────────
+"Critical priority"   →   +5% increase      =   ✅ Aligned
+"Essential program"   →   Flat funding       =   ⚠️ Lip Service  
+Rarely discussed      →   +25% increase     =   🔍 Hidden Priority
+Heavy debate          →   -15% cut          =   ❌ Performative Talk
+```
+
+**What It Reveals:**
+- 🎭 **Performative Politics**: Programs praised in meetings but defunded in budgets
+- 🔦 **Hidden Priorities**: Quiet budget increases for politically sensitive items
+- 💡 **Advocacy Opportunities**: Gaps between stated values and actual resource allocation
+- 📊 **Opportunity Costs**: "We funded X instead of Y" comparisons for advocacy messaging
+
+**Example Use Case:**
+```
+City Council: "School dental programs are a top priority"
+Budget Reality: Dental program funding decreased 20%
+Alternative Spending: New city hall landscaping increased 150%
+
+→ Advocacy Message: "City spent $200K on landscaping while cutting 
+   children's dental screenings. 800 kids now without care."
+```
+
+**Implementation:**
+See [`extraction/budget_analyzer.py`](extraction/budget_analyzer.py) for budget extraction logic and [`docs/ACCOUNTABILITY_DASHBOARD_STRATEGY.md`](docs/ACCOUNTABILITY_DASHBOARD_STRATEGY.md) for analysis methodology.
+
+⚠️ **All Public Data**: Budget documents are legally required to be publicly accessible. The system scrapes PDF budgets from .gov websites and standardizes them for analysis. Zero cost.
 
 ## Policy Topics Monitored
 

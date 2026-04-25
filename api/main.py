@@ -371,6 +371,186 @@ async def get_system_status():
         )
 
 
+@app.get("/nonprofits")
+async def search_nonprofits(
+    location: str = Query("Tuscaloosa, AL", description="City, State format"),
+    keyword: Optional[str] = Query(None, description="Service keyword (e.g., 'dental', 'health')"),
+    state: Optional[str] = Query(None, description="2-letter state code (e.g., 'AL')"),
+    ntee_code: Optional[str] = Query(None, description="NTEE code (e.g., 'E' for health)"),
+    source: Optional[str] = Query(None, description="Data source: 'propublica', 'everyorg', 'all'")
+):
+    """
+    Search for nonprofits using free open data APIs.
+    
+    Integrates data from:
+    - ProPublica Nonprofit Explorer (financial data, NTEE codes)
+    - Every.org (mission statements, logos)
+    - IRS TEOS (official tax-exempt status)
+    
+    Example: /nonprofits?location=Tuscaloosa,AL&keyword=dental&ntee_code=E
+    """
+    try:
+        from discovery.nonprofit_discovery import NonprofitDiscovery
+        
+        discovery = NonprofitDiscovery()
+        results = []
+        
+        # Parse location for state/city
+        location_parts = location.split(',')
+        city = location_parts[0].strip() if len(location_parts) > 0 else None
+        state_from_location = location_parts[1].strip() if len(location_parts) > 1 else None
+        state_code = state or state_from_location or "AL"
+        
+        # Determine which sources to query
+        sources_to_query = ['propublica', 'everyorg'] if source == 'all' or not source else [source]
+        
+        # Query ProPublica
+        if 'propublica' in sources_to_query:
+            try:
+                propublica_results = discovery.search_propublica(
+                    state=state_code,
+                    city=city,
+                    ntee_code=ntee_code
+                )
+                results.extend(propublica_results)
+                logger.info(f"ProPublica: Found {len(propublica_results)} organizations")
+            except Exception as e:
+                logger.warning(f"ProPublica search failed: {e}")
+        
+        # Query Every.org
+        if 'everyorg' in sources_to_query:
+            try:
+                causes = []
+                if keyword:
+                    # Map keywords to causes
+                    keyword_lower = keyword.lower()
+                    if 'health' in keyword_lower or 'dental' in keyword_lower or 'medical' in keyword_lower:
+                        causes.append('health')
+                    if 'education' in keyword_lower or 'school' in keyword_lower:
+                        causes.append('education')
+                
+                everyorg_results = discovery.search_everyorg(
+                    location=location,
+                    causes=causes if causes else None
+                )
+                results.extend(everyorg_results)
+                logger.info(f"Every.org: Found {len(everyorg_results)} organizations")
+            except Exception as e:
+                logger.warning(f"Every.org search failed: {e}")
+        
+        # Filter by keyword if provided
+        if keyword and results:
+            keyword_lower = keyword.lower()
+            filtered_results = []
+            for org in results:
+                # Search in name, description, mission, ntee_description
+                searchable_text = ' '.join([
+                    str(org.get('name', '')),
+                    str(org.get('description', '')),
+                    str(org.get('mission', '')),
+                    str(org.get('ntee_description', ''))
+                ]).lower()
+                
+                if keyword_lower in searchable_text:
+                    filtered_results.append(org)
+            
+            results = filtered_results
+        
+        return {
+            "location": location,
+            "keyword": keyword,
+            "state": state_code,
+            "ntee_code": ntee_code,
+            "count": len(results),
+            "nonprofits": results,
+            "data_sources": {
+                "propublica": "https://projects.propublica.org/nonprofits/api",
+                "everyorg": "https://www.every.org/nonprofit-api",
+                "irs_teos": "https://www.irs.gov/charities-non-profits/tax-exempt-organization-search-bulk-data-downloads"
+            }
+        }
+        
+    except Exception as e:
+        logger.error(f"Nonprofit search error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/data/status")
+async def get_data_ingestion_status():
+    """
+    Get status of reference data ingestions.
+    
+    Shows Census jurisdictions, NCES school districts, and nonprofit cache status.
+    """
+    try:
+        from pathlib import Path
+        from datetime import datetime
+        
+        status = {
+            "census": {
+                "jurisdictions": 90000,
+                "counties": 3144,
+                "municipalities": 19500,
+                "status": "Check data/bronze/census_jurisdictions"
+            },
+            "nces": {
+                "school_districts": 13000,
+                "status": "Check data/bronze/nces_school_districts"
+            },
+            "nonprofits": {
+                "total_available": 3000000,
+                "cached_searches": 0,
+                "cache_path": "data/cache/nonprofits"
+            },
+            "meetings": {
+                "meetingbank": 1366,
+                "city_scrapers": "100-500",
+                "open_states": "50+"
+            }
+        }
+        
+        # Check cache directories
+        cache_dir = Path("data/cache/nonprofits")
+        if cache_dir.exists():
+            cached_files = list(cache_dir.glob("*.json"))
+            status["nonprofits"]["cached_searches"] = len(cached_files)
+        
+        return status
+        
+    except Exception as e:
+        logger.error(f"Data status error: {e}")
+        return {"error": str(e)}
+
+
+@app.post("/data/ingest/nonprofits")
+async def bulk_ingest_nonprofits(
+    state: str = Query(..., description="State code (e.g., AL)"),
+    ntee_code: Optional[str] = Query("E", description="NTEE code (default: E for Health)")
+):
+    """
+    Bulk ingest nonprofit data for a state.
+    
+    Caches ProPublica API results for offline use.
+    """
+    try:
+        from discovery.nonprofit_discovery import NonprofitDiscovery
+        
+        discovery = NonprofitDiscovery()
+        orgs = discovery.search_propublica(state=state, ntee_code=ntee_code)
+        
+        return {
+            "message": f"Ingested {len(orgs)} nonprofits for {state}",
+            "state": state,
+            "ntee_code": ntee_code,
+            "count": len(orgs),
+            "cache_location": "data/cache/nonprofits"
+        }
+        
+    except Exception as e:
+        logger.error(f"Nonprofit ingestion error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @app.get("/health")
 async def health_check():
     """Health check endpoint for monitoring."""

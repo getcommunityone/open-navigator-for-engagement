@@ -4,6 +4,7 @@ import {
   MapIcon,
   DocumentTextIcon,
   BellAlertIcon,
+  BuildingLibraryIcon,
   Cog6ToothIcon,
 } from '@heroicons/react/24/outline'
 
@@ -12,6 +13,7 @@ const navigation = [
   { name: 'Heatmap', href: '/heatmap', icon: MapIcon },
   { name: 'Documents', href: '/documents', icon: DocumentTextIcon },
   { name: 'Opportunities', href: '/opportunities', icon: BellAlertIcon },
+  { name: 'Nonprofits', href: '/nonprofits', icon: BuildingLibraryIcon },
   { name: 'Settings', href: '/settings', icon: Cog6ToothIcon },
 ]
 
@@ -24,7 +26,7 @@ export default function Layout() {
       <div className="fixed inset-y-0 left-0 w-64 bg-white shadow-lg">
         <div className="flex h-16 items-center justify-center border-b border-gray-200">
           <h1 className="text-xl font-bold text-primary-600">
-            🦷 Oral Health Policy
+            🦷 Open Navigator
           </h1>
         </div>
         

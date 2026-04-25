@@ -316,6 +316,256 @@ async def search_nonprofits(
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@app.get("/api/data/status")
+async def get_data_status():
+    """
+    Get status of all reference data ingestions.
+    
+    Returns counts and last update times for:
+    - Census jurisdictions
+    - NCES school districts
+    - Nonprofit organizations
+    - Meeting datasets (MeetingBank, LocalView, etc.)
+    """
+    try:
+        from pathlib import Path
+        from datetime import datetime
+        
+        status = {
+            "census_jurisdictions": {
+                "path": "data/bronze/census_jurisdictions",
+                "status": "not_ingested",
+                "count": 0,
+                "last_updated": None
+            },
+            "nces_school_districts": {
+                "path": "data/bronze/nces_school_districts",
+                "status": "not_ingested",
+                "count": 0,
+                "last_updated": None
+            },
+            "nonprofits": {
+                "path": "data/cache/nonprofits",
+                "status": "cached",
+                "count": 0,
+                "last_updated": None
+            },
+            "meeting_datasets": {
+                "meetingbank": {"status": "available", "count": 1366},
+                "city_scrapers": {"status": "available", "count": "100-500"},
+                "open_states": {"status": "available", "count": "50+"}
+            }
+        }
+        
+        # Check each data directory
+        for key in ["census_jurisdictions", "nces_school_districts", "nonprofits"]:
+            data_path = Path(status[key]["path"])
+            if data_path.exists():
+                files = list(data_path.glob("**/*"))
+                status[key]["count"] = len(files)
+                status[key]["status"] = "ingested" if files else "empty"
+                if files:
+                    latest_file = max(files, key=lambda f: f.stat().st_mtime if f.is_file() else 0)
+                    if latest_file.is_file():
+                        status[key]["last_updated"] = datetime.fromtimestamp(
+                            latest_file.stat().st_mtime
+                        ).isoformat()
+        
+        return status
+        
+    except Exception as e:
+        logger.error(f"Data status error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/data/ingest/census")
+async def ingest_census_data(background_tasks: BackgroundTasks):
+    """
+    Trigger Census Bureau jurisdiction data ingestion.
+    
+    Downloads and processes:
+    - 3,144 counties
+    - 19,500+ municipalities  
+    - 36,000+ townships
+    - 13,000+ school districts
+    
+    This is a long-running operation that runs in the background.
+    """
+    try:
+        def run_census_ingestion():
+            from discovery.census_ingestion import CensusGovernmentIngestion
+            import asyncio
+            
+            logger.info("Starting Census data ingestion...")
+            ingestor = CensusGovernmentIngestion()
+            
+            # Run async ingestion
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            result = loop.run_until_complete(ingestor.ingest_all_jurisdictions())
+            loop.close()
+            
+            logger.success(f"Census ingestion complete: {result}")
+        
+        background_tasks.add_task(run_census_ingestion)
+        
+        return {
+            "message": "Census data ingestion started",
+            "status": "processing",
+            "check_status": "/api/data/status"
+        }
+        
+    except Exception as e:
+        logger.error(f"Census ingestion error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/data/ingest/nces")
+async def ingest_nces_data(background_tasks: BackgroundTasks):
+    """
+    Trigger NCES school district data ingestion.
+    
+    Downloads and processes 13,000+ school districts with:
+    - District names and addresses
+    - Contact information
+    - NCES IDs
+    - Enrollment data
+    """
+    try:
+        def run_nces_ingestion():
+            from discovery.nces_ingestion import NCESSchoolDistrictIngestion
+            import asyncio
+            
+            logger.info("Starting NCES data ingestion...")
+            ingestor = NCESSchoolDistrictIngestion()
+            
+            # Run async ingestion
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            result = loop.run_until_complete(ingestor.download_and_process())
+            loop.close()
+            
+            logger.success(f"NCES ingestion complete: {result}")
+        
+        background_tasks.add_task(run_nces_ingestion)
+        
+        return {
+            "message": "NCES data ingestion started",
+            "status": "processing",
+            "check_status": "/api/data/status"
+        }
+        
+    except Exception as e:
+        logger.error(f"NCES ingestion error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/data/ingest/nonprofits")
+async def ingest_nonprofits(
+    state: str = Query(..., description="2-letter state code"),
+    ntee_codes: Optional[List[str]] = Query(None, description="NTEE codes to ingest"),
+    background_tasks: BackgroundTasks = None
+):
+    """
+    Trigger nonprofit data ingestion for a specific state.
+    
+    Bulk downloads nonprofit data from ProPublica API and caches locally.
+    
+    Example: POST /api/data/ingest/nonprofits?state=AL&ntee_codes=E&ntee_codes=E20
+    """
+    try:
+        from discovery.nonprofit_discovery import NonprofitDiscovery
+        
+        discovery = NonprofitDiscovery()
+        ntee_list = ntee_codes or ["E"]  # Default to health
+        
+        total_orgs = 0
+        for ntee_code in ntee_list:
+            orgs = discovery.search_propublica(state=state, ntee_code=ntee_code)
+            total_orgs += len(orgs)
+            logger.info(f"Cached {len(orgs)} nonprofits for {state}/{ntee_code}")
+        
+        return {
+            "message": f"Nonprofit data ingestion complete for {state}",
+            "state": state,
+            "ntee_codes": ntee_list,
+            "organizations_cached": total_orgs,
+            "cache_location": "data/cache/nonprofits"
+        }
+        
+    except Exception as e:
+        logger.error(f"Nonprofit ingestion error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/jurisdictions")
+async def get_jurisdictions(
+    state: Optional[str] = Query(None, description="2-letter state code"),
+    type: Optional[str] = Query(None, description="Type: county, municipality, township"),
+    limit: int = Query(100, le=1000)
+):
+    """
+    Query ingested Census jurisdiction data.
+    
+    Returns government entities with FIPS codes, coordinates, and population.
+    """
+    try:
+        # This would query the Delta Lake census tables
+        # For now, return sample data
+        return {
+            "message": "Query census jurisdiction data from Delta Lake",
+            "filters": {"state": state, "type": type},
+            "limit": limit,
+            "note": "Requires Census data ingestion first (POST /api/data/ingest/census)",
+            "example_data": [
+                {
+                    "name": "Tuscaloosa County",
+                    "state": "AL",
+                    "type": "county",
+                    "fips": "01125",
+                    "population": "209355"
+                }
+            ]
+        }
+        
+    except Exception as e:
+        logger.error(f"Jurisdiction query error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/school-districts")
+async def get_school_districts(
+    state: Optional[str] = Query(None, description="2-letter state code"),
+    limit: int = Query(100, le=1000)
+):
+    """
+    Query ingested NCES school district data.
+    
+    Returns school districts with contact information and enrollment.
+    """
+    try:
+        # This would query the Delta Lake NCES tables
+        return {
+            "message": "Query NCES school district data from Delta Lake",
+            "filters": {"state": state},
+            "limit": limit,
+            "note": "Requires NCES data ingestion first (POST /api/data/ingest/nces)",
+            "example_data": [
+                {
+                    "name": "Tuscaloosa City Schools",
+                    "state": "AL",
+                    "nces_id": "0100123",
+                    "phone": "(205) 759-3500",
+                    "website": "https://www.tusc.k12.al.us/"
+                }
+            ]
+        }
+        
+    except Exception as e:
+        logger.error(f"School district query error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 # Serve React frontend
 static_dir = Path(__file__).parent / "static"
 if static_dir.exists():
