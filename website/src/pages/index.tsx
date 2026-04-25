@@ -153,6 +153,30 @@ export default function Home(): ReactNode {
     <Layout
       title={`${siteConfig.title}`}
       description="AI-powered advocacy opportunity finder analyzing municipal meetings and financial documents">
+      
+      {/* Important Notice Banner */}
+      <div style={{
+        backgroundColor: '#0ea5e9',
+        color: 'white',
+        padding: '1rem',
+        textAlign: 'center',
+        fontWeight: 'bold',
+      }}>
+        📚 This is the DOCUMENTATION site. Looking for the application? 
+        <a 
+          href="http://localhost:5173" 
+          target="_blank" 
+          style={{
+            color: 'white',
+            textDecoration: 'underline',
+            marginLeft: '0.5rem',
+            fontWeight: 'bold'
+          }}
+        >
+          🚀 Launch the Dashboard →
+        </a>
+      </div>
+
       <HomepageHeader />
       <main>
         <HomepageFeatures />

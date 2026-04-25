@@ -13,6 +13,11 @@ import type {SidebarsConfig} from '@docusaurus/plugin-content-docs';
 const sidebars: SidebarsConfig = {
   docsSidebar: [
     'intro',
+    {
+      type: 'doc',
+      id: 'where-is-the-app',
+      label: '⚠️ Where is the App?',
+    },
     'dashboard',
     {
       type: 'category',

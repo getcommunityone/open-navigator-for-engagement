@@ -11,9 +11,18 @@
 
 ## 📚 Documentation
 
-**[Read the full documentation →](http://localhost:3000)** (Start with `cd website && npm start`)
+**[📖 Read the full documentation →](http://localhost:3000)** (Start with `cd website && npm start`)
 
-This README provides a quick overview. For comprehensive guides, API reference, and tutorials, visit the **Docusaurus documentation site** in the `website/` directory.
+**[⚛️ Launch the interactive dashboard →](http://localhost:5173)** (Start with `cd frontend && npm run dev`)
+
+> **Architecture Note**: This project has **three separate services**:
+> - 📚 **Documentation Site** (port 3000) - Guides, API docs, getting started
+> - ⚛️ **React Dashboard** (port 5173) - **Main application** with search, filters, heatmap, data exploration
+> - 🔥 **API Backend** (port 8000) - Data processing and AI agents
+>
+> See [ARCHITECTURE.md](ARCHITECTURE.md) for detailed explanation.
+
+This README provides a quick overview. For comprehensive guides, API reference, and tutorials, visit the **Docusaurus documentation site** in the `website/` directory. For the **actual application interface with search, filters, and data exploration**, use the **React dashboard** in the `frontend/` directory.
 
 ## Overview
 
