@@ -4,8 +4,9 @@ import ImpactDashboard from './components/ImpactDashboard';
 import TopicNavigation from './components/TopicNavigation';
 import DecisionCard from './components/shared/DecisionCard';
 import SplitScreenView from './components/SplitScreenView';
+import NonprofitCard from './components/NonprofitCard';
 import { metadata } from './data/dashboardData';
-import { Home, Grid } from 'lucide-react';
+import { Home, Grid, Building2, Heart, Church } from 'lucide-react';
 
 export default function App() {
   const [viewMode, setViewMode] = useState('browse'); // 'home', 'impact', 'browse', 'split-screen'
@@ -475,45 +476,210 @@ export default function App() {
             fontWeight: 500,
             marginBottom: 16
           }}>
-            Explore Decisions
+            Explore {sectorView === 'all' ? 'All Sectors' : 
+                     sectorView === 'public' ? 'Public Sector' :
+                     sectorView === 'nonprofits' ? 'Nonprofits' : 'Churches'}
           </h2>
           
-          {filteredDecisions.length === 0 ? (
-            <div style={{
-              textAlign: 'center',
-              padding: '3rem',
-              color: '#999'
-            }}>
-              <p style={{ fontSize: 16, marginBottom: 8 }}>
-                No decisions match your filters
-              </p>
-              <button
-                onClick={handleClearFilters}
-                style={{
-                  fontSize: 15,
-                  color: '#D85A30',
-                  background: 'none',
-                  border: 'none',
-                  cursor: 'pointer',
-                  textDecoration: 'underline'
-                }}
-              >
-                Clear all filters
-              </button>
+          {/* Sector Filter Buttons */}
+          <div style={{
+            display: 'flex',
+            gap: 8,
+            marginBottom: 20,
+            padding: 16,
+            background: '#f9fafb',
+            borderRadius: 8,
+            flexWrap: 'wrap'
+          }}>
+            <button
+              onClick={() => setSectorView('all')}
+              style={{
+                padding: '10px 16px',
+                borderRadius: 6,
+                fontSize: 14,
+                fontWeight: 500,
+                cursor: 'pointer',
+                border: '1px solid',
+                borderColor: sectorView === 'all' ? '#059669' : '#ddd',
+                background: sectorView === 'all' ? '#dcfce7' : 'white',
+                color: sectorView === 'all' ? '#059669' : '#666',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 6
+              }}
+            >
+              <Grid size={14} />
+              All Sectors
+            </button>
+            <button
+              onClick={() => setSectorView('public')}
+              style={{
+                padding: '10px 16px',
+                borderRadius: 6,
+                fontSize: 14,
+                fontWeight: 500,
+                cursor: 'pointer',
+                border: '1px solid',
+                borderColor: sectorView === 'public' ? '#185FA5' : '#ddd',
+                background: sectorView === 'public' ? '#EFF6FF' : 'white',
+                color: sectorView === 'public' ? '#185FA5' : '#666',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 6
+              }}
+            >
+              <Building2 size={14} />
+              Public Sector ({filteredDecisions.length})
+            </button>
+            <button
+              onClick={() => setSectorView('nonprofits')}
+              style={{
+                padding: '10px 16px',
+                borderRadius: 6,
+                fontSize: 14,
+                fontWeight: 500,
+                cursor: 'pointer',
+                border: '1px solid',
+                borderColor: sectorView === 'nonprofits' ? '#059669' : '#ddd',
+                background: sectorView === 'nonprofits' ? '#dcfce7' : 'white',
+                color: sectorView === 'nonprofits' ? '#059669' : '#666',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 6
+              }}
+            >
+              <Heart size={14} />
+              Nonprofits ({exampleNonprofits.filter(org => !org.ntee_code.startsWith('X')).length})
+            </button>
+            <button
+              onClick={() => setSectorView('churches')}
+              style={{
+                padding: '10px 16px',
+                borderRadius: 6,
+                fontSize: 14,
+                fontWeight: 500,
+                cursor: 'pointer',
+                border: '1px solid',
+                borderColor: sectorView === 'churches' ? '#A855F7' : '#ddd',
+                background: sectorView === 'churches' ? '#FAF5FF' : 'white',
+                color: sectorView === 'churches' ? '#A855F7' : '#666',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 6
+              }}
+            >
+              <Church size={14} />
+              Churches ({exampleNonprofits.filter(org => org.ntee_code.startsWith('X')).length})
+            </button>
+          </div>
+          
+          {/* Sector Content */}
+          {(sectorView === 'all' || sectorView === 'public') && (
+            <div style={{ marginBottom: sectorView === 'all' ? 32 : 0 }}>
+              {sectorView === 'all' && (
+                <h3 style={{
+                  fontSize: 18,
+                  fontWeight: 600,
+                  color: '#185FA5',
+                  marginBottom: 16,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 8
+                }}>
+                  <Building2 size={20} />
+                  Public Sector Decisions
+                </h3>
+              )}
+              {filteredDecisions.length === 0 ? (
+                <div style={{
+                  textAlign: 'center',
+                  padding: '2rem',
+                  color: '#999',
+                  background: '#f9fafb',
+                  borderRadius: 8
+                }}>
+                  <p style={{ fontSize: 15, marginBottom: 8 }}>
+                    No government decisions match your filters
+                  </p>
+                  <button
+                    onClick={handleClearFilters}
+                    style={{
+                      fontSize: 14,
+                      color: '#D85A30',
+                      background: 'none',
+                      border: 'none',
+                      cursor: 'pointer',
+                      textDecoration: 'underline'
+                    }}
+                  >
+                    Clear all filters
+                  </button>
+                </div>
+              ) : (
+                <>
+                  <div style={{ fontSize: 14, color: '#888', marginBottom: 12 }}>
+                    Showing {filteredDecisions.length} decision{filteredDecisions.length !== 1 ? 's' : ''}
+                  </div>
+                  {filteredDecisions.map((decision, i) => (
+                    <DecisionCard
+                      key={i}
+                      decision={decision}
+                      onClick={() => handleDecisionClick(decision)}
+                    />
+                  ))}
+                </>
+              )}
             </div>
-          ) : (
-            <>
-              <div style={{ fontSize: 15, color: '#888', marginBottom: 16 }}>
-                Showing {filteredDecisions.length} decision{filteredDecisions.length !== 1 ? 's' : ''}
-              </div>
-              {filteredDecisions.map((decision, i) => (
-                <DecisionCard
-                  key={i}
-                  decision={decision}
-                  onClick={() => handleDecisionClick(decision)}
-                />
-              ))}
-            </>
+          )}
+          
+          {/* Nonprofits Section */}
+          {(sectorView === 'all' || sectorView === 'nonprofits') && (
+            <div style={{ marginBottom: sectorView === 'all' ? 32 : 0 }}>
+              {sectorView === 'all' && (
+                <h3 style={{
+                  fontSize: 18,
+                  fontWeight: 600,
+                  color: '#059669',
+                  marginBottom: 16,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 8
+                }}>
+                  <Heart size={20} />
+                  Nonprofit Organizations
+                </h3>
+              )}
+              {exampleNonprofits
+                .filter(org => !org.ntee_code.startsWith('X'))
+                .map((nonprofit, i) => (
+                  <NonprofitCard key={i} nonprofit={nonprofit} isChurch={false} />
+                ))}
+            </div>
+          )}
+          
+          {/* Churches Section */}
+          {(sectorView === 'all' || sectorView === 'churches') && (
+            <div>
+              {sectorView === 'all' && (
+                <h3 style={{
+                  fontSize: 18,
+                  fontWeight: 600,
+                  color: '#A855F7',
+                  marginBottom: 16,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 8
+                }}>
+                  <Church size={20} />
+                  Faith-Based Organizations
+                </h3>
+              )}
+              {exampleNonprofits
+                .filter(org => org.ntee_code.startsWith('X'))
+                .map((church, i) => (
+                  <NonprofitCard key={i} nonprofit={church} isChurch={true} />
+                ))}
+            </div>
           )}
         </div>
       )}
