@@ -1,6 +1,8 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
+import { useSearchParams } from 'react-router-dom'
 import axios from 'axios'
+import { MagnifyingGlassIcon } from '@heroicons/react/24/outline'
 
 interface Document {
   id: string
@@ -14,8 +16,16 @@ interface Document {
 }
 
 export default function Documents() {
-  const [searchQuery, setSearchQuery] = useState('')
+  const [searchParams, setSearchParams] = useSearchParams()
+  const [searchQuery, setSearchQuery] = useState(searchParams.get('search') || '')
   const [page, setPage] = useState(1)
+
+  useEffect(() => {
+    const searchFromUrl = searchParams.get('search')
+    if (searchFromUrl) {
+      setSearchQuery(searchFromUrl)
+    }
+  }, [searchParams])
 
   const { data, isLoading } = useQuery({
     queryKey: ['documents', searchQuery, page],
@@ -27,18 +37,48 @@ export default function Documents() {
     },
   })
 
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault()
+    setPage(1)
+    if (searchQuery) {
+      setSearchParams({ search: searchQuery })
+    } else {
+      setSearchParams({})
+    }
+  }
+
   return (
-    <div className="space-y-6">
-      {/* Search */}
-      <div className="card">
-        <input
-          type="text"
-          placeholder="Search documents..."
-          className="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500"
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-        />
-      </div>
+    <div className="min-h-screen bg-gray-50 p-8">
+      <div className="max-w-7xl mx-auto">
+        {/* Header */}
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">Document Explorer</h1>
+          <p className="text-gray-600">
+            Search and analyze meeting minutes, budgets, and financial reports from 90,000+ jurisdictions
+          </p>
+        </div>
+
+        {/* Search Bar */}
+        <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
+          <form onSubmit={handleSearch}>
+            <div className="relative">
+              <input
+                type="text"
+                placeholder="Search by location, topic, keyword..."
+                className="w-full px-4 py-3 pl-12 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-transparent"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+              <MagnifyingGlassIcon className="absolute left-4 top-3.5 h-6 w-6 text-gray-400" />
+              <button
+                type="submit"
+                className="absolute right-2 top-2 bg-sky-600 text-white px-6 py-2 rounded-md hover:bg-sky-700 transition-colors"
+              >
+                Search
+              </button>
+            </div>
+          </form>
+        </div>
 
       {/* Results */}
       <div className="space-y-4">

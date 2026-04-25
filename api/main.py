@@ -245,6 +245,63 @@ async def get_opportunities(
         raise HTTPException(status_code=500, detail=str(e))
 
 
+# React frontend endpoints with /api/ prefix
+@app.get("/api/opportunities")
+async def get_api_opportunities(
+    state: Optional[str] = Query(None),
+    topic: Optional[str] = Query(None),
+    urgency: Optional[str] = Query(None),
+    limit: int = Query(100)
+):
+    """API endpoint for React frontend opportunities page."""
+    try:
+        opportunities = pipeline.query_opportunities_by_state(state, urgency)
+        
+        if topic:
+            opportunities = [o for o in opportunities if o.get("topic") == topic]
+        
+        return {"opportunities": opportunities[:limit]}
+    except Exception as e:
+        logger.error(f"Error: {e}")
+        return {"opportunities": []}
+
+
+@app.get("/api/documents")
+async def get_api_documents(
+    search: Optional[str] = Query(None),
+    page: int = Query(1),
+    limit: int = Query(20)
+):
+    """API endpoint for React frontend documents page."""
+    try:
+        # Get all opportunities (documents)
+        documents = pipeline.query_opportunities_by_state(None, None)
+        
+        # Apply search filter
+        if search:
+            search_lower = search.lower()
+            documents = [
+                d for d in documents
+                if search_lower in d.get("title", "").lower() or
+                   search_lower in d.get("municipality", "").lower() or
+                   search_lower in d.get("content", "").lower()
+            ]
+        
+        # Paginate
+        start = (page - 1) * limit
+        end = start + limit
+        
+        return {
+            "documents": documents[start:end],
+            "total": len(documents),
+            "page": page,
+            "limit": limit
+        }
+    except Exception as e:
+        logger.error(f"Error: {e}")
+        return {"documents": [], "total": 0}
+
+
 @app.get("/opportunities/{opportunity_id}")
 async def get_opportunity_detail(opportunity_id: str):
     """Get detailed information about a specific opportunity."""
@@ -325,6 +382,52 @@ async def get_dashboard():
     except Exception as e:
         logger.error(f"Error generating dashboard: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/dashboard")
+async def get_api_dashboard():
+    """
+    Get dashboard statistics for React frontend.
+    Returns data in format expected by frontend Dashboard component.
+    """
+    try:
+        # Query all opportunities
+        opportunities = pipeline.query_opportunities_by_state(None, None)
+        
+        # Count topics
+        topics_count = {}
+        for opp in opportunities:
+            topic = opp.get("topic", "unknown")
+            topics_count[topic] = topics_count.get(topic, 0) + 1
+        
+        # Get unique states
+        states = set(opp.get("state") for opp in opportunities if opp.get("state"))
+        
+        # Get recent opportunities (last 10)
+        recent = sorted(
+            opportunities,
+            key=lambda x: x.get("meeting_date", ""),
+            reverse=True
+        )[:10]
+        
+        return {
+            "total_documents": len(opportunities),
+            "total_opportunities": len(opportunities),
+            "states_monitored": len(states),
+            "topics": topics_count,
+            "recent_opportunities": recent
+        }
+        
+    except Exception as e:
+        logger.error(f"Error generating API dashboard: {e}")
+        # Return mock data if there's an error
+        return {
+            "total_documents": 0,
+            "total_opportunities": 0,
+            "states_monitored": 0,
+            "topics": {},
+            "recent_opportunities": []
+        }
 
 
 @app.get("/topics")

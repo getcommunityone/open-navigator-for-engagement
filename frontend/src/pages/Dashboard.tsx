@@ -28,7 +28,11 @@ export default function Dashboard() {
   })
 
   if (isLoading) {
-    return <div className="flex justify-center items-center h-64">Loading...</div>
+    return (
+      <div className="flex justify-center items-center h-screen">
+        <div className="text-xl text-gray-600">Loading analytics...</div>
+      </div>
+    )
   }
 
   const topicData = Object.entries(data?.topics || {}).map(([name, value]) => ({
@@ -37,127 +41,161 @@ export default function Dashboard() {
   }))
 
   return (
-    <div className="space-y-6">
-      {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="card">
-          <h3 className="text-lg font-medium text-gray-900">Total Documents</h3>
-          <p className="mt-2 text-3xl font-bold text-primary-600">
-            {data?.total_documents?.toLocaleString()}
+    <div className="min-h-screen bg-gray-50 p-8">
+      <div className="max-w-7xl mx-auto">
+        {/* Header */}
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">Analytics Dashboard</h1>
+          <p className="text-gray-600">
+            Real-time statistics and insights across all monitored jurisdictions and nonprofits
           </p>
         </div>
-        
-        <div className="card">
-          <h3 className="text-lg font-medium text-gray-900">Opportunities Found</h3>
-          <p className="mt-2 text-3xl font-bold text-amber-600">
-            {data?.total_opportunities?.toLocaleString()}
-          </p>
+
+        {/* Stats Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+          <div className="bg-white rounded-lg shadow-sm p-6 border-l-4 border-sky-500">
+            <h3 className="text-sm font-medium text-gray-600 uppercase tracking-wide">Total Documents</h3>
+            <p className="mt-2 text-4xl font-bold text-sky-600">
+              {data?.total_documents?.toLocaleString() || '0'}
+            </p>
+            <p className="mt-1 text-sm text-gray-500">Meeting minutes & budgets</p>
+          </div>
+          
+          <div className="bg-white rounded-lg shadow-sm p-6 border-l-4 border-amber-500">
+            <h3 className="text-sm font-medium text-gray-600 uppercase tracking-wide">Opportunities Found</h3>
+            <p className="mt-2 text-4xl font-bold text-amber-600">
+              {data?.total_opportunities?.toLocaleString() || '0'}
+            </p>
+            <p className="mt-1 text-sm text-gray-500">Advocacy windows identified</p>
+          </div>
+          
+          <div className="bg-white rounded-lg shadow-sm p-6 border-l-4 border-emerald-500">
+            <h3 className="text-sm font-medium text-gray-600 uppercase tracking-wide">States Monitored</h3>
+            <p className="mt-2 text-4xl font-bold text-emerald-600">
+              {data?.states_monitored || '0'}
+            </p>
+            <p className="mt-1 text-sm text-gray-500">Across the nation</p>
+          </div>
         </div>
-        
-        <div className="card">
-          <h3 className="text-lg font-medium text-gray-900">States Monitored</h3>
-          <p className="mt-2 text-3xl font-bold text-emerald-600">
-            {data?.states_monitored}
-          </p>
-        </div>
-      </div>
 
       {/* Charts */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
         {/* Topics Bar Chart */}
-        <div className="card">
-          <h3 className="text-xl font-semibold mb-4">Policy Topics</h3>
-          <ResponsiveContainer width="100%" height={300}>
-            <BarChart data={topicData}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="name" angle={-45} textAnchor="end" height={100} />
-              <YAxis />
-              <Tooltip />
-              <Bar dataKey="value" fill="#0ea5e9" />
-            </BarChart>
-          </ResponsiveContainer>
+        <div className="bg-white rounded-lg shadow-sm p-6">
+          <h3 className="text-xl font-semibold mb-4 text-gray-900">Policy Topics</h3>
+          {topicData.length > 0 ? (
+            <ResponsiveContainer width="100%" height={300}>
+              <BarChart data={topicData}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="name" angle={-45} textAnchor="end" height={100} />
+                <YAxis />
+                <Tooltip />
+                <Bar dataKey="value" fill="#0ea5e9" />
+              </BarChart>
+            </ResponsiveContainer>
+          ) : (
+            <div className="h-64 flex items-center justify-center text-gray-400">
+              No topic data available
+            </div>
+          )}
         </div>
 
         {/* Topics Pie Chart */}
-        <div className="card">
-          <h3 className="text-xl font-semibold mb-4">Topic Distribution</h3>
-          <ResponsiveContainer width="100%" height={300}>
-            <PieChart>
-              <Pie
-                data={topicData}
-                cx="50%"
-                cy="50%"
-                labelLine={false}
-                label={(entry) => entry.name}
-                outerRadius={80}
-                fill="#8884d8"
-                dataKey="value"
-              >
-                {topicData.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                ))}
-              </Pie>
-              <Tooltip />
-            </PieChart>
-          </ResponsiveContainer>
+        <div className="bg-white rounded-lg shadow-sm p-6">
+          <h3 className="text-xl font-semibold mb-4 text-gray-900">Topic Distribution</h3>
+          {topicData.length > 0 ? (
+            <ResponsiveContainer width="100%" height={300}>
+              <PieChart>
+                <Pie
+                  data={topicData}
+                  cx="50%"
+                  cy="50%"
+                  labelLine={false}
+                  label={(entry) => entry.name}
+                  outerRadius={80}
+                  fill="#8884d8"
+                  dataKey="value"
+                >
+                  {topicData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                  ))}
+                </Pie>
+                <Tooltip />
+              </PieChart>
+            </ResponsiveContainer>
+          ) : (
+            <div className="h-64 flex items-center justify-center text-gray-400">
+              No topic data available
+            </div>
+          )}
         </div>
       </div>
 
       {/* Recent Opportunities */}
-      <div className="card">
-        <h3 className="text-xl font-semibold mb-4">Recent Opportunities</h3>
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Location
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Topic
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Urgency
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Date
-                </th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {data?.recent_opportunities?.map((opp, idx) => (
-                <tr key={idx}>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm font-medium text-gray-900">{opp.municipality}</div>
-                    <div className="text-sm text-gray-500">{opp.state}</div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {opp.topic.replace(/_/g, ' ')}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span
-                      className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                        opp.urgency === 'critical'
-                          ? 'bg-red-100 text-red-800'
-                          : opp.urgency === 'high'
-                          ? 'bg-orange-100 text-orange-800'
-                          : opp.urgency === 'medium'
-                          ? 'bg-yellow-100 text-yellow-800'
-                          : 'bg-green-100 text-green-800'
-                      }`}
-                    >
-                      {opp.urgency}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {new Date(opp.date).toLocaleDateString()}
-                  </td>
+      <div className="bg-white rounded-lg shadow-sm p-6">
+        <h3 className="text-xl font-semibold mb-4 text-gray-900">Recent Opportunities</h3>
+        {data?.recent_opportunities && data.recent_opportunities.length > 0 ? (
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Location
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Topic
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Urgency
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Date
+                  </th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {data.recent_opportunities.map((opp, idx) => (
+                  <tr key={idx} className="hover:bg-gray-50">
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm font-medium text-gray-900">{opp.municipality}</div>
+                      <div className="text-sm text-gray-500">{opp.state}</div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      {opp.topic.replace(/_/g, ' ')}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span
+                        className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                          opp.urgency === 'critical'
+                            ? 'bg-red-100 text-red-800'
+                            : opp.urgency === 'high'
+                            ? 'bg-orange-100 text-orange-800'
+                            : opp.urgency === 'medium'
+                            ? 'bg-yellow-100 text-yellow-800'
+                            : 'bg-green-100 text-green-800'
+                        }`}
+                      >
+                        {opp.urgency}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {new Date(opp.date).toLocaleDateString()}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <div className="text-center py-12">
+            <p className="text-gray-400 text-lg mb-4">No opportunities found yet</p>
+            <p className="text-gray-500 text-sm">
+              Run the data ingestion pipeline to analyze meetings and identify advocacy opportunities
+            </p>
+          </div>
+        )}
       </div>
+    </div>
     </div>
   )
 }

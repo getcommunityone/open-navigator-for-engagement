@@ -1,5 +1,6 @@
 import { Routes, Route } from 'react-router-dom'
 import Layout from './components/Layout'
+import Home from './pages/Home'
 import Dashboard from './pages/Dashboard'
 import Heatmap from './pages/Heatmap'
 import Documents from './pages/Documents'
@@ -11,7 +12,8 @@ function App() {
   return (
     <Routes>
       <Route path="/" element={<Layout />}>
-        <Route index element={<Dashboard />} />
+        <Route index element={<Home />} />
+        <Route path="analytics" element={<Dashboard />} />
         <Route path="heatmap" element={<Heatmap />} />
         <Route path="documents" element={<Documents />} />
         <Route path="opportunities" element={<Opportunities />} />
