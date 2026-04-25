@@ -43,8 +43,8 @@ export HF_TOKEN="hf_YOUR_TOKEN_HERE"
 ## ⚠️ CRITICAL: FILE LIMITS
 
 **Hugging Face Limits:**
-- Files per folder: <10,000
-- Total files per repo: <100,000
+- Files per folder: \<10,000
+- Total files per repo: \<100,000
 - For large datasets: Use Parquet or WebDataset format
 
 **Your Scale:**
