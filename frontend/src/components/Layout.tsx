@@ -35,7 +35,7 @@ export default function Layout() {
   }
 
   return (
-    <div className="min-h-screen" style={{ backgroundColor: '#F5F7F8' }}>
+    <div className="min-h-screen" style={{ backgroundColor: '#F1F5F9' }}>
       {/* Top Header Bar */}
       <div className="fixed top-0 left-0 right-0 bg-white border-b border-gray-200 z-50">
         <div className="flex items-center justify-between px-6 py-3">
@@ -43,9 +43,9 @@ export default function Layout() {
             <img 
               src="/communityone_logo.jpg" 
               alt="CommunityOne Logo" 
-              className="h-10 w-auto"
+              style={{ height: '100px', background: 'transparent', padding: '0.5rem' }}
             />
-            <h1 className="text-2xl font-bold text-primary-600">
+            <h1 className="text-2xl font-bold text-neutral-600">
               Open Navigator
             </h1>
           </Link>
