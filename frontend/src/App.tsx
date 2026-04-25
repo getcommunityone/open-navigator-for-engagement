@@ -8,6 +8,7 @@ import Opportunities from './pages/Opportunities'
 import Nonprofits from './pages/Nonprofits'
 import Settings from './pages/Settings'
 import PeopleFinder from './pages/PeopleFinder'
+import DebateFinder from './pages/DebateGrader'
 
 function App() {
   return (
@@ -20,6 +21,7 @@ function App() {
         <Route path="documents" element={<Documents />} />
         <Route path="opportunities" element={<Opportunities />} />
         <Route path="nonprofits" element={<Nonprofits />} />
+        <Route path="debate-grader" element={<DebateFinder />} />
         <Route path="settings" element={<Settings />} />
       </Route>
     </Routes>

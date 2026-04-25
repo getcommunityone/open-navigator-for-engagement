@@ -11,6 +11,7 @@ import {
   MagnifyingGlassIcon,
   BookOpenIcon,
   UserGroupIcon,
+  AcademicCapIcon,
 } from '@heroicons/react/24/outline'
 
 const navigation = [
@@ -21,6 +22,7 @@ const navigation = [
   { name: 'Documents', href: '/documents', icon: DocumentTextIcon },
   { name: 'Causes', href: '/opportunities', icon: BellAlertIcon },
   { name: 'Nonprofits', href: '/nonprofits', icon: BuildingLibraryIcon },
+  { name: 'Debate Finder', href: '/debate-grader', icon: AcademicCapIcon },
   { name: 'Settings', href: '/settings', icon: Cog6ToothIcon },
 ]
 

@@ -697,6 +697,116 @@ async def initialize_system():
 
 
 # Startup event
+@app.post("/api/debate-grade")
+async def grade_decision_with_debate_framework(
+    document_id: Optional[str] = Query(None, description="Document ID to grade"),
+    text: Optional[str] = Query(None, description="Text to grade directly"),
+    title: Optional[str] = Query("", description="Document title")
+):
+    """
+    Grade a government decision using debate framework (Harms/Solvency/Topicality).
+    
+    Translates debate concepts for laypeople:
+    - Harms → "The Problem": Why is this a crisis?
+    - Solvency → "The Fix": How does this solution work?
+    - Topicality → "The Scope": Does the government have authority?
+    
+    Example: /api/debate-grade?text=The city council approved funding for dental screening...
+    """
+    try:
+        from agents.debate_grader import DebateGraderAgent
+        
+        grader = DebateGraderAgent()
+        
+        # Get document content
+        if document_id:
+            document = pipeline.get_document_by_id(document_id)
+            if not document:
+                raise HTTPException(status_code=404, detail="Document not found")
+        elif text:
+            document = {
+                "content": text,
+                "title": title,
+                "id": "custom_text"
+            }
+        else:
+            raise HTTPException(status_code=400, detail="Provide either document_id or text")
+        
+        # Grade the document
+        grade = await grader._grade_document(document)
+        
+        return {
+            "document_id": document.get("id"),
+            "title": document.get("title", ""),
+            "debate_grade": grade,
+            "explanation": {
+                "harms": "This measures how well the decision identifies and documents the problem using data and evidence",
+                "solvency": "This measures how clearly the solution is defined and whether it will actually fix the problem",
+                "topicality": "This measures whether the government body has the legal authority to take this action"
+            }
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Debate grading error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/debate-grade/batch")
+async def grade_decisions_batch(
+    state: Optional[str] = Query(None, description="Filter by state"),
+    topic: Optional[str] = Query(None, description="Filter by topic"),
+    limit: int = Query(50, description="Number of documents to grade")
+):
+    """
+    Grade multiple government decisions using debate framework.
+    
+    Returns aggregate insights about decision quality across dimensions.
+    """
+    try:
+        from agents.debate_grader import DebateGraderAgent
+        from agents.base import AgentMessage, MessageType, AgentRole
+        
+        grader = DebateGraderAgent()
+        
+        # Get documents to grade
+        documents = pipeline.query_opportunities_by_state(state, None)
+        
+        if topic:
+            documents = [d for d in documents if d.get("topic") == topic]
+        
+        documents = documents[:limit]
+        
+        # Create message and process
+        message = AgentMessage(
+            message_id=f"batch_grade_{datetime.utcnow().timestamp()}",
+            sender=AgentRole.ORCHESTRATOR,
+            recipient=AgentRole.DEBATE_GRADER,
+            message_type=MessageType.COMMAND,
+            payload={"documents": documents}
+        )
+        
+        result = await grader.process(message)
+        graded_documents = result[0].payload.get("documents", [])
+        insights = result[0].payload.get("insights", {})
+        
+        return {
+            "graded_count": len(graded_documents),
+            "documents": graded_documents,
+            "insights": insights,
+            "explanation": {
+                "average_scores": "Average scores across all three debate dimensions (out of 5)",
+                "strongest_dimension": "Which dimension governments perform best on",
+                "weakest_dimension": "Which dimension needs the most improvement"
+            }
+        }
+        
+    except Exception as e:
+        logger.error(f"Batch debate grading error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @app.on_event("startup")
 async def startup_event():
     """Initialize system on startup."""

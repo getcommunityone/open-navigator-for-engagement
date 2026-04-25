@@ -15,6 +15,7 @@ class AgentRole(str, Enum):
     PARSER = "parser"
     CLASSIFIER = "classifier"
     SENTIMENT_ANALYZER = "sentiment_analyzer"
+    DEBATE_GRADER = "debate_grader"
     ADVOCACY_WRITER = "advocacy_writer"
     ORCHESTRATOR = "orchestrator"
 
