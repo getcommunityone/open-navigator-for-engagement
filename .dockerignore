@@ -1,0 +1,87 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+.venv/
+venv/
+ENV/
+env/
+
+# Node
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+frontend/dist/
+frontend/node_modules/
+website/build/
+website/node_modules/
+website/.docusaurus/
+
+# Data and cache
+data/
+cache/
+logs/
+output/
+*.db
+*.sqlite
+
+# Git
+.git/
+.gitignore
+.github/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Documentation (we copy specific dirs)
+docs/
+*.md
+!README.md
+
+# Test and development
+tests/
+examples/
+notebooks/
+*.ipynb
+
+# Large files
+*.zip
+*.tar.gz
+*.mp4
+*.avi
+*.mov
+
+# Environment
+.env
+.env.local
+*.key
+*.pem
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Build artifacts
+build/
+dist/
+*.egg-info/
+
+# Temporary
+tmp/
+temp/
+*.tmp
+
+# Scripts we don't need in container
+start-all.sh
+stop-all.sh
+deploy-huggingface.sh
+test-huggingface-build.sh
+migrate-docs.sh
+install.sh

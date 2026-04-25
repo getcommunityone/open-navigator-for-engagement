@@ -4,14 +4,18 @@
 FROM node:20-slim AS docs-builder
 WORKDIR /build
 COPY website/package*.json ./
-RUN npm ci
+RUN npm config set fetch-retry-mintimeout 20000 && \
+    npm config set fetch-retry-maxtimeout 120000 && \
+    npm ci --prefer-offline --no-audit || npm install --prefer-offline --no-audit
 COPY website/ ./
 RUN npm run build
 
 FROM node:20-slim AS frontend-builder
 WORKDIR /build
 COPY frontend/package*.json ./
-RUN npm ci
+RUN npm config set fetch-retry-mintimeout 20000 && \
+    npm config set fetch-retry-maxtimeout 120000 && \
+    npm ci --prefer-offline --no-audit || npm install --prefer-offline --no-audit
 COPY frontend/ ./
 # Build with base path for serving under /app
 RUN npm run build
