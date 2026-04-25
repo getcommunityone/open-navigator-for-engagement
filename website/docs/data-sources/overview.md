@@ -2,6 +2,24 @@
 
 This document covers the **official, free, public datasets** used by Open Navigator for Engagement.
 
+## 📊 Data Scale & Coverage
+
+Open Navigator provides comprehensive coverage across the United States:
+
+| Data Type | Count | Coverage |
+|-----------|-------|----------|
+| **Government Jurisdictions** | 90,000+ | All U.S. local governments |
+| **Counties** | 3,144 | 100% of U.S. counties |
+| **Municipalities** | 19,500+ | Cities, towns, villages |
+| **Townships** | 36,000+ | County subdivisions |
+| **School Districts** | 13,000+ | Complete NCES coverage |
+| **Nonprofit Organizations** | 3,000,000+ | All IRS-registered 501(c) orgs |
+| **Official .gov Domains** | 15,000+ | CISA validated domains |
+| **States** | 50 | All U.S. states + DC |
+| **Meeting Video Sources** | 1,000+ | Cities with full transcripts |
+
+**Key Insight:** All data sources are **100% free and public** - no subscriptions, no API fees, no paywalls.
+
 ---
 
 ## 📂 Data Source Categories

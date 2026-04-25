@@ -4,6 +4,22 @@ title: Open Navigator
 
 # Open Navigator
 
+**Open Navigator** is the main application interface providing search, analysis, and visualization tools for advocacy opportunities across the United States.
+
+## 🎯 What's Inside
+
+The platform gives you access to:
+
+- **90,000+ government jurisdictions** - Counties, cities, townships, school districts
+- **3M+ nonprofit organizations** - Complete IRS Form 990 financial data
+- **1,000+ cities** - Full meeting transcripts and videos
+- **13,000+ school districts** - Financial and meeting data
+- **All 50 states** - Complete geographic coverage
+
+---
+
+## 📱 Interface Overview
+
 The interactive platform provides real-time access to:
 
 - 📊 **Analytics** - Overview of opportunities and trends

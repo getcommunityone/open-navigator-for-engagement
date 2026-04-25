@@ -6,6 +6,89 @@ sidebar_position: 1
 
 Welcome to **Open Navigator for Engagement** - an AI-powered platform that analyzes municipal meeting minutes and financial documents to identify policy opportunities for advocacy.
 
+## 👋 Choose Your Path
+
+This documentation is organized by audience. Click the section that best describes you:
+
+<div style={{display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '20px', margin: '30px 0'}}>
+
+<div style={{border: '2px solid #4CAF50', borderRadius: '8px', padding: '20px', background: '#f1f8f4'}}>
+  <h3>📊 Policy Makers & Advocates</h3>
+  <p><strong>I want to:</strong></p>
+  <ul>
+    <li>Hold governments accountable</li>
+    <li>Analyze meeting minutes and budgets</li>
+    <li>Track nonprofit spending</li>
+    <li>Find advocacy opportunities</li>
+  </ul>
+  <p><strong><a href="/docs/for-advocates">→ Go to Advocacy Documentation</a></strong></p>
+</div>
+
+<div style={{border: '2px solid #2196F3', borderRadius: '8px', padding: '20px', background: '#e3f2fd'}}>
+  <h3>🛠️ Developers & Technical Users</h3>
+  <p><strong>I want to:</strong></p>
+  <ul>
+    <li>Install and configure the platform</li>
+    <li>Scrape meeting data</li>
+    <li>Deploy to production</li>
+    <li>Contribute to development</li>
+  </ul>
+  <p><strong><a href="/docs/for-developers">→ Go to Developer Documentation</a></strong></p>
+</div>
+
+</div>
+
+---
+
+## Platform Scale
+
+Open Navigator provides access to comprehensive data across the United States:
+
+<div style={{display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px', margin: '30px 0', textAlign: 'center'}}>
+
+<div style={{padding: '20px', background: '#f5f5f5', borderRadius: '8px'}}>
+  <div style={{fontSize: '2.5em', fontWeight: 'bold', color: '#2196F3'}}>90,000+</div>
+  <div style={{marginTop: '10px', color: '#666'}}>Government Jurisdictions</div>
+</div>
+
+<div style={{padding: '20px', background: '#f5f5f5', borderRadius: '8px'}}>
+  <div style={{fontSize: '2.5em', fontWeight: 'bold', color: '#4CAF50'}}>3,000,000+</div>
+  <div style={{marginTop: '10px', color: '#666'}}>Nonprofit Organizations</div>
+</div>
+
+<div style={{padding: '20px', background: '#f5f5f5', borderRadius: '8px'}}>
+  <div style={{fontSize: '2.5em', fontWeight: 'bold', color: '#FF9800'}}>3,144</div>
+  <div style={{marginTop: '10px', color: '#666'}}>U.S. Counties</div>
+</div>
+
+<div style={{padding: '20px', background: '#f5f5f5', borderRadius: '8px'}}>
+  <div style={{fontSize: '2.5em', fontWeight: 'bold', color: '#9C27B0'}}>19,500+</div>
+  <div style={{marginTop: '10px', color: '#666'}}>Cities & Municipalities</div>
+</div>
+
+<div style={{padding: '20px', background: '#f5f5f5', borderRadius: '8px'}}>
+  <div style={{fontSize: '2.5em', fontWeight: 'bold', color: '#F44336'}}>13,000+</div>
+  <div style={{marginTop: '10px', color: '#666'}}>School Districts</div>
+</div>
+
+<div style={{padding: '20px', background: '#f5f5f5', borderRadius: '8px'}}>
+  <div style={{fontSize: '2.5em', fontWeight: 'bold', color: '#00BCD4'}}>50</div>
+  <div style={{marginTop: '10px', color: '#666'}}>States (All U.S. States)</div>
+</div>
+
+</div>
+
+### Data Sources At Scale
+
+- **📄 Meeting Minutes**: 1,000+ municipalities with full transcripts and videos
+- **📺 Video Channels**: 50+ state legislature YouTube channels
+- **💰 Financial Data**: Complete budget and Form 990 coverage
+- **🗺️ Geographic Coverage**: All 50 states, 3,000+ counties and cities
+
+All data is **100% free and public** - no subscriptions or API fees required.
+
+---
+
 ## What It Does
 
 Open Navigator for Engagement combines data from multiple sources to provide comprehensive advocacy intelligence:
@@ -51,6 +134,32 @@ Coordinated agents handle the entire pipeline:
 - **Classifier Agent** - Identifies relevant policy topics
 - **Sentiment Analyzer** - Assesses stance and urgency
 - **Advocacy Writer** - Generates actionable materials
+
+### Automated Scraping & Discovery
+
+The platform automatically discovers and scrapes government websites at scale:
+
+**Discovery Methods:**
+- **Pattern Matching** - Tests common government URL patterns (city-name.gov, cityof*.org)
+- **Census Integration** - Uses official government registries to find jurisdictions
+- **CISA .gov Domains** - Validates against 15,000+ official government domains
+- **Pre-Built Datasets** - Leverages MeetingBank, LocalView, City Scrapers URLs
+
+**Scraping Platforms:**
+- **Legistar** - 1,000-3,000 cities use this platform (confidence: high)
+- **Granicus** - Government meeting management with video hosting
+- **CivicPlus** - Municipal website platform
+- **Municode** - Code and meeting platform
+- **Custom .gov Sites** - Adaptable scrapers for any municipal website
+
+**What Gets Scraped:**
+- Meeting agendas and minutes (PDF, HTML, Word docs)
+- Budget documents and financial reports
+- Video recordings and transcripts
+- Voting records and legislation text
+- Board member information and contact details
+
+See [Jurisdiction Discovery Guide](/docs/guides/jurisdiction-setup) to run discovery for your target area.
 
 ### Budget-to-Minutes Analysis
 
@@ -171,59 +280,108 @@ See [Open Source Repositories](/docs/data-sources/open-source-repositories) for 
 
 ## Quick Start
 
+### Three Services
+
+Open Navigator runs three separate services:
+
+| Service | Port | Description |
+|---------|------|-------------|
+| **⚛️ Open Navigator** | 5173 | **MAIN APPLICATION** - Search, filters, heatmap, data exploration |
+| **📚 Documentation** | 3000 | This Docusaurus site with guides and tutorials |
+| **🔥 API Backend** | 8000 | FastAPI server with AI agents |
+
 ### Prerequisites
 
 - Python 3.11+
-- Node.js 18+ (for React frontend)
+- Node.js 18+ (for React frontend and documentation)
 - Databricks workspace (optional, for production)
 - OpenAI API key (for AI capabilities)
 
 ### Installation
+
+**Automated Setup (Recommended):**
 
 ```bash
 # Clone the repository
 git clone https://github.com/getcommunityone/oral-health-policy-pulse.git
 cd oral-health-policy-pulse
 
-# Run installation script
-chmod +x install.sh
-./install.sh
+# Install all dependencies
+./install.sh                          # Python backend
+cd frontend && npm install && cd ..   # React app
+cd website && npm install && cd ..    # Documentation
 
-# Activate virtual environment
+# Start all services
+./start-all.sh
+
+# Visit:
+# 🚀 Main App: http://localhost:5173 (Open Navigator)
+# 📚 Docs:     http://localhost:3000 (this site)
+# 🔥 API:      http://localhost:8000/docs (FastAPI)
+```
+
+**Manual Setup:**
+
+```bash
+# Python backend
+python3 -m venv .venv
 source .venv/bin/activate
+pip install -r requirements.txt
 
 # Configure API keys
 cp .env.example .env
-# Edit .env with your API keys
+# Edit .env with your OpenAI API key
 
-# Start the API server
-python main.py serve
-```
-
-Visit `http://localhost:8000` for the API and `http://localhost:8000/docs` for interactive API documentation.
-
-### Using the Dashboard
-
-```bash
-# In a separate terminal
-cd frontend
-npm install
-npm run dev
-
-# Open http://localhost:3000
+# Start services (separate terminals)
+python main.py serve                    # Terminal 1: API
+cd frontend && npm run dev              # Terminal 2: Main App
+cd website && npm start                 # Terminal 3: Docs
 ```
 
 ## Next Steps
 
-<div class="alert alert--info">
-  <strong>📚 Explore the Documentation</strong>
-  <ul>
-    <li><a href="/docs/data-sources">Data Sources</a> - Learn about all integrated datasets</li>
-    <li><a href="/docs/guides/jurisdiction-discovery">Jurisdiction Discovery</a> - Discover government websites</li>
-    <li><a href="/docs/guides/nonprofit-data">Nonprofit Data</a> - Work with nonprofit financials</li>
-    <li><a href="/docs/api">API Reference</a> - Full API documentation</li>
-  </ul>
-</div>
+### 🚀 Using Open Navigator
+
+Once services are running, visit **http://localhost:5173** for the main application interface with:
+- Search and filter meetings by location, topic, date
+- Interactive heatmap of advocacy opportunities
+- Data exploration and analysis tools
+- Nonprofit organization lookup
+
+### 📚 Learn More
+
+Explore the documentation to understand the platform's capabilities:
+
+- **[Architecture](/docs/architecture)** - System design and components
+- **[Data Sources Overview](/docs/data-sources/overview)** - All integrated datasets
+- **[Meeting Minutes Sources](/docs/data-sources/confirmed-datasets)** - MeetingBank, LocalView, City Scrapers
+- **[Video Sources](/docs/data-sources/video-sources)** - YouTube channels and video platforms
+- **[Jurisdiction Discovery](/docs/data-sources/jurisdiction-discovery)** - How we find 90,000+ government websites
+- **[Nonprofit Data](/docs/data-sources/nonprofit-sources)** - Working with Form 990 data
+- **[Budget-to-Minutes Analysis](/docs/guides/political-economy)** - Correlating rhetoric with spending
+- **[Deployment Guide](/docs/deployment/databricks-apps)** - Production deployment options
+
+### 🛠️ Common Tasks
+
+**Run Jurisdiction Discovery:**
+```bash
+source .venv/bin/activate
+python main.py discover-jurisdictions --state CA --limit 100
+```
+
+**Scrape Meeting Minutes:**
+```bash
+python main.py scrape-batch --source discovered --limit 50
+```
+
+**Ingest Reference Data:**
+```bash
+python -m discovery.census_ingestion
+python -m discovery.nces_ingestion
+python discovery/meetingbank_ingestion.py
+```
+
+See the **[Quick Reference](/docs/quick-reference)** for all available commands.
 
 ## Architecture
 
@@ -273,12 +431,27 @@ Reality: 3 local nonprofits already providing screenings
    successfully. Can we support their expansion?"
 ```
 
-## Support
+## Support & Community
 
 - **GitHub Issues**: [Report bugs or request features](https://github.com/getcommunityone/oral-health-policy-pulse/issues)
-- **Documentation**: Browse the docs sidebar
-- **Dashboard**: Access the interactive dashboard
+- **Documentation**: Use the sidebar to explore all guides and references
+- **Main Application**: Launch Open Navigator at http://localhost:5173
+- **API Documentation**: Interactive API docs at http://localhost:8000/docs
+
+## What You Can Build
+
+Open Navigator provides the foundation for:
+- **Advocacy Campaigns** - Target specific jurisdictions with data-backed arguments
+- **Accountability Dashboards** - Track government and nonprofit spending vs. rhetoric
+- **Policy Research** - Analyze meeting patterns across hundreds of jurisdictions
+- **Community Mobilization** - Find existing solutions to share with decision-makers
+- **Budget Analysis** - Reveal hidden priorities through spending patterns
 
 ---
 
-**Ready to get started?** Check out the [Data Sources](/docs/data-sources) page to learn about available datasets, or jump into the [Jurisdiction Discovery Guide](/docs/guides/jurisdiction-discovery) to start finding government websites.
+**Ready to get started?** 
+
+- 🚀 **Quick Start:** [Install and run](/docs/quickstart) the platform
+- 📊 **Explore Data:** Learn about [all data sources](/docs/data-sources/overview)
+- 🎓 **Case Study:** See a [real-world example](/docs/case-studies/tuscaloosa-complete) (Tuscaloosa, AL)
+- 🏗️ **Architecture:** Understand the [system design](/docs/architecture)
