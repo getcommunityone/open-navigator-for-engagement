@@ -54,7 +54,7 @@ export default function Layout() {
             {/* Mobile menu button */}
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="md:hidden p-2 rounded-lg hover:bg-gray-100"
+              className="md:hidden p-2 rounded-lg hover:bg-gray-100 text-gray-700"
               aria-label="Toggle menu"
             >
               {mobileMenuOpen ? (
