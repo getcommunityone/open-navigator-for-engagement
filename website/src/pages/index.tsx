@@ -1,4 +1,5 @@
 import type {ReactNode} from 'react';
+import React from 'react';
 import clsx from 'clsx';
 import Link from '@docusaurus/Link';
 import useDocusaurusContext from '@docusaurus/useDocusaurusContext';
@@ -149,31 +150,104 @@ function WhyItMatters() {
 
 export default function Home(): ReactNode {
   const {siteConfig} = useDocusaurusContext();
+  
+  // Show prominent modal/overlay to redirect to dashboard
+  const [showModal, setShowModal] = React.useState(true);
+  
   return (
     <Layout
       title={`${siteConfig.title}`}
       description="AI-powered advocacy opportunity finder analyzing municipal meetings and financial documents">
       
+      {/* URGENT: Redirect Modal */}
+      {showModal && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.8)',
+          zIndex: 9999,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '2rem',
+        }}>
+          <div style={{
+            backgroundColor: 'white',
+            padding: '3rem',
+            borderRadius: '12px',
+            maxWidth: '600px',
+            textAlign: 'center',
+          }}>
+            <h2 style={{ fontSize: '2rem', marginBottom: '1rem', color: '#000' }}>
+              ⚠️ You're on the Documentation Site
+            </h2>
+            <p style={{ fontSize: '1.2rem', marginBottom: '1.5rem', color: '#333' }}>
+              This is <strong>NOT the application</strong>. This is just documentation and guides.
+            </p>
+            <p style={{ fontSize: '1.2rem', marginBottom: '2rem', color: '#333' }}>
+              Your original dashboard with <strong>search, filters, heatmap, and all features</strong> is at:
+            </p>
+            <a
+              href="http://localhost:5173"
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                display: 'inline-block',
+                backgroundColor: '#0ea5e9',
+                color: 'white',
+                padding: '1rem 2rem',
+                fontSize: '1.5rem',
+                fontWeight: 'bold',
+                textDecoration: 'none',
+                borderRadius: '8px',
+                marginBottom: '1rem',
+              }}
+            >
+              🚀 Open the Real Dashboard (Port 5173)
+            </a>
+            <div style={{ marginTop: '1.5rem' }}>
+              <button
+                onClick={() => setShowModal(false)}
+                style={{
+                  background: 'none',
+                  border: '1px solid #ccc',
+                  padding: '0.5rem 1rem',
+                  cursor: 'pointer',
+                  color: '#666',
+                }}
+              >
+                Stay on docs site (for reading guides)
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      
       {/* Important Notice Banner */}
       <div style={{
-        backgroundColor: '#0ea5e9',
+        backgroundColor: '#ef4444',
         color: 'white',
-        padding: '1rem',
+        padding: '1.5rem',
         textAlign: 'center',
         fontWeight: 'bold',
+        fontSize: '1.2rem',
       }}>
-        📚 This is the DOCUMENTATION site. Looking for the application? 
+        ⚠️ THIS IS THE DOCUMENTATION SITE, NOT THE APPLICATION! 
         <a 
           href="http://localhost:5173" 
           target="_blank" 
           style={{
             color: 'white',
             textDecoration: 'underline',
-            marginLeft: '0.5rem',
-            fontWeight: 'bold'
+            marginLeft: '1rem',
+            fontWeight: 'bold',
+            fontSize: '1.3rem',
           }}
         >
-          🚀 Launch the Dashboard →
+          🚀 CLICK HERE FOR THE REAL DASHBOARD →
         </a>
       </div>
 
