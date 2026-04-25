@@ -1,3 +1,13 @@
+---
+title: Open Navigator for Engagement
+emoji: 🦷
+colorFrom: blue
+colorTo: green
+sdk: docker
+app_port: 7860
+pinned: false
+---
+
 # 🦷 Open Navigator for Engagement
 
 > *AI-powered advocacy opportunity finder with React + FastAPI web interface*
