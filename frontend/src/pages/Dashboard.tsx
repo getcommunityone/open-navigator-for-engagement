@@ -53,9 +53,9 @@ export default function Dashboard() {
 
         {/* Stats Grid */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          <div className="bg-white rounded-lg shadow-sm p-6 border-l-4 border-sky-500">
+          <div className="bg-white rounded-lg shadow-sm p-6 border-l-4 border-primary-500">
             <h3 className="text-sm font-medium text-gray-600 uppercase tracking-wide">Total Documents</h3>
-            <p className="mt-2 text-4xl font-bold text-sky-600">
+            <p className="mt-2 text-4xl font-bold text-primary-600">
               {data?.total_documents?.toLocaleString() || '0'}
             </p>
             <p className="mt-1 text-sm text-gray-500">Meeting minutes & budgets</p>

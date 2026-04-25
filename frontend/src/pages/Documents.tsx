@@ -65,14 +65,14 @@ export default function Documents() {
               <input
                 type="text"
                 placeholder="Search by location, topic, keyword..."
-                className="w-full px-4 py-3 pl-12 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-transparent"
+                className="w-full px-4 py-3 pl-12 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
               <MagnifyingGlassIcon className="absolute left-4 top-3.5 h-6 w-6 text-gray-400" />
               <button
                 type="submit"
-                className="absolute right-2 top-2 bg-sky-600 text-white px-6 py-2 rounded-md hover:bg-sky-700 transition-colors"
+                className="absolute right-2 top-2 bg-primary-600 text-white px-6 py-2 rounded-md hover:bg-primary-700 transition-colors"
               >
                 Search
               </button>

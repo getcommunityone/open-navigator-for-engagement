@@ -45,7 +45,7 @@ export default function Layout() {
               alt="CommunityOne Logo" 
               className="h-10 w-auto"
             />
-            <h1 className="text-2xl font-bold text-sky-600">
+            <h1 className="text-2xl font-bold text-primary-600">
               Open Navigator
             </h1>
           </Link>
@@ -58,7 +58,7 @@ export default function Layout() {
                 placeholder="Search documents, nonprofits, locations..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full px-4 py-2 pl-10 border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-transparent"
+                className="w-full px-4 py-2 pl-10 border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
               />
               <MagnifyingGlassIcon className="absolute left-3 top-2.5 h-5 w-5 text-gray-400" />
             </div>
@@ -70,7 +70,7 @@ export default function Layout() {
               href="http://localhost:3000"
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center gap-2 px-4 py-2 text-gray-700 hover:text-sky-600 transition-colors"
+              className="flex items-center gap-2 px-4 py-2 text-gray-700 hover:text-primary-600 transition-colors"
             >
               <BookOpenIcon className="h-5 w-5" />
               <span className="font-medium">Docs</span>
@@ -79,7 +79,7 @@ export default function Layout() {
               href="http://localhost:8000/docs"
               target="_blank"
               rel="noopener noreferrer"
-              className="px-4 py-2 bg-sky-600 text-white rounded-lg hover:bg-sky-700 transition-colors"
+              className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
             >
               API Docs
             </a>
@@ -100,7 +100,7 @@ export default function Layout() {
                   flex items-center gap-3 px-4 py-3 mb-2 rounded-lg transition-colors
                   ${
                     isActive
-                      ? 'bg-sky-50 text-sky-700 font-medium'
+                      ? 'bg-primary-50 text-primary-700 font-medium'
                       : 'text-gray-700 hover:bg-gray-100'
                   }
                 `}

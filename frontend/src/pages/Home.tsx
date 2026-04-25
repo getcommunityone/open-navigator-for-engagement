@@ -88,7 +88,7 @@ export default function Home() {
                     placeholder="Enter a topic, keyword, or program name..."
                     value={keyword}
                     onChange={(e) => setKeyword(e.target.value)}
-                    className="w-full px-4 py-3 text-lg border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-transparent"
+                    className="w-full px-4 py-3 text-lg border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                   />
                 </div>
 
@@ -103,7 +103,7 @@ export default function Home() {
                       placeholder="City, County, or ZIP"
                       value={location}
                       onChange={(e) => setLocation(e.target.value)}
-                      className="w-full px-4 py-3 pl-10 text-lg border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-transparent"
+                      className="w-full px-4 py-3 pl-10 text-lg border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                     />
                     <MapPinIcon className="absolute left-3 top-3.5 h-6 w-6 text-gray-400" />
                   </div>
@@ -113,7 +113,7 @@ export default function Home() {
                 <div className="lg:col-span-2">
                   <button
                     type="submit"
-                    className="w-full bg-sky-600 text-white px-6 py-3 rounded-lg hover:bg-sky-700 transition-colors text-lg font-semibold flex items-center justify-center gap-2"
+                    className="w-full bg-primary-600 text-white px-6 py-3 rounded-lg hover:bg-primary-700 transition-colors text-lg font-semibold flex items-center justify-center gap-2"
                   >
                     <MagnifyingGlassIcon className="h-6 w-6" />
                     Find
@@ -130,7 +130,7 @@ export default function Home() {
                 <button
                   key={category.name}
                   onClick={() => quickSearch(category.query)}
-                  className="inline-flex items-center gap-2 px-4 py-2 bg-white border-2 border-gray-300 rounded-lg hover:border-sky-500 hover:bg-sky-50 transition-colors"
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-white border-2 border-gray-300 rounded-lg hover:border-primary-500 hover:bg-primary-50 transition-colors"
                 >
                   <category.icon className="h-5 w-5 text-gray-600" />
                   <span className="font-medium text-gray-700">{category.name}</span>
@@ -142,9 +142,9 @@ export default function Home() {
           {/* Terms Note */}
           <p className="text-sm text-gray-500">
             By continuing, you agree to the{' '}
-            <a href="#" className="text-sky-600 hover:underline">Terms</a>
+            <a href="#" className="text-primary-600 hover:underline">Terms</a>
             {' & '}
-            <a href="#" className="text-sky-600 hover:underline">Privacy</a>.
+            <a href="#" className="text-primary-600 hover:underline">Privacy</a>.
           </p>
         </div>
       </div>
@@ -156,26 +156,26 @@ export default function Home() {
           
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             <Link to="/analytics" className="group">
-              <div className="border-2 border-gray-200 rounded-lg p-6 hover:border-sky-500 transition-colors">
-                <ChartBarIcon className="h-10 w-10 text-sky-600 mb-4" />
-                <h3 className="text-xl font-semibold mb-2 group-hover:text-sky-600">Analytics Dashboard</h3>
+              <div className="border-2 border-gray-200 rounded-lg p-6 hover:border-primary-500 transition-colors">
+                <ChartBarIcon className="h-10 w-10 text-primary-600 mb-4" />
+                <h3 className="text-xl font-semibold mb-2 group-hover:text-primary-600">Analytics Dashboard</h3>
                 <p className="text-gray-600 mb-4">
                   Real-time statistics, charts, and insights across all monitored jurisdictions
                 </p>
-                <span className="text-sky-600 font-medium inline-flex items-center">
+                <span className="text-primary-600 font-medium inline-flex items-center">
                   View Analytics <ArrowRightIcon className="h-4 w-4 ml-2" />
                 </span>
               </div>
             </Link>
 
             <Link to="/documents" className="group">
-              <div className="border-2 border-gray-200 rounded-lg p-6 hover:border-sky-500 transition-colors">
-                <DocumentTextIcon className="h-10 w-10 text-sky-600 mb-4" />
-                <h3 className="text-xl font-semibold mb-2 group-hover:text-sky-600">Document Explorer</h3>
+              <div className="border-2 border-gray-200 rounded-lg p-6 hover:border-primary-500 transition-colors">
+                <DocumentTextIcon className="h-10 w-10 text-primary-600 mb-4" />
+                <h3 className="text-xl font-semibold mb-2 group-hover:text-primary-600">Document Explorer</h3>
                 <p className="text-gray-600 mb-4">
                   Search and analyze meeting minutes, budgets, and financial reports
                 </p>
-                <span className="text-sky-600 font-medium inline-flex items-center">
+                <span className="text-primary-600 font-medium inline-flex items-center">
                   Browse Documents <ArrowRightIcon className="h-4 w-4 ml-2" />
                 </span>
               </div>
@@ -187,13 +187,13 @@ export default function Home() {
               rel="noopener noreferrer"
               className="group"
             >
-              <div className="border-2 border-gray-200 rounded-lg p-6 hover:border-sky-500 transition-colors">
-                <BookOpenIcon className="h-10 w-10 text-sky-600 mb-4" />
-                <h3 className="text-xl font-semibold mb-2 group-hover:text-sky-600">Documentation</h3>
+              <div className="border-2 border-gray-200 rounded-lg p-6 hover:border-primary-500 transition-colors">
+                <BookOpenIcon className="h-10 w-10 text-primary-600 mb-4" />
+                <h3 className="text-xl font-semibold mb-2 group-hover:text-primary-600">Documentation</h3>
                 <p className="text-gray-600 mb-4">
                   Comprehensive guides, API reference, and getting started tutorials
                 </p>
-                <span className="text-sky-600 font-medium inline-flex items-center">
+                <span className="text-primary-600 font-medium inline-flex items-center">
                   Read Docs <ArrowRightIcon className="h-4 w-4 ml-2" />
                 </span>
               </div>
@@ -207,7 +207,7 @@ export default function Home() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-8 text-center">
             <div>
-              <div className="text-4xl font-bold text-sky-600 mb-2">90,000+</div>
+              <div className="text-4xl font-bold text-primary-600 mb-2">90,000+</div>
               <div className="text-gray-600">Government Jurisdictions</div>
             </div>
             <div>
