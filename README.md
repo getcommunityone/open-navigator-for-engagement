@@ -9,9 +9,9 @@
 
 ## � Quick Links
 
-**[⚛️ Open Navigator →](http://localhost:5173)** - **MAIN APPLICATION** (search, filters, heatmap, data exploration)
+**[⚛️ Open Navigator →](https://www.communityone.com)** - **LIVE APPLICATION** (search, filters, heatmap, data exploration)
 
-**[📖 Documentation →](http://localhost:3000)** - Complete guides, architecture, and feature details
+**[📖 Documentation →](https://www.communityone.com/docs)** - Complete guides, architecture, and feature details
 
 The documentation site includes:
 - Features and capabilities
@@ -28,13 +28,15 @@ The documentation site includes:
 
 This project runs three separate services:
 
-| Service | Port | Description |
-|---------|------|-------------|
-| **⚛️ Open Navigator** 🚀 | 5173 | **MAIN APPLICATION** - Search, filters, heatmap, data exploration |
-| **📚 Documentation** | 3000 | Docusaurus site with complete guides and tutorials |
-| **🔥 API Backend** | 8000 | FastAPI server with AI agents |
+| Service | Port (Local) | Live URL | Description |
+|---------|------|----------|-------------|
+| **⚛️ Open Navigator** 🚀 | 5173 | [www.communityone.com](https://www.communityone.com) | **MAIN APPLICATION** - Search, filters, heatmap, data exploration |
+| **📚 Documentation** | 3000 | [www.communityone.com/docs](https://www.communityone.com/docs) | Docusaurus site with complete guides and tutorials |
+| **🔥 API Backend** | 8000 | [www.communityone.com/api](https://www.communityone.com/api) | FastAPI server with AI agents |
 
-> **💡 TIP:** After running `./start-all.sh`, visit **http://localhost:5173** to use the main application!
+> **💡 LIVE DEMO:** Visit **[www.communityone.com](https://www.communityone.com)** to use the application!
+> 
+> **💻 LOCAL DEV:** After running `./start-all.sh`, visit **http://localhost:5173**
 
 ### Prerequisites
 
@@ -104,11 +106,15 @@ cd website && npm start                             # Terminal 3
 
 ### Access Points
 
-**🚀 START HERE:** http://localhost:5173 - **Open Navigator (Main Application)**
+**🌐 LIVE APPLICATION:**
+- **🚀 Open Navigator:** https://www.communityone.com - Main application
+- 📚 **Documentation:** https://www.communityone.com/docs - Guides and API reference
+- 🔥 **API Docs:** https://www.communityone.com/api/docs - FastAPI interactive documentation
 
-Other services:
-- 📚 Documentation: http://localhost:3000 - Guides and API reference
-- 🔥 API Docs: http://localhost:8000/docs - FastAPI interactive documentation
+**💻 LOCAL DEVELOPMENT:**
+- **🚀 Main App:** http://localhost:5173
+- 📚 **Documentation:** http://localhost:3000
+- 🔥 **API Docs:** http://localhost:8000/docs
 
 ### Stop Services
 
