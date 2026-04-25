@@ -29,7 +29,7 @@ const sidebars: SidebarsConfig = {
           label: 'Understanding the Data',
           items: [
             'data-sources/overview',
-            'data-sources/confirmed-datasets',
+            // 'data-sources/confirmed-datasets', // Temporarily disabled - MDX parsing issue
             'data-sources/nonprofit-sources',
             'data-sources/video-sources',
           ],
@@ -80,7 +80,7 @@ const sidebars: SidebarsConfig = {
           items: [
             'data-sources/jurisdiction-discovery',
             'data-sources/census-data',
-            'data-sources/civic-tech-sources',
+            // 'data-sources/civic-tech-sources', // Temporarily disabled - MDX parsing issue
             'data-sources/huggingface-datasets',
             'data-sources/url-datasets',
             'data-sources/youtube-discovery',
