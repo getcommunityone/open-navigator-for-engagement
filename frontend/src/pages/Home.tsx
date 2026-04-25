@@ -219,24 +219,24 @@ export default function Home() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 text-center">
             <div>
-              <div className="text-4xl font-bold text-primary-600 mb-2">90,000+</div>
-              <div className="text-gray-600">Government Jurisdictions</div>
+              <div className="text-4xl font-bold text-primary-600 mb-2">2,500+</div>
+              <div className="text-gray-600">Advocacy Causes Tracked</div>
             </div>
             <div>
-              <div className="text-4xl font-bold text-emerald-600 mb-2">13,000+</div>
-              <div className="text-gray-600">School Districts</div>
+              <div className="text-4xl font-bold text-emerald-600 mb-2">15,000+</div>
+              <div className="text-gray-600">Government Decisions</div>
             </div>
             <div>
-              <div className="text-4xl font-bold text-amber-600 mb-2">3M+</div>
-              <div className="text-gray-600">Nonprofit Organizations</div>
+              <div className="text-4xl font-bold text-amber-600 mb-2">8 Years</div>
+              <div className="text-gray-600">Historical Data Coverage</div>
             </div>
             <div>
-              <div className="text-4xl font-bold text-cyan-600 mb-2">1,000+</div>
-              <div className="text-gray-600">Civic Tech Projects</div>
+              <div className="text-4xl font-bold text-cyan-600 mb-2">5,000+</div>
+              <div className="text-gray-600">Meeting Records</div>
             </div>
             <div>
-              <div className="text-4xl font-bold mb-2" style={{ color: '#354F52' }}>1,000+</div>
-              <div className="text-gray-600">Leaders & Contributors</div>
+              <div className="text-4xl font-bold mb-2" style={{ color: '#354F52' }}>12,000+</div>
+              <div className="text-gray-600">Hours of Video Archived</div>
             </div>
             <div>
               <div className="text-4xl font-bold text-purple-600 mb-2">100%</div>
