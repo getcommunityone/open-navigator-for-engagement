@@ -217,7 +217,7 @@ export default function Home() {
       {/* Stats Section */}
       <div className="py-16" style={{ backgroundColor: '#F1F5F9' }}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-8 text-center">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 text-center">
             <div>
               <div className="text-4xl font-bold text-primary-600 mb-2">90,000+</div>
               <div className="text-gray-600">Government Jurisdictions</div>
@@ -229,6 +229,10 @@ export default function Home() {
             <div>
               <div className="text-4xl font-bold text-amber-600 mb-2">3M+</div>
               <div className="text-gray-600">Nonprofit Organizations</div>
+            </div>
+            <div>
+              <div className="text-4xl font-bold text-cyan-600 mb-2">1,000+</div>
+              <div className="text-gray-600">Civic Tech Projects</div>
             </div>
             <div>
               <div className="text-4xl font-bold mb-2" style={{ color: '#354F52' }}>1,000+</div>
