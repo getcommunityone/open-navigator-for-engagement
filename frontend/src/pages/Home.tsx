@@ -236,7 +236,7 @@ export default function Home() {
             </div>
             <div>
               <div className="text-4xl font-bold mb-2" style={{ color: '#354F52' }}>1,000+</div>
-              <div className="text-gray-600">Decision Makers & Leaders</div>
+              <div className="text-gray-600">Leaders & Contributors</div>
             </div>
             <div>
               <div className="text-4xl font-bold text-purple-600 mb-2">100%</div>

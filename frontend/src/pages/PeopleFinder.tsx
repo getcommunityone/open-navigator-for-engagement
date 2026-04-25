@@ -178,7 +178,7 @@ export default function PeopleFinder() {
         <div className="relative">
           <input
             type="text"
-            placeholder="Search by name, organization, or location..."
+            placeholder="Search by name, organization, repository, or location..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="w-full px-4 py-3 pl-12 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
@@ -188,7 +188,7 @@ export default function PeopleFinder() {
       </div>
 
       {/* Role Filter Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-8">
         <button
           onClick={() => setSelectedRole('all')}
           className={`p-4 rounded-lg border-2 transition-all ${
@@ -231,7 +231,7 @@ export default function PeopleFinder() {
       </div>
 
       {/* Role Categories Explanation */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         {(Object.keys(roleCategories) as PersonRole[]).map((roleKey) => {
           const category = roleCategories[roleKey]
           const Icon = category.icon
@@ -290,8 +290,21 @@ export default function PeopleFinder() {
                   
                   <div className="space-y-2 text-sm">
                     <div>
-                      <span className="font-medium text-gray-700">Organization:</span>
-                      <p className="text-gray-600">{person.organization}</p>
+                      <span className="font-medium text-gray-700">
+                        {person.role === 'open-source' ? 'Repository:' : 'Organization:'}
+                      </span>
+                      {person.role === 'open-source' ? (
+                        <a 
+                          href={`https://github.com/${person.organization}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-cyan-600 hover:underline block"
+                        >
+                          {person.organization}
+                        </a>
+                      ) : (
+                        <p className="text-gray-600">{person.organization}</p>
+                      )}
                     </div>
                     <div>
                       <span className="font-medium text-gray-700">Location:</span>
@@ -300,7 +313,18 @@ export default function PeopleFinder() {
                     {person.contact && (
                       <div>
                         <span className="font-medium text-gray-700">Contact:</span>
-                        <p className="text-gray-600">{person.contact}</p>
+                        {person.role === 'open-source' && person.contact.startsWith('@') ? (
+                          <a 
+                            href={`https://github.com/${person.contact.substring(1)}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-cyan-600 hover:underline block"
+                          >
+                            {person.contact}
+                          </a>
+                        ) : (
+                          <p className="text-gray-600">{person.contact}</p>
+                        )}
                       </div>
                     )}
                   </div>
