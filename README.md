@@ -480,7 +480,7 @@ npm run dev
 ### Prerequisites
 
 - Python 3.11+
-- Node.js 18+ (for React dashboard and Docusaurus documentation)
+- Node.js 18+ (for Open Navigator and Docusaurus documentation)
 - Docker (optional, for containerized deployment)
 - Databricks workspace (for production lakehouse)
 - OpenAI API key (for LLM capabilities)

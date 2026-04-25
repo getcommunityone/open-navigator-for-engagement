@@ -75,7 +75,7 @@ const config: Config = {
       respectPrefersColorScheme: true,
     },
     navbar: {
-      title: 'Open Navigator',
+      title: 'Open Navigator Home',
       logo: {
         alt: 'CommunityOne Logo',
         src: 'img/communityone_logo.jpg',
@@ -90,11 +90,6 @@ const config: Config = {
           label: 'Documentation',
         },
         {to: '/blog', label: 'Blog', position: 'left'},
-        {
-          href: 'http://localhost:5173',
-          label: '🚀 Open Navigator',
-          position: 'right',
-        },
         {
           href: 'https://github.com/getcommunityone/oral-health-policy-pulse',
           label: 'GitHub',
@@ -126,7 +121,7 @@ const config: Config = {
           title: 'Resources',
           items: [
             {
-              label: 'Open Navigator',
+              label: 'Launch Open Navigator',
               to: '/dashboard',
             },
             {

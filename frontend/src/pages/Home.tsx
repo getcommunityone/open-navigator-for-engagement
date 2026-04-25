@@ -155,15 +155,15 @@ export default function Home() {
       </div>
 
       {/* Features Grid */}
-      <div className="bg-white py-16">
+      <div className="py-16" style={{ backgroundColor: '#354F52' }}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <h2 className="text-3xl font-bold text-center mb-12">Explore the Platform</h2>
+          <h2 className="text-3xl font-bold text-center mb-12 text-white">Explore the Platform</h2>
           
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             <Link to="/analytics" className="group">
-              <div className="border-2 border-gray-200 rounded-lg p-6 hover:border-primary-500 transition-colors">
+              <div className="bg-white border-2 border-gray-200 rounded-lg p-6 hover:border-primary-500 transition-colors">
                 <ChartBarIcon className="h-10 w-10 text-primary-600 mb-4" />
-                <h3 className="text-xl font-semibold mb-2 group-hover:text-primary-600">Analytics</h3>
+                <h3 className="text-xl font-semibold mb-2" style={{ color: '#354F52' }}>Analytics</h3>
                 <p className="text-gray-600 mb-4">
                 Real-time statistics, charts, and insights. Track causes across jurisdictions.
                 </p>
@@ -174,9 +174,9 @@ export default function Home() {
             </Link>
 
             <Link to="/documents" className="group">
-              <div className="border-2 border-gray-200 rounded-lg p-6 hover:border-primary-500 transition-colors">
+              <div className="bg-white border-2 border-gray-200 rounded-lg p-6 hover:border-primary-500 transition-colors">
                 <DocumentTextIcon className="h-10 w-10 text-primary-600 mb-4" />
-                <h3 className="text-xl font-semibold mb-2 group-hover:text-primary-600">Document Explorer</h3>
+                <h3 className="text-xl font-semibold mb-2" style={{ color: '#354F52' }}>Document Explorer</h3>
                 <p className="text-gray-600 mb-4">
                   Search and analyze meeting minutes, budgets, and financial reports
                 </p>
@@ -192,9 +192,9 @@ export default function Home() {
               rel="noopener noreferrer"
               className="group"
             >
-              <div className="border-2 border-gray-200 rounded-lg p-6 hover:border-primary-500 transition-colors">
+              <div className="bg-white border-2 border-gray-200 rounded-lg p-6 hover:border-primary-500 transition-colors">
                 <BookOpenIcon className="h-10 w-10 text-primary-600 mb-4" />
-                <h3 className="text-xl font-semibold mb-2 group-hover:text-primary-600">Documentation</h3>
+                <h3 className="text-xl font-semibold mb-2" style={{ color: '#354F52' }}>Documentation</h3>
                 <p className="text-gray-600 mb-4">
                   Comprehensive guides, API reference, and getting started tutorials
                 </p>
