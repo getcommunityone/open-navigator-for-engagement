@@ -27,8 +27,9 @@ export default function Home() {
             </h1>
           </div>
           <p className="text-xl text-gray-600 mb-8 max-w-3xl mx-auto">
-            Advocacy opportunity finder analyzing municipal meetings and financial documents 
-            across 90,000+ jurisdictions and 3M+ nonprofits
+            Track what local governments and nonprofits say and spend.
+            <br />
+            90,000+ cities. 3M+ nonprofits. All free.
           </p>
           
           {/* Search Bar */}

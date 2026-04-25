@@ -6,7 +6,7 @@ import type * as Preset from '@docusaurus/preset-classic';
 
 const config: Config = {
   title: 'Open Navigator for Engagement',
-  tagline: 'Advocacy opportunity finder analyzing municipal meetings and financial documents',
+  tagline: 'Find opportunities in local meetings and budgets',
   favicon: 'img/favicon.ico',
 
   // Future flags, see https://docusaurus.io/docs/api/docusaurus-config#future

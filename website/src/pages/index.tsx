@@ -46,27 +46,27 @@ function HomepageFeatures() {
   const features = [
     {
       title: '📄 Meeting Minutes & Financial Documents',
-      description: 'Analyzes thousands of municipal meeting minutes and budget documents from 90,000+ government jurisdictions and nonprofit organizations.',
+      description: 'Tracks what happens in local meetings and budgets. Covers 90,000+ cities, counties, and school districts.',
     },
     {
-      title: '🤖 Multi-Agent AI System',
-      description: 'Coordinated agents for scraping, parsing, classification, sentiment analysis, and advocacy generation powered by Databricks.',
+      title: '🤖 Automated Analysis',
+      description: 'Finds documents. Reads them. Identifies topics. Spots opportunities. Drafts emails.',
     },
     {
-      title: '💰 Budget-to-Minutes Analysis',
-      description: 'Correlates meeting rhetoric with actual spending to reveal true priorities and identify gaps between statements and funding.',
+      title: '💰 Words vs Money',
+      description: 'Compare what they say in meetings with what they actually spend. Find the gaps.',
     },
     {
-      title: '🔍 Comprehensive Data Sources',
-      description: 'Integrates Census data, NCES school districts, ProPublica nonprofit data, and meeting datasets. All 100% free and public.',
+      title: '🔍 Free Public Data',
+      description: 'Census, school district, and nonprofit data. All free. All public.',
     },
     {
-      title: '🗺️ Interactive Heatmap',
-      description: 'Visual representation of policy opportunities with urgency levels, topic concentration, and clickable details.',
+      title: '🗺️ Visual Map',
+      description: 'See opportunities on a map. Filter by topic and urgency. Click for details.',
     },
     {
-      title: '📧 Automated Advocacy Materials',
-      description: 'Generates personalized emails, talking points, social media content, and policy briefs based on opportunities.',
+      title: '📧 Draft Materials',
+      description: 'Auto-generate emails, talking points, and social posts for each opportunity.',
     },
   ];
 
@@ -93,8 +93,8 @@ function HomepageStats() {
     <section className="container margin-vert--lg">
       <div className="row">
         <div className="col text--center">
-          <Heading as="h2">By the Numbers</Heading>
-          <p className="margin-bottom--lg">Comprehensive data coverage for evidence-based advocacy</p>
+          <Heading as="h2">Coverage</Heading>
+          <p className="margin-bottom--lg">Scale of available data</p>
         </div>
       </div>
       <div className="row">
@@ -161,7 +161,7 @@ export default function Home(): ReactNode {
   return (
     <Layout
       title={`${siteConfig.title}`}
-      description="AI-powered advocacy opportunity finder analyzing municipal meetings and financial documents">
+      description="Find opportunities in local meetings and budgets">
       
       <HomepageHeader />
       <main>

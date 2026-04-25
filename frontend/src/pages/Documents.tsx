@@ -54,7 +54,7 @@ export default function Documents() {
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900 mb-2">Document Explorer</h1>
           <p className="text-gray-600">
-            Search and analyze meeting minutes, budgets, and financial reports from 90,000+ jurisdictions
+            Search meeting minutes and budgets from 90,000+ cities, counties, and school districts
           </p>
         </div>
 
