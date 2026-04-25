@@ -8,7 +8,7 @@
   font-weight: 400;
   color-scheme: light dark;
   color: rgba(255, 255, 255, 0.87);
-  background-color: #F0F4F5;
+  background-color: #F5F7F8;
 }
 
 body {
@@ -34,7 +34,7 @@ body {
   }
   
   .btn-primary {
-    @apply bg-dark-600 hover:bg-dark-700 text-white font-medium py-2 px-4 rounded-lg transition-colors;
+    @apply bg-neutral-600 hover:bg-neutral-700 text-white font-medium py-2 px-4 rounded-lg transition-colors;
   }
   
   .btn-secondary {

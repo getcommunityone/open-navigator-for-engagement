@@ -54,7 +54,7 @@ export default function Home() {
   }
 
   return (
-    <div className="min-h-screen" style={{ backgroundColor: '#F0F4F5' }}>
+    <div className="min-h-screen" style={{ backgroundColor: '#F5F7F8' }}>
       {/* Hero Section */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-20 pb-16">
         <div className="text-center">
@@ -203,7 +203,7 @@ export default function Home() {
       </div>
 
       {/* Stats Section */}
-      <div className="py-16" style={{ backgroundColor: '#F0F4F5' }}>
+      <div className="py-16" style={{ backgroundColor: '#F5F7F8' }}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-8 text-center">
             <div>

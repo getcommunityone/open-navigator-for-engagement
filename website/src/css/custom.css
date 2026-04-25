@@ -17,7 +17,7 @@
   --ifm-button-color: #ffffff;
   --ifm-code-font-size: 95%;
   --docusaurus-highlighted-code-line-bg: rgba(0, 0, 0, 0.1);
-  --ifm-background-color: #F0F4F5;
+  --ifm-background-color: #F5F7F8;
 }
 
 /* For readability concerns, you should choose a lighter palette in dark mode. */
@@ -30,16 +30,16 @@
   --ifm-color-primary-lighter: #7a89db;
   --ifm-color-primary-lightest: #9aa6e5;
   --docusaurus-highlighted-code-line-bg: rgba(0, 0, 0, 0.3);
-  --ifm-background-color: #F0F4F5;
+  --ifm-background-color: #F5F7F8;
 }
 
 /* Additional background color overrides */
 html[data-theme='light'],
 html[data-theme='dark'] {
-  --ifm-background-color: #F0F4F5;
-  --ifm-background-surface-color: #F0F4F5;
+  --ifm-background-color: #F5F7F8;
+  --ifm-background-surface-color: #F5F7F8;
 }
 
 body {
-  background-color: #F0F4F5 !important;
+  background-color: #F5F7F8 !important;
 }
