@@ -75,7 +75,40 @@ huggingface-cli login
 huggingface-cli repo create open-navigator-for-engagement --type space --space-sdk docker
 ```
 
-## 📤 Step 3: Push Your Code
+## 📤 Step 3: Deploy Your Code
+
+### Option A: Automated Deployment (Recommended)
+
+Use the deployment script for easy one-command deployment:
+
+**Step 1: Set your username**
+
+Add to your `.env` file:
+```bash
+echo "HF_USERNAME=your_hf_username" >> .env
+```
+
+Or export for current session:
+```bash
+export HF_USERNAME=getcommunityone  # Replace with your username
+```
+
+**Step 2: Run deployment script**
+```bash
+./deploy-huggingface.sh
+```
+
+The script automatically:
+- Creates the Space on Hugging Face
+- Sets up deployment branch
+- Configures Dockerfile and README
+- Pushes to Hugging Face
+
+You can also pass username as argument: `./deploy-huggingface.sh YOUR_USERNAME`
+
+### Option B: Manual Deployment
+
+If you prefer manual control:
 
 ```bash
 # Add Hugging Face as a remote
