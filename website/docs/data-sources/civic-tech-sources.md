@@ -104,7 +104,7 @@ Each CDP deployment has:
 - **Meeting pages** (official city websites)
 
 ### Where to Find URLs:
-Each city has a repo like: `CouncilDataProject/cdp-CITY-backend`
+Each city has a repo like: `CouncilDataProject/cdp-{{CITY}}-backend`
 
 Example for Seattle:
 ```bash

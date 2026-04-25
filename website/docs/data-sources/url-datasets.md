@@ -30,7 +30,7 @@ We integrated their **code patterns**, but missed the much more valuable **pre-e
    - **Estimated: 100-500 agency URLs**
 
 4. **Legistar Subdomain Pattern**
-   - Test pattern: `{city}.legistar.com`
+   - Test pattern: `{{city}}.legistar.com`
    - Can enumerate against our 32,333 municipalities
    - **Estimated: 1,000-3,000 matches**
 

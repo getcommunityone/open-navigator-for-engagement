@@ -95,7 +95,7 @@ dfs = await census.ingest_all_jurisdictions()
 ```
 
 **Lakehouse Strategy:**
-1. Ingest to **Bronze Layer** (`bronze/jurisdictions/{type}`)
+1. Ingest to **Bronze Layer** (`bronze/jurisdictions/{{type}}`)
 2. Create **unified view** with all jurisdiction types
 3. **Join with CISA** to identify missing URLs
 4. Prioritize by population for scraping
@@ -131,7 +131,7 @@ districts_df = await nces.ingest_school_districts()
 1. Ingest to **Bronze Layer** (`bronze/nces_school_districts`)
 2. Extract **provided URLs** (many NCES records include website field!)
 3. Use district names to **generate URL patterns** for missing sites
-4. Common pattern: `{district}.k12.{state}.us`
+4. Common pattern: `{{district}}.k12.{{state}}.us`
 
 ---
 

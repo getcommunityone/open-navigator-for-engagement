@@ -96,7 +96,7 @@ cdp_jurisdictions = [
 ## 🔍 THIRD PRIORITY: Legistar Subdomain Enumeration
 
 **Why**: Legistar is used by 1,000+ municipalities  
-**Pattern**: `{city}.legistar.com` or `{city}-{state}.legistar.com`
+**Pattern**: `{{city}}.legistar.com` or `{{city}}-{{state}}.legistar.com`
 
 ### Known Legistar Cities (Examples):
 - chicago.legistar.com
