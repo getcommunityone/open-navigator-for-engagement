@@ -73,18 +73,18 @@
 - These are **premium jurisdictions** (large cities, high value for oral health advocacy)
 
 ### 🔥 ACTION: Extract CDP URLs
-```python
-# Each CDP deployment has a GitHub repo with config
+```text
+# Python code - Each CDP deployment has a GitHub repo with config
 # Example: https://github.com/CouncilDataProject/seattle
 # Config file contains the source URLs for that jurisdiction
 
 cdp_jurisdictions = [
-    {{
+    {
         "name": "Seattle",
         "state": "WA",
         "cdp_url": "https://councildataproject.org/seattle",
         "source_repo": "https://github.com/CouncilDataProject/seattle"
-    }},
+    },
     # ... (all 20+)
 ]
 ```

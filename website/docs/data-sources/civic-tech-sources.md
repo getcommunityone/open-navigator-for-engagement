@@ -116,12 +116,13 @@ cat cdp_seattle_backend/cdp_seattle_backend_pipeline.py
 ```
 
 Contains patterns like:
-```python
-SCRAPER_CONFIG = {{
+```text
+# Python code
+SCRAPER_CONFIG = {
     "source_url": "https://seattle.gov/city-council/calendar",
     "video_source": "https://www.seattlechannel.org/CouncilVideos",
     "granicus_site": "https://seattle.granicus.com/ViewPublisher.php?view_id=24"
-}}
+}
 ```
 
 ### Status:
