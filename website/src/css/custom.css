@@ -28,4 +28,16 @@
   --ifm-color-primary-lighter: #32d8b4;
   --ifm-color-primary-lightest: #4fddbf;
   --docusaurus-highlighted-code-line-bg: rgba(0, 0, 0, 0.3);
+  --ifm-background-color: #F0F4F5;
+}
+
+/* Additional background color overrides */
+html[data-theme='light'],
+html[data-theme='dark'] {
+  --ifm-background-color: #F0F4F5;
+  --ifm-background-surface-color: #F0F4F5;
+}
+
+body {
+  background-color: #F0F4F5 !important;
 }
