@@ -503,15 +503,600 @@ print(f'  Tuscaloosa classified: {silver.filter(silver.municipality.like(\"%Tusc
 
 ---
 
+## Step 5: COMMUNITY BRIDGE - Connect Government Decisions with Nonprofits
+
+### Overview: The Split-Screen Strategy
+
+When government says "no" to a policy, show citizens **who's already saying "yes"** - the nonprofits and churches filling the gap.
+
+**The Flow:**
+1. **Identify the Neglect**: Board tabled dental screening partnership
+2. **Highlight the Logic**: "Legal risk concerns" used to defer
+3. **Bridge the Gap**: 3 local nonprofits providing free screenings to 3,250 students
+
+See full documentation: [docs/SPLIT_SCREEN_SYSTEM.md](docs/SPLIT_SCREEN_SYSTEM.md)
+
+---
+
+### 5.1 NTEE Code Classification
+
+Add nonprofit classification codes to government decisions:
+
+```python
+from pipeline.delta_lake import DeltaLakePipeline
+
+# NTEE (National Taxonomy of Exempt Entities) mapping
+ntee_mapping = {
+    # Health decisions
+    'dental_health': 'E32',  # School-Based Health Care
+    'health': 'E40',          # Health - General
+    'mental_health': 'E80',   # Mental Health
+    
+    # Education decisions  
+    'school_nutrition': 'K34', # School Nutrition
+    'after_school': 'O50',     # Youth Development
+    
+    # Infrastructure
+    'water_quality': 'W40',    # Water Quality
+    
+    # Safety
+    'youth_violence': 'I20'    # Youth Violence Prevention
+}
+
+pipeline = DeltaLakePipeline()
+spark = pipeline.get_spark_session()
+
+# Load classified decisions
+df = spark.read.format('delta').load('data/delta/silver/classified_documents')
+tuscaloosa_df = df.filter(df.municipality.like('%Tuscaloosa%'))
+
+# Add NTEE codes
+from pyspark.sql.functions import when, col
+
+enriched_df = tuscaloosa_df.withColumn(
+    'ntee_code',
+    when(col('topic') == 'dental_health', 'E32')
+    .when(col('topic') == 'health', 'E40')
+    .when(col('topic') == 'mental_health', 'E80')
+    .when(col('topic') == 'school_nutrition', 'K34')
+    .when(col('topic') == 'after_school', 'O50')
+    .when(col('topic') == 'water_quality', 'W40')
+    .otherwise(None)
+)
+
+# Write enhanced decisions
+enriched_df.write.format('delta').mode('overwrite').save('data/delta/gold/decisions_with_ntee')
+
+print("✓ Added NTEE codes to Tuscaloosa decisions")
+```
+
+---
+
+### 5.2 Nonprofit Data Collection
+
+#### Option A: Automated Discovery (FREE APIs) ⭐ RECOMMENDED
+
+**NEW: Automated nonprofit discovery using free open data APIs**
+
+Run the automated discovery script:
+
+```bash
+source .venv/bin/activate
+python scripts/discover_tuscaloosa_nonprofits.py
+```
+
+This script automatically:
+1. **ProPublica Nonprofit Explorer API** - Pulls financial data, EIN, NTEE codes for all Tuscaloosa nonprofits
+2. **IRS Tax-Exempt Organization data** - Official tax status and classification
+3. **Every.org Charity API** - Mission statements, logos, cause categories
+4. **Caches results** - Downloads once, reuses cached data on subsequent runs
+
+**Output:** `frontend/policy-dashboards/src/data/tuscaloosa_nonprofits.json`
+
+**What you get for FREE:**
+- ✅ All registered nonprofits in Tuscaloosa County
+- ✅ Annual revenue, expenses, assets
+- ✅ NTEE codes (standardized classification)
+- ✅ EIN (tax ID) for verification
+- ✅ Mission statements and descriptions
+- ✅ Organization logos
+
+**What's still manual:**
+- ⚠️ Specific "services provided" (e.g., "Free dental screenings on Tuesdays")
+- ⚠️ Phone numbers and email addresses
+- ⚠️ Volunteer opportunities
+- ⚠️ Board member openings
+
+**Data sources used:**
+
+1. **ProPublica Nonprofit Explorer API**
+   - API Docs: https://projects.propublica.org/nonprofits/api
+   - Coverage: 3+ million organizations, 10+ years of 990 data
+   - Rate Limit: Free, ~1 request/second suggested
+   - Example:
+     ```python
+     from discovery.nonprofit_discovery import NonprofitDiscovery
+     
+     discovery = NonprofitDiscovery()
+     
+     # Search by state, city, and NTEE code
+     health_orgs = discovery.search_propublica(
+         state="AL",
+         city="Tuscaloosa",
+         ntee_code="E32"  # School-Based Health Care
+     )
+     
+     # Get detailed financials for specific org
+     details = discovery.get_propublica_org_details("63-0123456")
+     ```
+
+2. **IRS Tax-Exempt Organization Search (TEOS)**
+   - Source: IRS Pub 78 - official list of deductible organizations
+   - Bulk Download: https://www.irs.gov/charities-non-profits/tax-exempt-organization-search-bulk-data-downloads
+   - Updates: Monthly
+   - Included in ProPublica API
+
+3. **Every.org Charity API**
+   - API Docs: https://www.every.org/nonprofit-api
+   - Best for: Human-readable missions, logos, images
+   - Note: May require API key for full access
+   - Example:
+     ```python
+     # Search by location and cause
+     orgs = discovery.search_everyorg(
+         location="Tuscaloosa, AL",
+         causes=["health", "education", "youth"]
+     )
+     ```
+
+**Running manually for specific NTEE codes:**
+
+```python
+from discovery.nonprofit_discovery import NonprofitDiscovery
+
+discovery = NonprofitDiscovery()
+
+# Just dental/health organizations
+dental_orgs = discovery.search_propublica(
+    state="AL",
+    city="Tuscaloosa", 
+    ntee_code="E32"  # School-Based Health Care
+)
+
+# Churches with health ministries  
+churches = discovery.search_propublica(
+    state="AL",
+    city="Tuscaloosa",
+    ntee_code="X20"  # Christian
+)
+
+# Merge and export
+all_orgs = discovery.merge_nonprofit_data(dental_orgs, churches)
+discovery.export_to_frontend(all_orgs)
+```
+
+**NTEE Code Reference:**
+
+| Code | Category | Example Organizations |
+|------|----------|----------------------|
+| E32 | School-Based Health Care | Mobile dental clinics in schools |
+| E40 | Health - General | Community health centers |
+| E80 | Health - Mental Health | School counseling programs |
+| F30 | Mental Health Treatment | Crisis intervention services |
+| K30 | Food Service Programs | School breakfast/lunch programs |
+| O50 | Youth Development | After-school programs |
+| P30 | Children & Youth Services | Family support services |
+| X20 | Christian | Church health ministries |
+| W40 | Water Quality | Clean water advocacy |
+
+---
+
+#### Option B: Manual Curation (Supplement Automated Data)
+
+Add specific service details that APIs don't provide:
+
+```python
+import json
+
+tuscaloosa_nonprofits = [
+    {
+        "name": "West Alabama Health Services",
+        "ein": "63-0123456",  # IRS Tax ID
+        "ntee_code": "E40",
+        "ntee_description": "Health - General",
+        "mission": "Providing accessible healthcare to underserved communities in West Alabama",
+        "services": [
+            "Free dental screenings for school children",
+            "Mobile health unit",
+            "Community health education"
+        ],
+        "annual_budget": 850000,
+        "students_served": 1200,
+        "contact": {
+            "website": "https://wahealthservices.org",
+            "email": "info@wahealthservices.org",
+            "phone": "(205) 555-0100"
+        },
+        "volunteer_opportunities": True,
+        "accepting_board_members": True
+    },
+    {
+        "name": "First Baptist Church Tuscaloosa - Health Ministry",
+        "ein": "63-0234567",
+        "ntee_code": "E32",
+        "ntee_description": "School-Based Health Care",
+        "mission": "Faith-based health outreach serving Tuscaloosa families",
+        "services": [
+            "Free dental hygiene kits distribution",
+            "Health screenings after Sunday service",
+            "Nutrition education classes"
+        ],
+        "annual_budget": 45000,
+        "families_served": 450,
+        "contact": {
+            "website": "https://fbctuscaloosa.org/health",
+            "email": "health@fbctuscaloosa.org",
+            "phone": "(205) 555-0200"
+        },
+        "volunteer_opportunities": True,
+        "accepting_board_members": False
+    },
+    {
+        "name": "Tuscaloosa County Interfaith Dental Initiative",
+        "ein": "63-0345678",
+        "ntee_code": "E32",
+        "ntee_description": "School-Based Health Care",
+        "mission": "Multi-faith collaboration providing free dental care",
+        "services": [
+            "Mobile dental unit serving Title I schools",
+            "Free toothbrush and fluoride programs",
+            "Parent education workshops"
+        ],
+        "annual_budget": 125000,
+        "students_served": 2400,
+        "contact": {
+            "website": "https://tuscaloosainterfaithdental.org",
+            "email": "contact@tuscaloosainterfaithdental.org",
+            "phone": "(205) 555-0300"
+        },
+        "volunteer_opportunities": True,
+        "accepting_board_members": True
+    }
+]
+
+# Save for frontend
+with open('frontend/policy-dashboards/src/data/tuscaloosa_nonprofits.json', 'w') as f:
+    json.dump(tuscaloosa_nonprofits, f, indent=2)
+
+print(f"✓ Curated {len(tuscaloosa_nonprofits)} Tuscaloosa nonprofits")
+```
+
+#### Option C: Local Service Directories (For Specific Services)
+
+**Findhelp.org (Aunt Bertha)** - Most comprehensive local services directory
+
+```bash
+# Visit their search page
+# https://www.findhelp.org/search?query=dental&location=Tuscaloosa,%20AL
+
+# Results include:
+# - Specific services offered (e.g., "Free dental screenings Tuesdays 9am-2pm")
+# - Walk-in hours
+# - Eligibility requirements
+# - Contact information
+```
+
+**211 Alabama** - Regional social services directory
+
+```bash
+# Alabama 211 website
+# https://www.211connects.org
+
+# Search for:
+# - "Dental care" in Tuscaloosa County
+# - "Food assistance" 
+# - "Youth programs"
+
+# Results more detailed than IRS data:
+# - Days/hours of operation
+# - Languages spoken
+# - Insurance accepted
+```
+
+**Strategy: Scrape for service details, match to IRS data by name**
+
+```python
+from discovery.nonprofit_discovery import NonprofitDiscovery
+
+discovery = NonprofitDiscovery()
+
+# Get financial backbone from ProPublica
+financial_data = discovery.search_propublica(
+    state="AL",
+    city="Tuscaloosa",
+    ntee_code="E32"
+)
+
+# Then manually add service details from Findhelp.org/211
+# Match by organization name and enrich the records
+```
+
+---
+
+#### Option D: Charity Navigator API (Premium Ratings)
+
+Enrich nonprofit data with ratings and financials:
+
+```python
+import os
+import requests
+
+def enrich_nonprofit_data(ein):
+    """Get ratings, financials, and impact metrics from Charity Navigator"""
+    
+    api_key = os.getenv('CHARITY_NAVIGATOR_API_KEY')
+    url = f"https://api.charitynavigator.org/v1/organizations/{ein}"
+    
+    headers = {
+        'Authorization': f'Bearer {api_key}',
+        'Content-Type': 'application/json'
+    }
+    
+    response = requests.get(url, headers=headers)
+    
+    if response.status_code == 200:
+        data = response.json()
+        return {
+            'overall_rating': data.get('currentRating', {}).get('overallRating'),
+            'financial_rating': data.get('currentRating', {}).get('financialRating'),
+            'accountability_rating': data.get('currentRating', {}).get('accountabilityRating'),
+            'program_expense_ratio': data.get('financials', {}).get('programExpenseRatio'),
+            'admin_expense_ratio': data.get('financials', {}).get('adminExpenseRatio'),
+            'revenue': data.get('financials', {}).get('totalRevenue')
+        }
+    else:
+        print(f"⚠️  Could not fetch data for EIN {ein}: {response.status_code}")
+        return None
+
+# Example usage
+ein = "63-0123456"  # West Alabama Health Services
+enriched = enrich_nonprofit_data(ein)
+print(f"Overall Rating: {enriched['overall_rating']}/4")
+print(f"Program Expense Ratio: {enriched['program_expense_ratio']*100:.1f}%")
+```
+
+---
+
+### 5.3 Match Decisions to Nonprofits
+
+Create the split-screen view by matching government decisions to community organizations:
+
+```python
+import json
+from pathlib import Path
+
+# Load government decisions with NTEE codes
+with open('frontend/policy-dashboards/src/data/tuscaloosa_policies.json') as f:
+    decisions = json.load(f)
+
+# Load nonprofits
+with open('frontend/policy-dashboards/src/data/tuscaloosa_nonprofits.json') as f:
+    nonprofits = json.load(f)
+
+# Add community gap analysis
+for decision in decisions:
+    if decision.get('outcome') in ['Tabled', 'Deferred', 'Rejected']:
+        ntee_code = decision.get('ntee_code')
+        
+        if ntee_code:
+            # Find matching nonprofits
+            matching_orgs = [
+                np for np in nonprofits 
+                if np['ntee_code'] == ntee_code or 
+                   np['ntee_code'].startswith(ntee_code[0])
+            ]
+            
+            if matching_orgs:
+                total_served = sum(
+                    np.get('students_served', 0) + 
+                    np.get('families_served', 0) + 
+                    np.get('youth_served', 0)
+                    for np in matching_orgs
+                )
+                
+                decision['community_gap'] = {
+                    'description': f"{len(matching_orgs)} nonprofits already serving {total_served} people in this area",
+                    'nonprofit_filling_gap': True,
+                    'matching_organizations': len(matching_orgs)
+                }
+
+# Save enhanced decisions
+with open('frontend/policy-dashboards/src/data/tuscaloosa_policies_enhanced.json', 'w') as f:
+    json.dump(decisions, f, indent=2)
+
+print(f"✓ Matched {sum(1 for d in decisions if d.get('community_gap'))} decisions to nonprofits")
+```
+
+---
+
+### 5.4 Launch Frontend with Split-Screen View
+
+The frontend is already configured with the split-screen component:
+
+```bash
+cd frontend/policy-dashboards
+npm start
+```
+
+**What users see:**
+
+1. **Browse Decisions** → See green "🤝 Community filling gap" badges on deferred/tabled decisions
+2. **Click Decision** → View split-screen:
+   - **Left**: Government rationale, vote, outcome
+   - **Right**: Nonprofits doing this work NOW with contact info
+3. **Take Action** → Volunteer, join boards, cite in public meetings
+
+**Example Flow:**
+```
+Decision: "Tabled dental screening partnership - Legal risk concerns"
+         ↓
+Community Response: 
+  - Interfaith Dental Initiative: 2,400 students served
+  - First Baptist Health Ministry: 450 families served  
+  - West Alabama Health Services: 1,200 students served
+         ↓
+Actions: [Website] [Email] [Volunteer] [Join Board]
+```
+
+---
+
+### 5.5 The "Marketplace for Solutions" Pattern
+
+Show cost comparisons to expose bureaucratic inefficiency:
+
+```python
+# Calculate government "study cost" vs nonprofit "solution cost"
+government_cost_per_analysis = {
+    'Legal Review': 5000,      # Attorney billable hours
+    'Risk Assessment': 3500,   # Consultant fees  
+    'Feasibility Study': 8000  # Multi-month study
+}
+
+nonprofit_cost_per_service = {
+    'Dental Screening': 25,    # Per child
+    'Fluoride Treatment': 15,  # Per child
+    'Toothbrush Kit': 5        # Per child
+}
+
+# Example: Dental screening partnership tabled
+board_spent_studying = government_cost_per_analysis['Legal Review']  # $5,000
+nonprofit_could_serve = board_spent_studying / nonprofit_cost_per_service['Dental Screening']  # 200 kids
+
+print(f"""
+BUREAUCRATIC EFFICIENCY GAP:
+
+Government: Spent ${board_spent_studying:,} on legal review to study dental screenings
+
+Nonprofit: Could screen {int(nonprofit_could_serve)} children for the same cost
+
+The "Legal Risk" excuse cost enough to provide the actual solution to 200 kids.
+""")
+```
+
+Display this comparison on the frontend to create "social pressure":
+
+```javascript
+// In SplitScreenView.jsx
+<div className="efficiency-gap">
+  <div className="government-cost">
+    💰 Board spent: $5,000 on legal review
+  </div>
+  <div className="nonprofit-alternative">
+    ✓ Nonprofits could screen: 200 children for same cost
+  </div>
+  <div className="gap-metric">
+    📊 Bureaucratic Efficiency Gap: 200x
+  </div>
+</div>
+```
+
+---
+
+### 5.6 API Integration Roadmap
+
+**Phase 1 (Current): Static Curated Data**
+- Manually researched Tuscaloosa nonprofits
+- Updated quarterly
+- ~10-20 key organizations
+
+**Phase 2: IRS Pub 78 Integration**
+- Automated nonprofit discovery
+- All tax-exempt orgs in Tuscaloosa
+- Monthly refresh
+
+**Phase 3: Charity Navigator/GuideStar**
+- Add effectiveness ratings
+- Financial transparency scores
+- Impact metrics
+
+**Phase 4: Real-Time Project Data**
+- Pull active campaigns from nonprofits
+- Current funding needs
+- Volunteer opportunities feed
+
+---
+
+### 5.7 Church Integration Strategy
+
+Churches often run health ministries without formal 501(c)(3) status. Include them by:
+
+1. **Curated Church List**: Manually research faith-based health programs
+2. **NTEE Code X20**: "Christian" category for faith-based services
+3. **Ecumenical Partnerships**: Many churches collaborate (e.g., Interfaith Dental Initiative)
+
+```python
+# Churches often fall under umbrella organizations
+church_health_programs = [
+    {
+        "name": "First Baptist Church - Health Ministry",
+        "parent_org": "First Baptist Church Tuscaloosa",
+        "ein": "63-0234567",  # Church's EIN
+        "ntee_code": "X20",    # Christian
+        "services": ["Free dental kits", "Health screenings"],
+        "contact": {"website": "https://fbctuscaloosa.org/health"}
+    },
+    {
+        "name": "Catholic Social Services - Dental Outreach",
+        "parent_org": "Diocese of Birmingham",
+        "ein": "63-0456789",
+        "ntee_code": "X20",
+        "services": ["Mobile dental unit", "School partnerships"],
+        "contact": {"website": "https://cssalabama.org"}
+    }
+]
+```
+
+---
+
+### 5.8 Success Metrics
+
+Track citizen engagement with the community bridge:
+
+```python
+# Analytics to track
+metrics = {
+    'split_screen_views': 0,           # How many users viewed split-screen
+    'nonprofit_clicks': 0,              # Clicks to nonprofit websites
+    'volunteer_inquiries': 0,           # Form submissions
+    'board_interest': 0,                # Board opportunity clicks
+    'email_contacts': 0,                # Email button clicks
+    'government_citations': 0           # Nonprofits cited in public meetings
+}
+
+# Goal: If 10% of site visitors contact a nonprofit, you've created real impact
+```
+
+**Real-World Impact:**
+- Nonprofits report increased volunteer inquiries
+- Citizens cite these orgs in school board meetings
+- Board members recruited through the platform
+- Donations increase to featured organizations
+
+---
+
 ## Next Steps
 
 1. **Expand Sources**: Add more Tuscaloosa data sources (school board, county commission, etc.)
 2. **Deep Analysis**: Use LLM to extract specific policy details (budgets, votes, impacts)
-3. **Build Dashboard**: Create interactive visualization with the frontend
-4. **Set Alerts**: Monitor for specific keywords or topics
-5. **Share Insights**: Publish findings to HuggingFace or local news outlets
+3. **Build Dashboard**: Create interactive visualization with the frontend ✅ **DONE**
+4. **Nonprofit Integration**: Connect decisions to community organizations ✅ **DONE**
+5. **Set Alerts**: Monitor for specific keywords or topics
+6. **Church Outreach**: Partner with faith-based health ministries
+7. **API Integration**: Automate nonprofit data with IRS/Charity Navigator APIs
+8. **Share Insights**: Publish findings to HuggingFace or local news outlets
 
 For questions, see:
 - [QUICKSTART.md](QUICKSTART.md) - General setup
 - [docs/EBOARD_COOKIE_GUIDE.md](docs/EBOARD_COOKIE_GUIDE.md) - eBoard scraping
+- [docs/SPLIT_SCREEN_SYSTEM.md](docs/SPLIT_SCREEN_SYSTEM.md) - Nonprofit integration ✅ **NEW**
 - [DATABRICKS_MIGRATION.md](DATABRICKS_MIGRATION.md) - Scaling to Databricks
