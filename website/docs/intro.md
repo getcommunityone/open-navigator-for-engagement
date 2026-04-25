@@ -139,7 +139,7 @@ Board Minutes: "Expanding access to underserved communities"
 Form 990: Only 12% of budget on direct services
 
 → Donor Alert: "Organization claims to prioritize underserved 
-   but allocates <15% to programs."
+   but allocates \<15% to programs."
 ```
 
 ### Community Mobilization
