@@ -1,7 +1,7 @@
 import { useState } from 'react'
-import { MagnifyingGlassIcon, UserGroupIcon, AcademicCapIcon, UsersIcon } from '@heroicons/react/24/outline'
+import { MagnifyingGlassIcon, UserGroupIcon, AcademicCapIcon, UsersIcon, CodeBracketIcon } from '@heroicons/react/24/outline'
 
-type PersonRole = 'decision-makers' | 'support' | 'public'
+type PersonRole = 'decision-makers' | 'support' | 'public' | 'open-source'
 
 interface Person {
   id: number
@@ -46,6 +46,17 @@ const roleCategories = {
       'Neighbors & Residents',
       'Parents & Families',
       'Advocates',
+    ]
+  },
+  'open-source': {
+    title: 'Open Source Contributors',
+    subtitle: 'Civic tech maintainers and developers',
+    icon: CodeBracketIcon,
+    color: '#06B6D4',
+    roles: [
+      'Project Maintainers',
+      'Core Contributors',
+      'Community Developers',
     ]
   }
 }
@@ -97,6 +108,42 @@ const mockPeople: Person[] = [
     location: 'Westside',
     contact: 'maria@pbs.org'
   },
+  {
+    id: 6,
+    name: 'Alex Chen',
+    role: 'open-source',
+    specificRole: 'Project Maintainers',
+    organization: 'openbudgetoakland',
+    location: 'GitHub',
+    contact: '@alexchen'
+  },
+  {
+    id: 7,
+    name: 'Jordan Taylor',
+    role: 'open-source',
+    specificRole: 'Core Contributors',
+    organization: 'transitland',
+    location: 'GitHub',
+    contact: '@jordantaylor'
+  },
+  {
+    id: 8,
+    name: 'Sam Rodriguez',
+    role: 'open-source',
+    specificRole: 'Project Maintainers',
+    organization: 'affordable-housing-finder',
+    location: 'GitHub',
+    contact: '@samrodriguez'
+  },
+  {
+    id: 9,
+    name: 'Casey Kim',
+    role: 'open-source',
+    specificRole: 'Community Developers',
+    organization: 'health-equity-tracker',
+    location: 'GitHub',
+    contact: '@caseykim'
+  },
 ]
 
 export default function PeopleFinder() {
@@ -122,7 +169,7 @@ export default function PeopleFinder() {
           People Finder
         </h1>
         <p className="text-gray-600">
-          Find decision makers, support staff, and community advocates in your area
+          Find decision makers, support staff, open source contributors, and community advocates
         </p>
       </div>
 
