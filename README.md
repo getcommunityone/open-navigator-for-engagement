@@ -13,16 +13,16 @@
 
 **[📖 Read the full documentation →](http://localhost:3000)** (Start with `cd website && npm start`)
 
-**[⚛️ Launch the interactive dashboard →](http://localhost:5173)** (Start with `cd frontend && npm run dev`)
+**[⚛️ Launch Open Navigator →](http://localhost:5173)** (Start with `cd frontend && npm run dev`)
 
 > **Architecture Note**: This project has **three separate services**:
 > - 📚 **Documentation Site** (port 3000) - Guides, API docs, getting started
-> - ⚛️ **React Dashboard** (port 5173) - **Main application** with search, filters, heatmap, data exploration
+> - ⚛️ **Open Navigator** (port 5173) - **Main application** with search, filters, heatmap, data exploration
 > - 🔥 **API Backend** (port 8000) - Data processing and AI agents
 >
 > See [ARCHITECTURE.md](ARCHITECTURE.md) for detailed explanation.
 
-This README provides a quick overview. For comprehensive guides, API reference, and tutorials, visit the **Docusaurus documentation site** in the `website/` directory. For the **actual application interface with search, filters, and data exploration**, use the **React dashboard** in the `frontend/` directory.
+This README provides a quick overview. For comprehensive guides, API reference, and tutorials, visit the **Docusaurus documentation site** in the `website/` directory. For the **actual application interface with search, filters, and data exploration**, use **Open Navigator** in the `frontend/` directory.
 
 ## Overview
 
@@ -43,7 +43,7 @@ The **Open Navigator for Engagement** is a full-stack AI application that analyz
 **✨ New in v2.0:**
 - 🎨 **React Frontend** - Modern, responsive UI with interactive visualizations
 - 🚀 **Databricks Apps** - One-click deployment to Databricks workspace
-- 📊 **Live Dashboard** - Real-time analytics and opportunity tracking
+- 📊 **Real-Time Platform** - Live analytics and opportunity tracking
 - 🗺️ **Interactive Heatmap** - Geographic visualization of advocacy opportunities
 - 📧 **Automated Generation** - AI-powered advocacy emails and materials
 
@@ -522,7 +522,7 @@ cd oral-health-policy-pulse
 
 # Install dependencies
 ./install.sh                    # Python backend
-cd frontend && npm install && cd ..      # React dashboard
+cd frontend && npm install && cd ..      # Open Navigator
 cd website && npm install && cd ..       # Documentation site
 
 # Start everything with one command
@@ -531,7 +531,7 @@ cd website && npm install && cd ..       # Documentation site
 
 This launches all three services in a tmux session:
 - 📚 **Documentation**: http://localhost:3000 (Docusaurus site)
-- ⚛️ **Dashboard**: http://localhost:5173 (React app)
+- ⚛️ **Open Navigator**: http://localhost:5173 (React app)
 - 🔥 **API**: http://localhost:8000 (FastAPI backend)
 
 **Using Makefile (Alternative)**
@@ -563,7 +563,7 @@ python3 -m venv .venv
 source .venv/bin/activate  # On Windows: .venv\Scripts\activate
 pip install -r requirements.txt
 
-# Install React dashboard
+# Install Open Navigator
 cd frontend && npm install && cd ..
 
 # Install documentation site
@@ -577,7 +577,7 @@ cp .env.example .env
 # Terminal 1: API
 source .venv/bin/activate && python main.py serve
 
-# Terminal 2: Dashboard
+# Terminal 2: Open Navigator
 cd frontend && npm run dev
 
 # Terminal 3: Documentation
@@ -586,7 +586,7 @@ cd website && npm start
 
 Visit:
 - `http://localhost:3000` - Documentation and project overview
-- `http://localhost:5173` - Interactive dashboard
+- `http://localhost:5173` - Open Navigator
 - `http://localhost:8000/docs` - API documentation
 
 > **💡 Tip:** Use `./start-all.sh` for the best development experience. It manages all services in tmux, making it easy to switch between terminals and see logs.
@@ -995,9 +995,9 @@ oral-health-policy-pulse/
 ├── api/                   # FastAPI application
 │   ├── app.py            # Main application (Databricks Apps)
 │   └── main.py           # API endpoints (Standalone mode)
-├── frontend/             # React Dashboard (Vite + TypeScript)
+├── frontend/             # Open Navigator (React + Vite + TypeScript)
 │   ├── src/
-│   │   ├── pages/        # Dashboard, Heatmap, Nonprofits, etc.
+│   │   ├── pages/        # Analytics, Heatmap, Nonprofits, etc.
 │   │   └── components/   # Shared UI components
 │   └── package.json
 ├── website/              # Docusaurus Documentation Site ⭐ NEW
@@ -1035,8 +1035,8 @@ oral-health-policy-pulse/
 ### Key Directories
 
 - **`website/`** - Docusaurus documentation site with comprehensive guides
-- **`frontend/`** - React dashboard for interactive data exploration
-- **`api/`** - FastAPI backend serving both the dashboard and public API
+- **`frontend/`** - Open Navigator for interactive data exploration
+- **`api/`** - FastAPI backend serving both the application and public API
 - **`discovery/`** - Data ingestion modules for Census, NCES, nonprofits, etc.
 - **`agents/`** - AI agents for scraping, parsing, classification, and advocacy
 - **`docs/`** - Legacy markdown documentation (being migrated to `website/docs/`)
