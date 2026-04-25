@@ -124,7 +124,7 @@ class ScraperAgent(BaseAgent):
             timeout=30.0,
             follow_redirects=True,
             headers={
-                "User-Agent": "OralHealthPolicyPulse/1.0 (+https://github.com/getcommunityone/oral-health-policy-pulse)"
+                "User-Agent": "OralHealthPolicyPulse/1.0 (+https://github.com/getcommunityone/open-navigator-for-engagement)"
             }
         )
         return self

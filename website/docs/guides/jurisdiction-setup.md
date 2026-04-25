@@ -550,7 +550,7 @@ Once discovery is complete:
 ## Support
 
 For issues or questions:
-- GitHub Issues: [github.com/getcommunityone/oral-health-policy-pulse/issues](https://github.com/getcommunityone/oral-health-policy-pulse/issues)
+- GitHub Issues: [github.com/getcommunityone/open-navigator-for-engagement/issues](https://github.com/getcommunityone/open-navigator-for-engagement/issues)
 - Documentation: [JURISDICTION_DISCOVERY.md](JURISDICTION_DISCOVERY.md)
 
 ---

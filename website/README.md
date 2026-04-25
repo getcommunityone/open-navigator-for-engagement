@@ -66,7 +66,7 @@ The built static site can be served alongside the FastAPI backend for production
 
 - [Docusaurus Docs](https://docusaurus.io/docs)
 - [Main Project README](../README.md)
-- [GitHub Repository](https://github.com/getcommunityone/oral-health-policy-pulse)
+- [GitHub Repository](https://github.com/getcommunityone/open-navigator-for-engagement)
 
 ---
 

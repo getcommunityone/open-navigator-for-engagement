@@ -49,7 +49,7 @@ This project runs three separate services:
 
 ```bash
 # Clone repository
-git clone https://github.com/getcommunityone/oral-health-policy-pulse.git
+git clone https://github.com/getcommunityone/open-navigator-for-engagement.git
 cd oral-health-policy-pulse
 
 # Install dependencies
@@ -381,7 +381,7 @@ MIT License - see [LICENSE](LICENSE) file for details.
 
 ## Support
 
-- GitHub Issues: [github.com/getcommunityone/oral-health-policy-pulse/issues](https://github.com/getcommunityone/oral-health-policy-pulse/issues)
+- GitHub Issues: [github.com/getcommunityone/open-navigator-for-engagement/issues](https://github.com/getcommunityone/open-navigator-for-engagement/issues)
 - Email: support@communityone.com
 
 ---

@@ -303,7 +303,7 @@ Open Navigator runs three separate services:
 
 ```bash
 # Clone the repository
-git clone https://github.com/getcommunityone/oral-health-policy-pulse.git
+git clone https://github.com/getcommunityone/open-navigator-for-engagement.git
 cd oral-health-policy-pulse
 
 # Install all dependencies
@@ -433,7 +433,7 @@ Reality: 3 local nonprofits already providing screenings
 
 ## Support & Community
 
-- **GitHub Issues**: [Report bugs or request features](https://github.com/getcommunityone/oral-health-policy-pulse/issues)
+- **GitHub Issues**: [Report bugs or request features](https://github.com/getcommunityone/open-navigator-for-engagement/issues)
 - **Documentation**: Use the sidebar to explore all guides and references
 - **Main Application**: Launch Open Navigator at http://localhost:5173
 - **API Documentation**: Interactive API docs at http://localhost:8000/docs

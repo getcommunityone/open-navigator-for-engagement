@@ -196,7 +196,7 @@ All data comes from **100% free, public sources**:
 
 If you need help setting up or accessing data:
 - Visit the [Developer Documentation](/docs/quickstart)
-- File an issue on [GitHub](https://github.com/getcommunityone/oral-health-policy-pulse/issues)
+- File an issue on [GitHub](https://github.com/getcommunityone/open-navigator-for-engagement/issues)
 - Contact: support@communityone.com
 
 ## Next Steps

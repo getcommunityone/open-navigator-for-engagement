@@ -44,7 +44,7 @@ const config: Config = {
           // Please change this to your repo.
           // Remove this to remove the "edit this page" links.
           editUrl:
-            'https://github.com/getcommunityone/oral-health-policy-pulse/tree/main/website/',
+            'https://github.com/getcommunityone/open-navigator-for-engagement/tree/main/website/',
         },
         blog: {
           showReadingTime: true,
@@ -55,7 +55,7 @@ const config: Config = {
           // Please change this to your repo.
           // Remove this to remove the "edit this page" links.
           editUrl:
-            'https://github.com/getcommunityone/oral-health-policy-pulse/tree/main/website/',
+            'https://github.com/getcommunityone/open-navigator-for-engagement/tree/main/website/',
           // Useful options to enforce blogging best practices
           onInlineTags: 'warn',
           onInlineAuthors: 'warn',
@@ -91,7 +91,7 @@ const config: Config = {
         },
         {to: '/blog', label: 'Blog', position: 'left'},
         {
-          href: 'https://github.com/getcommunityone/oral-health-policy-pulse',
+          href: 'https://github.com/getcommunityone/open-navigator-for-engagement',
           label: 'GitHub',
           position: 'right',
         },
@@ -126,7 +126,7 @@ const config: Config = {
             },
             {
               label: 'GitHub',
-              href: 'https://github.com/getcommunityone/oral-health-policy-pulse',
+              href: 'https://github.com/getcommunityone/open-navigator-for-engagement',
             },
             {
               label: 'GroundVue (Partner)',
@@ -143,7 +143,7 @@ const config: Config = {
             },
             {
               label: 'License (MIT)',
-              href: 'https://github.com/getcommunityone/oral-health-policy-pulse/blob/main/LICENSE',
+              href: 'https://github.com/getcommunityone/open-navigator-for-engagement/blob/main/LICENSE',
             },
           ],
         },

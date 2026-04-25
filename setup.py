@@ -14,7 +14,7 @@ setup(
     description="Multi-agent system for analyzing local government oral health policy discussions",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    url="https://github.com/getcommunityone/oral-health-policy-pulse",
+    url="https://github.com/getcommunityone/open-navigator-for-engagement",
     packages=find_packages(exclude=["tests", "examples", "notebooks"]),
     classifiers=[
         "Development Status :: 4 - Beta",
@@ -93,8 +93,8 @@ setup(
         "": ["*.md", "*.txt", "*.json"],
     },
     project_urls={
-        "Bug Reports": "https://github.com/getcommunityone/oral-health-policy-pulse/issues",
-        "Source": "https://github.com/getcommunityone/oral-health-policy-pulse",
-        "Documentation": "https://github.com/getcommunityone/oral-health-policy-pulse#readme",
+        "Bug Reports": "https://github.com/getcommunityone/open-navigator-for-engagement/issues",
+        "Source": "https://github.com/getcommunityone/open-navigator-for-engagement",
+        "Documentation": "https://github.com/getcommunityone/open-navigator-for-engagement#readme",
     },
 )

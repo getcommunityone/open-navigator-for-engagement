@@ -118,8 +118,8 @@ See the [API Reference](/docs/api) for complete documentation.
 ## Need Help?
 
 - 📚 Browse the [Documentation](/docs/intro)
-- 🐛 [Report an Issue](https://github.com/getcommunityone/oral-health-policy-pulse/issues)
-- 💡 [Request a Feature](https://github.com/getcommunityone/oral-health-policy-pulse/issues/new)
+- 🐛 [Report an Issue](https://github.com/getcommunityone/open-navigator-for-engagement/issues)
+- 💡 [Request a Feature](https://github.com/getcommunityone/open-navigator-for-engagement/issues/new)
 
 ---
 

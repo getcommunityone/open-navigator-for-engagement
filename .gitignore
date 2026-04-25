@@ -37,6 +37,19 @@ ENV/
 # Environment variables
 .env
 .env.local
+.env.*.local
+.env.production
+.env.development
+.env.test
+
+# Credentials and secrets
+credentials.json
+service-account.json
+*_credentials.json
+auth.json
+token.json
+*_token.txt
+*-token.txt
 
 # Logs
 logs/

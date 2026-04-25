@@ -101,7 +101,7 @@ Contributing and development:
 
 ```bash
 # Clone and install
-git clone https://github.com/getcommunityone/oral-health-policy-pulse.git
+git clone https://github.com/getcommunityone/open-navigator-for-engagement.git
 cd oral-health-policy-pulse
 ./install.sh
 
@@ -348,7 +348,7 @@ Edit `config/settings.py` for:
 ```bash
 git clone https://github.com/YOUR-USERNAME/oral-health-policy-pulse.git
 cd oral-health-policy-pulse
-git remote add upstream https://github.com/getcommunityone/oral-health-policy-pulse.git
+git remote add upstream https://github.com/getcommunityone/open-navigator-for-engagement.git
 ```
 
 ### 2. Create Branch
@@ -371,7 +371,7 @@ git push origin feature/your-feature-name
 # Then create PR on GitHub
 ```
 
-See [CONTRIBUTING.md](https://github.com/getcommunityone/oral-health-policy-pulse/blob/main/CONTRIBUTING.md) for details.
+See [CONTRIBUTING.md](https://github.com/getcommunityone/open-navigator-for-engagement/blob/main/CONTRIBUTING.md) for details.
 
 ## Troubleshooting
 
@@ -413,11 +413,11 @@ Adjust rate limits in `config/settings.py`.
 2. **Set Up Environment** → [Quick Start](/docs/quickstart)
 3. **Run Discovery** → [Jurisdiction Setup](/docs/guides/jurisdiction-setup)
 4. **Deploy to Production** → [Databricks Apps](/docs/deployment/databricks-apps)
-5. **Contribute** → [GitHub Issues](https://github.com/getcommunityone/oral-health-policy-pulse/issues)
+5. **Contribute** → [GitHub Issues](https://github.com/getcommunityone/open-navigator-for-engagement/issues)
 
 ## Support
 
-- **GitHub Issues**: [Report bugs or request features](https://github.com/getcommunityone/oral-health-policy-pulse/issues)
+- **GitHub Issues**: [Report bugs or request features](https://github.com/getcommunityone/open-navigator-for-engagement/issues)
 - **Documentation**: Browse the sidebar
 - **API Docs**: http://localhost:8000/docs
 - **Email**: support@communityone.com
