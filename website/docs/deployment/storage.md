@@ -30,8 +30,8 @@
 ### ⚠️ CRITICAL: File Limits
 
 **Hugging Face has repository limits:**
-- Files per folder: <10,000
-- Total files per repo: <100,000
+- Files per folder: \<10,000
+- Total files per repo: \<100,000
 - Large datasets: Use Parquet or WebDataset format
 
 **Your scale (22M files) exceeds limits!**

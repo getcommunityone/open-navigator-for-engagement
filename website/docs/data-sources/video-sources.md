@@ -104,7 +104,7 @@ async with ELGLYouTubeDiscovery() as elgl:
 **County Categories:**
 - Large counties (500k+ population): ~100 counties - most have video
 - Medium counties (100k-500k): ~400 counties - many have video
-- Small counties (<100k): ~2,600 counties - fewer with video
+- Small counties (\<100k): ~2,600 counties - fewer with video
 - **Digital Innovation Leaders:** ~100 counties with advanced media
 
 **Implementation:** ✅ `discovery/curated_sources.py` - `NACoCountyDiscovery` class

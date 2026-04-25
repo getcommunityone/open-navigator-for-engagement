@@ -87,12 +87,6 @@ const config: Config = {
           position: 'left',
           label: 'Documentation',
         },
-        {
-          type: 'docSidebar',
-          sidebarId: 'guidesSidebar',
-          position: 'left',
-          label: 'Guides',
-        },
         {to: '/blog', label: 'Blog', position: 'left'},
         {
           href: 'http://localhost:5173',
