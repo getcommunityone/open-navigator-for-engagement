@@ -63,3 +63,73 @@ body {
   height: 50px !important;
   max-height: 50px !important;
 }
+
+/* Sidebar backgrounds */
+.theme-doc-sidebar-container {
+  background-color: #F1F5F9 !important;
+}
+
+aside.theme-doc-sidebar-container {
+  background-color: #F1F5F9 !important;
+}
+
+/* Sidebar navigation link colors */
+.theme-doc-sidebar-item-link,
+.menu__link,
+.theme-doc-sidebar-item-category > .menu__list-item-collapsible > .menu__link {
+  color: #354F52 !important;
+}
+
+.menu__link:hover,
+.menu__link--active {
+  color: #2e4346 !important;
+}
+
+/* Category labels */
+.menu__list-item-collapsible {
+  color: #354F52 !important;
+}
+
+/* Table of Contents (right sidebar) background */
+.theme-doc-toc-desktop,
+.table-of-contents {
+  background-color: #F1F5F9 !important;
+  padding: 1rem;
+  border-radius: 8px;
+}
+
+/* Main content area - keep white */
+.theme-doc-markdown,
+article {
+  background-color: #ffffff !important;
+}
+
+/* Content headers color */
+.markdown h1,
+.markdown h2,
+.markdown h3,
+.markdown h4,
+.markdown h5,
+.markdown h6 {
+  color: #354F52 !important;
+}
+
+article h1,
+article h2,
+article h3,
+article h4,
+article h5,
+article h6 {
+  color: #354F52 !important;
+}
+
+/* Dark mode overrides */
+[data-theme='dark'] .theme-doc-sidebar-container,
+[data-theme='dark'] aside.theme-doc-sidebar-container {
+  background-color: #1E293B !important;
+}
+
+[data-theme='dark'] .theme-doc-toc-desktop,
+[data-theme='dark'] .table-of-contents {
+  background-color: #1E293B !important;
+}

@@ -44,9 +44,16 @@ Heavy debate          →   -15% cut          =   ❌ Performative Talk
 
 All data sources are **100% free and public**:
 
+**Government Data:**
 - **Census Bureau** - 90,000+ government jurisdictions
 - **NCES** - 13,000+ school districts with contact info
-- **ProPublica Nonprofit Explorer** - 3M+ Form 990 filings
+- **CISA** - 15,000+ official .gov domains
+
+**Nonprofit Data:**
+- **ProPublica Nonprofit Explorer** - 3M+ IRS Form 990 filings
+- **Reference Sites:** Charity Navigator, Candid/GuideStar, GiveWell (see [Nonprofit Data Sources](/docs/data-sources/nonprofit-sources))
+
+**Research Collections:**
 - **Harvard Dataverse** - Academic research datasets
 - **MeetingBank, LocalView, City Scrapers** - Pre-built meeting collections
 

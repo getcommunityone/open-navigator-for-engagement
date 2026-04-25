@@ -219,11 +219,15 @@ Compare to deprecated approach:
 
 ## 📚 References
 
+**Government Jurisdiction Data:**
 - **CISA .gov Domains:** https://github.com/cisagov/dotgov-data
 - **Census Bureau GID:** https://www.census.gov/programs-surveys/gus.html
 - **NCES CCD:** https://nces.ed.gov/ccd/
 - **State/Local Gov Directory:** https://www.statelocalgov.net/
 - **LegiScan API:** https://legiscan.com/legiscan
+
+**Nonprofit Data:**
+- See [Nonprofit Data Sources](./nonprofit-sources.md) for ProPublica, Charity Navigator, Candid/GuideStar, and GiveWell
 
 ---
 
