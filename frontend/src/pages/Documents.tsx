@@ -80,13 +80,13 @@ export default function Documents() {
           </form>
         </div>
 
-      {/* Results */}
-      <div className="space-y-4">
-        {isLoading ? (
-          <div className="card">Loading documents...</div>
-        ) : (
-          <>
-            {data?.documents?.map((doc: Document) => (
+        {/* Results */}
+        <div className="space-y-4">
+          {isLoading ? (
+            <div className="card">Loading documents...</div>
+          ) : (
+            <>
+              {data?.documents?.map((doc: Document) => (
               <div key={doc.id} className="card hover:shadow-lg transition-shadow">
                 <div className="flex justify-between items-start">
                   <div className="flex-1">
@@ -140,7 +140,8 @@ export default function Documents() {
               </button>
             </div>
           </>
-        )}
+          )}
+        </div>
       </div>
     </div>
   )

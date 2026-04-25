@@ -75,10 +75,10 @@ const config: Config = {
       respectPrefersColorScheme: true,
     },
     navbar: {
-      title: '🦷 Open Navigator',
+      title: 'Open Navigator',
       logo: {
-        alt: 'Open Navigator Logo',
-        src: 'img/logo.svg',
+        alt: 'CommunityOne Logo',
+        src: 'img/communityone_logo.jpg',
       },
       items: [
         {
