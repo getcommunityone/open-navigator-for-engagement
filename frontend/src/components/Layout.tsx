@@ -12,6 +12,8 @@ import {
   BookOpenIcon,
   UserGroupIcon,
   AcademicCapIcon,
+  Bars3Icon,
+  XMarkIcon,
 } from '@heroicons/react/24/outline'
 
 const navigation = [
@@ -30,6 +32,11 @@ export default function Layout() {
   const location = useLocation()
   const navigate = useNavigate()
   const [searchQuery, setSearchQuery] = useState('')
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+
+  // Environment-aware URLs
+  const docsUrl = import.meta.env.PROD ? '/docs' : 'http://localhost:3000'
+  const apiDocsUrl = import.meta.env.PROD ? '/api/docs' : 'http://localhost:8000/docs'
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault()
@@ -42,22 +49,37 @@ export default function Layout() {
     <div className="min-h-screen" style={{ backgroundColor: '#F1F5F9' }}>
       {/* Top Header Bar */}
       <div className="fixed top-0 left-0 right-0 bg-white border-b border-gray-200 z-50">
-        <div className="flex items-center justify-between px-6 py-3">
-          <Link to="/" className="flex items-center gap-3">
-            <img 
-              src="/communityone_logo.png" 
-              alt="CommunityOne Logo" 
-              style={{ height: '50px' }}
-            />
-            <h1 className="text-2xl font-bold" style={{ color: '#354F52' }}>
-              Open Navigator
-            </h1>
-          </Link>
+        <div className="flex items-center justify-between px-4 md:px-6 py-3">
+          <div className="flex items-center gap-3">
+            {/* Mobile menu button */}
+            <button
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              className="md:hidden p-2 rounded-lg hover:bg-gray-100"
+              aria-label="Toggle menu"
+            >
+              {mobileMenuOpen ? (
+                <XMarkIcon className="h-6 w-6" />
+              ) : (
+                <Bars3Icon className="h-6 w-6" />
+              )}
+            </button>
 
-          {/* Global Search - Hidden on home page */}
+            <Link to="/" className="flex items-center gap-2 md:gap-3">
+              <img 
+                src="/communityone_logo.jpg" 
+                alt="CommunityOne Logo" 
+                className="h-10 md:h-12"
+              />
+              <h1 className="text-lg md:text-2xl font-bold" style={{ color: '#354F52' }}>
+                Open Navigator
+              </h1>
+            </Link>
+          </div>
+
+          {/* Global Search - Hidden on home page and mobile */}
           {location.pathname !== '/' && (
-            <form onSubmit={handleSearch} className="flex-1 max-w-2xl mx-8">
-              <div className="relative">
+            <form onSubmit={handleSearch} className="hidden md:flex flex-1 max-w-2xl mx-8">
+              <div className="relative w-full">
                 <input
                   type="text"
                   placeholder="Search documents, nonprofits, locations..."
@@ -71,40 +93,45 @@ export default function Layout() {
           )}
 
           {/* Header Actions */}
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2 md:gap-4">
             <a
-              href="http://localhost:3000"
+              href={docsUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center gap-2 px-4 py-2 text-gray-700 hover:text-primary-600 transition-colors"
+              className="flex items-center gap-1 md:gap-2 px-2 md:px-4 py-2 text-gray-700 hover:text-primary-600 transition-colors"
             >
               <BookOpenIcon className="h-5 w-5" />
-              <span className="font-medium">Docs</span>
+              <span className="hidden md:inline font-medium">Docs</span>
             </a>
             <a
-              href="http://localhost:8000/docs"
+              href={apiDocsUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="px-4 py-2 text-white rounded-lg transition-colors"
+              className="px-2 md:px-4 py-2 text-white rounded-lg transition-colors text-sm md:text-base"
               style={{ backgroundColor: '#354F52' }}
               onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#2e4346'}
               onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#354F52'}
             >
-              API Docs
+              API
             </a>
           </div>
         </div>
       </div>
 
       {/* Sidebar */}
-      <div className="fixed top-16 inset-y-0 left-0 w-64 bg-white border-r border-gray-200">
-        <nav className="mt-6 px-4">
+      <div className={`
+        fixed top-16 inset-y-0 left-0 w-64 bg-white border-r border-gray-200 z-40
+        transform transition-transform duration-200 ease-in-out
+        ${mobileMenuOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
+      `}>
+        <nav className="mt-6 px-4 overflow-y-auto h-[calc(100vh-10rem)]">
           {navigation.map((item) => {
             const isActive = location.pathname === item.href
             return (
               <Link
                 key={item.name}
                 to={item.href}
+                onClick={() => setMobileMenuOpen(false)}
                 className={`
                   flex items-center gap-3 px-4 py-3 mb-2 rounded-lg transition-colors
                   ${
@@ -122,7 +149,7 @@ export default function Layout() {
         </nav>
 
         {/* Sidebar Footer */}
-        <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-gray-200">
+        <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-gray-200 bg-white">
           <div className="text-sm text-gray-600">
             <div className="font-medium mb-1">Data Sources</div>
             <div className="text-xs">
@@ -134,8 +161,16 @@ export default function Layout() {
         </div>
       </div>
 
+      {/* Mobile menu overlay */}
+      {mobileMenuOpen && (
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-50 z-30 md:hidden"
+          onClick={() => setMobileMenuOpen(false)}
+        />
+      )}
+
       {/* Main content */}
-      <div className="pl-64 pt-16">
+      <div className="md:pl-64 pt-16">
         <main>
           <Outlet />
         </main>
