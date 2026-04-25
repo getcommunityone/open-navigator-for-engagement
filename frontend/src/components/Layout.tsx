@@ -10,11 +10,13 @@ import {
   ChartBarIcon,
   MagnifyingGlassIcon,
   BookOpenIcon,
+  UserGroupIcon,
 } from '@heroicons/react/24/outline'
 
 const navigation = [
   { name: 'Home', href: '/', icon: HomeIcon },
   { name: 'Analytics', href: '/analytics', icon: ChartBarIcon },
+  { name: 'People Finder', href: '/people', icon: UserGroupIcon },
   { name: 'Heatmap', href: '/heatmap', icon: MapIcon },
   { name: 'Documents', href: '/documents', icon: DocumentTextIcon },
   { name: 'Causes', href: '/opportunities', icon: BellAlertIcon },

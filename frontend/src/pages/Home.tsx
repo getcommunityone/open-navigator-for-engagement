@@ -16,7 +16,8 @@ import {
   HeartIcon,
   AcademicCapIcon,
   BriefcaseIcon,
-  ScaleIcon
+  ScaleIcon,
+  UserGroupIcon
 } from '@heroicons/react/24/outline'
 
 export default function Home() {
@@ -35,6 +36,7 @@ export default function Home() {
   }
 
   const categories = [
+    { name: 'People', icon: UserGroupIcon, query: '', route: '/people' },
     { name: 'Budget', icon: CurrencyDollarIcon, query: 'budget funding' },
     { name: 'Housing', icon: HomeIcon, query: 'housing affordable' },
     { name: 'Transport', icon: TruckIcon, query: 'transportation transit' },
@@ -42,14 +44,14 @@ export default function Home() {
     { name: 'Education', icon: AcademicCapIcon, query: 'education school' },
     { name: 'Jobs', icon: BriefcaseIcon, query: 'employment jobs' },
     { name: 'Legal', icon: ScaleIcon, query: 'legal services' },
-    { name: 'Nonprofits', icon: BuildingLibraryIcon, query: '' },
+    { name: 'Nonprofits', icon: BuildingLibraryIcon, query: '', route: '/nonprofits' },
   ]
 
-  const quickSearch = (query: string) => {
-    if (query) {
-      navigate(`/documents?search=${encodeURIComponent(query)}`)
-    } else {
-      navigate('/nonprofits')
+  const quickSearch = (category: { query: string, route?: string }) => {
+    if (category.route) {
+      navigate(category.route)
+    } else if (category.query) {
+      navigate(`/documents?search=${encodeURIComponent(category.query)}`)
     }
   }
 
@@ -132,7 +134,7 @@ export default function Home() {
               {categories.map((category) => (
                 <button
                   key={category.name}
-                  onClick={() => quickSearch(category.query)}
+                  onClick={() => quickSearch(category)}
                   className="inline-flex items-center gap-2 px-4 py-2 bg-white border-2 border-gray-300 rounded-lg hover:border-primary-500 hover:bg-primary-50 transition-colors"
                 >
                   <category.icon className="h-5 w-5 text-gray-600" />
