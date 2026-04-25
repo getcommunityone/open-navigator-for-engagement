@@ -1,14 +1,14 @@
 import React from 'react';
-import { TrendingUp, AlertCircle, Users, Scale, Droplet } from 'lucide-react';
+import { TrendingUp, AlertCircle, Users, Scale, Droplet, Building2, Heart, Church, Grid } from 'lucide-react';
 
 /**
- * HomePage Component - "Tuscaloosa Decision Pulse"
- * Impact-focused landing page for citizens
+ * HomePage Component - Policy Accountability Platform
+ * Sector-based landing page for citizens
  */
-export default function HomePage({ onPersonaSelect, onTopicSelect }) {
+export default function HomePage({ onPersonaSelect, onTopicSelect, onSectorSelect }) {
   return (
     <div>
-      {/* Top Section: The City Pulse (Big Picture) */}
+      {/* Top Section: Explore by Sector */}
       <div style={{
         background: 'linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%)',
         color: 'white',
@@ -18,73 +18,51 @@ export default function HomePage({ onPersonaSelect, onTopicSelect }) {
       }}>
         <div style={{ marginBottom: 16 }}>
           <div style={{ fontSize: 13, color: '#aaa', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 8 }}>
-            Tuscaloosa Decision Pulse
+            Policy Accountability Platform
           </div>
           <h1 style={{ fontSize: 28, fontWeight: 500, marginBottom: 12, lineHeight: 1.3 }}>
-            In 2026, Tuscaloosa prioritized "Bricks over Biological Needs" by a ratio of 10:1
+            Track Government Decisions & Community Solutions
           </h1>
+          <p style={{ fontSize: 16, color: '#ccc', lineHeight: 1.6 }}>
+            Explore policy decisions, track accountability, and discover community resources
+          </p>
         </div>
 
-        {/* Progress Meter */}
-        <div style={{ marginBottom: 20 }}>
-          <div style={{ fontSize: 15, color: '#ccc', marginBottom: 12 }}>
-            Capital Projects vs. Community Health & Wellness
-          </div>
-          
-          <div style={{ position: 'relative', marginBottom: 8 }}>
-            {/* Capital bar */}
-            <div style={{
-              height: 40,
-              background: '#BA7517',
-              borderRadius: 6,
-              marginBottom: 6,
-              display: 'flex',
-              alignItems: 'center',
-              paddingLeft: 16,
-              color: 'white',
-              fontSize: 14,
-              fontWeight: 500
-            }}>
-              Capital Projects: $28M (Turf, HVAC, Police Cars)
-            </div>
-            
-            {/* Health bar */}
-            <div style={{
-              height: 40,
-              width: '10%',
-              background: '#1D9E75',
-              borderRadius: 6,
-              display: 'flex',
-              alignItems: 'center',
-              paddingLeft: 16,
-              color: 'white',
-              fontSize: 14,
-              fontWeight: 500
-            }}>
-              <span style={{ whiteSpace: 'nowrap' }}>Health: $2.4M</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Accountability Alert */}
+        {/* Sector Navigation Cards */}
         <div style={{
-          background: 'rgba(216, 90, 48, 0.2)',
-          border: '1px solid rgba(216, 90, 48, 0.4)',
-          borderRadius: 8,
-          padding: 12,
-          display: 'flex',
-          alignItems: 'center',
-          gap: 10
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+          gap: 12,
+          marginTop: 24
         }}>
-          <AlertCircle size={20} color="#D85A30" />
-          <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 12, color: '#D85A30', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 2 }}>
-              Accountability Alert
-            </div>
-            <div style={{ fontSize: 15, color: '#fff' }}>
-              West Alabama Dental Clinic funding has been "Tabled for Study" for <strong>152 consecutive days</strong>
-            </div>
-          </div>
+          <SectorCard
+            icon={<Grid size={24} />}
+            title="All Sectors"
+            description="View everything together"
+            color="#059669"
+            onClick={() => onSectorSelect('all')}
+          />
+          <SectorCard
+            icon={<Building2 size={24} />}
+            title="Public Sector"
+            description="Government decisions"
+            color="#185FA5"
+            onClick={() => onSectorSelect('public')}
+          />
+          <SectorCard
+            icon={<Heart size={24} />}
+            title="Nonprofits"
+            description="Community organizations"
+            color="#059669"
+            onClick={() => onSectorSelect('nonprofits')}
+          />
+          <SectorCard
+            icon={<Church size={24} />}
+            title="Churches"
+            description="Faith-based ministries"
+            color="#A855F7"
+            onClick={() => onSectorSelect('churches')}
+          />
         </div>
       </div>
 
@@ -170,6 +148,43 @@ export default function HomePage({ onPersonaSelect, onTopicSelect }) {
             onClick={() => onTopicSelect('public-safety')}
           />
         </div>
+      </div>
+    </div>
+  );
+}
+
+function SectorCard({ icon, title, description, color, onClick }) {
+  return (
+    <div
+      onClick={onClick}
+      style={{
+        background: 'rgba(255, 255, 255, 0.1)',
+        border: '1px solid rgba(255, 255, 255, 0.2)',
+        borderRadius: 8,
+        padding: 20,
+        cursor: 'pointer',
+        transition: 'all 0.2s ease',
+        textAlign: 'center'
+      }}
+      onMouseEnter={(e) => {
+        e.currentTarget.style.background = 'rgba(255, 255, 255, 0.15)';
+        e.currentTarget.style.borderColor = color;
+        e.currentTarget.style.transform = 'translateY(-4px)';
+      }}
+      onMouseLeave={(e) => {
+        e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)';
+        e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.2)';
+        e.currentTarget.style.transform = 'translateY(0)';
+      }}
+    >
+      <div style={{ color: color, marginBottom: 12 }}>
+        {icon}
+      </div>
+      <div style={{ fontSize: 16, fontWeight: 600, marginBottom: 4, color: 'white' }}>
+        {title}
+      </div>
+      <div style={{ fontSize: 13, color: '#aaa' }}>
+        {description}
       </div>
     </div>
   );

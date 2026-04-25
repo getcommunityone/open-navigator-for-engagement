@@ -6,10 +6,10 @@ import DecisionCard from './components/shared/DecisionCard';
 import SplitScreenView from './components/SplitScreenView';
 import NonprofitCard from './components/NonprofitCard';
 import { metadata } from './data/dashboardData';
-import { Home, Grid, Building2, Heart, Church } from 'lucide-react';
+import { Home, Grid, Building2, Heart, Church, Search, X, Calendar, Filter } from 'lucide-react';
 
 export default function App() {
-  const [viewMode, setViewMode] = useState('browse'); // 'home', 'impact', 'browse', 'split-screen'
+  const [viewMode, setViewMode] = useState('home'); // 'home', 'impact', 'browse', 'split-screen'
   const [sectorView, setSectorView] = useState('all'); // 'all', 'public', 'nonprofits', 'churches'
   const [selectedPersona, setSelectedPersona] = useState(null);
   const [selectedTopic, setSelectedTopic] = useState(null);
@@ -20,6 +20,8 @@ export default function App() {
   const [startDate, setStartDate] = useState(null);
   const [endDate, setEndDate] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [quickDateFilter, setQuickDateFilter] = useState('all'); // 'all', '7days', '30days', '90days'
+  const [quickTopicFilter, setQuickTopicFilter] = useState('all'); // 'all', 'health', 'education', 'infrastructure'
   
   const handlePersonaSelect = (persona, topic) => {
     setSelectedPersona(persona);
@@ -63,6 +65,49 @@ export default function App() {
     setStartDate(null);
     setEndDate(null);
     setSearchQuery('');
+    setQuickDateFilter('all');
+    setQuickTopicFilter('all');
+  };
+  
+  const handleQuickDateFilter = (filter) => {
+    setQuickDateFilter(filter);
+    const today = new Date();
+    
+    switch(filter) {
+      case '7days':
+        const sevenDaysAgo = new Date(today);
+        sevenDaysAgo.setDate(today.getDate() - 7);
+        setStartDate(sevenDaysAgo.toISOString().split('T')[0]);
+        setEndDate(today.toISOString().split('T')[0]);
+        break;
+      case '30days':
+        const thirtyDaysAgo = new Date(today);
+        thirtyDaysAgo.setDate(today.getDate() - 30);
+        setStartDate(thirtyDaysAgo.toISOString().split('T')[0]);
+        setEndDate(today.toISOString().split('T')[0]);
+        break;
+      case '90days':
+        const ninetyDaysAgo = new Date(today);
+        ninetyDaysAgo.setDate(today.getDate() - 90);
+        setStartDate(ninetyDaysAgo.toISOString().split('T')[0]);
+        setEndDate(today.toISOString().split('T')[0]);
+        break;
+      case 'all':
+      default:
+        setStartDate(null);
+        setEndDate(null);
+        break;
+    }
+  };
+  
+  const handleQuickTopicFilter = (filter) => {
+    setQuickTopicFilter(filter);
+    
+    if (filter === 'all') {
+      setSelectedTopics([]);
+    } else {
+      setSelectedTopics([filter]);
+    }
   };
   
   const handleBackToHome = () => {
@@ -75,6 +120,11 @@ export default function App() {
   const handleDecisionClick = (decision) => {
     setSelectedDecision(decision);
     setViewMode('split-screen');
+  };
+  
+  const handleSectorSelect = (sector) => {
+    setSectorView(sector);
+    setViewMode('browse');
   };
   
   // Example decision data - would come from Python export
@@ -282,7 +332,8 @@ export default function App() {
   // Filter decisions based on search, topics, patterns, resources, and date range
   const filteredDecisions = exampleDecisions.filter(decision => {
     const matchesSearch = searchQuery === '' || 
-      decision.decision_summary.toLowerCase().includes(searchQuery.toLowerCase());
+      decision.decision_summary.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      decision.primary_rationale.toLowerCase().includes(searchQuery.toLowerCase());
     
     // Map policy_domain to topic IDs
     const topicMap = {
@@ -303,6 +354,29 @@ export default function App() {
     
     return matchesSearch && matchesTopic && matchesStartDate && matchesEndDate;
   });
+  
+  // Filter nonprofits and churches based on search and topic
+  const filteredNonprofits = exampleNonprofits.filter(org => {
+    const matchesSearch = searchQuery === '' ||
+      org.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      org.mission.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      org.services.some(service => service.toLowerCase().includes(searchQuery.toLowerCase())) ||
+      org.ntee_description.toLowerCase().includes(searchQuery.toLowerCase());
+    
+    // Map NTEE codes to topic IDs
+    const nteeTopicMap = {
+      'E': 'public-health',    // Health
+      'F': 'public-health',    // Mental Health
+      'K': 'public-health',    // Food/Nutrition
+      'O': 'education',        // Youth Development
+      'P': 'education',        // Human Services
+      'X': 'public-health'     // Religious (often health ministries)
+    };
+    const orgTopic = nteeTopicMap[org.ntee_code?.[0]] || 'public-health';
+    const matchesTopic = selectedTopics.length === 0 || selectedTopics.includes(orgTopic);
+    
+    return matchesSearch && matchesTopic;
+  });
 
   return (
     <div style={{ maxWidth: 1200, margin: '0 auto', padding: 24 }}>
@@ -314,6 +388,66 @@ export default function App() {
         <p style={{ color: '#666', fontSize: 16, lineHeight: 1.6 }}>
           {metadata.description}
         </p>
+      </div>
+      
+      {/* Global Search Bar */}
+      <div style={{
+        background: 'white',
+        border: '1px solid #eee',
+        borderRadius: 12,
+        padding: 16,
+        marginBottom: 16,
+        boxShadow: '0 1px 3px rgba(0,0,0,0.05)'
+      }}>
+        <div style={{
+          position: 'relative',
+          display: 'flex',
+          alignItems: 'center'
+        }}>
+          <Search
+            size={18}
+            style={{
+              position: 'absolute',
+              left: 12,
+              color: '#999'
+            }}
+          />
+          <input
+            type="text"
+            placeholder="Search decisions, nonprofits, churches, or topics..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            style={{
+              width: '100%',
+              padding: '12px 40px 12px 44px',
+              fontSize: 15,
+              border: '1px solid #ddd',
+              borderRadius: 8,
+              outline: 'none',
+              transition: 'border-color 0.2s'
+            }}
+            onFocus={(e) => e.target.style.borderColor = '#059669'}
+            onBlur={(e) => e.target.style.borderColor = '#ddd'}
+          />
+          {searchQuery && (
+            <button
+              onClick={() => setSearchQuery('')}
+              style={{
+                position: 'absolute',
+                right: 12,
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
+                color: '#999',
+                display: 'flex',
+                alignItems: 'center',
+                padding: 4
+              }}
+            >
+              <X size={16} />
+            </button>
+          )}
+        </div>
       </div>
 
       {/* View Mode Toggle */}
@@ -367,6 +501,111 @@ export default function App() {
         </div>
       </div>
 
+      {/* Search Bar & Quick Filters (show in browse view) */}
+      {viewMode === 'browse' && (
+        <div style={{
+          background: 'white',
+          border: '1px solid #eee',
+          borderRadius: 12,
+          padding: 16,
+          marginBottom: 16,
+          boxShadow: '0 1px 3px rgba(0,0,0,0.05)'
+        }}>
+          {/* Quick Filters */}
+          <div style={{
+            display: 'flex',
+            gap: 16,
+            flexWrap: 'wrap',
+            alignItems: 'center'
+          }}>
+            {/* Date Range Quick Filter */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <Calendar size={14} style={{ color: '#666' }} />
+              <span style={{ fontSize: 13, color: '#666', fontWeight: 500 }}>Date:</span>
+              <div style={{ display: 'flex', gap: 4 }}>
+                {['all', '7days', '30days', '90days'].map(filter => (
+                  <button
+                    key={filter}
+                    onClick={() => handleQuickDateFilter(filter)}
+                    style={{
+                      padding: '6px 12px',
+                      fontSize: 12,
+                      fontWeight: 500,
+                      border: '1px solid',
+                      borderColor: quickDateFilter === filter ? '#059669' : '#ddd',
+                      background: quickDateFilter === filter ? '#dcfce7' : 'white',
+                      color: quickDateFilter === filter ? '#059669' : '#666',
+                      borderRadius: 6,
+                      cursor: 'pointer',
+                      transition: 'all 0.2s'
+                    }}
+                  >
+                    {filter === 'all' ? 'All Time' :
+                     filter === '7days' ? 'Last 7 Days' :
+                     filter === '30days' ? 'Last 30 Days' : 'Last 90 Days'}
+                  </button>
+                ))}
+              </div>
+            </div>
+            
+            {/* Topic Quick Filter */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <Filter size={14} style={{ color: '#666' }} />
+              <span style={{ fontSize: 13, color: '#666', fontWeight: 500 }}>Topic:</span>
+              <div style={{ display: 'flex', gap: 4 }}>
+                {[
+                  { id: 'all', label: 'All' },
+                  { id: 'public-health', label: 'Health' },
+                  { id: 'education', label: 'Education' },
+                  { id: 'infrastructure', label: 'Infrastructure' },
+                  { id: 'safety', label: 'Safety' }
+                ].map(topic => (
+                  <button
+                    key={topic.id}
+                    onClick={() => handleQuickTopicFilter(topic.id)}
+                    style={{
+                      padding: '6px 12px',
+                      fontSize: 12,
+                      fontWeight: 500,
+                      border: '1px solid',
+                      borderColor: quickTopicFilter === topic.id ? '#059669' : '#ddd',
+                      background: quickTopicFilter === topic.id ? '#dcfce7' : 'white',
+                      color: quickTopicFilter === topic.id ? '#059669' : '#666',
+                      borderRadius: 6,
+                      cursor: 'pointer',
+                      transition: 'all 0.2s'
+                    }}
+                  >
+                    {topic.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+            
+            {/* Clear All Filters */}
+            {(searchQuery || quickDateFilter !== 'all' || quickTopicFilter !== 'all' || 
+              selectedPatterns.length > 0 || selectedResources.length > 0) && (
+              <button
+                onClick={handleClearFilters}
+                style={{
+                  padding: '6px 12px',
+                  fontSize: 12,
+                  fontWeight: 500,
+                  border: '1px solid #D85A30',
+                  background: 'white',
+                  color: '#D85A30',
+                  borderRadius: 6,
+                  cursor: 'pointer',
+                  marginLeft: 'auto'
+                }}
+              >
+                Clear All
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Filters (show in browse view) */}
       {viewMode === 'browse' && (
         <TopicNavigation
@@ -389,6 +628,10 @@ export default function App() {
         <HomePage 
           onPersonaSelect={handlePersonaSelect}
           onTopicSelect={handleTopicSelect}
+          onSectorSelect={handleSectorSelect}
+          decisionsCount={exampleDecisions.length}
+          nonprofitsCount={exampleNonprofits.filter(org => !org.ntee_code.startsWith('X')).length}
+          churchesCount={exampleNonprofits.filter(org => org.ntee_code.startsWith('X')).length}
         />
       ) : viewMode === 'impact' ? (
         <div style={{ 
@@ -549,7 +792,7 @@ export default function App() {
               }}
             >
               <Heart size={14} />
-              Nonprofits ({exampleNonprofits.filter(org => !org.ntee_code.startsWith('X')).length})
+              Nonprofits ({filteredNonprofits.filter(org => !org.ntee_code.startsWith('X')).length})
             </button>
             <button
               onClick={() => setSectorView('churches')}
@@ -569,7 +812,7 @@ export default function App() {
               }}
             >
               <Church size={14} />
-              Churches ({exampleNonprofits.filter(org => org.ntee_code.startsWith('X')).length})
+              Churches ({filteredNonprofits.filter(org => org.ntee_code.startsWith('X')).length})
             </button>
           </div>
           
@@ -649,11 +892,25 @@ export default function App() {
                   Nonprofit Organizations
                 </h3>
               )}
-              {exampleNonprofits
-                .filter(org => !org.ntee_code.startsWith('X'))
-                .map((nonprofit, i) => (
-                  <NonprofitCard key={i} nonprofit={nonprofit} isChurch={false} />
-                ))}
+              {filteredNonprofits.filter(org => !org.ntee_code.startsWith('X')).length === 0 ? (
+                <div style={{
+                  textAlign: 'center',
+                  padding: '2rem',
+                  color: '#999',
+                  background: '#f9fafb',
+                  borderRadius: 8
+                }}>
+                  <p style={{ fontSize: 15 }}>
+                    No nonprofits match your search
+                  </p>
+                </div>
+              ) : (
+                filteredNonprofits
+                  .filter(org => !org.ntee_code.startsWith('X'))
+                  .map((nonprofit, i) => (
+                    <NonprofitCard key={i} nonprofit={nonprofit} isChurch={false} />
+                  ))
+              )}
             </div>
           )}
           
@@ -674,11 +931,25 @@ export default function App() {
                   Faith-Based Organizations
                 </h3>
               )}
-              {exampleNonprofits
-                .filter(org => org.ntee_code.startsWith('X'))
-                .map((church, i) => (
-                  <NonprofitCard key={i} nonprofit={church} isChurch={true} />
-                ))}
+              {filteredNonprofits.filter(org => org.ntee_code.startsWith('X')).length === 0 ? (
+                <div style={{
+                  textAlign: 'center',
+                  padding: '2rem',
+                  color: '#999',
+                  background: '#f9fafb',
+                  borderRadius: 8
+                }}>
+                  <p style={{ fontSize: 15 }}>
+                    No churches match your search
+                  </p>
+                </div>
+              ) : (
+                filteredNonprofits
+                  .filter(org => org.ntee_code.startsWith('X'))
+                  .map((church, i) => (
+                    <NonprofitCard key={i} nonprofit={church} isChurch={true} />
+                  ))
+              )}
             </div>
           )}
         </div>
