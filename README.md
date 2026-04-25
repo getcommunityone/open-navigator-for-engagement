@@ -7,18 +7,18 @@
 [![React](https://img.shields.io/badge/React-18.2-61DAFB.svg)](https://reactjs.org)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.109.0-009688.svg)](https://fastapi.tiangolo.com)
 
-## 📚 Documentation
+## � Quick Links
 
-**[📖 Read Full Documentation →](http://localhost:3000)** - Complete guides, architecture, and feature details
+**[⚛️ Open Navigator →](http://localhost:5173)** - **MAIN APPLICATION** (search, filters, heatmap, data exploration)
 
-For comprehensive information about:
+**[📖 Documentation →](http://localhost:3000)** - Complete guides, architecture, and feature details
+
+The documentation site includes:
 - Features and capabilities
 - Data sources and integrations
 - Architecture and deployment options
 - Policy topics and advocacy tools
 - API reference and examples
-
-**Visit the [documentation site](http://localhost:3000)** (start with `cd website && npm start`)
 
 ---
 
@@ -30,9 +30,11 @@ This project runs three separate services:
 
 | Service | Port | Description |
 |---------|------|-------------|
-| **📚 Documentation** | 3000 | Docusaurus site with complete guides |
-| **⚛️ Open Navigator** | 5173 | React application (main interface) |
+| **⚛️ Open Navigator** 🚀 | 5173 | **MAIN APPLICATION** - Search, filters, heatmap, data exploration |
+| **📚 Documentation** | 3000 | Docusaurus site with complete guides and tutorials |
 | **🔥 API Backend** | 8000 | FastAPI server with AI agents |
+
+> **💡 TIP:** After running `./start-all.sh`, visit **http://localhost:5173** to use the main application!
 
 ### Prerequisites
 
@@ -102,9 +104,11 @@ cd website && npm start                             # Terminal 3
 
 ### Access Points
 
-- 📚 Documentation: http://localhost:3000
-- ⚛️ Open Navigator: http://localhost:5173
-- 🔥 API Docs: http://localhost:8000/docs
+**🚀 START HERE:** http://localhost:5173 - **Open Navigator (Main Application)**
+
+Other services:
+- 📚 Documentation: http://localhost:3000 - Guides and API reference
+- 🔥 API Docs: http://localhost:8000/docs - FastAPI interactive documentation
 
 ### Stop Services
 

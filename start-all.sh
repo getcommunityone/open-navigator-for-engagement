@@ -72,12 +72,12 @@ start_with_tmux() {
     echo -e "${GREEN}✅ All services started in tmux!${NC}"
     echo ""
     echo "📡 Services:"
-    echo "  • Documentation:     http://localhost:3000 (Docusaurus - guides & docs)"
-    echo "  • 🚀 DASHBOARD:      http://localhost:5173 (React - MAIN APP)"
-    echo "  • API Backend:       http://localhost:8000 (FastAPI)"
-    echo "  • API Docs:          http://localhost:8000/docs"
+    echo "  • 🚀 MAIN APP:       http://localhost:5173 (Open Navigator - search, filters, heatmap)"
+    echo "  • 📚 Documentation:  http://localhost:3000 (Docusaurus - guides & tutorials)"
+    echo "  • 🔥 API Backend:    http://localhost:8000 (FastAPI)"
+    echo "  • 📖 API Docs:       http://localhost:8000/docs"
     echo ""
-    echo "💡 Start here: http://localhost:5173 (Dashboard - search, filters, heatmap, data)"
+    echo "💡 Start here: http://localhost:5173 (Open Navigator - MAIN APPLICATION)"
     echo ""
     echo "🎮 tmux Controls:"
     echo "  • Attach to session: tmux attach -t $SESSION"
@@ -90,7 +90,22 @@ start_with_tmux() {
     read -p "Attach to tmux session now? [Y/n] " -n 1 -r
     echo
     if [[ ! $REPLY =~ ^[Nn]$ ]]; then
+        # Open browser before attaching
+        if command -v xdg-open >/dev/null 2>&1; then
+            sleep 2  # Give services time to start
+            xdg-open http://localhost:5173 2>/dev/null &
+        fi
         tmux attach -t $SESSION
+    else
+        # Offer to open browser if not attaching
+        if command -v xdg-open >/dev/null 2>&1; then
+            read -p "Open main application in browser? [Y/n] " -n 1 -r
+            echo
+            if [[ ! $REPLY =~ ^[Nn]$ ]]; then
+                sleep 2
+                xdg-open http://localhost:5173 2>/dev/null &
+            fi
+        fi
     fi
 }
 
@@ -133,12 +148,12 @@ start_without_tmux() {
     echo -e "${GREEN}✅ All services started!${NC}"
     echo ""
     echo "📡 Services:"
-    echo "  • Documentation:     http://localhost:3000 (Docusaurus - guides & docs)"
-    echo "  • 🚀 DASHBOARD:      http://localhost:5173 (React - MAIN APP)"
-    echo "  • API Backend:       http://localhost:8000 (FastAPI)"
-    echo "  • API Docs:          http://localhost:8000/docs"
+    echo "  • 🚀 MAIN APP:       http://localhost:5173 (Open Navigator - search, filters, heatmap)"
+    echo "  • 📚 Documentation:  http://localhost:3000 (Docusaurus - guides & tutorials)"
+    echo "  • 🔥 API Backend:    http://localhost:8000 (FastAPI)"
+    echo "  • 📖 API Docs:       http://localhost:8000/docs"
     echo ""
-    echo "💡 Start here: http://localhost:5173 (Dashboard - search, filters, heatmap, data)"
+    echo "💡 Start here: http://localhost:5173 (Open Navigator - MAIN APPLICATION)"
     echo ""
     echo "📋 Logs:"
     echo "  • API:        tail -f logs/api.log"
@@ -156,7 +171,21 @@ start_without_tmux() {
     
     echo ""
     echo "🎉 Open Navigator is ready!"
-    echo "   Visit http://localhost:3000 for documentation"
+    echo ""
+    echo "🚀 MAIN APP: http://localhost:5173 (Open Navigator - search, filters, heatmap)"
+    echo "📚 Documentation: http://localhost:3000 (guides, API docs, tutorials)"
+    echo "🔥 API: http://localhost:8000/docs (FastAPI interactive docs)"
+    echo ""
+    
+    # Offer to open browser
+    if command -v xdg-open >/dev/null 2>&1; then
+        read -p "Open main application in browser? [Y/n] " -n 1 -r
+        echo
+        if [[ ! $REPLY =~ ^[Nn]$ ]]; then
+            sleep 2  # Give services a moment to fully start
+            xdg-open http://localhost:5173 2>/dev/null &
+        fi
+    fi
 }
 
 # Main execution
