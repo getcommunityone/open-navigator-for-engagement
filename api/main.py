@@ -578,6 +578,22 @@ async def search_nonprofits(
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@app.get("/api/nonprofits")
+async def search_nonprofits_api(
+    location: str = Query("Tuscaloosa, AL", description="City, State format"),
+    keyword: Optional[str] = Query(None, description="Service keyword (e.g., 'dental', 'health')"),
+    state: Optional[str] = Query(None, description="2-letter state code (e.g., 'AL')"),
+    ntee_code: Optional[str] = Query(None, description="NTEE code (e.g., 'E' for health)"),
+    source: Optional[str] = Query(None, description="Data source: 'propublica', 'everyorg', 'all'")
+):
+    """
+    Search for nonprofits using free open data APIs (API-prefixed endpoint for frontend).
+    
+    This is a duplicate of /nonprofits with /api prefix for frontend routing.
+    """
+    return await search_nonprofits(location, keyword, state, ntee_code, source)
+
+
 @app.get("/data/status")
 async def get_data_ingestion_status():
     """

@@ -73,13 +73,14 @@ export default function Nonprofits() {
   }
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold text-gray-900">Nonprofit Solutions</h1>
-        <p className="mt-2 text-gray-600">
-          Discover nonprofits already providing services that governments claim are "impossible"
-        </p>
-      </div>
+    <div className="min-h-screen p-8" style={{ backgroundColor: '#F1F5F9' }}>
+      <div className="max-w-7xl mx-auto space-y-6">
+        <div>
+          <h1 className="text-3xl font-bold mb-2" style={{ color: '#354F52' }}>Nonprofit Solutions</h1>
+          <p className="text-gray-600">
+            Discover nonprofits already providing services that governments claim are "impossible"
+          </p>
+        </div>
 
       {/* Search Form */}
       <div className="bg-white rounded-lg shadow-sm p-6">
@@ -300,6 +301,7 @@ export default function Nonprofits() {
           <p>✓ Show working alternatives to government inaction</p>
           <p>✓ All data is 100% free from public APIs</p>
         </div>
+      </div>
       </div>
     </div>
   )

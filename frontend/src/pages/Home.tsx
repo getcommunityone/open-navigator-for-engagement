@@ -38,7 +38,7 @@ export default function Home() {
 
   const categories = [
     { name: 'People', icon: UserGroupIcon, query: '', route: '/people' },
-    { name: 'Open Source', icon: CodeBracketIcon, query: '', route: 'http://localhost:3000/docs/data-sources/open-source-repositories' },
+    { name: 'Civic Tech', icon: CodeBracketIcon, query: '', route: 'http://localhost:3000/docs/data-sources/open-source-repositories' },
     { name: 'Budget', icon: CurrencyDollarIcon, query: 'budget funding' },
     { name: 'Housing', icon: HomeIcon, query: 'housing affordable' },
     { name: 'Transport', icon: TruckIcon, query: 'transportation transit' },
