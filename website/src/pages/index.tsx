@@ -90,7 +90,7 @@ function AudiencePathways() {
                 Start Here: Advocacy Docs →
               </Link>
               <div style={{ marginTop: '1rem', fontSize: '0.9rem', color: '#555' }}>
-                <Link to="http://localhost:5173" style={{ fontWeight: 'bold' }}>
+                <Link to="/" style={{ fontWeight: 'bold' }}>
                   🚀 Or launch the app immediately
                 </Link>
               </div>
@@ -339,7 +339,7 @@ function GetStartedCTA() {
           </Link>
           <Link
             className="button button--secondary button--lg"
-            href="http://localhost:5173"
+            to="/"
             style={{ minWidth: '200px' }}>
             🚀 Launch App
           </Link>
