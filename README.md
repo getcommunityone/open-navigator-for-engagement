@@ -7,6 +7,13 @@
 [![React](https://img.shields.io/badge/React-18.2-61DAFB.svg)](https://reactjs.org)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.109.0-009688.svg)](https://fastapi.tiangolo.com)
 [![Databricks](https://img.shields.io/badge/Databricks-Apps-FF3621.svg)](https://www.databricks.com)
+[![Docusaurus](https://img.shields.io/badge/Docusaurus-3.10-green.svg)](https://docusaurus.io)
+
+## 📚 Documentation
+
+**[Read the full documentation →](http://localhost:3000)** (Start with `cd website && npm start`)
+
+This README provides a quick overview. For comprehensive guides, API reference, and tutorials, visit the **Docusaurus documentation site** in the `website/` directory.
 
 ## Overview
 
@@ -464,11 +471,36 @@ npm run dev
 ### Prerequisites
 
 - Python 3.11+
+- Node.js 18+ (for React dashboard and Docusaurus documentation)
 - Docker (optional, for containerized deployment)
 - Databricks workspace (for production lakehouse)
 - OpenAI API key (for LLM capabilities)
 
 Note: `./install.sh` now attempts to install `tesseract-ocr` automatically (Linux via `apt-get`, macOS via `brew`) so OCR parsing works out of the box.
+
+### Documentation Site
+
+This project uses **Docusaurus** for comprehensive documentation:
+
+```bash
+# Navigate to the documentation site
+cd website
+
+# Install dependencies
+npm install
+
+# Start the documentation server
+npm start
+
+# Open http://localhost:3000
+```
+
+The documentation site includes:
+- Complete project documentation
+- API reference
+- Integration guides
+- Data source documentation
+- Interactive examples
 
 ### Quick Start
 
@@ -948,13 +980,36 @@ oral-health-policy-pulse/
 │   ├── sentiment.py       # Sentiment analysis agent
 │   └── advocacy.py        # Advocacy generation agent
 ├── api/                   # FastAPI application
-│   └── main.py           # API endpoints
+│   ├── app.py            # Main application (Databricks Apps)
+│   └── main.py           # API endpoints (Standalone mode)
+├── frontend/             # React Dashboard (Vite + TypeScript)
+│   ├── src/
+│   │   ├── pages/        # Dashboard, Heatmap, Nonprofits, etc.
+│   │   └── components/   # Shared UI components
+│   └── package.json
+├── website/              # Docusaurus Documentation Site ⭐ NEW
+│   ├── docs/            # Documentation markdown files
+│   ├── blog/            # Blog posts
+│   ├── src/
+│   │   └── pages/       # Custom pages (home, dashboard redirect)
+│   ├── docusaurus.config.ts
+│   └── package.json
+├── discovery/            # Data discovery modules
+│   ├── census_ingestion.py
+│   ├── nces_ingestion.py
+│   ├── nonprofit_discovery.py
+│   └── ...
+├── extraction/           # Document extraction
+│   ├── budget_analyzer.py
+│   ├── summarizer.py
+│   └── ...
 ├── pipeline/             # Data pipeline components
-│   └── delta_lake.py     # Delta Lake integration
+│   └── delta_lake.py    # Delta Lake integration
 ├── visualization/        # Visualization components
-│   └── heatmap.py        # Heatmap generation
+│   └── heatmap.py       # Heatmap generation
 ├── config/               # Configuration
-│   └── settings.py       # Application settings
+│   └── settings.py      # Application settings
+├── docs/                # Markdown documentation (legacy)
 ├── tests/                # Test suite
 ├── examples/             # Example scripts
 ├── notebooks/            # Analysis notebooks
@@ -963,6 +1018,15 @@ oral-health-policy-pulse/
 ├── Dockerfile          # Container definition
 └── docker-compose.yml  # Multi-container setup
 ```
+
+### Key Directories
+
+- **`website/`** - Docusaurus documentation site with comprehensive guides
+- **`frontend/`** - React dashboard for interactive data exploration
+- **`api/`** - FastAPI backend serving both the dashboard and public API
+- **`discovery/`** - Data ingestion modules for Census, NCES, nonprofits, etc.
+- **`agents/`** - AI agents for scraping, parsing, classification, and advocacy
+- **`docs/`** - Legacy markdown documentation (being migrated to `website/docs/`)
 
 ---
 
