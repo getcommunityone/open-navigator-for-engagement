@@ -17,7 +17,8 @@ import {
   AcademicCapIcon,
   BriefcaseIcon,
   ScaleIcon,
-  UserGroupIcon
+  UserGroupIcon,
+  CodeBracketIcon
 } from '@heroicons/react/24/outline'
 
 export default function Home() {
@@ -37,6 +38,7 @@ export default function Home() {
 
   const categories = [
     { name: 'People', icon: UserGroupIcon, query: '', route: '/people' },
+    { name: 'Open Source', icon: CodeBracketIcon, query: '', route: 'http://localhost:3000/docs/data-sources/open-source-repositories' },
     { name: 'Budget', icon: CurrencyDollarIcon, query: 'budget funding' },
     { name: 'Housing', icon: HomeIcon, query: 'housing affordable' },
     { name: 'Transport', icon: TruckIcon, query: 'transportation transit' },
@@ -49,7 +51,12 @@ export default function Home() {
 
   const quickSearch = (category: { query: string, route?: string }) => {
     if (category.route) {
-      navigate(category.route)
+      // External links (like docs) open in new tab
+      if (category.route.startsWith('http')) {
+        window.open(category.route, '_blank')
+      } else {
+        navigate(category.route)
+      }
     } else if (category.query) {
       navigate(`/documents?search=${encodeURIComponent(category.query)}`)
     }

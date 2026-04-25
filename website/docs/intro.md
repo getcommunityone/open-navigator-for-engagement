@@ -13,7 +13,8 @@ Open Navigator for Engagement combines data from multiple sources to:
 - 📄 **Analyze Meeting Minutes** - Automatically scrapes and processes meetings from 90,000+ government jurisdictions
 - 💰 **Track Financial Documents** - Correlates budget data with meeting rhetoric to reveal true priorities
 - 🏛️ **Monitor Nonprofits** - Integrates IRS Form 990 data for 3M+ organizations
-- 🗺️ **Visualize Opportunities** - Creates interactive heatmaps of policy opportunities
+- � **Track Open Source** - Treats civic tech projects as first-class citizens alongside governments and nonprofits
+- �🗺️ **Visualize Opportunities** - Creates interactive heatmaps of policy opportunities
 - 📧 **Generate Materials** - Auto-creates advocacy emails, talking points, and policy briefs
 
 ## Key Features
@@ -52,6 +53,10 @@ All data sources are **100% free and public**:
 **Nonprofit Data:**
 - **ProPublica Nonprofit Explorer** - 3M+ IRS Form 990 filings
 - **Reference Sites:** Charity Navigator, Candid/GuideStar, GiveWell (see [Nonprofit Data Sources](/docs/data-sources/nonprofit-sources))
+
+**Open Source Projects:**
+- **GitHub** - Civic tech repositories and community tools
+- **Curated Lists:** Code for America, U.S. Digital Response, Civic Tech Field Guide (see [Open Source Repositories](/docs/data-sources/open-source-repositories))
 
 **Research Collections:**
 - **Harvard Dataverse** - Academic research datasets

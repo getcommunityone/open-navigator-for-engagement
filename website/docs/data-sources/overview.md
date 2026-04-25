@@ -1,10 +1,20 @@
-# Official Data Sources for Jurisdiction Discovery
+# Data Sources Overview
 
-This document credits the **official, free, public datasets** used by the Oral Health Policy Pulse jurisdiction discovery system.
+This document covers the **official, free, public datasets** used by Open Navigator for Engagement.
 
 ---
 
-## 🏛️ Primary Data Sources
+## 📂 Data Source Categories
+
+Open Navigator integrates data from three main categories:
+
+1. **[Government Jurisdictions](#government-jurisdiction-data)** - Cities, counties, school districts (this page)
+2. **[Nonprofit Organizations](./nonprofit-sources.md)** - IRS Form 990s, charity ratings, transparency data
+3. **[Open Source Projects](./open-source-repositories.md)** - Civic tech repositories, community tools, digital public goods
+
+---
+
+## 🏛️ Government Jurisdiction Data
 
 ### 1. CISA .gov Domain Master List ⭐ **Most Authoritative**
 
@@ -227,7 +237,11 @@ Compare to deprecated approach:
 - **LegiScan API:** https://legiscan.com/legiscan
 
 **Nonprofit Data:**
+**Nonprofit Data:**
 - See [Nonprofit Data Sources](./nonprofit-sources.md) for ProPublica, Charity Navigator, Candid/GuideStar, and GiveWell
+
+**Open Source Projects:**
+- See [Open Source Repositories](./open-source-repositories.md) for civic tech projects, GitHub data, and community tools
 
 ---
 
