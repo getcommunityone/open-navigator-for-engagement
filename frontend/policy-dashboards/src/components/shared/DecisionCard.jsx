@@ -42,7 +42,7 @@ export default function DecisionCard({ decision, onClick }) {
         border: '1px solid #eee',
         borderLeft: `4px solid ${domainColors[policy_domain] || '#888'}`,
         borderRadius: 8,
-        padding: 16,
+        padding: 20,
         cursor: 'pointer',
         transition: 'all 0.2s ease',
         marginBottom: 12
@@ -59,22 +59,22 @@ export default function DecisionCard({ decision, onClick }) {
       {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
         <div style={{ flex: 1 }}>
-          <div style={{ fontSize: 14, fontWeight: 500, color: '#222', lineHeight: 1.4, marginBottom: 6 }}>
+          <div style={{ fontSize: 16, fontWeight: 500, color: '#222', lineHeight: 1.5, marginBottom: 8 }}>
             {decision_summary}
           </div>
           <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
             <span style={{
-              fontSize: 11,
+              fontSize: 13,
               color: '#888',
               display: 'flex',
               alignItems: 'center',
               gap: 4
             }}>
-              <Calendar size={12} />
+              <Calendar size={14} />
               {meeting_date ? new Date(meeting_date).toLocaleDateString() : 'Date unknown'}
             </span>
             {vote_result && (
-              <span style={{ fontSize: 11, color: '#888' }}>
+              <span style={{ fontSize: 13, color: '#888' }}>
                 Vote: {vote_result}
               </span>
             )}

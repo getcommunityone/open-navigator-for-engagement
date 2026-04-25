@@ -9,9 +9,13 @@ export default function TopicNavigation({
   selectedTopics = [],
   selectedPatterns = [],
   selectedResources = [],
+  startDate,
+  endDate,
   onTopicToggle,
   onPatternToggle,
   onResourceToggle,
+  onStartDateChange,
+  onEndDateChange,
   onClearAll
 }) {
   const [showFilters, setShowFilters] = useState(true);
@@ -36,7 +40,11 @@ export default function TopicNavigation({
     { id: 'summary', label: 'Summary Notes', icon: FileText }
   ];
   
-  const hasActiveFilters = selectedTopics.length > 0 || selectedPatterns.length > 0 || selectedResources.length > 0;
+  const hasActiveFilters = selectedTopics.length > 0 || 
+    selectedPatterns.length > 0 || 
+    selectedResources.length > 0 ||
+    startDate !== null ||
+    endDate !== null;
   
   return (
     <div style={{ marginBottom: 20 }}>
@@ -50,13 +58,13 @@ export default function TopicNavigation({
         <button
           onClick={() => setShowFilters(!showFilters)}
           style={{
-            padding: '8px 16px',
+            padding: '10px 18px',
             border: '1px solid',
             borderColor: showFilters ? '#888' : '#ddd',
             borderRadius: 8,
             background: showFilters ? '#f5f5f2' : 'white',
             cursor: 'pointer',
-            fontSize: 13,
+            fontSize: 15,
             fontWeight: 500,
             display: 'flex',
             alignItems: 'center',
@@ -88,12 +96,12 @@ export default function TopicNavigation({
           <button
             onClick={onClearAll}
             style={{
-              padding: '8px 16px',
+              padding: '10px 18px',
               border: '1px solid #ddd',
               borderRadius: 8,
               background: 'white',
               cursor: 'pointer',
-              fontSize: 13,
+              fontSize: 15,
               color: '#D85A30'
             }}
           >
@@ -109,7 +117,7 @@ export default function TopicNavigation({
           borderRadius: 12,
           padding: 18,
           display: 'grid',
-          gridTemplateColumns: '2fr 1fr 1fr',
+          gridTemplateColumns: '2fr 1fr 1fr 1fr',
           gap: 20
         }}>
           {/* Primary Navigation: Topics */}
@@ -132,13 +140,13 @@ export default function TopicNavigation({
                     key={topic.id}
                     onClick={() => onTopicToggle(topic.id)}
                     style={{
-                      padding: '10px 14px',
+                      padding: '12px 16px',
                       borderRadius: 8,
                       border: '2px solid',
                       borderColor: isSelected ? topic.color : '#ddd',
                       background: isSelected ? `${topic.color}15` : 'white',
                       color: '#222',
-                      fontSize: 13,
+                      fontSize: 15,
                       cursor: 'pointer',
                       textAlign: 'left',
                       fontWeight: isSelected ? 500 : 400,
@@ -146,7 +154,7 @@ export default function TopicNavigation({
                     }}
                   >
                     <div style={{ fontWeight: 500 }}>{topic.label}</div>
-                    <div style={{ fontSize: 11, color: '#888', marginTop: 2 }}>
+                    <div style={{ fontSize: 13, color: '#888', marginTop: 2 }}>
                       {topic.sublabel}
                     </div>
                   </button>
@@ -239,9 +247,9 @@ export default function TopicNavigation({
                       checked={isSelected}
                       onChange={() => onResourceToggle(resource.id)}
                     />
-                    <Icon size={14} color={isSelected ? '#D85A30' : '#888'} />
+                    <Icon size={16} color={isSelected ? '#D85A30' : '#888'} />
                     <div style={{ 
-                      fontSize: 12, 
+                      fontSize: 14, 
                       color: isSelected ? '#222' : '#666',
                       fontWeight: isSelected ? 500 : 400
                     }}>
@@ -250,6 +258,70 @@ export default function TopicNavigation({
                   </label>
                 );
               })}
+            </div>
+          </div>
+          
+          {/* Time Window Filter */}
+          <div>
+            <div style={{
+              fontSize: 12,
+              fontWeight: 500,
+              color: '#666',
+              textTransform: 'uppercase',
+              letterSpacing: '0.05em',
+              marginBottom: 12
+            }}>
+              Time Window
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <div>
+                <label style={{ 
+                  fontSize: 10, 
+                  color: '#888', 
+                  display: 'block', 
+                  marginBottom: 4 
+                }}>
+                  From
+                </label>
+                <input
+                  type="date"
+                  value={startDate || ''}
+                  onChange={(e) => onStartDateChange(e.target.value || null)}
+                  style={{
+                    width: '100%',
+                    padding: '6px 8px',
+                    borderRadius: 6,
+                    border: '1px solid',
+                    borderColor: startDate ? '#D85A30' : '#ddd',
+                    fontSize: 12,
+                    background: 'white'
+                  }}
+                />
+              </div>
+              <div>
+                <label style={{ 
+                  fontSize: 10, 
+                  color: '#888', 
+                  display: 'block', 
+                  marginBottom: 4 
+                }}>
+                  To
+                </label>
+                <input
+                  type="date"
+                  value={endDate || ''}
+                  onChange={(e) => onEndDateChange(e.target.value || null)}
+                  style={{
+                    width: '100%',
+                    padding: '6px 8px',
+                    borderRadius: 6,
+                    border: '1px solid',
+                    borderColor: endDate ? '#D85A30' : '#ddd',
+                    fontSize: 12,
+                    background: 'white'
+                  }}
+                />
+              </div>
             </div>
           </div>
         </div>
@@ -335,6 +407,103 @@ export default function TopicNavigation({
               </span>
             );
           })}
+          {selectedResources.map(resourceId => {
+            const resource = resources.find(r => r.id === resourceId);
+            return (
+              <span
+                key={resourceId}
+                style={{
+                  fontSize: 11,
+                  padding: '4px 10px',
+                  borderRadius: 12,
+                  background: '#185FA5',
+                  color: 'white',
+                  fontWeight: 500,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 4
+                }}
+              >
+                {resource.label}
+                <button
+                  onClick={() => onResourceToggle(resourceId)}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    color: 'white',
+                    cursor: 'pointer',
+                    padding: 0,
+                    fontSize: 14,
+                    lineHeight: 1
+                  }}
+                >
+                  ×
+                </button>
+              </span>
+            );
+          })}
+          {startDate && (
+            <span
+              style={{
+                fontSize: 11,
+                padding: '4px 10px',
+                borderRadius: 12,
+                background: '#666',
+                color: 'white',
+                fontWeight: 500,
+                display: 'flex',
+                alignItems: 'center',
+                gap: 4
+              }}
+            >
+              From: {new Date(startDate).toLocaleDateString()}
+              <button
+                onClick={() => onStartDateChange(null)}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: 'white',
+                  cursor: 'pointer',
+                  padding: 0,
+                  fontSize: 14,
+                  lineHeight: 1
+                }}
+              >
+                ×
+              </button>
+            </span>
+          )}
+          {endDate && (
+            <span
+              style={{
+                fontSize: 11,
+                padding: '4px 10px',
+                borderRadius: 12,
+                background: '#666',
+                color: 'white',
+                fontWeight: 500,
+                display: 'flex',
+                alignItems: 'center',
+                gap: 4
+              }}
+            >
+              To: {new Date(endDate).toLocaleDateString()}
+              <button
+                onClick={() => onEndDateChange(null)}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: 'white',
+                  cursor: 'pointer',
+                  padding: 0,
+                  fontSize: 14,
+                  lineHeight: 1
+                }}
+              >
+                ×
+              </button>
+            </span>
+          )}
         </div>
       )}
     </div>

@@ -17,17 +17,17 @@ export default function HomePage({ onPersonaSelect, onTopicSelect }) {
         marginBottom: 24
       }}>
         <div style={{ marginBottom: 16 }}>
-          <div style={{ fontSize: 12, color: '#aaa', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 8 }}>
+          <div style={{ fontSize: 13, color: '#aaa', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 8 }}>
             Tuscaloosa Decision Pulse
           </div>
-          <h1 style={{ fontSize: 24, fontWeight: 500, marginBottom: 12, lineHeight: 1.3 }}>
+          <h1 style={{ fontSize: 28, fontWeight: 500, marginBottom: 12, lineHeight: 1.3 }}>
             In 2026, Tuscaloosa prioritized "Bricks over Biological Needs" by a ratio of 10:1
           </h1>
         </div>
 
         {/* Progress Meter */}
         <div style={{ marginBottom: 20 }}>
-          <div style={{ fontSize: 13, color: '#ccc', marginBottom: 12 }}>
+          <div style={{ fontSize: 15, color: '#ccc', marginBottom: 12 }}>
             Capital Projects vs. Community Health & Wellness
           </div>
           
@@ -78,10 +78,10 @@ export default function HomePage({ onPersonaSelect, onTopicSelect }) {
         }}>
           <AlertCircle size={20} color="#D85A30" />
           <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 11, color: '#D85A30', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 2 }}>
+            <div style={{ fontSize: 12, color: '#D85A30', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 2 }}>
               Accountability Alert
             </div>
-            <div style={{ fontSize: 13, color: '#fff' }}>
+            <div style={{ fontSize: 15, color: '#fff' }}>
               West Alabama Dental Clinic funding has been "Tabled for Study" for <strong>152 consecutive days</strong>
             </div>
           </div>
@@ -90,10 +90,10 @@ export default function HomePage({ onPersonaSelect, onTopicSelect }) {
 
       {/* Middle Section: Find Your Impact (Persona Filters) */}
       <div style={{ marginBottom: 24 }}>
-        <h2 style={{ fontSize: 18, fontWeight: 500, marginBottom: 8 }}>
+        <h2 style={{ fontSize: 22, fontWeight: 500, marginBottom: 8 }}>
           Find Your Impact
         </h2>
-        <p style={{ fontSize: 14, color: '#666', marginBottom: 16 }}>
+        <p style={{ fontSize: 16, color: '#666', marginBottom: 16 }}>
           How are these decisions affecting you?
         </p>
 
