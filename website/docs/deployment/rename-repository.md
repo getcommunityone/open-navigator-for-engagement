@@ -1,4 +1,8 @@
-# Repository Rename & Public Guide
+---
+sidebar_position: 10
+---
+
+# Rename Repository & Make Public
 
 This guide walks you through renaming your GitHub repository to "open-navigator-for-engagement" and making it public.
 
