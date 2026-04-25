@@ -404,31 +404,17 @@ export default function App() {
         <div style={{ maxWidth: 1200, margin: '0 auto', padding: '16px 24px' }}>
           {/* Logo and Title Row */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 12 }}>
-            {/* CareQuest Logo */}
-            <div style={{
-              fontSize: 24,
-              fontWeight: 700,
-              color: '#185FA5',
-              display: 'flex',
-              alignItems: 'center',
-              gap: 8
-            }}>
-              <div style={{
-                width: 40,
-                height: 40,
-                background: 'linear-gradient(135deg, #185FA5 0%, #059669 100%)',
-                borderRadius: 8,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                color: 'white',
-                fontSize: 20,
-                fontWeight: 700
-              }}>
-                CQ
-              </div>
-              <span style={{ fontSize: 18 }}>CareQuest</span>
-            </div>
+            {/* CommunityOne Logo */}
+            <img 
+              src="/communityone_logo.jpg" 
+              alt="CommunityOne"
+              onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+              style={{
+                height: 100,
+                cursor: 'pointer',
+                objectFit: 'contain'
+              }}
+            />
             
             <div style={{ flex: 1 }}>
               <h1 style={{ fontSize: 20, fontWeight: 600, marginBottom: 4, color: '#111' }}>
@@ -1039,6 +1025,8 @@ export default function App() {
           )}
         </div>
       )}
+      </div>
+      </div>
     </div>
   );
 }
