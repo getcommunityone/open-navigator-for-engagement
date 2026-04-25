@@ -28,7 +28,7 @@ from config import settings
 
 # Initialize FastAPI app
 app = FastAPI(
-    title="Oral Health Policy Pulse API",
+    title="Open Navigator for Engagement API",
     description="Multi-agent system for analyzing local government oral health policy discussions",
     version="1.0.0"
 )
@@ -105,7 +105,7 @@ async def root():
     <!DOCTYPE html>
     <html>
         <head>
-            <title>Oral Health Policy Pulse API</title>
+            <title>Open Navigator for Engagement API</title>
             <style>
                 body { font-family: Arial, sans-serif; max-width: 800px; margin: 50px auto; padding: 20px; }
                 h1 { color: #1976d2; }
@@ -114,7 +114,7 @@ async def root():
             </style>
         </head>
         <body>
-            <h1>🦷 Oral Health Policy Pulse API</h1>
+            <h1>🦷 Open Navigator for Engagement API</h1>
             <p>Multi-agent system for analyzing local government oral health policy discussions.</p>
             
             <h2>Key Endpoints:</h2>
@@ -292,7 +292,7 @@ async def get_heatmap(
         # Generate map
         m = heatmap_generator.create_folium_map(
             opportunities,
-            title="Oral Health Policy Advocacy Heatmap"
+            title="Open Navigator for Engagement - Advocacy Heatmap"
         )
         
         # Return HTML

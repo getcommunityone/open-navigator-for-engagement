@@ -1,4 +1,4 @@
-# 🦷 Oral Health Policy Pulse
+# 🦷 Open Navigator for Engagement
 
 > *AI-powered advocacy opportunity finder with React + FastAPI web interface*
 
@@ -10,7 +10,7 @@
 
 ## Overview
 
-The **Oral Health Policy Pulse** is a full-stack AI application that analyzes thousands of municipal meeting minutes across the country to identify policy opportunities for oral health advocacy. It features a **modern React web interface**, **FastAPI backend**, and **multi-agent AI system** powered by Databricks.
+The **Open Navigator for Engagement** is a full-stack AI application that analyzes thousands of municipal meeting minutes across the country to identify policy opportunities for oral health advocacy. It features a **modern React web interface**, **FastAPI backend**, and **multi-agent AI system** powered by Databricks.
 
 **✨ New in v2.0:**
 - 🎨 **React Frontend** - Modern, responsive UI with interactive visualizations

@@ -1,7 +1,7 @@
 {
   "name": "oral-health-policy-pulse-ui",
   "version": "1.0.0",
-  "description": "React frontend for Oral Health Policy Pulse",
+  "description": "React frontend for Open Navigator for Engagement",
   "private": true,
   "scripts": {
     "dev": "vite",

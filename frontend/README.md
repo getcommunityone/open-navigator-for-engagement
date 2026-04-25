@@ -1,6 +1,6 @@
-# Oral Health Policy Pulse - Frontend
+# Open Navigator for Engagement - Frontend
 
-React + TypeScript web interface for the Oral Health Policy Pulse application.
+React + TypeScript web interface for the Open Navigator for Engagement application.
 
 ## Projects
 

@@ -6,11 +6,11 @@ import DecisionCard from './components/shared/DecisionCard';
 import SplitScreenView from './components/SplitScreenView';
 import NonprofitCard from './components/NonprofitCard';
 import { metadata } from './data/dashboardData';
-import { Home, Grid, Building2, Heart, Church, Search, X, Calendar, Filter } from 'lucide-react';
+import { Home, Grid, Building2, Heart, Church, Search, X, Calendar, Filter, MapPin, Edit2, Lightbulb } from 'lucide-react';
 
 export default function App() {
   const [viewMode, setViewMode] = useState('home'); // 'home', 'impact', 'browse', 'split-screen'
-  const [exploreMode, setExploreMode] = useState('decisions'); // 'decisions' or 'organizations'
+  const [exploreMode, setExploreMode] = useState('decisions'); // 'decisions', 'organizations', or 'causes'
   const [sectorView, setSectorView] = useState('all'); // 'all', 'public', 'nonprofits', 'churches'
   const [selectedPersona, setSelectedPersona] = useState(null);
   const [selectedTopic, setSelectedTopic] = useState(null);
@@ -23,6 +23,13 @@ export default function App() {
   const [searchQuery, setSearchQuery] = useState('');
   const [quickDateFilter, setQuickDateFilter] = useState('all'); // 'all', '7days', '30days', '90days'
   const [quickTopicFilter, setQuickTopicFilter] = useState('all'); // 'all', 'health', 'education', 'infrastructure'
+  const [jurisdictionType, setJurisdictionType] = useState('city'); // 'nation', 'state', 'county', 'city', 'school-district'
+  const [jurisdictionName, setJurisdictionName] = useState('Tuscaloosa');
+  const [jurisdictionState, setJurisdictionState] = useState('AL');
+  const [showLocationModal, setShowLocationModal] = useState(false);
+  const [tempJurisdictionType, setTempJurisdictionType] = useState('city');
+  const [tempJurisdictionName, setTempJurisdictionName] = useState('');
+  const [tempJurisdictionState, setTempJurisdictionState] = useState('');
   
   const handlePersonaSelect = (persona, topic) => {
     setSelectedPersona(persona);
@@ -416,6 +423,51 @@ export default function App() {
               }}
             />
             
+            {/* User Location Display */}
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 8,
+              padding: '8px 16px',
+              background: '#f5f5f5',
+              borderRadius: 8,
+              border: '1px solid #e0e0e0'
+            }}>
+              <MapPin size={18} style={{ color: '#059669' }} />
+              <div>
+                <div style={{ fontSize: 14, fontWeight: 600, color: '#111' }}>
+                  {jurisdictionType === 'nation' ? 'United States' : 
+                   jurisdictionType === 'state' ? jurisdictionState :
+                   jurisdictionType === 'county' ? `${jurisdictionName} County, ${jurisdictionState}` :
+                   jurisdictionType === 'school-district' ? `${jurisdictionName} (${jurisdictionState})` :
+                   `${jurisdictionName}, ${jurisdictionState}`}
+                </div>
+                <div style={{ fontSize: 12, color: '#666', textTransform: 'capitalize' }}>
+                  {jurisdictionType === 'school-district' ? 'School District' : jurisdictionType}
+                </div>
+              </div>
+              <button
+                onClick={() => {
+                  setTempJurisdictionType(jurisdictionType);
+                  setTempJurisdictionName(jurisdictionName);
+                  setTempJurisdictionState(jurisdictionState);
+                  setShowLocationModal(true);
+                }}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
+                  padding: 4,
+                  display: 'flex',
+                  alignItems: 'center',
+                  color: '#059669'
+                }}
+                title="Change location"
+              >
+                <Edit2 size={16} />
+              </button>
+            </div>
+            
             <div style={{ flex: 1 }}>
               <h1 style={{ fontSize: 20, fontWeight: 600, marginBottom: 4, color: '#111' }}>
                 {metadata.title}
@@ -490,11 +542,10 @@ export default function App() {
             display: 'flex', 
             justifyContent: 'space-between',
             alignItems: 'center'
-          }}> 
-      }}>
-        <div style={{ display: 'flex', gap: 6 }}>
-          <button
-            onClick={() => setViewMode('home')}
+          }}>
+            <div style={{ display: 'flex', gap: 6 }}>
+              <button
+                onClick={() => setViewMode('home')}
             style={{
               padding: '10px 20px',
               borderRadius: 8,
@@ -512,6 +563,30 @@ export default function App() {
           >
             <Home size={14} />
             Home
+          </button>
+          <button
+            onClick={() => {
+              setViewMode('browse');
+              setExploreMode('causes');
+              setSectorView('all');
+            }}
+            style={{
+              padding: '10px 20px',
+              borderRadius: 8,
+              fontSize: 15,
+              cursor: 'pointer',
+              border: '1px solid',
+              borderColor: (viewMode === 'browse' && exploreMode === 'causes') ? '#888' : '#ddd',
+              background: (viewMode === 'browse' && exploreMode === 'causes') ? '#f5f5f2' : 'white',
+              fontWeight: (viewMode === 'browse' && exploreMode === 'causes') ? 500 : 400,
+              color: (viewMode === 'browse' && exploreMode === 'causes') ? '#111' : '#666',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 6
+            }}
+          >
+            <Lightbulb size={14} />
+            Explore Causes
           </button>
           <button
             onClick={() => {
@@ -673,8 +748,8 @@ export default function App() {
         </div>
       )}
 
-      {/* Filters (show in browse view) */}
-      {viewMode === 'browse' && (
+      {/* Filters (show in browse view for decisions only) */}
+      {viewMode === 'browse' && exploreMode === 'decisions' && (
         <TopicNavigation
           selectedTopics={selectedTopics}
           selectedPatterns={selectedPatterns}
@@ -786,8 +861,8 @@ export default function App() {
             fontWeight: 500,
             marginBottom: 16
           }}>
-            {exploreMode === 'decisions' ? 'Explore Decisions' : 'Explore Organizations'}
-            {sectorView !== 'all' && sectorView !== 'public' && (
+            {exploreMode === 'decisions' ? 'Explore Decisions' : exploreMode === 'organizations' ? 'Explore Organizations' : 'Explore Causes'}
+            {sectorView !== 'all' && sectorView !== 'public' && exploreMode !== 'causes' && (
               <span style={{ color: '#999', fontWeight: 400 }}>
                 {' '}› {sectorView === 'nonprofits' ? 'Nonprofits' : 'Churches'}
               </span>
@@ -1023,10 +1098,258 @@ export default function App() {
               )}
             </div>
           )}
+          
+          {/* Causes Section */}
+          {exploreMode === 'causes' && (
+            <div>
+              <div style={{
+                textAlign: 'center',
+                padding: '3rem 2rem',
+                color: '#666',
+                background: '#f9fafb',
+                borderRadius: 12,
+                border: '2px dashed #ddd'
+              }}>
+                <Lightbulb size={48} style={{ color: '#D85A30', marginBottom: 16 }} />
+                <h3 style={{
+                  fontSize: 20,
+                  fontWeight: 600,
+                  color: '#111',
+                  marginBottom: 12
+                }}>
+                  Explore Root Causes
+                </h3>
+                <p style={{ fontSize: 15, lineHeight: 1.6, maxWidth: 600, margin: '0 auto', marginBottom: 16 }}>
+                  Discover the underlying factors driving policy decisions in your community. 
+                  Understand the connections between social determinants, community needs, and government actions.
+                </p>
+                <p style={{ fontSize: 14, color: '#999', fontStyle: 'italic' }}>
+                  Coming soon: Interactive cause analysis and trend mapping
+                </p>
+              </div>
+            </div>
+          )}
         </div>
       )}
       </div>
       </div>
+
+      {/* Location Selection Modal */}
+      {showLocationModal && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0,0,0,0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 2000
+        }}>
+          <div style={{
+            background: 'white',
+            borderRadius: 12,
+            padding: 32,
+            maxWidth: 500,
+            width: '90%',
+            boxShadow: '0 10px 40px rgba(0,0,0,0.2)'
+          }}>
+            <h2 style={{
+              fontSize: 22,
+              fontWeight: 600,
+              marginBottom: 8,
+              color: '#111'
+            }}>
+              Select Your Jurisdiction
+            </h2>
+            <p style={{
+              color: '#666',
+              fontSize: 14,
+              marginBottom: 24
+            }}>
+              Choose the level and location to see relevant decisions and organizations.
+            </p>
+
+            <div style={{ marginBottom: 16 }}>
+              <label style={{
+                display: 'block',
+                fontSize: 14,
+                fontWeight: 500,
+                marginBottom: 8,
+                color: '#111'
+              }}>
+                Jurisdiction Level
+              </label>
+              <select
+                value={tempJurisdictionType}
+                onChange={(e) => setTempJurisdictionType(e.target.value)}
+                style={{
+                  width: '100%',
+                  padding: '10px 12px',
+                  fontSize: 15,
+                  border: '1px solid #ddd',
+                  borderRadius: 6,
+                  outline: 'none',
+                  cursor: 'pointer'
+                }}
+                onFocus={(e) => e.target.style.borderColor = '#059669'}
+                onBlur={(e) => e.target.style.borderColor = '#ddd'}
+              >
+                <option value="nation">Nation</option>
+                <option value="state">State</option>
+                <option value="county">County</option>
+                <option value="city">City</option>
+                <option value="school-district">School District</option>
+              </select>
+            </div>
+
+            {tempJurisdictionType !== 'nation' && (
+              <div style={{ marginBottom: 16 }}>
+                <label style={{
+                  display: 'block',
+                  fontSize: 14,
+                  fontWeight: 500,
+                  marginBottom: 8,
+                  color: '#111'
+                }}>
+                  {tempJurisdictionType === 'state' ? 'State' :
+                   tempJurisdictionType === 'county' ? 'County Name' :
+                   tempJurisdictionType === 'school-district' ? 'School District Name' :
+                   'City Name'}
+                </label>
+                <input
+                  type="text"
+                  value={tempJurisdictionName}
+                  onChange={(e) => setTempJurisdictionName(e.target.value)}
+                  placeholder={
+                    tempJurisdictionType === 'state' ? 'e.g., Alabama' :
+                    tempJurisdictionType === 'county' ? 'e.g., Tuscaloosa' :
+                    tempJurisdictionType === 'school-district' ? 'e.g., Tuscaloosa City Schools' :
+                    'e.g., Tuscaloosa'
+                  }
+                  style={{
+                    width: '100%',
+                    padding: '10px 12px',
+                    fontSize: 15,
+                    border: '1px solid #ddd',
+                    borderRadius: 6,
+                    outline: 'none'
+                  }}
+                  onFocus={(e) => e.target.style.borderColor = '#059669'}
+                  onBlur={(e) => e.target.style.borderColor = '#ddd'}
+                />
+              </div>
+            )}
+
+            {tempJurisdictionType !== 'nation' && tempJurisdictionType !== 'state' && (
+              <div style={{ marginBottom: 24 }}>
+                <label style={{
+                  display: 'block',
+                  fontSize: 14,
+                  fontWeight: 500,
+                  marginBottom: 8,
+                  color: '#111'
+                }}>
+                  State
+                </label>
+                <input
+                  type="text"
+                  value={tempJurisdictionState}
+                  onChange={(e) => setTempJurisdictionState(e.target.value)}
+                  placeholder="e.g., AL"
+                  maxLength="2"
+                  style={{
+                    width: '100%',
+                    padding: '10px 12px',
+                    fontSize: 15,
+                    border: '1px solid #ddd',
+                    borderRadius: 6,
+                    outline: 'none',
+                    textTransform: 'uppercase'
+                  }}
+                  onFocus={(e) => e.target.style.borderColor = '#059669'}
+                  onBlur={(e) => e.target.style.borderColor = '#ddd'}
+                />
+              </div>
+            )}
+
+            {tempJurisdictionType === 'state' && (
+              <div style={{ marginBottom: 24 }}>
+                <label style={{
+                  display: 'block',
+                  fontSize: 14,
+                  fontWeight: 500,
+                  marginBottom: 8,
+                  color: '#111'
+                }}>
+                  State Code
+                </label>
+                <input
+                  type="text"
+                  value={tempJurisdictionState}
+                  onChange={(e) => setTempJurisdictionState(e.target.value)}
+                  placeholder="e.g., AL"
+                  maxLength="2"
+                  style={{
+                    width: '100%',
+                    padding: '10px 12px',
+                    fontSize: 15,
+                    border: '1px solid #ddd',
+                    borderRadius: 6,
+                    outline: 'none',
+                    textTransform: 'uppercase'
+                  }}
+                  onFocus={(e) => e.target.style.borderColor = '#059669'}
+                  onBlur={(e) => e.target.style.borderColor = '#ddd'}
+                />
+              </div>
+            )}
+
+            <div style={{
+              display: 'flex',
+              gap: 12,
+              justifyContent: 'flex-end'
+            }}>
+              <button
+                onClick={() => setShowLocationModal(false)}
+                style={{
+                  padding: '10px 20px',
+                  fontSize: 15,
+                  border: '1px solid #ddd',
+                  background: 'white',
+                  borderRadius: 6,
+                  cursor: 'pointer',
+                  color: '#666'
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  setJurisdictionType(tempJurisdictionType);
+                  setJurisdictionName(tempJurisdictionName);
+                  setJurisdictionState(tempJurisdictionState);
+                  setShowLocationModal(false);
+                }}
+                style={{
+                  padding: '10px 20px',
+                  fontSize: 15,
+                  border: 'none',
+                  background: '#059669',
+                  color: 'white',
+                  borderRadius: 6,
+                  cursor: 'pointer',
+                  fontWeight: 500
+                }}
+              >
+                Save Location
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

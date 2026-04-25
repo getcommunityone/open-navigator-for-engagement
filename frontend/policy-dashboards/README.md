@@ -244,7 +244,7 @@ For questions or issues:
 
 ## License
 
-Part of the Oral Health Policy Pulse project.
+Part of the Open Navigator for Engagement project.
 
 ---
 
