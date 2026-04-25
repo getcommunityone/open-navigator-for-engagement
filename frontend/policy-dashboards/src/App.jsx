@@ -10,6 +10,7 @@ import { Home, Grid, Building2, Heart, Church, Search, X, Calendar, Filter } fro
 
 export default function App() {
   const [viewMode, setViewMode] = useState('home'); // 'home', 'impact', 'browse', 'split-screen'
+  const [exploreMode, setExploreMode] = useState('decisions'); // 'decisions' or 'organizations'
   const [sectorView, setSectorView] = useState('all'); // 'all', 'public', 'nonprofits', 'churches'
   const [selectedPersona, setSelectedPersona] = useState(null);
   const [selectedTopic, setSelectedTopic] = useState(null);
@@ -123,8 +124,19 @@ export default function App() {
   };
   
   const handleSectorSelect = (sector) => {
-    setSectorView(sector);
     setViewMode('browse');
+    
+    // Set explore mode and sector based on selection
+    if (sector === 'public') {
+      setExploreMode('decisions');
+      setSectorView('public');
+    } else if (sector === 'nonprofits' || sector === 'churches') {
+      setExploreMode('organizations');
+      setSectorView(sector);
+    } else if (sector === 'all') {
+      setExploreMode('organizations');
+      setSectorView('all');
+    }
   };
   
   // Example decision data - would come from Python export
@@ -379,83 +391,120 @@ export default function App() {
   });
 
   return (
-    <div style={{ maxWidth: 1200, margin: '0 auto', padding: 24 }}>
-      {/* Header */}
-      <div style={{ marginBottom: 24 }}>
-        <h1 style={{ fontSize: 28, fontWeight: 600, marginBottom: 8, color: '#111' }}>
-          {metadata.title}
-        </h1>
-        <p style={{ color: '#666', fontSize: 16, lineHeight: 1.6 }}>
-          {metadata.description}
-        </p>
-      </div>
-      
-      {/* Global Search Bar */}
+    <div>
+      {/* Sticky Header */}
       <div style={{
+        position: 'sticky',
+        top: 0,
+        zIndex: 1000,
         background: 'white',
-        border: '1px solid #eee',
-        borderRadius: 12,
-        padding: 16,
-        marginBottom: 16,
-        boxShadow: '0 1px 3px rgba(0,0,0,0.05)'
+        borderBottom: '1px solid #eee',
+        boxShadow: '0 2px 8px rgba(0,0,0,0.05)'
       }}>
-        <div style={{
-          position: 'relative',
-          display: 'flex',
-          alignItems: 'center'
-        }}>
-          <Search
-            size={18}
-            style={{
-              position: 'absolute',
-              left: 12,
-              color: '#999'
-            }}
-          />
-          <input
-            type="text"
-            placeholder="Search decisions, nonprofits, churches, or topics..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            style={{
-              width: '100%',
-              padding: '12px 40px 12px 44px',
-              fontSize: 15,
-              border: '1px solid #ddd',
-              borderRadius: 8,
-              outline: 'none',
-              transition: 'border-color 0.2s'
-            }}
-            onFocus={(e) => e.target.style.borderColor = '#059669'}
-            onBlur={(e) => e.target.style.borderColor = '#ddd'}
-          />
-          {searchQuery && (
-            <button
-              onClick={() => setSearchQuery('')}
-              style={{
-                position: 'absolute',
-                right: 12,
-                background: 'none',
-                border: 'none',
-                cursor: 'pointer',
-                color: '#999',
+        <div style={{ maxWidth: 1200, margin: '0 auto', padding: '16px 24px' }}>
+          {/* Logo and Title Row */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 12 }}>
+            {/* CareQuest Logo */}
+            <div style={{
+              fontSize: 24,
+              fontWeight: 700,
+              color: '#185FA5',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 8
+            }}>
+              <div style={{
+                width: 40,
+                height: 40,
+                background: 'linear-gradient(135deg, #185FA5 0%, #059669 100%)',
+                borderRadius: 8,
                 display: 'flex',
                 alignItems: 'center',
-                padding: 4
-              }}
-            >
-              <X size={16} />
-            </button>
-          )}
-        </div>
-      </div>
+                justifyContent: 'center',
+                color: 'white',
+                fontSize: 20,
+                fontWeight: 700
+              }}>
+                CQ
+              </div>
+              <span style={{ fontSize: 18 }}>CareQuest</span>
+            </div>
+            
+            <div style={{ flex: 1 }}>
+              <h1 style={{ fontSize: 20, fontWeight: 600, marginBottom: 4, color: '#111' }}>
+                {metadata.title}
+              </h1>
+              <p style={{ color: '#666', fontSize: 14, lineHeight: 1.4, margin: 0 }}>
+                {metadata.description}
+              </p>
+            </div>
+          </div>
+          
+          {/* Global Search Bar */}
+          <div style={{
+            background: 'white',
+            border: '1px solid #eee',
+            borderRadius: 8,
+            padding: 12,
+            marginBottom: 12
+          }}>
+            <div style={{
+              position: 'relative',
+              display: 'flex',
+              alignItems: 'center'
+            }}>
+              <Search
+                size={16}
+                style={{
+                  position: 'absolute',
+                  left: 12,
+                  color: '#999'
+                }}
+              />
+              <input
+                type="text"
+                placeholder="Search decisions, nonprofits, churches, or topics..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                style={{
+                  width: '100%',
+                  padding: '10px 40px 10px 40px',
+                  fontSize: 14,
+                  border: '1px solid #ddd',
+                  borderRadius: 6,
+                  outline: 'none',
+                  transition: 'border-color 0.2s'
+                }}
+                onFocus={(e) => e.target.style.borderColor = '#059669'}
+                onBlur={(e) => e.target.style.borderColor = '#ddd'}
+              />
+              {searchQuery && (
+                <button
+                  onClick={() => setSearchQuery('')}
+                  style={{
+                    position: 'absolute',
+                    right: 12,
+                    background: 'none',
+                    border: 'none',
+                    cursor: 'pointer',
+                    color: '#999',
+                    display: 'flex',
+                    alignItems: 'center',
+                    padding: 4
+                  }}
+                >
+                  <X size={16} />
+                </button>
+              )}
+            </div>
+          </div>
 
-      {/* View Mode Toggle */}
-      <div style={{ 
-        display: 'flex', 
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        marginBottom: 16 
+          {/* View Mode Toggle */}
+          <div style={{ 
+            display: 'flex', 
+            justifyContent: 'space-between',
+            alignItems: 'center'
+          }}> 
       }}>
         <div style={{ display: 'flex', gap: 6 }}>
           <button
@@ -479,27 +528,59 @@ export default function App() {
             Home
           </button>
           <button
-            onClick={() => setViewMode('browse')}
+            onClick={() => {
+              setViewMode('browse');
+              setExploreMode('decisions');
+              setSectorView('public');
+            }}
             style={{
               padding: '10px 20px',
               borderRadius: 8,
               fontSize: 15,
               cursor: 'pointer',
               border: '1px solid',
-              borderColor: viewMode === 'browse' ? '#888' : '#ddd',
-              background: viewMode === 'browse' ? '#f5f5f2' : 'white',
-              fontWeight: viewMode === 'browse' ? 500 : 400,
-              color: viewMode === 'browse' ? '#111' : '#666',
+              borderColor: (viewMode === 'browse' && exploreMode === 'decisions') ? '#888' : '#ddd',
+              background: (viewMode === 'browse' && exploreMode === 'decisions') ? '#f5f5f2' : 'white',
+              fontWeight: (viewMode === 'browse' && exploreMode === 'decisions') ? 500 : 400,
+              color: (viewMode === 'browse' && exploreMode === 'decisions') ? '#111' : '#666',
               display: 'flex',
               alignItems: 'center',
               gap: 6
             }}
           >
-            <Grid size={14} />
+            <Building2 size={14} />
             Explore Decisions
           </button>
+          <button
+            onClick={() => {
+              setViewMode('browse');
+              setExploreMode('organizations');
+              setSectorView('all');
+            }}
+            style={{
+              padding: '10px 20px',
+              borderRadius: 8,
+              fontSize: 15,
+              cursor: 'pointer',
+              border: '1px solid',
+              borderColor: (viewMode === 'browse' && exploreMode === 'organizations') ? '#888' : '#ddd',
+              background: (viewMode === 'browse' && exploreMode === 'organizations') ? '#f5f5f2' : 'white',
+              fontWeight: (viewMode === 'browse' && exploreMode === 'organizations') ? 500 : 400,
+              color: (viewMode === 'browse' && exploreMode === 'organizations') ? '#111' : '#666',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 6
+            }}
+          >
+            <Heart size={14} />
+            Explore Organizations
+          </button>
+        </div>
         </div>
       </div>
+
+      {/* Main Content Area */}
+      <div style={{ maxWidth: 1200, margin: '0 auto', padding: 24 }}>
 
       {/* Search Bar & Quick Filters (show in browse view) */}
       {viewMode === 'browse' && (
@@ -719,12 +800,49 @@ export default function App() {
             fontWeight: 500,
             marginBottom: 16
           }}>
-            Explore {sectorView === 'all' ? 'All Sectors' : 
-                     sectorView === 'public' ? 'Public Sector' :
-                     sectorView === 'nonprofits' ? 'Nonprofits' : 'Churches'}
+            {exploreMode === 'decisions' ? 'Explore Decisions' : 'Explore Organizations'}
+            {sectorView !== 'all' && sectorView !== 'public' && (
+              <span style={{ color: '#999', fontWeight: 400 }}>
+                {' '}› {sectorView === 'nonprofits' ? 'Nonprofits' : 'Churches'}
+              </span>
+            )}
           </h2>
           
           {/* Sector Filter Buttons */}
+          {exploreMode === 'decisions' && (
+            <div style={{
+              display: 'flex',
+              gap: 8,
+              marginBottom: 20,
+              padding: 16,
+              background: '#f9fafb',
+              borderRadius: 8,
+              flexWrap: 'wrap'
+            }}>
+              <button
+                onClick={() => setSectorView('public')}
+                style={{
+                  padding: '10px 16px',
+                  borderRadius: 6,
+                  fontSize: 14,
+                  fontWeight: 500,
+                  cursor: 'pointer',
+                  border: '1px solid',
+                  borderColor: sectorView === 'public' ? '#185FA5' : '#ddd',
+                  background: sectorView === 'public' ? '#EFF6FF' : 'white',
+                  color: sectorView === 'public' ? '#185FA5' : '#666',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 6
+                }}
+              >
+                <Building2 size={14} />
+                Public Sector ({filteredDecisions.length})
+              </button>
+            </div>
+          )}
+          
+          {exploreMode === 'organizations' && (
           <div style={{
             display: 'flex',
             gap: 8,
@@ -752,27 +870,7 @@ export default function App() {
               }}
             >
               <Grid size={14} />
-              All Sectors
-            </button>
-            <button
-              onClick={() => setSectorView('public')}
-              style={{
-                padding: '10px 16px',
-                borderRadius: 6,
-                fontSize: 14,
-                fontWeight: 500,
-                cursor: 'pointer',
-                border: '1px solid',
-                borderColor: sectorView === 'public' ? '#185FA5' : '#ddd',
-                background: sectorView === 'public' ? '#EFF6FF' : 'white',
-                color: sectorView === 'public' ? '#185FA5' : '#666',
-                display: 'flex',
-                alignItems: 'center',
-                gap: 6
-              }}
-            >
-              <Building2 size={14} />
-              Public Sector ({filteredDecisions.length})
+              All Organizations
             </button>
             <button
               onClick={() => setSectorView('nonprofits')}
@@ -815,24 +913,11 @@ export default function App() {
               Churches ({filteredNonprofits.filter(org => org.ntee_code.startsWith('X')).length})
             </button>
           </div>
+          )}
           
-          {/* Sector Content */}
-          {(sectorView === 'all' || sectorView === 'public') && (
-            <div style={{ marginBottom: sectorView === 'all' ? 32 : 0 }}>
-              {sectorView === 'all' && (
-                <h3 style={{
-                  fontSize: 18,
-                  fontWeight: 600,
-                  color: '#185FA5',
-                  marginBottom: 16,
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 8
-                }}>
-                  <Building2 size={20} />
-                  Public Sector Decisions
-                </h3>
-              )}
+          {/* Public Sector Decisions */}
+          {exploreMode === 'decisions' && (
+            <div>
               {filteredDecisions.length === 0 ? (
                 <div style={{
                   textAlign: 'center',
@@ -876,7 +961,7 @@ export default function App() {
           )}
           
           {/* Nonprofits Section */}
-          {(sectorView === 'all' || sectorView === 'nonprofits') && (
+          {exploreMode === 'organizations' && (sectorView === 'all' || sectorView === 'nonprofits') && (
             <div style={{ marginBottom: sectorView === 'all' ? 32 : 0 }}>
               {sectorView === 'all' && (
                 <h3 style={{
@@ -915,7 +1000,7 @@ export default function App() {
           )}
           
           {/* Churches Section */}
-          {(sectorView === 'all' || sectorView === 'churches') && (
+          {exploreMode === 'organizations' && (sectorView === 'all' || sectorView === 'churches') && (
             <div>
               {sectorView === 'all' && (
                 <h3 style={{
