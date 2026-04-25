@@ -80,6 +80,11 @@ cp Dockerfile.huggingface Dockerfile
 echo "📝 Configuring README..."
 cp .huggingface/README.md README_HF.md
 
+# Remove large binary files that will be included in Docker build
+# (HF Spaces rejects large binary files in git)
+echo "📝 Optimizing deployment (removing large binaries)..."
+git rm --cached frontend/public/communityone_logo.png website/static/img/communityone_logo.png 2>/dev/null || true
+
 # Stage deployment files
 git add Dockerfile README_HF.md .huggingface/
 git add -u
