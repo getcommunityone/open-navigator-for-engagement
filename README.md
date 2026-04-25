@@ -15,16 +15,14 @@ The **Open Navigator for Engagement** is a full-stack AI application that analyz
 ### What It Analyzes
 
 **📄 Meeting Minutes & Transcripts**
-- City council meetings, school board sessions, health department discussions
-- Public hearings, budget meetings, committee sessions
-- Automatically scraped from 90,000+ local government websites
+- **Government**: City council meetings, school board sessions, health department discussions, public hearings, budget meetings, committee sessions
+- **Nonprofit**: Board meetings, committee meetings, public forums, community listening sessions
+- Automatically scraped from 90,000+ local government websites and nonprofit public records
 
 **💰 Financial Documents**
-- Municipal budgets and budget amendments
-- School district financial reports
-- Department expenditure summaries
-- Revenue allocations and funding proposals
-- Correlates spending with meeting rhetoric to reveal true priorities
+- **Government**: Municipal budgets and amendments, school district financial reports, department expenditures, revenue allocations, funding proposals
+- **Nonprofit**: IRS Form 990 filings (revenue, expenses, executive compensation), annual reports, financial statements, grant allocations, program budgets
+- Correlates spending with meeting rhetoric to reveal true priorities for both government agencies and nonprofit organizations
 
 **✨ New in v2.0:**
 - 🎨 **React Frontend** - Modern, responsive UI with interactive visualizations
@@ -68,6 +66,14 @@ Access comprehensive nonprofit data without expensive subscriptions. The platfor
 - **Coalition Building** - Identify natural allies and stakeholders for policy campaigns
 - **Alternative Pathways** - When government action stalls, direct people to existing nonprofit solutions
 - **Mobilization** - Turn "government should do X" into "help organization Y expand what they're already doing"
+
+**Nonprofit Accountability & Advocacy:**
+- **Mission Alignment Analysis** - Compare nonprofit board meeting minutes with actual programs and spending (same Budget-to-Minutes framework)
+- **Financial Transparency** - Analyze Form 990 data alongside stated priorities to verify resource allocation
+- **Service Verification** - Ensure nonprofits claiming to serve specific populations are actually delivering
+- **Impact Assessment** - Track whether nonprofits meeting discussions about new programs lead to actual service expansion
+- **Donor Intelligence** - Help funders verify that nonprofits are focusing resources where they say they are
+- **Board Accountability** - Monitor whether nonprofit boards address the issues they claim to prioritize
 
 ### Integrated Data Sources
 
@@ -767,14 +773,21 @@ See [`docs/INTEGRATION_STATUS.md`](docs/INTEGRATION_STATUS.md) for complete inte
 
 ### Financial Documents & Budget Sources
 
-The system analyzes municipal financial documents to correlate rhetoric (meeting minutes) with reality (actual spending):
+The system analyzes **government and nonprofit financial documents** to correlate rhetoric (meeting minutes) with reality (actual spending):
 
-**Municipal Budget Documents (Free Public Data):**
+**Government Budget Documents (Free Public Data):**
 - 💰 **City & County Budgets** - Annual budgets, mid-year amendments, departmental allocations
 - 📊 **School District Financials** - K-12 budgets, per-pupil spending, categorical funding
 - 🏥 **Health Department Budgets** - Public health spending, program-specific allocations
 - 📈 **Budget Amendments** - Real-time changes that reveal shifting priorities
 - 📉 **Expenditure Reports** - Actual spending vs. budgeted amounts
+
+**Nonprofit Financial Documents (Free Public Data):**
+- 📋 **IRS Form 990** - Complete financial picture (revenue, expenses, assets, executive compensation, program service accomplishments)
+- 💼 **Annual Reports** - Mission statements, program descriptions, financial summaries
+- 📊 **Audited Financial Statements** - When publicly available
+- 🎯 **Grant Reports** - Foundations often require public reporting
+- 📈 **Program Budgets** - Allocation across different service areas
 
 **Key Data Sources:**
 - 🏛️ **Municipal Finance Officer Association (GFOA)** - Standardized budget formats from 17,000+ governments
@@ -782,10 +795,13 @@ The system analyzes municipal financial documents to correlate rhetoric (meeting
 - 📚 **U.S. Census Annual Survey of State & Local Government Finances** - Comprehensive revenue/expenditure data ([Census Finance Data](https://www.census.gov/programs-surveys/gov-finances.html))
 - 🏙️ **Comprehensive Annual Financial Reports (CAFRs)** - Detailed municipal financial statements (publicly posted on .gov sites)
 - 📄 **OpenGov Platforms** - Many cities use OpenGov, OpenBudget, or similar transparency portals
+- 💰 **ProPublica Nonprofit Explorer** - 3M+ Form 990 filings with 10+ years of history
+- 🏛️ **IRS TEOS** - Official source for all nonprofit financial data
+- 🌟 **GuideStar/Candid** - Enhanced nonprofit profiles (some data requires subscription, but core 990s are free)
 
 **Budget-to-Minutes Analysis Framework:**
 
-The system implements **political economy forensics** by correlating discussion with funding:
+The system implements **political economy forensics** by correlating discussion with funding for both **government agencies and nonprofit organizations**:
 
 ```
 Meeting Rhetoric          Budget Reality          Analysis
@@ -797,12 +813,14 @@ Heavy debate          →   -15% cut          =   ❌ Performative Talk
 ```
 
 **What It Reveals:**
-- 🎭 **Performative Politics**: Programs praised in meetings but defunded in budgets
-- 🔦 **Hidden Priorities**: Quiet budget increases for politically sensitive items
-- 💡 **Advocacy Opportunities**: Gaps between stated values and actual resource allocation
+- 🎭 **Performative Politics/Messaging**: Programs praised in meetings but defunded in budgets (government) or Form 990s showing minimal spending on stated mission (nonprofits)
+- 🔦 **Hidden Priorities**: Quiet budget increases for politically sensitive items or nonprofit executive compensation growing while program spending stagnates
+- 💡 **Advocacy Opportunities**: Gaps between stated values and actual resource allocation in both sectors
 - 📊 **Opportunity Costs**: "We funded X instead of Y" comparisons for advocacy messaging
 
-**Example Use Case:**
+**Example Use Cases:**
+
+*Government Accountability:*
 ```
 City Council: "School dental programs are a top priority"
 Budget Reality: Dental program funding decreased 20%
@@ -812,10 +830,24 @@ Alternative Spending: New city hall landscaping increased 150%
    children's dental screenings. 800 kids now without care."
 ```
 
+*Nonprofit Accountability:*
+```
+Nonprofit Board Minutes: "Expanding access to underserved communities is our core mission"
+Form 990 Reality: Only 12% of budget spent on direct services, 45% on administration
+Board Discussions: Zero mentions of service expansion in past 6 months
+
+→ Donor Alert: "Organization claims to prioritize underserved communities 
+   but allocates <15% to programs. Board hasn't discussed service expansion 
+   in 6+ months despite $2M annual revenue."
+```
+
 **Implementation:**
 See [`extraction/budget_analyzer.py`](extraction/budget_analyzer.py) for budget extraction logic and [`docs/ACCOUNTABILITY_DASHBOARD_STRATEGY.md`](docs/ACCOUNTABILITY_DASHBOARD_STRATEGY.md) for analysis methodology.
 
-⚠️ **All Public Data**: Budget documents are legally required to be publicly accessible. The system scrapes PDF budgets from .gov websites and standardizes them for analysis. Zero cost.
+⚠️ **All Public Data**: 
+- **Government**: Budget documents are legally required to be publicly accessible. The system scrapes PDF budgets from .gov websites and standardizes them for analysis.
+- **Nonprofits**: IRS Form 990 filings are public records. Tax-exempt organizations must make their 990s available upon request, and they're freely accessible via ProPublica and IRS databases.
+- **Total Cost**: $0 - All data sources are free and publicly available.
 
 ## Policy Topics Monitored
 
@@ -1084,6 +1116,22 @@ We're grateful to these open-source projects and their communities:
 - **MeetingBank** - Open dataset for summarization research
 - **CivicBand** - Raft Foundation
 - **OpenCouncil** (MIT) - Schemalab
+
+---
+
+## Related Organizations & Projects
+
+### Government Accountability & Transparency
+
+**[GroundVue](https://www.groundvue.org/)** - Nonprofit organization dedicated to government accountability through data transparency and civic engagement. GroundVue provides tools and resources for citizens to monitor government activities, track spending, and hold elected officials accountable. Their work parallels this project's mission of using data to empower advocacy and community engagement.
+
+**Shared Goals:**
+- 📊 Making government data accessible and actionable
+- 🔍 Tracking the gap between political rhetoric and actual policy outcomes
+- 💡 Empowering citizens with tools for accountability
+- 🏛️ Promoting transparency in government decision-making
+
+This project complements GroundVue's work by focusing specifically on oral health policy opportunities while applying similar principles of data-driven accountability.
 
 ---
 
