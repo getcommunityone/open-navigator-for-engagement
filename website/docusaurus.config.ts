@@ -78,7 +78,7 @@ const config: Config = {
       title: 'Open Navigator Home',
       logo: {
         alt: 'CommunityOne Logo',
-        src: 'img/communityone_logo.jpg',
+        src: 'img/communityone_logo.png',
         href: 'http://localhost:5173',
         target: '_self',
       },
