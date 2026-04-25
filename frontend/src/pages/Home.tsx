@@ -2,11 +2,9 @@ import { Link, useNavigate } from 'react-router-dom'
 import { useState } from 'react'
 import { 
   MagnifyingGlassIcon, 
-  MapIcon, 
   DocumentTextIcon, 
   ChartBarIcon,
   BuildingLibraryIcon,
-  BellAlertIcon,
   ArrowRightIcon,
   BookOpenIcon,
   MapPinIcon,
