@@ -275,10 +275,10 @@ How to Help: PR accepted, translation guide provided
 **Documentation:** https://docs.github.com/en/rest  
 **Rate Limits:** 5,000/hour (authenticated)  
 **Key Endpoints:**
-- `GET /repos/{owner}/{repo}` - Repository metadata
-- `GET /repos/{owner}/{repo}/issues` - Issues and PRs
-- `GET /repos/{owner}/{repo}/contributors` - Contributors
-- `GET /orgs/{org}/repos` - Organization repositories
+- `GET /repos/{{owner}}/{{repo}}` - Repository metadata
+- `GET /repos/{{owner}}/{{repo}}/issues` - Issues and PRs
+- `GET /repos/{{owner}}/{{repo}}/contributors` - Contributors
+- `GET /orgs/{{org}}/repos` - Organization repositories
 
 ### GitHub GraphQL API
 **Documentation:** https://docs.github.com/en/graphql  

@@ -46,9 +46,9 @@ This system uses **vendor-neutral, production-ready methods**:
 │  • Confidence: 0.95-1.0                                │
 │                                                          │
 │  Strategy 2: URL Pattern Generation                     │
-│  • Counties: co.{name}.{state}.us, {name}county.gov   │
-│  • Cities: www.{name}.gov, cityof{name}.gov           │
-│  • Schools: {name}.k12.{state}.us, {name}schools.org  │
+│  • Counties: co.{{name}}.{{state}}.us, {{name}}county.gov   │
+│  • Cities: www.{{name}}.gov, cityof{{name}}.gov           │
+│  • Schools: {{name}}.k12.{{state}}.us, {{name}}schools.org  │
 │  • Verify accessibility with HTTP HEAD/GET             │
 │  • Confidence: 0.6-0.9                                 │
 │                                                          │
