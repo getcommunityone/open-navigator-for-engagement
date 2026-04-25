@@ -24,21 +24,151 @@ function HomepageHeader() {
           </Heading>
         </div>
         <p className="hero__subtitle">{siteConfig.tagline}</p>
-        <div className={styles.buttons}>
-          <Link
-            className="button button--secondary button--lg"
-            to="/docs/intro">
-            Get Started - 5min ⏱️
-          </Link>
-          <Link
-            className="button button--primary button--lg margin-left--md"
-            href="http://localhost:5173"
-            target="_blank">
-            🚀 Launch Dashboard →
-          </Link>
-        </div>
+        <p style={{ fontSize: '1.2rem', marginTop: '1rem', marginBottom: '2rem' }}>
+          Analyze municipal meetings and budgets across 90,000+ jurisdictions to find advocacy opportunities
+        </p>
       </div>
     </header>
+  );
+}
+
+function AudiencePathways() {
+  return (
+    <section className="container margin-vert--xl">
+      <div className="row">
+        <div className="col text--center margin-bottom--lg">
+          <Heading as="h2">Choose Your Path</Heading>
+          <p style={{ fontSize: '1.1rem', color: '#666' }}>
+            Select the documentation that matches your role
+          </p>
+        </div>
+      </div>
+      <div className="row">
+        {/* Policy Makers & Advocates Path */}
+        <div className="col col--6">
+          <div style={{
+            border: '3px solid #4CAF50',
+            borderRadius: '12px',
+            padding: '2rem',
+            height: '100%',
+            background: 'linear-gradient(135deg, #f1f8f4 0%, #ffffff 100%)',
+            transition: 'transform 0.2s, box-shadow 0.2s',
+            cursor: 'pointer'
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.transform = 'translateY(-5px)';
+            e.currentTarget.style.boxShadow = '0 8px 16px rgba(76, 175, 80, 0.3)';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.transform = 'translateY(0)';
+            e.currentTarget.style.boxShadow = 'none';
+          }}>
+            <div style={{ textAlign: 'center', marginBottom: '1.5rem' }}>
+              <div style={{ fontSize: '4rem' }}>📊</div>
+              <Heading as="h3" style={{ color: '#2E7D32', marginTop: '1rem' }}>
+                Policy Makers & Advocates
+              </Heading>
+            </div>
+            
+            <p style={{ fontSize: '1.1rem', marginBottom: '1.5rem', textAlign: 'center' }}>
+              <strong>I want to:</strong>
+            </p>
+            
+            <ul style={{ fontSize: '1rem', lineHeight: '1.8', marginBottom: '2rem' }}>
+              <li>Hold governments accountable</li>
+              <li>Analyze meeting minutes and budgets</li>
+              <li>Track nonprofit spending vs. mission</li>
+              <li>Find advocacy opportunities</li>
+              <li>Generate campaign materials</li>
+            </ul>
+            
+            <div style={{ textAlign: 'center' }}>
+              <Link
+                className="button button--success button--lg"
+                to="/docs/for-advocates"
+                style={{ marginBottom: '0.5rem', width: '80%' }}>
+                Start Here: Advocacy Docs →
+              </Link>
+              <div style={{ marginTop: '1rem', fontSize: '0.9rem', color: '#555' }}>
+                <Link to="http://localhost:5173" style={{ fontWeight: 'bold' }}>
+                  🚀 Or launch the app immediately
+                </Link>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Developers & Technical Users Path */}
+        <div className="col col--6">
+          <div style={{
+            border: '3px solid #2196F3',
+            borderRadius: '12px',
+            padding: '2rem',
+            height: '100%',
+            background: 'linear-gradient(135deg, #e3f2fd 0%, #ffffff 100%)',
+            transition: 'transform 0.2s, box-shadow 0.2s',
+            cursor: 'pointer'
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.transform = 'translateY(-5px)';
+            e.currentTarget.style.boxShadow = '0 8px 16px rgba(33, 150, 243, 0.3)';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.transform = 'translateY(0)';
+            e.currentTarget.style.boxShadow = 'none';
+          }}>
+            <div style={{ textAlign: 'center', marginBottom: '1.5rem' }}>
+              <div style={{ fontSize: '4rem' }}>🛠️</div>
+              <Heading as="h3" style={{ color: '#1565C0', marginTop: '1rem' }}>
+                Developers & Technical Users
+              </Heading>
+            </div>
+            
+            <p style={{ fontSize: '1.1rem', marginBottom: '1.5rem', textAlign: 'center' }}>
+              <strong>I want to:</strong>
+            </p>
+            
+            <ul style={{ fontSize: '1rem', lineHeight: '1.8', marginBottom: '2rem' }}>
+              <li>Install and configure the platform</li>
+              <li>Scrape meeting data at scale</li>
+              <li>Integrate with data pipelines</li>
+              <li>Deploy to production</li>
+              <li>Contribute to development</li>
+            </ul>
+            
+            <div style={{ textAlign: 'center' }}>
+              <Link
+                className="button button--primary button--lg"
+                to="/docs/for-developers"
+                style={{ marginBottom: '0.5rem', width: '80%' }}>
+                Start Here: Developer Docs →
+              </Link>
+              <div style={{ marginTop: '1rem', fontSize: '0.9rem', color: '#555' }}>
+                <Link to="/docs/quickstart" style={{ fontWeight: 'bold' }}>
+                  ⚡ Quick Start Guide
+                </Link>
+                {' | '}
+                <Link to="/docs/architecture" style={{ fontWeight: 'bold' }}>
+                  🏗️ Architecture
+                </Link>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      {/* Not sure section */}
+      <div className="row margin-top--lg">
+        <div className="col text--center">
+          <p style={{ fontSize: '1rem', color: '#666' }}>
+            Not sure which path to take?{' '}
+            <Link to="/docs/intro" style={{ fontWeight: 'bold' }}>
+              Start with the Introduction →
+            </Link>
+          </p>
+        </div>
+      </div>
+    </section>
   );
 }
 
@@ -90,36 +220,51 @@ function HomepageFeatures() {
 
 function HomepageStats() {
   return (
-    <section className="container margin-vert--lg">
-      <div className="row">
-        <div className="col text--center">
-          <Heading as="h2">Coverage</Heading>
-          <p className="margin-bottom--lg">Scale of available data</p>
-        </div>
-      </div>
-      <div className="row">
-        <div className="col col--3 text--center">
-          <div className="padding--md">
-            <Heading as="h3">90,000+</Heading>
-            <p>Government Jurisdictions</p>
+    <section style={{ background: '#f8f9fa', padding: '3rem 0' }}>
+      <div className="container">
+        <div className="row">
+          <div className="col text--center">
+            <Heading as="h2">Data Coverage Nationwide</Heading>
+            <p className="margin-bottom--lg" style={{ fontSize: '1.1rem', color: '#666' }}>
+              100% free, public data from official sources
+            </p>
           </div>
         </div>
-        <div className="col col--3 text--center">
-          <div className="padding--md">
-            <Heading as="h3">13,000+</Heading>
-            <p>School Districts</p>
+        <div className="row">
+          <div className="col col--3 text--center">
+            <div className="padding--md">
+              <div style={{ fontSize: '3rem', fontWeight: 'bold', color: '#2196F3' }}>90,000+</div>
+              <p style={{ fontSize: '1rem', fontWeight: '500' }}>Government Jurisdictions</p>
+              <p style={{ fontSize: '0.9rem', color: '#666' }}>Counties, cities, townships</p>
+            </div>
+          </div>
+          <div className="col col--3 text--center">
+            <div className="padding--md">
+              <div style={{ fontSize: '3rem', fontWeight: 'bold', color: '#4CAF50' }}>3M+</div>
+              <p style={{ fontSize: '1rem', fontWeight: '500' }}>Nonprofit Organizations</p>
+              <p style={{ fontSize: '0.9rem', color: '#666' }}>IRS Form 990 data</p>
+            </div>
+          </div>
+          <div className="col col--3 text--center">
+            <div className="padding--md">
+              <div style={{ fontSize: '3rem', fontWeight: 'bold', color: '#FF9800' }}>13,000+</div>
+              <p style={{ fontSize: '1rem', fontWeight: '500' }}>School Districts</p>
+              <p style={{ fontSize: '0.9rem', color: '#666' }}>Financial & meeting data</p>
+            </div>
+          </div>
+          <div className="col col--3 text--center">
+            <div className="padding--md">
+              <div style={{ fontSize: '3rem', fontWeight: 'bold', color: '#9C27B0' }}>1,000+</div>
+              <p style={{ fontSize: '1rem', fontWeight: '500' }}>Meeting Videos</p>
+              <p style={{ fontSize: '0.9rem', color: '#666' }}>Full transcripts available</p>
+            </div>
           </div>
         </div>
-        <div className="col col--3 text--center">
-          <div className="padding--md">
-            <Heading as="h3">3M+</Heading>
-            <p>Nonprofit Organizations</p>
-          </div>
-        </div>
-        <div className="col col--3 text--center">
-          <div className="padding--md">
-            <Heading as="h3">$0</Heading>
-            <p>Total Cost</p>
+        <div className="row margin-top--md">
+          <div className="col text--center">
+            <p style={{ fontSize: '1.2rem', fontWeight: 'bold', color: '#2E7D32' }}>
+              💰 Total Cost: $0 — All data is free and public
+            </p>
           </div>
         </div>
       </div>
@@ -129,27 +274,79 @@ function HomepageStats() {
 
 function WhyItMatters() {
   return (
-    <section className="container margin-vert--lg text--center">
-      <Heading as="h2">Why This Matters</Heading>
+    <section className="container margin-vert--xl">
+      <div className="text--center margin-bottom--lg">
+        <Heading as="h2">Why This Matters</Heading>
+        <p style={{ fontSize: '1.1rem', color: '#666', marginTop: '1rem' }}>
+          Turn public data into accountability and action
+        </p>
+      </div>
       <div className="row margin-top--lg">
         <div className="col col--4 padding--md">
-          <Heading as="h4">Direct Community Impact</Heading>
-          <p>
+          <div style={{ textAlign: 'center', marginBottom: '1rem' }}>
+            <span style={{ fontSize: '3rem' }}>🎯</span>
+          </div>
+          <Heading as="h4" style={{ textAlign: 'center' }}>Direct Community Impact</Heading>
+          <p style={{ textAlign: 'center' }}>
             Find nonprofits and organizations already providing services, connect citizens to care, and identify partnership opportunities.
           </p>
         </div>
         <div className="col col--4 padding--md">
-          <Heading as="h4">Government Accountability</Heading>
-          <p>
+          <div style={{ textAlign: 'center', marginBottom: '1rem' }}>
+            <span style={{ fontSize: '3rem' }}>⚖️</span>
+          </div>
+          <Heading as="h4" style={{ textAlign: 'center' }}>Government Accountability</Heading>
+          <p style={{ textAlign: 'center' }}>
             Challenge "impossibility" claims, expose resource gaps, and compare spending priorities with service provision.
           </p>
         </div>
         <div className="col col--4 padding--md">
-          <Heading as="h4">Strategic Advocacy</Heading>
-          <p>
+          <div style={{ textAlign: 'center', marginBottom: '1rem' }}>
+            <span style={{ fontSize: '3rem' }}>🚀</span>
+          </div>
+          <Heading as="h4" style={{ textAlign: 'center' }}>Strategic Advocacy</Heading>
+          <p style={{ textAlign: 'center' }}>
             Ground campaigns in real data, build coalitions, and mobilize communities with evidence-based messaging.
           </p>
         </div>
+      </div>
+    </section>
+  );
+}
+
+function GetStartedCTA() {
+  return (
+    <section style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', padding: '4rem 0', color: 'white' }}>
+      <div className="container text--center">
+        <Heading as="h2" style={{ color: 'white', marginBottom: '1rem' }}>
+          Ready to Get Started?
+        </Heading>
+        <p style={{ fontSize: '1.2rem', marginBottom: '2rem', opacity: 0.9 }}>
+          Choose your path and start exploring the data
+        </p>
+        <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', flexWrap: 'wrap' }}>
+          <Link
+            className="button button--success button--lg"
+            to="/docs/for-advocates"
+            style={{ minWidth: '200px' }}>
+            📊 For Advocates
+          </Link>
+          <Link
+            className="button button--info button--lg"
+            to="/docs/for-developers"
+            style={{ minWidth: '200px' }}>
+            🛠️ For Developers
+          </Link>
+          <Link
+            className="button button--secondary button--lg"
+            href="http://localhost:5173"
+            style={{ minWidth: '200px' }}>
+            🚀 Launch App
+          </Link>
+        </div>
+        <p style={{ marginTop: '2rem', fontSize: '0.9rem', opacity: 0.8 }}>
+          All data is free and public • No subscriptions • Open source
+        </p>
       </div>
     </section>
   );
@@ -165,9 +362,11 @@ export default function Home(): ReactNode {
       
       <HomepageHeader />
       <main>
+        <AudiencePathways />
         <HomepageFeatures />
         <HomepageStats />
         <WhyItMatters />
+        <GetStartedCTA />
       </main>
     </Layout>
   );
