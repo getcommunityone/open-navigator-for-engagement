@@ -16,7 +16,9 @@ export default function DecisionCard({ decision, onClick }) {
     meeting_date,
     tradeoffs_discussed = [],
     evidence_cited = [],
-    policy_domain = 'general'
+    policy_domain = 'general',
+    community_gap,
+    ntee_code
   } = decision;
   
   const domainColors = {
@@ -214,6 +216,35 @@ export default function DecisionCard({ decision, onClick }) {
           }}>
             <FileText size={10} />
             {evidence_cited.length} source{evidence_cited.length > 1 ? 's' : ''}
+          </span>
+        )}
+        {community_gap?.nonprofit_filling_gap && (
+          <span style={{
+            fontSize: 10,
+            padding: '2px 8px',
+            borderRadius: 10,
+            background: '#dcfce7',
+            color: '#059669',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 4,
+            fontWeight: 500
+          }}>
+            🤝 Community filling gap
+          </span>
+        )}
+        {ntee_code && (
+          <span style={{
+            fontSize: 10,
+            padding: '2px 8px',
+            borderRadius: 10,
+            background: '#f3f4f6',
+            color: '#6b7280',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 4
+          }}>
+            NTEE: {ntee_code}
           </span>
         )}
       </div>

@@ -3,13 +3,15 @@ import HomePage from './components/HomePage';
 import ImpactDashboard from './components/ImpactDashboard';
 import TopicNavigation from './components/TopicNavigation';
 import DecisionCard from './components/shared/DecisionCard';
+import SplitScreenView from './components/SplitScreenView';
 import { metadata } from './data/dashboardData';
 import { Home, Grid } from 'lucide-react';
 
 export default function App() {
-  const [viewMode, setViewMode] = useState('browse'); // 'home', 'impact', 'browse'
+  const [viewMode, setViewMode] = useState('browse'); // 'home', 'impact', 'browse', 'split-screen'
   const [selectedPersona, setSelectedPersona] = useState(null);
   const [selectedTopic, setSelectedTopic] = useState(null);
+  const [selectedDecision, setSelectedDecision] = useState(null);
   const [selectedTopics, setSelectedTopics] = useState([]);
   const [selectedPatterns, setSelectedPatterns] = useState([]);
   const [selectedResources, setSelectedResources] = useState([]);
@@ -65,6 +67,12 @@ export default function App() {
     setViewMode('home');
     setSelectedPersona(null);
     setSelectedTopic(null);
+    setSelectedDecision(null);
+  };
+  
+  const handleDecisionClick = (decision) => {
+    setSelectedDecision(decision);
+    setViewMode('split-screen');
   };
   
   // Example decision data - would come from Python export
@@ -84,7 +92,8 @@ export default function App() {
       meeting_date: "2026-03-15",
       tradeoffs_discussed: ["Athletic facilities vs. health screening programs"],
       evidence_cited: [{ source: "Athletic Department Report" }],
-      policy_domain: "facilities"
+      policy_domain: "facilities",
+      ntee_code: "N20" // Recreation, Sports, and Athletics
     },
     {
       decision_summary: "Tabled decision on dental screening partnership with West Alabama Dental Clinic",
@@ -102,7 +111,12 @@ export default function App() {
       meeting_date: "2026-01-18",
       tradeoffs_discussed: ["Preventive care vs. perceived liability risk"],
       evidence_cited: [{ source: "Risk Management Memo" }],
-      policy_domain: "health"
+      policy_domain: "health",
+      ntee_code: "E32", // School-Based Health Care
+      community_gap: {
+        description: "100% of surveyed parents want dental screenings for students",
+        nonprofit_filling_gap: true
+      }
     },
     {
       decision_summary: "Reduction of nursing staff from 5 FTE to 3 FTE",
@@ -120,7 +134,80 @@ export default function App() {
       meeting_date: "2026-02-20",
       tradeoffs_discussed: ["Cost savings vs. preventive health services"],
       evidence_cited: [{ source: "FY2026 Budget Proposal" }],
-      policy_domain: "budget"
+      policy_domain: "budget",
+      ntee_code: "E40", // Health - General and Rehabilitative
+      community_gap: {
+        description: "Students lost access to preventive health services",
+        nonprofit_filling_gap: true
+      }
+    }
+  ];
+  
+  // Example nonprofit data - would come from IRS/GuideStar API
+  const exampleNonprofits = [
+    {
+      name: "West Alabama Dental Initiative",
+      ein: "63-1234567",
+      ntee_code: "E32",
+      ntee_description: "School-Based Health Care",
+      mission: "Providing free dental screenings and preventive care to underserved students in West Alabama",
+      services: [
+        "Mobile dental unit visits to schools",
+        "Free toothbrush and fluoride kits",
+        "Dental education workshops for parents"
+      ],
+      annual_budget: 125000,
+      students_served: 2400,
+      contact: {
+        website: "https://wadaldentalinitiative.org",
+        email: "info@wadaldentalinitiative.org",
+        phone: "(205) 555-0123"
+      },
+      volunteer_opportunities: true,
+      accepting_board_members: true
+    },
+    {
+      name: "Tuscaloosa Family Health Network",
+      ein: "63-7654321",
+      ntee_code: "E40",
+      ntee_description: "Health - General and Rehabilitative",
+      mission: "Connecting low-income families with preventive health services and wellness programs",
+      services: [
+        "Health screenings at community centers",
+        "Nutrition education programs",
+        "Mental health counseling referrals"
+      ],
+      annual_budget: 280000,
+      families_served: 850,
+      contact: {
+        website: "https://tuscfamilyhealth.org",
+        email: "contact@tuscfamilyhealth.org",
+        phone: "(205) 555-0456"
+      },
+      volunteer_opportunities: true,
+      accepting_board_members: false
+    },
+    {
+      name: "After School Champions",
+      ein: "63-9876543",
+      ntee_code: "O50",
+      ntee_description: "Youth Development Programs",
+      mission: "Providing safe, enriching after-school programs that support academic success and healthy development",
+      services: [
+        "Homework help and tutoring",
+        "Healthy snacks and meals",
+        "Physical activity and sports",
+        "Health and wellness workshops"
+      ],
+      annual_budget: 340000,
+      youth_served: 450,
+      contact: {
+        website: "https://afterschoolchamps.org",
+        email: "info@afterschoolchamps.org",
+        phone: "(205) 555-0789"
+      },
+      volunteer_opportunities: true,
+      accepting_board_members: true
     }
   ];
   
@@ -261,6 +348,53 @@ export default function App() {
           </button>
           <ImpactDashboard persona={selectedPersona} topic={selectedTopic} />
         </div>
+      ) : viewMode === 'split-screen' ? (
+        <div style={{ 
+          background: 'white', 
+          border: '1px solid #eee', 
+          borderRadius: 12, 
+          padding: '1.5rem',
+          boxShadow: '0 1px 3px rgba(0,0,0,0.05)'
+        }}>
+          <button
+            onClick={() => setViewMode('browse')}
+            style={{
+              fontSize: 13,
+              color: '#666',
+              background: 'none',
+              border: 'none',
+              cursor: 'pointer',
+              marginBottom: 16,
+              display: 'flex',
+              alignItems: 'center',
+              gap: 4
+            }}
+          >
+            ← Back to Decisions
+          </button>
+          <div style={{
+            fontSize: 12,
+            fontWeight: 600,
+            color: '#059669',
+            textTransform: 'uppercase',
+            letterSpacing: '0.05em',
+            marginBottom: 8
+          }}>
+            Split-Screen Analysis
+          </div>
+          <h2 style={{
+            fontSize: 22,
+            fontWeight: 600,
+            color: '#111',
+            marginBottom: 16
+          }}>
+            Government Decision ↔ Community Response
+          </h2>
+          <SplitScreenView 
+            decision={selectedDecision} 
+            nonprofits={exampleNonprofits}
+          />
+        </div>
       ) : (
         <div style={{
           background: 'white',
@@ -309,7 +443,7 @@ export default function App() {
                 <DecisionCard
                   key={i}
                   decision={decision}
-                  onClick={() => console.log('View decision:', decision)}
+                  onClick={() => handleDecisionClick(decision)}
                 />
               ))}
             </>
