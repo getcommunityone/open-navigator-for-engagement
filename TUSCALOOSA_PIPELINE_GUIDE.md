@@ -505,6 +505,27 @@ print(f'  Tuscaloosa classified: {silver.filter(silver.municipality.like(\"%Tusc
 
 ## Step 5: COMMUNITY BRIDGE - Connect Government Decisions with Nonprofits
 
+### Quick Start: Automated Nonprofit Discovery
+
+```bash
+# Discover all Tuscaloosa nonprofits using free APIs (ProPublica, IRS)
+source .venv/bin/activate
+python scripts/discover_tuscaloosa_nonprofits.py
+
+# Output: frontend/policy-dashboards/src/data/tuscaloosa_nonprofits.json
+# Contains: Financial data, NTEE codes, mission statements for 50-200+ orgs
+```
+
+**What this does:**
+- ✅ Searches ProPublica Nonprofit Explorer API for all Tuscaloosa organizations
+- ✅ Filters by relevant NTEE codes (health, education, youth, food, religion)
+- ✅ Pulls 5+ years of IRS Form 990 financial data
+- ✅ Enriches with mission statements from Every.org
+- ✅ Exports in frontend-compatible JSON format
+- ✅ Caches results for fast repeated runs
+
+---
+
 ### Overview: The Split-Screen Strategy
 
 When government says "no" to a policy, show citizens **who's already saying "yes"** - the nonprofits and churches filling the gap.
@@ -1002,27 +1023,37 @@ Display this comparison on the frontend to create "social pressure":
 
 ---
 
-### 5.6 API Integration Roadmap
+### 5.6 API Integration Status
 
-**Phase 1 (Current): Static Curated Data**
+**✅ Phase 1: Static Curated Data** - COMPLETE
 - Manually researched Tuscaloosa nonprofits
-- Updated quarterly
-- ~10-20 key organizations
+- ~10-20 key organizations with verified contact info
+- Frontend example data in place
 
-**Phase 2: IRS Pub 78 Integration**
-- Automated nonprofit discovery
-- All tax-exempt orgs in Tuscaloosa
-- Monthly refresh
+**✅ Phase 2: IRS/ProPublica Integration** - COMPLETE
+- Automated nonprofit discovery via ProPublica API
+- Financial data (revenue, expenses, assets) for all Tuscaloosa nonprofits
+- NTEE code classification
+- Cached data for fast repeated access
+- **Run with:** `python scripts/discover_tuscaloosa_nonprofits.py`
 
-**Phase 3: Charity Navigator/GuideStar**
+**🔨 Phase 3: Local Service Directories** - IN PROGRESS
+- Manual enrichment from Findhelp.org and 211 directories
+- Specific services, hours, contact details
+- Volunteer opportunities verification
+- **To Do:** Build automated scrapers for Findhelp.org/211
+
+**🔮 Phase 4: Charity Navigator/GuideStar** - PLANNED
 - Add effectiveness ratings
 - Financial transparency scores
-- Impact metrics
+- Impact metrics verification
+- **Requires:** API key ($$$) or web scraping
 
-**Phase 4: Real-Time Project Data**
+**🔮 Phase 5: Real-Time Project Data** - FUTURE
 - Pull active campaigns from nonprofits
 - Current funding needs
-- Volunteer opportunities feed
+- Live volunteer opportunities feed
+- **Requires:** Direct nonprofit partnerships or aggregator APIs
 
 ---
 

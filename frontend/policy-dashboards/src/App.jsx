@@ -9,6 +9,7 @@ import { Home, Grid } from 'lucide-react';
 
 export default function App() {
   const [viewMode, setViewMode] = useState('browse'); // 'home', 'impact', 'browse', 'split-screen'
+  const [sectorView, setSectorView] = useState('all'); // 'all', 'public', 'nonprofits', 'churches'
   const [selectedPersona, setSelectedPersona] = useState(null);
   const [selectedTopic, setSelectedTopic] = useState(null);
   const [selectedDecision, setSelectedDecision] = useState(null);
@@ -208,6 +209,72 @@ export default function App() {
       },
       volunteer_opportunities: true,
       accepting_board_members: true
+    },
+    {
+      name: "First Baptist Church Tuscaloosa - Health Ministry",
+      ein: "63-2345678",
+      ntee_code: "X20",
+      ntee_description: "Christian",
+      mission: "Faith-based health outreach serving Tuscaloosa families through free dental kits, health screenings, and nutrition education",
+      services: [
+        "Free dental hygiene kits distribution",
+        "Health screenings after Sunday service",
+        "Nutrition education classes",
+        "Mobile health unit partnership"
+      ],
+      annual_budget: 45000,
+      families_served: 450,
+      contact: {
+        website: "https://fbctuscaloosa.org/health",
+        email: "health@fbctuscaloosa.org",
+        phone: "(205) 555-0200"
+      },
+      volunteer_opportunities: true,
+      accepting_board_members: false
+    },
+    {
+      name: "Tuscaloosa County Interfaith Dental Initiative",
+      ein: "63-3456789",
+      ntee_code: "X20",
+      ntee_description: "Christian",
+      mission: "Multi-faith collaboration providing free dental care to low-income students across Tuscaloosa County schools",
+      services: [
+        "Mobile dental unit serving Title I schools",
+        "Free toothbrush and fluoride programs",
+        "Parent education workshops",
+        "Dental emergency fund for families"
+      ],
+      annual_budget: 180000,
+      students_served: 1600,
+      contact: {
+        website: "https://tuscaloosainterfaithdental.org",
+        email: "contact@tuscaloosainterfaithdental.org",
+        phone: "(205) 555-0300"
+      },
+      volunteer_opportunities: true,
+      accepting_board_members: true
+    },
+    {
+      name: "Catholic Social Services - Dental Outreach",
+      ein: "63-4567890",
+      ntee_code: "X20",
+      ntee_description: "Christian",
+      mission: "Diocese of Birmingham outreach providing dental care and health services to underserved communities",
+      services: [
+        "Quarterly dental clinics at parish hall",
+        "School dental screening partnerships",
+        "Dental supply distribution",
+        "Financial assistance for dental emergencies"
+      ],
+      annual_budget: 95000,
+      families_served: 320,
+      contact: {
+        website: "https://cssalabama.org/dental",
+        email: "dental@cssalabama.org",
+        phone: "(205) 555-0400"
+      },
+      volunteer_opportunities: true,
+      accepting_board_members: false
     }
   ];
   
