@@ -230,7 +230,7 @@ cd city-scrapers
 
 1. ✅ Enumerate Legistar subdomains
    - Test all 85,302 jurisdiction names against legistar.com
-   - Pattern: {city}.legistar.com
+   - Pattern: {{city}}.legistar.com
    
 2. ✅ Scrape Granicus client list
    - Check granicus.com website for clients

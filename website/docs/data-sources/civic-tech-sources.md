@@ -204,7 +204,7 @@ enumerate_legistar_subdomains()  # Tests chicago.legistar.com, la.legistar.com, 
 4. ⏳ **PENDING**: Open States integration (if not run yet)
 
 ### Near-Term (Next 2 Weeks):
-5. **Legistar enumeration** - Test {city}.legistar.com pattern against Census
+5. **Legistar enumeration** - Test {{city}}.legistar.com pattern against Census
 6. **LocalView download** - Manual download from Harvard Dataverse
 7. **URL deduplication** - Combine all sources, remove duplicates
 
