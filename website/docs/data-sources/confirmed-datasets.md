@@ -111,9 +111,9 @@ cdp_jurisdictions = [
 # Or use DNS enumeration tools
 
 legistar_pattern_tests = [
-    f"{city.lower()}.legistar.com",
-    f"{city.lower()}-{state.lower()}.legistar.com",
-    f"{city.lower()}{state.lower()}.legistar.com"
+    f"{{city.lower()}}.legistar.com",
+    f"{{city.lower()}}-{{state.lower()}}.legistar.com",
+    f"{{city.lower()}}{{state.lower()}}.legistar.com"
 ]
 
 # Test against our 85,302 jurisdictions
