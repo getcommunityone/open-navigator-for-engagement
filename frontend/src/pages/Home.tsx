@@ -1,4 +1,5 @@
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
+import { useState } from 'react'
 import { 
   MagnifyingGlassIcon, 
   MapIcon, 
@@ -7,16 +8,57 @@ import {
   BuildingLibraryIcon,
   BellAlertIcon,
   ArrowRightIcon,
-  BookOpenIcon
+  BookOpenIcon,
+  MapPinIcon,
+  CurrencyDollarIcon,
+  HomeIcon,
+  TruckIcon,
+  HeartIcon,
+  AcademicCapIcon,
+  BriefcaseIcon,
+  ScaleIcon
 } from '@heroicons/react/24/outline'
 
 export default function Home() {
+  const navigate = useNavigate()
+  const [keyword, setKeyword] = useState('')
+  const [location, setLocation] = useState('')
+
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (keyword || location) {
+      const params = new URLSearchParams()
+      if (keyword) params.set('search', keyword)
+      if (location) params.set('location', location)
+      navigate(`/documents?${params.toString()}`)
+    }
+  }
+
+  const categories = [
+    { name: 'Budget', icon: CurrencyDollarIcon, query: 'budget funding' },
+    { name: 'Housing', icon: HomeIcon, query: 'housing affordable' },
+    { name: 'Transport', icon: TruckIcon, query: 'transportation transit' },
+    { name: 'Health', icon: HeartIcon, query: 'health dental' },
+    { name: 'Education', icon: AcademicCapIcon, query: 'education school' },
+    { name: 'Jobs', icon: BriefcaseIcon, query: 'employment jobs' },
+    { name: 'Legal', icon: ScaleIcon, query: 'legal services' },
+    { name: 'Nonprofits', icon: BuildingLibraryIcon, query: '' },
+  ]
+
+  const quickSearch = (query: string) => {
+    if (query) {
+      navigate(`/documents?search=${encodeURIComponent(query)}`)
+    } else {
+      navigate('/nonprofits')
+    }
+  }
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-sky-50 via-white to-emerald-50">
+    <div className="min-h-screen" style={{ backgroundColor: '#F0F4F5' }}>
       {/* Hero Section */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-20 pb-16">
         <div className="text-center">
-          <div className="flex items-center justify-center gap-4 mb-4">
+          <div className="flex items-center justify-center gap-4 mb-6">
             <img 
               src="/communityone_logo.jpg" 
               alt="CommunityOne Logo" 
@@ -26,76 +68,84 @@ export default function Home() {
               Open Navigator for Engagement
             </h1>
           </div>
-          <p className="text-xl text-gray-600 mb-8 max-w-3xl mx-auto">
+          <p className="text-xl text-gray-600 mb-12 max-w-3xl mx-auto">
             Track what local governments and nonprofits say and spend.
             <br />
             90,000+ cities. 3M+ nonprofits. All free.
           </p>
           
-          {/* Search Bar */}
-          <div className="max-w-2xl mx-auto mb-12">
-            <div className="relative">
-              <input
-                type="text"
-                placeholder="Search documents, nonprofits, or locations..."
-                className="w-full px-6 py-4 text-lg border-2 border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-transparent shadow-lg"
-              />
-              <button className="absolute right-2 top-2 bg-sky-600 text-white px-6 py-2 rounded-full hover:bg-sky-700 transition-colors">
-                <MagnifyingGlassIcon className="h-6 w-6" />
-              </button>
+          {/* Two-Part Search */}
+          <form onSubmit={handleSearch} className="max-w-5xl mx-auto mb-8">
+            <div className="bg-white rounded-xl shadow-lg p-8">
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-end">
+                {/* What are you looking for? */}
+                <div className="lg:col-span-7">
+                  <label className="block text-left text-sm font-medium text-gray-700 mb-2">
+                    What are you looking for today?
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Enter a topic, keyword, or program name..."
+                    value={keyword}
+                    onChange={(e) => setKeyword(e.target.value)}
+                    className="w-full px-4 py-3 text-lg border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-transparent"
+                  />
+                </div>
+
+                {/* Where? */}
+                <div className="lg:col-span-3">
+                  <label className="block text-left text-sm font-medium text-gray-700 mb-2">
+                    Where?
+                  </label>
+                  <div className="relative">
+                    <input
+                      type="text"
+                      placeholder="City, County, or ZIP"
+                      value={location}
+                      onChange={(e) => setLocation(e.target.value)}
+                      className="w-full px-4 py-3 pl-10 text-lg border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-transparent"
+                    />
+                    <MapPinIcon className="absolute left-3 top-3.5 h-6 w-6 text-gray-400" />
+                  </div>
+                </div>
+
+                {/* Find Button */}
+                <div className="lg:col-span-2">
+                  <button
+                    type="submit"
+                    className="w-full bg-sky-600 text-white px-6 py-3 rounded-lg hover:bg-sky-700 transition-colors text-lg font-semibold flex items-center justify-center gap-2"
+                  >
+                    <MagnifyingGlassIcon className="h-6 w-6" />
+                    Find
+                  </button>
+                </div>
+              </div>
             </div>
-            <p className="text-sm text-gray-500 mt-2">
-              Try: "water fluoridation", "dental programs", or a city name
-            </p>
+          </form>
+
+          {/* Category Quick Buttons */}
+          <div className="max-w-5xl mx-auto mb-6">
+            <div className="flex flex-wrap justify-center gap-3">
+              {categories.map((category) => (
+                <button
+                  key={category.name}
+                  onClick={() => quickSearch(category.query)}
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-white border-2 border-gray-300 rounded-lg hover:border-sky-500 hover:bg-sky-50 transition-colors"
+                >
+                  <category.icon className="h-5 w-5 text-gray-600" />
+                  <span className="font-medium text-gray-700">{category.name}</span>
+                </button>
+              ))}
+            </div>
           </div>
 
-          {/* Quick Actions */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl mx-auto mb-16">
-            <Link 
-              to="/opportunities"
-              className="bg-white p-6 rounded-xl shadow-lg hover:shadow-xl transition-all transform hover:-translate-y-1 group"
-            >
-              <div className="flex items-center justify-center mb-4">
-                <div className="bg-amber-100 p-4 rounded-full">
-                  <BellAlertIcon className="h-8 w-8 text-amber-600" />
-                </div>
-              </div>
-              <h3 className="text-lg font-semibold mb-2 group-hover:text-sky-600">View Opportunities</h3>
-              <p className="text-gray-600 text-sm">
-                Discover advocacy windows based on meeting minutes and budgets
-              </p>
-            </Link>
-
-            <Link 
-              to="/heatmap"
-              className="bg-white p-6 rounded-xl shadow-lg hover:shadow-xl transition-all transform hover:-translate-y-1 group"
-            >
-              <div className="flex items-center justify-center mb-4">
-                <div className="bg-emerald-100 p-4 rounded-full">
-                  <MapIcon className="h-8 w-8 text-emerald-600" />
-                </div>
-              </div>
-              <h3 className="text-lg font-semibold mb-2 group-hover:text-sky-600">Explore Heatmap</h3>
-              <p className="text-gray-600 text-sm">
-                Geographic visualization of policy opportunities nationwide
-              </p>
-            </Link>
-
-            <Link 
-              to="/nonprofits"
-              className="bg-white p-6 rounded-xl shadow-lg hover:shadow-xl transition-all transform hover:-translate-y-1 group"
-            >
-              <div className="flex items-center justify-center mb-4">
-                <div className="bg-sky-100 p-4 rounded-full">
-                  <BuildingLibraryIcon className="h-8 w-8 text-sky-600" />
-                </div>
-              </div>
-              <h3 className="text-lg font-semibold mb-2 group-hover:text-sky-600">Find Nonprofits</h3>
-              <p className="text-gray-600 text-sm">
-                Search 3M+ organizations and IRS Form 990 financial data
-              </p>
-            </Link>
-          </div>
+          {/* Terms Note */}
+          <p className="text-sm text-gray-500">
+            By continuing, you agree to the{' '}
+            <a href="#" className="text-sky-600 hover:underline">Terms</a>
+            {' & '}
+            <a href="#" className="text-sky-600 hover:underline">Privacy</a>.
+          </p>
         </div>
       </div>
 
@@ -153,7 +203,7 @@ export default function Home() {
       </div>
 
       {/* Stats Section */}
-      <div className="py-16 bg-gray-50">
+      <div className="py-16" style={{ backgroundColor: '#F0F4F5' }}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-8 text-center">
             <div>
