@@ -79,12 +79,12 @@
 # Config file contains the source URLs for that jurisdiction
 
 cdp_jurisdictions = [
-    {
+    {{
         "name": "Seattle",
         "state": "WA",
         "cdp_url": "https://councildataproject.org/seattle",
         "source_repo": "https://github.com/CouncilDataProject/seattle"
-    },
+    }},
     # ... (all 20+)
 ]
 ```
