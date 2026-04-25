@@ -504,81 +504,85 @@ The documentation site includes:
 
 ### Quick Start
 
-**Option 1: Automated Installation (Recommended)**
+**🚀 Fastest Way: Start All Services at Once (Recommended)**
 
 ```bash
 # Clone the repository
 git clone https://github.com/getcommunityone/oral-health-policy-pulse.git
 cd oral-health-policy-pulse
-
-# Run installation script
-chmod +x install.sh
-./install.sh
-
-# Activate virtual environment
-source venv/bin/activate
-
-# Edit .env with your API keys
-nano .env  # or vim .env
-
-# Run the API server
-python main.py serve
-```
-
-**Option 2: Using Makefile**
-
-```bash
-# Clone and navigate
-git clone https://github.com/getcommunityone/oral-health-policy-pulse.git
-cd oral-health-policy-pulse
-
-# Install everything
-make install
-
-# Activate virtual environment
-source venv/bin/activate
-
-# Configure .env with your API keys
-cp .env.example .env
-nano .env
-
-# Start the server
-make run
-```
-
-**Option 3: Manual Installation**
-
-```bash
-# Clone the repository
-git clone https://github.com/getcommunityone/oral-health-policy-pulse.git
-cd oral-health-policy-pulse
-
-# Create virtual environment
-python3 -m venv venv
-
-# Activate virtual environment
-source venv/bin/activate  # On Windows: venv\Scripts\activate
-
-# Upgrade pip
-pip install --upgrade pip
 
 # Install dependencies
+./install.sh                    # Python backend
+cd frontend && npm install && cd ..      # React dashboard
+cd website && npm install && cd ..       # Documentation site
+
+# Start everything with one command
+./start-all.sh
+```
+
+This launches all three services in a tmux session:
+- 📚 **Documentation**: http://localhost:3000 (Docusaurus site)
+- ⚛️ **Dashboard**: http://localhost:5173 (React app)
+- 🔥 **API**: http://localhost:8000 (FastAPI backend)
+
+**Using Makefile (Alternative)**
+
+```bash
+# Install all dependencies
+make install
+make install-frontend
+make install-docs
+
+# Start everything
+make start-all
+
+# Or start services individually:
+make dev           # API only
+make dev-frontend  # Dashboard only
+make dev-docs      # Documentation only
+```
+
+**Manual Installation (Traditional)**
+
+```bash
+# Clone the repository
+git clone https://github.com/getcommunityone/oral-health-policy-pulse.git
+cd oral-health-policy-pulse
+
+# Install Python backend
+python3 -m venv .venv
+source .venv/bin/activate  # On Windows: .venv\Scripts\activate
 pip install -r requirements.txt
+
+# Install React dashboard
+cd frontend && npm install && cd ..
+
+# Install documentation site
+cd website && npm install && cd ..
 
 # Configure environment
 cp .env.example .env
 # Edit .env with your API keys
 
-# Run the API server
-python main.py serve
+# Start services (in separate terminals)
+# Terminal 1: API
+source .venv/bin/activate && python main.py serve
+
+# Terminal 2: Dashboard
+cd frontend && npm run dev
+
+# Terminal 3: Documentation
+cd website && npm start
 ```
 
-Visit `http://localhost:8000` to access the API and `http://localhost:8000/docs` for interactive documentation.
+Visit:
+- `http://localhost:3000` - Documentation and project overview
+- `http://localhost:5173` - Interactive dashboard
+- `http://localhost:8000/docs` - API documentation
 
-> **Note:** Always activate the virtual environment before running commands:
-> ```bash
-> source venv/bin/activate
-> ```
+> **💡 Tip:** Use `./start-all.sh` for the best development experience. It manages all services in tmux, making it easy to switch between terminals and see logs.
+>
+> **Stop all services:** `./stop-all.sh` or `make stop-all`
 
 For detailed installation instructions and troubleshooting, see [QUICKSTART.md](QUICKSTART.md).
 
