@@ -94,7 +94,11 @@ const config: Config = {
           label: 'Guides',
         },
         {to: '/blog', label: 'Blog', position: 'left'},
-        {to: '/dashboard', label: 'Dashboard', position: 'left'},
+        {
+          href: 'http://localhost:5173',
+          label: '🚀 Dashboard',
+          position: 'right',
+        },
         {
           href: 'https://github.com/getcommunityone/oral-health-policy-pulse',
           label: 'GitHub',

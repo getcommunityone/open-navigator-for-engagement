@@ -24,8 +24,9 @@ function HomepageHeader() {
           </Link>
           <Link
             className="button button--primary button--lg margin-left--md"
-            to="/dashboard">
-            Open Dashboard →
+            href="http://localhost:5173"
+            target="_blank">
+            🚀 Launch Dashboard →
           </Link>
         </div>
       </div>

@@ -3,16 +3,39 @@ import Layout from '@theme/Layout';
 import Link from '@docusaurus/Link';
 import Heading from '@theme/Heading';
 
+// Dashboard URL - update this for production deployment
+const DASHBOARD_URL = process.env.REACT_APP_DASHBOARD_URL || 'http://localhost:5173';
+
 export default function DashboardRedirect(): JSX.Element {
+  // Auto-redirect after 3 seconds
+  React.useEffect(() => {
+    const timer = setTimeout(() => {
+      window.location.href = DASHBOARD_URL;
+    }, 3000);
+    return () => clearTimeout(timer);
+  }, []);
+
   return (
     <Layout title="Dashboard" description="Access the Open Navigator Dashboard">
       <div className="container margin-vert--lg">
-        <Heading as="h1">📊 Open Navigator Dashboard</Heading>
+        <Heading as="h1">📊 Redirecting to Dashboard...</Heading>
         
+        <div className="alert alert--success margin-vert--md">
+          <p>
+            <strong>You will be redirected in 3 seconds...</strong>
+          </p>
+          <p>
+            Or click here to go immediately: <a href={DASHBOARD_URL} target="_blank" rel="noopener noreferrer">
+              <strong>Open Dashboard →</strong>
+            </a>
+          </p>
+        </div>
+
         <div className="alert alert--info margin-vert--md">
           <p>
-            The interactive dashboard is a separate React application that provides
-            real-time access to advocacy opportunities, meeting minutes, and nonprofit data.
+            <strong>Note:</strong> The interactive dashboard is a separate React application (port 5173) 
+            that provides real-time access to advocacy opportunities, meeting minutes, and nonprofit data.
+            This documentation site (port 3000) provides guides and reference materials.
           </p>
         </div>
 
@@ -43,7 +66,7 @@ npm run dev`}
                 </pre>
               </li>
               <li>
-                <strong>Access the dashboard:</strong> <a href="http://localhost:3000" target="_blank">http://localhost:3000</a>
+                <strong>Access the dashboard:</strong> <a href="http://localhost:5173" target="_blank">http://localhost:5173</a>
               </li>
             </ol>
           </div>
@@ -89,9 +112,9 @@ npm run dev`}
         <div className="margin-vert--lg text--center">
           <Link
             className="button button--primary button--lg"
-            href="http://localhost:3000"
+            href={DASHBOARD_URL}
             target="_blank">
-            Open Dashboard (Dev Mode) →
+            🚀 Launch Dashboard Now →
           </Link>
           <Link
             className="button button--secondary button--lg margin-left--md"
