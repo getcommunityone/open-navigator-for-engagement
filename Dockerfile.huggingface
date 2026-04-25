@@ -43,7 +43,7 @@ COPY . .
 
 # Copy built static files from previous stages
 COPY --from=docs-builder /build/build /app/static/docs
-COPY --from=frontend-builder /build/dist /app/static/frontend
+COPY --from=frontend-builder /api/static /app/static/frontend
 
 # Create necessary directories
 RUN mkdir -p /app/logs /app/data /var/log/supervisor
