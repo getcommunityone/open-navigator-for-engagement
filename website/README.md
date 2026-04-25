@@ -28,7 +28,7 @@ npm run clear          # Clear Docusaurus cache
 
 - `docs/` - All documentation markdown files
 - `blog/` - Blog posts (optional)
-- `src/pages/` - Custom React pages (home, dashboard redirect)
+- `src/pages/` - Custom React pages (home, redirect to app)
 - `static/` - Static assets (images, files)
 - `docusaurus.config.ts` - Site configuration
 - `sidebars.ts` - Documentation sidebar structure
@@ -38,10 +38,10 @@ npm run clear          # Clear Docusaurus cache
 The documentation site is part of the larger Open Navigator project:
 
 - **Documentation**: `http://localhost:3000` (this site)
-- **Dashboard**: React app at `frontend/` (separate Vite app)
+- **Open Navigator**: React app at `frontend/` (separate Vite app)
 - **API**: FastAPI backend at `api/`
 
-The `/dashboard` page in this site redirects users to the React dashboard application.
+The `/dashboard` page in this site redirects users to the React application.
 
 ## Deployment
 

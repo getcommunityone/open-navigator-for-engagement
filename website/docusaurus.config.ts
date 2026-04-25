@@ -92,7 +92,7 @@ const config: Config = {
         {to: '/blog', label: 'Blog', position: 'left'},
         {
           href: 'http://localhost:5173',
-          label: '🚀 Dashboard',
+          label: '🚀 Open Navigator',
           position: 'right',
         },
         {
@@ -126,7 +126,7 @@ const config: Config = {
           title: 'Resources',
           items: [
             {
-              label: 'Dashboard',
+              label: 'Open Navigator',
               to: '/dashboard',
             },
             {

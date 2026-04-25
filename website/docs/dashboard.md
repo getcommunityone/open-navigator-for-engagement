@@ -1,19 +1,19 @@
 ---
-title: Dashboard
+title: Open Navigator
 ---
 
-# Open Navigator Dashboard
+# Open Navigator
 
-The interactive dashboard provides real-time access to:
+The interactive platform provides real-time access to:
 
-- 📊 **Analytics Dashboard** - Overview of opportunities and trends
+- 📊 **Analytics** - Overview of opportunities and trends
 - 🗺️ **Interactive Heatmap** - Geographic visualization of policy opportunities  
 - 📄 **Document Explorer** - Search and browse meeting minutes
 - 🔔 **Opportunities** - Identified advocacy opportunities
 - 🏛️ **Nonprofit Solutions** - Search nonprofit organizations by location and service
 - ⚙️ **Settings** - Configure alerts and preferences
 
-## Accessing the Dashboard
+## Accessing Open Navigator
 
 ### Development Mode
 
@@ -46,10 +46,10 @@ export OPENAI_API_KEY=sk-...
 
 ```bash
 docker-compose up -d
-# Dashboard available at http://localhost:8000
+# Open Navigator available at http://localhost:8000
 ```
 
-## Dashboard Features
+## Features
 
 ### Analytics Overview
 
@@ -87,7 +87,7 @@ Find local organizations:
 
 ## API Integration
 
-The dashboard communicates with the FastAPI backend:
+Open Navigator communicates with the FastAPI backend:
 
 **Base URL:** `http://localhost:8000/api`
 
@@ -110,7 +110,7 @@ See the [API Reference](/docs/api) for complete documentation.
 <div class="alert alert--success">
   <strong>Quick Links</strong>
   <ul>
-    <li><a href="http://localhost:3000" target="_blank">Open Dashboard (Dev)</a></li>
+    <li><a href="http://localhost:3000" target="_blank">Open Navigator (Dev)</a></li>
     <li><a href="http://localhost:8000/docs" target="_blank">API Docs (Dev)</a></li>
     <li><a href="/docs/intro">Project Documentation</a></li>
   </ul>

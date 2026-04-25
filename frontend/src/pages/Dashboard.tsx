@@ -45,7 +45,7 @@ export default function Dashboard() {
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Analytics Dashboard</h1>
+          <h1 className="text-3xl font-bold mb-2" style={{ color: '#354F52' }}>Analytics</h1>
           <p className="text-gray-600">
             Real-time statistics and insights across all monitored jurisdictions and nonprofits
           </p>
