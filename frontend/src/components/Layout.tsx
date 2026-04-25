@@ -39,9 +39,14 @@ export default function Layout() {
       {/* Top Header Bar */}
       <div className="fixed top-0 left-0 right-0 bg-white border-b border-gray-200 z-50">
         <div className="flex items-center justify-between px-6 py-3">
-          <Link to="/" className="flex items-center gap-2">
+          <Link to="/" className="flex items-center gap-3">
+            <img 
+              src="/communityone_logo.jpg" 
+              alt="CommunityOne Logo" 
+              className="h-10 w-auto"
+            />
             <h1 className="text-2xl font-bold text-sky-600">
-              🦷 Open Navigator
+              Open Navigator
             </h1>
           </Link>
 

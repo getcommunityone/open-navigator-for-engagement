@@ -16,11 +16,18 @@ export default function Home() {
       {/* Hero Section */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-20 pb-16">
         <div className="text-center">
-          <h1 className="text-5xl font-bold text-gray-900 mb-4">
-            🦷 Open Navigator for Engagement
-          </h1>
+          <div className="flex items-center justify-center gap-4 mb-4">
+            <img 
+              src="/communityone_logo.jpg" 
+              alt="CommunityOne Logo" 
+              className="h-20 w-auto"
+            />
+            <h1 className="text-5xl font-bold text-gray-900">
+              Open Navigator for Engagement
+            </h1>
+          </div>
           <p className="text-xl text-gray-600 mb-8 max-w-3xl mx-auto">
-            AI-powered advocacy opportunity finder analyzing municipal meetings and financial documents 
+            Advocacy opportunity finder analyzing municipal meetings and financial documents 
             across 90,000+ jurisdictions and 3M+ nonprofits
           </p>
           
