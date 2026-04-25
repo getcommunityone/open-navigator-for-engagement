@@ -74,7 +74,7 @@ export default function Opportunities() {
       {/* Opportunities List */}
       <div className="space-y-4">
         {isLoading ? (
-          <div className="card">Loading opportunities...</div>
+          <div className="card">Loading causes...</div>
         ) : (
           opportunities?.map((opp) => (
             <div key={opp.id} className="card">

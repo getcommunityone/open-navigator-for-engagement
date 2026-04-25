@@ -17,7 +17,7 @@ const navigation = [
   { name: 'Analytics', href: '/analytics', icon: ChartBarIcon },
   { name: 'Heatmap', href: '/heatmap', icon: MapIcon },
   { name: 'Documents', href: '/documents', icon: DocumentTextIcon },
-  { name: 'Opportunities', href: '/opportunities', icon: BellAlertIcon },
+  { name: 'Causes', href: '/opportunities', icon: BellAlertIcon },
   { name: 'Nonprofits', href: '/nonprofits', icon: BuildingLibraryIcon },
   { name: 'Settings', href: '/settings', icon: Cog6ToothIcon },
 ]

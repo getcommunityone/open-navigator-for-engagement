@@ -69,9 +69,9 @@ export default function Home() {
             </h1>
           </div>
           <p className="text-xl text-gray-600 mb-12 max-w-3xl mx-auto">
-            Track what local governments and nonprofits say and spend.
+            Track what local governments and nonprofits say, spend—and block.
             <br />
-            90,000+ cities. 3M+ nonprofits. All free.
+            Find leaders by name. Discover causes. 90,000+ cities. 3M+ nonprofits. All free.
           </p>
           
           {/* Two-Part Search */}
@@ -160,7 +160,7 @@ export default function Home() {
                 <ChartBarIcon className="h-10 w-10 text-primary-600 mb-4" />
                 <h3 className="text-xl font-semibold mb-2 group-hover:text-primary-600">Analytics Dashboard</h3>
                 <p className="text-gray-600 mb-4">
-                  Real-time statistics, charts, and insights across all monitored jurisdictions
+                Real-time statistics, charts, and insights. Track causes across jurisdictions.
                 </p>
                 <span className="text-primary-600 font-medium inline-flex items-center">
                   View Analytics <ArrowRightIcon className="h-4 w-4 ml-2" />

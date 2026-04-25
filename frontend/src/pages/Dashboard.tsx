@@ -133,7 +133,7 @@ export default function Dashboard() {
 
       {/* Recent Opportunities */}
       <div className="bg-white rounded-lg shadow-sm p-6">
-        <h3 className="text-xl font-semibold mb-4 text-gray-900">Recent Opportunities</h3>
+        <h3 className="text-xl font-semibold mb-4 text-gray-900">Recent Causes</h3>
         {data?.recent_opportunities && data.recent_opportunities.length > 0 ? (
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">
