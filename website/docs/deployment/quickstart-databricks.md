@@ -1,3 +1,7 @@
+---
+sidebar_position: 3
+---
+
 # Quick Start Guide - React + FastAPI Databricks App
 
 ## 🚀 Deploy to Databricks Apps (5 minutes)

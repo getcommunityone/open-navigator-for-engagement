@@ -1,3 +1,7 @@
+---
+sidebar_position: 1
+---
+
 # 🏡 TUSCALOOSA, ALABAMA - COMPLETE DATA SOURCES & STATISTICS
 
 **Last Updated:** April 22, 2026  

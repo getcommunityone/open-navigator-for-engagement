@@ -1,3 +1,7 @@
+---
+sidebar_position: 3
+---
+
 # Tuscaloosa Policy Pulse Pipeline Guide
 
 This guide shows how to run the complete 4-step pipeline for Tuscaloosa, AL.

@@ -1,3 +1,7 @@
+---
+sidebar_position: 2
+---
+
 # 🏛️ TUSCALOOSA, ALABAMA - COMPLETE DISCOVERY REPORT
 
 **Generated:** April 22, 2026  

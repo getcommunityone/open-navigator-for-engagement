@@ -1,3 +1,7 @@
+---
+sidebar_position: 15
+---
+
 # ✨ React + FastAPI Databricks App - Complete Refactoring Summary
 
 ## 🎉 What We Built

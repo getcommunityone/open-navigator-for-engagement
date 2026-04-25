@@ -1,3 +1,7 @@
+---
+sidebar_position: 13
+---
+
 # React + FastAPI Databricks App Refactoring
 
 ## Executive Summary

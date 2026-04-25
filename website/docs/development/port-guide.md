@@ -1,3 +1,7 @@
+---
+sidebar_position: 12
+---
+
 # 🚨 CRITICAL: Which Port to Use?
 
 ## TL;DR: Go to Port 5173 for the App

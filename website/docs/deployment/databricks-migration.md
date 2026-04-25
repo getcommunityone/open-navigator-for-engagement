@@ -1,3 +1,7 @@
+---
+sidebar_position: 2
+---
+
 # Databricks Agent Bricks Refactoring - Summary
 
 ## What Was Done

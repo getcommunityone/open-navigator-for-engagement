@@ -1,3 +1,7 @@
+---
+sidebar_position: 11
+---
+
 # Documentation Migration Summary
 
 ## ✅ Successfully Migrated 40+ Documentation Files
