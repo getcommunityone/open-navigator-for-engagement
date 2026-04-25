@@ -360,10 +360,12 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for details.
 ## Documentation
 
 - **[Full Documentation](http://localhost:3000)** - Complete guides and API reference
-- [QUICKSTART.md](QUICKSTART.md) - Detailed setup instructions
-- [ARCHITECTURE.md](ARCHITECTURE.md) - System architecture
-- [DATABRICKS_APP_GUIDE.md](DATABRICKS_APP_GUIDE.md) - Deployment guide
-- [DATA_SOURCES.md](docs/DATA_SOURCES.md) - Data source documentation
+- **[Architecture](http://localhost:3000/docs/architecture)** - System architecture overview
+- **[Quick Start](http://localhost:3000/docs/quickstart)** - Detailed setup instructions
+- **[Quick Reference](http://localhost:3000/docs/quick-reference)** - Command reference card
+- **[Deployment](http://localhost:3000/docs/deployment/databricks-apps)** - Production deployment guides
+- **[Case Studies](http://localhost:3000/docs/case-studies/tuscaloosa-complete)** - Real-world examples
+- [CONTRIBUTING.md](CONTRIBUTING.md) - How to contribute
 
 ---
 
