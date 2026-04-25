@@ -547,7 +547,7 @@ make start-all
 
 # Or start services individually:
 make dev           # API only
-make dev-frontend  # Dashboard only
+make dev-frontend  # Open Navigator only
 make dev-docs      # Documentation only
 ```
 
