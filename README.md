@@ -29,6 +29,92 @@ The **Open Navigator for Engagement** is a full-stack AI application that analyz
 - 📊 **Real-Time Analytics**: Identifies windows of opportunity for policy change
 - 🎯 **Topic-Focused**: Monitors water fluoridation, school dental programs, Medicaid dental, and more
 
+## 💰 Free Nonprofit Data Sources
+
+Access comprehensive nonprofit data without expensive subscriptions. The platform integrates with **100% free** open data APIs to discover and track organizations already providing services that governments claim are "impossible."
+
+### Why This Matters
+
+When officials reject policy proposals with technical objections ("We can't do dental screenings - legal liability"), you can instantly show citizens the nonprofits **already doing it successfully**. This:
+
+- **Bypasses technocratic vetoes** - Shows working alternatives exist
+- **Creates accountability pressure** - Exposes inefficiency ("$5K legal review vs $25 screening")  
+- **Mobilizes citizens** - Provides direct volunteer/donation pathways
+
+### Integrated Data Sources
+
+#### 1. 🏆 ProPublica Nonprofit Explorer API (Primary Source)
+
+**Best overall free source** for IRS Form 990 financial data.
+
+- **Coverage**: 3+ million organizations, 10+ years of filings
+- **Data**: Revenue, expenses, assets, executive compensation, NTEE codes
+- **Rate Limits**: Free, unlimited (be respectful: ~1 req/sec suggested)
+- **API Docs**: [ProPublica Nonprofit Explorer API](https://projects.propublica.org/nonprofits/api)
+
+```python
+# Example: Search health nonprofits in Tuscaloosa
+from discovery.nonprofit_discovery import NonprofitDiscovery
+discovery = NonprofitDiscovery()
+health_orgs = discovery.search_propublica(
+    state="AL", city="Tuscaloosa", ntee_code="E"  # E = Health
+)
+```
+
+#### 2. 📋 IRS Tax Exempt Organization Search (TEOS)
+
+**Official source of truth** for all U.S. nonprofits and churches.
+
+- **Coverage**: Every registered tax-exempt organization
+- **Data**: Legal status, Pub 78 verification (deductibility), raw financial extracts
+- **Format**: Bulk data downloads (CSV/JSON)
+- **Resource**: [IRS Bulk Data Downloads](https://www.irs.gov/charities-non-profits/tax-exempt-organization-search-bulk-data-downloads)
+
+#### 3. 🌟 Every.org Charity API
+
+**Best for human-readable** mission statements and visual assets.
+
+- **Coverage**: Verified nonprofits with enhanced metadata
+- **Data**: Mission statements, logos, cover images, cause categories
+- **Best Feature**: "Browse by Cause" - easier discovery than raw IRS codes
+- **API Docs**: [Every.org Charity API](https://www.every.org/nonprofit-api)
+
+```python
+# Example: Find nonprofits by cause
+nonprofits = discovery.search_everyorg(
+    location="Tuscaloosa, AL",
+    causes=["health", "education"]
+)
+```
+
+#### 4. 🔍 Findhelp.org (Aunt Bertha)
+
+**Most comprehensive local services directory** for food, health, housing.
+
+- **Coverage**: 400,000+ community programs across the U.S.
+- **Data**: Services provided, eligibility criteria, contact info, hours
+- **Best Use**: Search "dental" + location to find active providers
+- **Resource**: [Findhelp.org](https://www.findhelp.org/)
+- **Note**: API access varies; web scraping is an option for small-scale use
+
+#### 5. 📞 211 Directory
+
+**Regional social services directory** available in most U.S. regions.
+
+- **Coverage**: Local United Way and community service referrals
+- **Data**: Service descriptions, contact information, hours of operation
+- **Access**: State/region-specific (e.g., [Alabama 211](https://www.211connects.org/))
+- **Note**: Each region has different systems; scraping may be required
+
+### Implementation
+
+See [`discovery/nonprofit_discovery.py`](discovery/nonprofit_discovery.py) for full implementation and [`discovery/README_NONPROFIT_DISCOVERY.md`](discovery/README_NONPROFIT_DISCOVERY.md) for detailed documentation.
+
+Access via API:
+```bash
+GET /api/nonprofits?location=Tuscaloosa,AL&keyword=dental
+```
+
 ## Architecture
 
 ### Deployment Architecture
