@@ -6,35 +6,37 @@
 
 /* You can override the default Infima variables here. */
 :root {
-  --ifm-color-primary: #34D4BF;
-  --ifm-color-primary-dark: #2AB89F;
-  --ifm-color-primary-darker: #239C85;
-  --ifm-color-primary-darkest: #1d826e;
-  --ifm-color-primary-light: #5FDFCA;
-  --ifm-color-primary-lighter: #8AE9D5;
-  --ifm-color-primary-lightest: #b5f2e3;
-  --ifm-button-background-color: #1E293B;
+  --ifm-color-primary: #354F52;
+  --ifm-color-primary-dark: #2e4346;
+  --ifm-color-primary-darker: #27383a;
+  --ifm-color-primary-darkest: #202d2f;
+  --ifm-color-primary-light: #496466;
+  --ifm-color-primary-lighter: #5d797a;
+  --ifm-color-primary-lightest: #8a9d9e;
+  --ifm-button-background-color: #354F52;
   --ifm-button-color: #ffffff;
   --ifm-code-font-size: 95%;
-  --docusaurus-highlighted-code-line-bg: rgba(52, 212, 191, 0.1);
+  --docusaurus-highlighted-code-line-bg: rgba(53, 79, 82, 0.1);
   --ifm-background-color: #F1F5F9;
-  --ifm-navbar-link-color: #64748B;
-  --ifm-navbar-link-hover-color: #34D4BF;
+  --ifm-navbar-link-color: #354F52;
+  --ifm-navbar-link-hover-color: #2e4346;
+  --ifm-navbar-sidebar-link-color: #354F52;
 }
 
 /* For readability concerns, you should choose a lighter palette in dark mode. */
 [data-theme='dark'] {
-  --ifm-color-primary: #5FDFCA;
-  --ifm-color-primary-dark: #34D4BF;
-  --ifm-color-primary-darker: #2AB89F;
-  --ifm-color-primary-darkest: #239C85;
-  --ifm-color-primary-light: #8AE9D5;
-  --ifm-color-primary-lighter: #b5f2e3;
-  --ifm-color-primary-lightest: #d5f7f0;
-  --docusaurus-highlighted-code-line-bg: rgba(52, 212, 191, 0.2);
+  --ifm-color-primary: #5d797a;
+  --ifm-color-primary-dark: #496466;
+  --ifm-color-primary-darker: #354F52;
+  --ifm-color-primary-darkest: #2e4346;
+  --ifm-color-primary-light: #8a9d9e;
+  --ifm-color-primary-lighter: #a7b7b8;
+  --ifm-color-primary-lightest: #c4d1d2;
+  --docusaurus-highlighted-code-line-bg: rgba(53, 79, 82, 0.2);
   --ifm-background-color: #1E293B;
-  --ifm-navbar-link-color: #94A3B8;
-  --ifm-navbar-link-hover-color: #5FDFCA;
+  --ifm-navbar-link-color: #5d797a;
+  --ifm-navbar-link-hover-color: #8a9d9e;
+  --ifm-navbar-sidebar-link-color: #5d797a;
 }
 
 /* Additional background color overrides */
@@ -59,7 +61,6 @@ body {
 
 /* Logo styling */
 .navbar__logo img {
-  height: 100px !important;
-  background: transparent !important;
-  padding: 0.5rem;
+  height: 50px !important;
+  max-height: 50px !important;
 }

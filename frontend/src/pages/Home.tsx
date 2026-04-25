@@ -62,13 +62,13 @@ export default function Home() {
             <img 
               src="/communityone_logo.jpg" 
               alt="CommunityOne Logo" 
-              style={{ height: '100px', background: 'transparent', padding: '0.5rem' }}
+              style={{ height: '80px' }}
             />
-            <h1 className="text-5xl font-bold text-gray-900">
+            <h1 className="text-5xl font-bold" style={{ color: '#354F52' }}>
               Open Navigator for Engagement
             </h1>
           </div>
-          <p className="text-xl text-gray-600 mb-12 max-w-3xl mx-auto">
+          <p className="text-xl mb-12 max-w-3xl mx-auto" style={{ color: '#354F52' }}>
             Track what local governments and nonprofits say, spend—and block.
             <br />
             Find leaders by name. Discover causes. 90,000+ cities. 3M+ nonprofits. All free.
@@ -113,7 +113,10 @@ export default function Home() {
                 <div className="lg:col-span-2">
                   <button
                     type="submit"
-                    className="w-full bg-primary-600 text-white px-6 py-3 rounded-lg hover:bg-primary-700 transition-colors text-lg font-semibold flex items-center justify-center gap-2"
+                    className="w-full text-white px-6 py-3 rounded-lg transition-colors text-lg font-semibold flex items-center justify-center gap-2"
+                    style={{ backgroundColor: '#354F52' }}
+                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#2e4346'}
+                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#354F52'}
                   >
                     <MagnifyingGlassIcon className="h-6 w-6" />
                     Find

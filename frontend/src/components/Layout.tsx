@@ -43,9 +43,9 @@ export default function Layout() {
             <img 
               src="/communityone_logo.jpg" 
               alt="CommunityOne Logo" 
-              style={{ height: '100px', background: 'transparent', padding: '0.5rem' }}
+              style={{ height: '50px' }}
             />
-            <h1 className="text-2xl font-bold text-neutral-600">
+            <h1 className="text-2xl font-bold" style={{ color: '#354F52' }}>
               Open Navigator
             </h1>
           </Link>
@@ -79,7 +79,10 @@ export default function Layout() {
               href="http://localhost:8000/docs"
               target="_blank"
               rel="noopener noreferrer"
-              className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
+              className="px-4 py-2 text-white rounded-lg transition-colors"
+              style={{ backgroundColor: '#354F52' }}
+              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#2e4346'}
+              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#354F52'}
             >
               API Docs
             </a>

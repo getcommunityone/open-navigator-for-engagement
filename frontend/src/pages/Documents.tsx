@@ -72,7 +72,7 @@ export default function Documents() {
               <MagnifyingGlassIcon className="absolute left-4 top-3.5 h-6 w-6 text-gray-400" />
               <button
                 type="submit"
-                className="absolute right-2 top-2 bg-primary-600 text-white px-6 py-2 rounded-md hover:bg-primary-700 transition-colors"
+                className="absolute right-2 top-2 bg-neutral-600 text-white px-6 py-2 rounded-md hover:bg-neutral-700 transition-colors"
               >
                 Search
               </button>
