@@ -106,7 +106,7 @@ cdp_jurisdictions = [
 - phoenix.legistar.com
 
 ### 🔥 ACTION: Enumerate Legistar Subdomains
-```python
+```text
 # Try common city names against legistar.com
 # Or use DNS enumeration tools
 
@@ -288,7 +288,7 @@ We should instead:
 ```
 
 ### Step 2: Extract CDP URLs (30 minutes)
-```python
+```text
 # Create cdp_deployments.json with all 20+ instances
 # Each entry needs: city, state, cdp_url, source_url
 ```
@@ -300,7 +300,7 @@ git clone https://github.com/city-scrapers/city-scrapers.git
 ```
 
 ### Step 4: Integrate Into Bronze Layer (2 hours)
-```python
+```text
 # Add new tables:
 # - bronze/localview_jurisdictions
 # - bronze/cdp_deployments

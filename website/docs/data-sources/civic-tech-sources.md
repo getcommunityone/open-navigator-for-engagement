@@ -183,7 +183,7 @@ Each deployment uses **Legistar API** as their data source, so we'd get:
 **Redundant** - Councilmatic scrapes Legistar, which we already have access to.
 
 We can enumerate Legistar directly without going through Councilmatic:
-```python
+```text
 # Already in our codebase
 enumerate_legistar_subdomains()  # Tests chicago.legistar.com, la.legistar.com, etc.
 ```
