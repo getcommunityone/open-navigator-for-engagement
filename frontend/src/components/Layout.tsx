@@ -216,15 +216,6 @@ export default function Layout() {
                       <p className="text-sm font-medium text-gray-900">Sign in with:</p>
                     </div>
                     <button
-                      onClick={() => { login('huggingface'); setShowLoginMenu(false); }}
-                      className="flex items-center gap-3 w-full px-4 py-3 hover:bg-gray-100 transition-colors"
-                    >
-                      <div className="w-6 h-6 flex items-center justify-center">
-                        <span className="text-2xl">🤗</span>
-                      </div>
-                      <span className="text-sm font-medium text-gray-700">HuggingFace</span>
-                    </button>
-                    <button
                       onClick={() => { login('google'); setShowLoginMenu(false); }}
                       className="flex items-center gap-3 w-full px-4 py-3 hover:bg-gray-100 transition-colors"
                     >
@@ -259,6 +250,16 @@ export default function Layout() {
                         </svg>
                       </div>
                       <span className="text-sm font-medium text-gray-700">GitHub</span>
+                    </button>
+                    <div className="border-t border-gray-100 my-1"></div>
+                    <button
+                      onClick={() => { login('huggingface'); setShowLoginMenu(false); }}
+                      className="flex items-center gap-3 w-full px-4 py-3 hover:bg-gray-100 transition-colors"
+                    >
+                      <div className="w-6 h-6 flex items-center justify-center">
+                        <span className="text-2xl">🤗</span>
+                      </div>
+                      <span className="text-sm font-medium text-gray-700">HuggingFace</span>
                     </button>
                   </div>
                 )}
