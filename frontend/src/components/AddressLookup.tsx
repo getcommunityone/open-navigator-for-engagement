@@ -118,9 +118,6 @@ export default function AddressLookup({ onLocationFound, initialAddress = '', co
             placeholder="Enter your address..."
             className="w-full px-4 py-2 pl-10 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
             disabled={isLoading}
-            autoComplete="street-address"
-            data-lpignore="true"
-            data-form-type="other"
           />
           <MapPinIcon className="absolute left-3 top-2.5 h-5 w-5 text-gray-400" />
           <button
@@ -155,14 +152,12 @@ export default function AddressLookup({ onLocationFound, initialAddress = '', co
             <input
               type="text"
               id="address"
+              name="addresslookup"
               value={address}
               onChange={(e) => setAddress(e.target.value)}
               placeholder="123 Main St, Los Angeles, CA 90001"
               className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-base"
               disabled={isLoading}
-              autoComplete="street-address"
-              data-lpignore="true"
-              data-form-type="other"
             />
           </div>
           <p className="mt-1 text-xs text-gray-500">
