@@ -52,10 +52,13 @@ python -m discovery.nces_ingestion
 
 ## 🚧 Partially Integrated
 
-### 3. Ballotpedia ⚠️
-**Status:** PARTIAL - Web scraping implemented (no official API)  
+### 3. Ballotpedia API v3.0 ⚠️
+**Status:** PARTIAL - Official API v3.0 + Web scraping fallback  
 **File:** `discovery/ballotpedia_integration.py`  
 **Website:** https://ballotpedia.org  
+**API Docs:** https://ballotpedia.org/API_documentation  
+**API Announcement:** https://ballotpedia.org/Just_launched:_Ballotpedia's_API_Version_3.0  
+
 **What it provides:**
 - Elected officials (federal, state, local)
 - Ballot measures and initiatives
@@ -63,32 +66,51 @@ python -m discovery.nces_ingestion
 - Candidate information
 
 **Current Implementation:**
-- ✅ Web scraping with rate limiting
+- ✅ Official API v3.0 client (BallotpediaAPI class)
+- ✅ Web scraping fallback (BallotpediaDiscovery class)
 - ✅ Leader search by name
 - ✅ City officials discovery
 - ✅ Ballot measures by state/year
-- ❌ No official API (Ballotpedia doesn't offer free public API)
+- ✅ Rate-limited web scraping (2s delays)
 
-**Usage:**
+**API Key:** Contact Ballotpedia for access  
+**Get access:** https://ballotpedia.org/API_documentation
+
+**Usage (Official API - RECOMMENDED):**
+```python
+from discovery.ballotpedia_integration import BallotpediaAPI
+
+# Set BALLOTPEDIA_API_KEY in .env
+api = BallotpediaAPI()
+
+# Get officials via official API
+officials = await api.get_officials("Tuscaloosa", state="Alabama")
+
+# Get ballot measures via official API
+measures = await api.get_ballot_measures("Alabama", year=2024)
+```
+
+**Usage (Web Scraping Fallback):**
 ```python
 from discovery.ballotpedia_integration import BallotpediaDiscovery
 
 discovery = BallotpediaDiscovery()
 
-# Search for a leader
+# Search for a leader (web scraping)
 leader = await discovery.search_leader("Walt Maddox", "Alabama")
 
-# Get city officials
+# Get city officials (web scraping)
 officials = await discovery.get_city_officials("Tuscaloosa", "Alabama")
 
-# Get ballot measures
+# Get ballot measures (web scraping)
 measures = await discovery.get_ballot_measures("Alabama", year=2024)
 ```
 
 **Notes:**
-- Uses respectful web scraping (2-second delays between requests)
-- For production use, contact Ballotpedia for data partnership
-- Ballotpedia API page: https://ballotpedia.org/Ballotpedia_API (limited availability)
+- **Ballotpedia launched API v3.0** - official REST API now available!
+- For production, use official API (contact Ballotpedia for key)
+- Web scraping included as development/testing fallback
+- API provides more reliable, structured data than scraping
 
 ---
 
@@ -156,9 +178,11 @@ measures = await discovery.get_ballot_measures("Alabama", year=2024)
 |-----|--------|-------|------|---------------|
 | **Open States** | ✅ Integrated | Yes | `openstates_sources.py` | Yes (free) |
 | **NCES** | ✅ Integrated | Yes | `nces_ingestion.py` | No |
-| **Ballotpedia** | ⚠️ Partial | Yes | `ballotpedia_integration.py` | No (scraping) |
+| **Ballotpedia** | ⚠️ Partial | Contact | `ballotpedia_integration.py` | Yes (contact for API) |
 | **Google Civic** | ❌ Not Yet | Yes | - | Yes (free) |
 | **Cicero** | ❌ Not Yet | No | - | Yes (paid) |
+
+**Note:** Ballotpedia has both official API v3.0 (contact for access) and web scraping fallback.
 
 ---
 

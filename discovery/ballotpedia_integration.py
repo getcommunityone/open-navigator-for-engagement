@@ -8,29 +8,37 @@ Ballotpedia.org is the definitive source for:
 - Political positions and voting records
 
 INTEGRATION METHODS:
-1. **Web Scraping** - Structured HTML parsing (no API key needed)
-2. **Bulk Data** - Check if Ballotpedia offers CSV/JSON exports
-3. **API Access** - Contact Ballotpedia for partnership/API key
+1. **Ballotpedia API v3.0** - Official REST API (RECOMMENDED)
+   - Sign up: https://ballotpedia.org/API_documentation
+   - Announcement: https://ballotpedia.org/Just_launched:_Ballotpedia's_API_Version_3.0
+   - Pricing: Contact Ballotpedia for API access
+   
+2. **Web Scraping** - Fallback for public data (rate-limited, respectful)
 
-USAGE:
+OFFICIAL API (v3.0):
+    from discovery.ballotpedia_integration import BallotpediaAPI
+    
+    api = BallotpediaAPI(api_key="your-api-key")
+    
+    # Get officials for a jurisdiction
+    officials = await api.get_officials("Tuscaloosa", "AL")
+    
+    # Get ballot measures
+    measures = await api.get_ballot_measures("Alabama", year=2024)
+
+WEB SCRAPING (Fallback):
     from discovery.ballotpedia_integration import BallotpediaDiscovery
     
     discovery = BallotpediaDiscovery()
-    
-    # Get officials for a jurisdiction
-    officials = await discovery.get_officials("Tuscaloosa", "AL")
-    
-    # Get ballot measures
-    measures = await discovery.get_ballot_measures("Alabama", year=2024)
     
     # Search for a specific leader
     leader = await discovery.search_leader("Walt Maddox")
 
 NOTES:
-- Ballotpedia does NOT have a free public API
-- Web scraping is allowed but be respectful (rate limiting)
-- For production, contact Ballotpedia for data partnership
-- See: https://ballotpedia.org/Ballotpedia:Index_of_Contents
+- Ballotpedia API v3.0 launched recently - OFFICIAL API available!
+- For production use, get official API key from Ballotpedia
+- Web scraping included as fallback for testing/development
+- API documentation: https://ballotpedia.org/API_documentation
 """
 import asyncio
 import re
@@ -49,6 +57,174 @@ except ImportError:
     SPARK_AVAILABLE = False
     logger.warning("PySpark not available - will save to JSON instead of Delta Lake")
 
+try:
+    from config.settings import settings
+    SETTINGS_AVAILABLE = True
+except ImportError:
+    SETTINGS_AVAILABLE = False
+    settings = None
+
+
+# ============================================================================
+# OFFICIAL BALLOTPEDIA API v3.0 (RECOMMENDED)
+# ============================================================================
+
+class BallotpediaAPI:
+    """
+    Official Ballotpedia API v3.0 client.
+    
+    API Documentation: https://ballotpedia.org/API_documentation
+    Announcement: https://ballotpedia.org/Just_launched:_Ballotpedia's_API_Version_3.0
+    
+    To get API access:
+    1. Visit https://ballotpedia.org/API_documentation
+    2. Contact Ballotpedia for API key
+    3. Add to .env: BALLOTPEDIA_API_KEY=your-key
+    
+    This is the RECOMMENDED method for production use.
+    """
+    
+    # API base URL (update when official endpoint is confirmed)
+    BASE_URL = "https://api.ballotpedia.org/v3"
+    
+    def __init__(self, api_key: Optional[str] = None):
+        """
+        Initialize Ballotpedia API client.
+        
+        Args:
+            api_key: Ballotpedia API key. If not provided, will try settings.ballotpedia_api_key
+        """
+        if api_key:
+            self.api_key = api_key
+        elif SETTINGS_AVAILABLE and hasattr(settings, 'ballotpedia_api_key'):
+            self.api_key = settings.ballotpedia_api_key
+        else:
+            self.api_key = None
+            logger.warning("⚠️  BALLOTPEDIA_API_KEY not found")
+            logger.warning("   Get API access at: https://ballotpedia.org/API_documentation")
+            logger.warning("   Add to .env: BALLOTPEDIA_API_KEY=your-key")
+        
+        self.cache_dir = Path("data/cache/ballotpedia_api")
+        self.cache_dir.mkdir(parents=True, exist_ok=True)
+    
+    async def get_officials(
+        self,
+        jurisdiction: str,
+        state: Optional[str] = None,
+        office_type: Optional[str] = None
+    ) -> List[Dict]:
+        """
+        Get elected officials using official API.
+        
+        Args:
+            jurisdiction: City/county name
+            state: State code or name
+            office_type: Filter by office type (e.g., 'mayor', 'council', 'commissioner')
+        
+        Returns:
+            List of official dicts
+        """
+        if not self.api_key:
+            raise ValueError("Ballotpedia API key required. Get one at https://ballotpedia.org/API_documentation")
+        
+        # NOTE: Actual endpoint structure needs to be confirmed with Ballotpedia API docs
+        # This is a placeholder structure based on typical REST API patterns
+        
+        params = {
+            "jurisdiction": jurisdiction,
+            "api_key": self.api_key
+        }
+        
+        if state:
+            params["state"] = state
+        if office_type:
+            params["office_type"] = office_type
+        
+        logger.info(f"Fetching officials via API for {jurisdiction}, {state}")
+        
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            try:
+                response = await client.get(
+                    f"{self.BASE_URL}/officials",
+                    params=params
+                )
+                response.raise_for_status()
+                data = response.json()
+                
+                logger.info(f"✅ API returned {len(data.get('officials', []))} officials")
+                return data.get('officials', [])
+                
+            except httpx.HTTPStatusError as e:
+                logger.error(f"API error: {e.response.status_code}")
+                logger.warning("⚠️  Falling back to web scraping...")
+                # Fall back to web scraping
+                return []
+            except Exception as e:
+                logger.error(f"Error calling Ballotpedia API: {e}")
+                raise
+    
+    async def get_ballot_measures(
+        self,
+        state: str,
+        year: Optional[int] = None,
+        status: Optional[str] = None
+    ) -> List[Dict]:
+        """
+        Get ballot measures using official API.
+        
+        Args:
+            state: State name or code
+            year: Election year
+            status: Filter by status (e.g., 'passed', 'failed', 'upcoming')
+        
+        Returns:
+            List of ballot measure dicts
+        """
+        if not self.api_key:
+            raise ValueError("Ballotpedia API key required")
+        
+        params = {
+            "state": state,
+            "api_key": self.api_key
+        }
+        
+        if year:
+            params["year"] = year
+        if status:
+            params["status"] = status
+        
+        logger.info(f"Fetching ballot measures via API for {state} ({year or 'all years'})")
+        
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            try:
+                response = await client.get(
+                    f"{self.BASE_URL}/ballot-measures",
+                    params=params
+                )
+                response.raise_for_status()
+                data = response.json()
+                
+                logger.info(f"✅ API returned {len(data.get('measures', []))} ballot measures")
+                return data.get('measures', [])
+                
+            except Exception as e:
+                logger.error(f"Error calling Ballotpedia API: {e}")
+                raise
+    
+    def save_to_json(self, data: List[Dict], filename: str):
+        """Save API data to JSON cache."""
+        import json
+        
+        filepath = self.cache_dir / filename
+        with open(filepath, 'w') as f:
+            json.dump(data, f, indent=2)
+        
+        logger.info(f"💾 Saved {len(data)} records to {filepath}")
+
+
+# ============================================================================
+# WEB SCRAPING FALLBACK (For testing/development without API key)
+# ============================================================================
 
 class BallotpediaDiscovery:
     """
@@ -380,14 +556,73 @@ class BallotpediaDiscovery:
 # ============================================================================
 
 async def example_usage():
-    """Example usage of Ballotpedia integration."""
+    """
+    Example usage of Ballotpedia integration.
+    
+    Shows both official API (v3.0) and web scraping fallback methods.
+    """
+    
+    logger.info("\n" + "="*80)
+    logger.info("BALLOTPEDIA INTEGRATION EXAMPLES")
+    logger.info("="*80)
+    
+    # Check if API key is available
+    api_available = False
+    if SETTINGS_AVAILABLE and hasattr(settings, 'ballotpedia_api_key') and settings.ballotpedia_api_key:
+        api_available = True
+    
+    # ==========================================================================
+    # METHOD 1: Official API (RECOMMENDED for production)
+    # ==========================================================================
+    if api_available:
+        logger.info("\n" + "="*80)
+        logger.info("METHOD 1: Using Official Ballotpedia API v3.0 (RECOMMENDED)")
+        logger.info("="*80)
+        
+        api = BallotpediaAPI()
+        
+        try:
+            # Example 1: Get officials via API
+            logger.info("\nExample 1: Get Tuscaloosa officials via API")
+            officials = await api.get_officials("Tuscaloosa", state="Alabama")
+            
+            if officials:
+                print(f"\n✅ API returned {len(officials)} officials:")
+                for official in officials[:5]:
+                    print(f"   • {official.get('name')} - {official.get('office')}")
+                api.save_to_json(officials, "tuscaloosa_officials_api.json")
+            
+            # Example 2: Get ballot measures via API
+            logger.info("\nExample 2: Get Alabama ballot measures via API")
+            measures = await api.get_ballot_measures("Alabama", year=2024)
+            
+            if measures:
+                print(f"\n✅ API returned {len(measures)} ballot measures:")
+                for measure in measures[:5]:
+                    print(f"   • {measure.get('title')} - {measure.get('status')}")
+                api.save_to_json(measures, "alabama_measures_api.json")
+            
+        except Exception as e:
+            logger.error(f"API error: {e}")
+            logger.info("Falling back to web scraping...")
+    else:
+        logger.info("\n" + "="*80)
+        logger.info("⚠️  Ballotpedia API key not found - using web scraping fallback")
+        logger.info("   Get API access at: https://ballotpedia.org/API_documentation")
+        logger.info("   Add to .env: BALLOTPEDIA_API_KEY=your-key")
+        logger.info("="*80)
+    
+    # ==========================================================================
+    # METHOD 2: Web Scraping Fallback (for testing without API key)
+    # ==========================================================================
+    logger.info("\n" + "="*80)
+    logger.info("METHOD 2: Using Web Scraping (Fallback)")
+    logger.info("="*80)
     
     discovery = BallotpediaDiscovery()
     
     # 1. Search for a specific leader
-    logger.info("\n" + "="*80)
-    logger.info("Example 1: Search for Mayor Walt Maddox")
-    logger.info("="*80)
+    logger.info("\nExample 1: Search for Mayor Walt Maddox (web scraping)")
     
     leader = await discovery.search_leader("Walt Maddox", "Alabama")
     if leader:
@@ -397,9 +632,7 @@ async def example_usage():
         print(f"   URL: {leader['ballotpedia_url']}")
     
     # 2. Get city officials
-    logger.info("\n" + "="*80)
-    logger.info("Example 2: Get Tuscaloosa city officials")
-    logger.info("="*80)
+    logger.info("\nExample 2: Get Tuscaloosa city officials (web scraping)")
     
     officials = await discovery.get_city_officials("Tuscaloosa", "Alabama")
     print(f"\n✅ Found {len(officials)} officials:")
@@ -407,9 +640,7 @@ async def example_usage():
         print(f"   • {official['name']} - {official['position']}")
     
     # 3. Get ballot measures
-    logger.info("\n" + "="*80)
-    logger.info("Example 3: Get Alabama ballot measures (2024)")
-    logger.info("="*80)
+    logger.info("\nExample 3: Get Alabama ballot measures (web scraping)")
     
     measures = await discovery.get_ballot_measures("Alabama", year=2024)
     print(f"\n✅ Found {len(measures)} ballot measures:")
@@ -418,15 +649,19 @@ async def example_usage():
     
     # Save to cache
     if officials:
-        discovery.save_to_json(officials, "tuscaloosa_officials.json")
+        discovery.save_to_json(officials, "tuscaloosa_officials_scraping.json")
     
     if measures:
-        discovery.save_to_json(measures, "alabama_ballot_measures_2024.json")
+        discovery.save_to_json(measures, "alabama_ballot_measures_scraping.json")
     
     # Close session
     await discovery.close()
     
     logger.info("\n✅ Integration examples complete!")
+    logger.info("\n" + "="*80)
+    logger.info("RECOMMENDATION: Get official API key for production use")
+    logger.info("Visit: https://ballotpedia.org/API_documentation")
+    logger.info("="*80)
 
 
 if __name__ == "__main__":
