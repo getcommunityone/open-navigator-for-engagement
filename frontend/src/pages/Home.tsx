@@ -26,7 +26,7 @@ export default function Home() {
   const navigate = useNavigate()
   const [keyword, setKeyword] = useState('')
   const [searchLocation, setSearchLocation] = useState('')
-  const { location, setLocation, clearLocation, hasLocation } = useLocationContext()
+  const { location, setLocation } = useLocationContext()
 
   const DOCS_URL = import.meta.env.PROD ? '/docs' : 'http://localhost:3000'
 
@@ -93,31 +93,6 @@ export default function Home() {
             Find leaders by name. Discover causes. 90,000+ cities. 3M+ charities. All free.
           </p>
 
-          {/* Location Banner */}
-          {hasLocation && location && (
-            <div className="max-w-3xl mx-auto mb-8">
-              <div className="bg-primary-50 border-2 border-primary-200 rounded-lg p-4 flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <MapPinIcon className="h-6 w-6 text-primary-600" />
-                  <div>
-                    <p className="font-medium text-primary-900">
-                      {location.city}, {location.state}
-                    </p>
-                    {location.county && (
-                      <p className="text-sm text-primary-700">{location.county}</p>
-                    )}
-                  </div>
-                </div>
-                <button
-                  onClick={clearLocation}
-                  className="text-sm text-primary-600 hover:text-primary-700 font-medium underline"
-                >
-                  Change
-                </button>
-              </div>
-            </div>
-          )}
-
           {/* Tabbed Interface */}
           <div className="max-w-5xl mx-auto mb-8">
             <Tab.Group>
@@ -174,7 +149,7 @@ export default function Home() {
                           <div className="relative">
                             <input
                               type="text"
-                              placeholder={hasLocation && location ? `${location.city}, ${location.state}` : "City or ZIP code"}
+                              placeholder={location ? `${location.city}, ${location.state}` : "City or ZIP code"}
                               value={searchLocation}
                               onChange={(e) => setSearchLocation(e.target.value)}
                               className="w-full px-4 py-3 pl-10 text-lg border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"

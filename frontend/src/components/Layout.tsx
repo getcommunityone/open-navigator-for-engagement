@@ -18,8 +18,10 @@ import {
   UserCircleIcon,
   ArrowRightOnRectangleIcon,
   ChevronDownIcon,
+  MapPinIcon,
 } from '@heroicons/react/24/outline'
 import { useAuth } from '../contexts/AuthContext'
+import { useLocation as useLocationContext } from '../contexts/LocationContext'
 
 const navigation = [
   { name: 'Home', href: '/', icon: HomeIcon },
@@ -40,6 +42,7 @@ export default function Layout() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [showLoginMenu, setShowLoginMenu] = useState(false)
   const { user, isAuthenticated, login, logout, isLoading } = useAuth()
+  const { location: userLocation, clearLocation, hasLocation } = useLocationContext()
 
   // Environment-aware URLs
   const docsUrl = import.meta.env.PROD ? '/docs' : 'http://localhost:3000'
@@ -97,6 +100,27 @@ export default function Layout() {
                 <MagnifyingGlassIcon className="absolute left-3 top-2.5 h-5 w-5 text-gray-400" />
               </div>
             </form>
+          )}
+
+          {/* Location Banner - Compact */}
+          {hasLocation && userLocation && (
+            <div className="hidden lg:flex items-center gap-2 px-3 py-1.5 bg-primary-50 border border-primary-200 rounded-lg">
+              <MapPinIcon className="h-4 w-4 text-primary-600 flex-shrink-0" />
+              <div className="text-xs">
+                <div className="font-semibold text-primary-900">
+                  {userLocation.city}, {userLocation.state}
+                </div>
+                {userLocation.county && (
+                  <div className="text-primary-700">{userLocation.county}</div>
+                )}
+              </div>
+              <button
+                onClick={clearLocation}
+                className="text-xs text-primary-600 hover:text-primary-700 font-medium underline ml-2 flex-shrink-0"
+              >
+                Change
+              </button>
+            </div>
           )}
 
           {/* Header Actions */}
