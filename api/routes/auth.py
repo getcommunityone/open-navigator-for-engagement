@@ -6,6 +6,7 @@ import httpx
 from datetime import datetime, timedelta
 from typing import Optional
 from urllib.parse import urlencode
+from dotenv import load_dotenv
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.responses import RedirectResponse
@@ -15,6 +16,9 @@ from pydantic import BaseModel
 from api.database import get_db
 from api.models import User, OAuthState
 from api.auth import create_access_token, generate_state_token
+
+# Load environment variables from .env file
+load_dotenv()
 
 router = APIRouter(prefix="/auth", tags=["authentication"])
 
