@@ -637,7 +637,7 @@ export default function HomeModern() {
             >
               <RocketLaunchIcon className="h-12 w-12 mb-4 group-hover:scale-110 transition-transform" style={{ color: '#354F52' }} />
               <h3 className="text-2xl font-bold mb-3" style={{ color: '#354F52' }}>
-                🚀 Getting Started
+                Getting Started
               </h3>
               <p className="text-gray-600 mb-4">
                 New here? Start with our quick introduction and dashboard overview.
@@ -656,7 +656,7 @@ export default function HomeModern() {
             >
               <AcademicCapIcon className="h-12 w-12 mb-4 group-hover:scale-110 transition-transform" style={{ color: '#354F52' }} />
               <h3 className="text-2xl font-bold mb-3" style={{ color: '#354F52' }}>
-                📊 Policy Makers
+                Policy Makers
               </h3>
               <p className="text-gray-600 mb-4">
                 Case studies, data insights, and how to use the platform for advocacy.
@@ -675,7 +675,7 @@ export default function HomeModern() {
             >
               <CodeBracketIcon className="h-12 w-12 mb-4 group-hover:scale-110 transition-transform" style={{ color: '#354F52' }} />
               <h3 className="text-2xl font-bold mb-3" style={{ color: '#354F52' }}>
-                🛠️ Developers
+                Developers
               </h3>
               <p className="text-gray-600 mb-4">
                 Setup guides, API docs, deployment instructions, and integrations.
@@ -694,7 +694,7 @@ export default function HomeModern() {
             >
               <CommandLineIcon className="h-12 w-12 mb-4 group-hover:scale-110 transition-transform" style={{ color: '#354F52' }} />
               <h3 className="text-2xl font-bold mb-3" style={{ color: '#354F52' }}>
-                📚 Full Docs
+                Full Docs
               </h3>
               <p className="text-gray-600 mb-4">
                 Complete documentation including data sources, guides, and more.
