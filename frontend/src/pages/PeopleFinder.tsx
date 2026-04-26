@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { MagnifyingGlassIcon, UserGroupIcon, AcademicCapIcon, UsersIcon, CodeBracketIcon } from '@heroicons/react/24/outline'
+import FollowButton from '../components/FollowButton'
 
 type PersonRole = 'decision-makers' | 'support' | 'public' | 'open-source'
 
@@ -288,7 +289,7 @@ export default function PeopleFinder() {
                     </div>
                   </div>
                   
-                  <div className="space-y-2 text-sm">
+                  <div className="space-y-2 text-sm mb-4">
                     <div>
                       <span className="font-medium text-gray-700">
                         {person.role === 'open-source' ? 'Repository:' : 'Organization:'}
@@ -327,6 +328,17 @@ export default function PeopleFinder() {
                         )}
                       </div>
                     )}
+                  </div>
+
+                  {/* Follow button (LinkedIn/Facebook style) */}
+                  <div className="pt-4 border-t border-gray-100">
+                    <FollowButton 
+                      type="leader" 
+                      id={person.id}
+                      initialFollowing={false}
+                      initialCount={Math.floor(Math.random() * 500)}
+                      compact={true}
+                    />
                   </div>
                 </div>
               )

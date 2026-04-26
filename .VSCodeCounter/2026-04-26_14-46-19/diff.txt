@@ -1,0 +1,160 @@
+Date : 2026-04-26 14:46:19
+Directory : /home/developer/projects/oral-health-policy-pulse
+Total : 95 files,  6379 codes, 437 comments, 1431 blanks, all 8247 lines
+
+Languages
++------------------+------------+------------+------------+------------+------------+
+| language         | files      | code       | comment    | blank      | total      |
++------------------+------------+------------+------------+------------+------------+
+| TypeScript JSX   |         15 |      2,201 |         76 |        174 |      2,451 |
+| Markdown         |         48 |      1,882 |          0 |        744 |      2,626 |
+| Python           |         10 |      1,166 |        250 |        320 |      1,736 |
+| HTML             |          4 |        507 |          0 |         67 |        574 |
+| Shell Script     |          7 |        329 |         53 |         66 |        448 |
+| Properties       |          2 |         77 |          5 |         16 |         98 |
+| TypeScript       |          2 |         75 |         13 |          5 |         93 |
+| Ignore           |          1 |         62 |         13 |         13 |         88 |
+| XML              |          4 |         52 |         20 |         20 |         92 |
+| Docker           |          1 |         24 |          6 |          5 |         35 |
+| pip requirements |          1 |          4 |          1 |          1 |          6 |
++------------------+------------+------------+------------+------------+------------+
+
+Directories
++-----------------------------------------------------------------------------------------------------------+------------+------------+------------+------------+------------+
+| path                                                                                                      | files      | code       | comment    | blank      | total      |
++-----------------------------------------------------------------------------------------------------------+------------+------------+------------+------------+------------+
+| .                                                                                                         |         95 |      6,379 |        437 |      1,431 |      8,247 |
+| . (Files)                                                                                                 |         27 |     -3,628 |         77 |     -1,132 |     -4,683 |
+| .github                                                                                                   |          1 |         96 |          0 |         33 |        129 |
+| .huggingface                                                                                              |          4 |        180 |          7 |         49 |        236 |
+| api                                                                                                       |         10 |      1,360 |        215 |        337 |      1,912 |
+| api (Files)                                                                                               |          4 |        387 |        119 |        113 |        619 |
+| api/routes                                                                                                |          3 |        699 |         91 |        185 |        975 |
+| api/static                                                                                                |          3 |        274 |          5 |         39 |        318 |
+| discovery                                                                                                 |          1 |          0 |         20 |          0 |         20 |
+| frontend                                                                                                  |         19 |      2,293 |         85 |        210 |      2,588 |
+| frontend (Files)                                                                                          |          1 |          2 |          0 |          0 |          2 |
+| frontend/policy-dashboards                                                                                |          1 |         13 |          5 |          5 |         23 |
+| frontend/policy-dashboards/public                                                                         |          1 |         13 |          5 |          5 |         23 |
+| frontend/public                                                                                           |          2 |        257 |          5 |         38 |        300 |
+| frontend/src                                                                                              |         15 |      2,021 |         75 |        167 |      2,263 |
+| frontend/src (Files)                                                                                      |          3 |         14 |          2 |          3 |         19 |
+| frontend/src/components                                                                                   |          5 |      1,085 |         39 |         88 |      1,212 |
+| frontend/src/contexts                                                                                     |          2 |        200 |         11 |         33 |        244 |
+| frontend/src/pages                                                                                        |          5 |        722 |         23 |         43 |        788 |
+| scripts                                                                                                   |          1 |         28 |         14 |          9 |         51 |
+| website                                                                                                   |         32 |      6,050 |         19 |      1,925 |      7,994 |
+| website (Files)                                                                                           |          2 |        236 |         11 |         39 |        286 |
+| website/docs                                                                                              |         28 |      5,615 |          0 |      1,871 |      7,486 |
+| website/docs (Files)                                                                                      |          7 |      1,079 |          0 |        384 |      1,463 |
+| website/docs/case-studies                                                                                 |          3 |      1,474 |          0 |        467 |      1,941 |
+| website/docs/data-sources                                                                                 |          5 |         15 |          0 |          4 |         19 |
+| website/docs/deployment                                                                                   |          7 |      1,821 |          0 |        659 |      2,480 |
+| website/docs/development                                                                                  |          6 |      1,226 |          0 |        357 |      1,583 |
+| website/src                                                                                               |          1 |        186 |          3 |         10 |        199 |
+| website/src/pages                                                                                         |          1 |        186 |          3 |         10 |        199 |
+| website/static                                                                                            |          1 |         13 |          5 |          5 |         23 |
+| website/static/img                                                                                        |          1 |         13 |          5 |          5 |         23 |
++-----------------------------------------------------------------------------------------------------------+------------+------------+------------+------------+------------+
+
+Files
++-----------------------------------------------------------------------------------------------------------+------------------+------------+------------+------------+------------+
+| filename                                                                                                  | language         | code       | comment    | blank      | total      |
++-----------------------------------------------------------------------------------------------------------+------------------+------------+------------+------------+------------+
+| /home/developer/projects/oral-health-policy-pulse/.dockerignore                                           | Ignore           |         62 |         13 |         13 |         88 |
+| /home/developer/projects/oral-health-policy-pulse/.github/copilot-instructions.md                         | Markdown         |         96 |          0 |         33 |        129 |
+| /home/developer/projects/oral-health-policy-pulse/.huggingface/README.md                                  | Markdown         |         92 |          0 |         30 |        122 |
+| /home/developer/projects/oral-health-policy-pulse/.huggingface/nginx.conf                                 | Properties       |         59 |          5 |         13 |         77 |
+| /home/developer/projects/oral-health-policy-pulse/.huggingface/start.sh                                   | Shell Script     |         11 |          2 |          3 |         16 |
+| /home/developer/projects/oral-health-policy-pulse/.huggingface/supervisord.conf                           | Properties       |         18 |          0 |          3 |         21 |
+| /home/developer/projects/oral-health-policy-pulse/ARCHITECTURE.md                                         | Markdown         |       -160 |          0 |        -43 |       -203 |
+| /home/developer/projects/oral-health-policy-pulse/CITATIONS.md                                            | Markdown         |         77 |          0 |         27 |        104 |
+| /home/developer/projects/oral-health-policy-pulse/DASHBOARD_REDESIGN.md                                   | Markdown         |        -84 |          0 |        -21 |       -105 |
+| /home/developer/projects/oral-health-policy-pulse/DATABRICKS_APP_GUIDE.md                                 | Markdown         |       -295 |          0 |       -103 |       -398 |
+| /home/developer/projects/oral-health-policy-pulse/DATABRICKS_MIGRATION.md                                 | Markdown         |       -221 |          0 |        -52 |       -273 |
+| /home/developer/projects/oral-health-policy-pulse/DOCS_MIGRATION.md                                       | Markdown         |        -70 |          0 |        -22 |        -92 |
+| /home/developer/projects/oral-health-policy-pulse/Dockerfile                                              | Docker           |         24 |          6 |          5 |         35 |
+| /home/developer/projects/oral-health-policy-pulse/PORT_GUIDE.md                                           | Markdown         |       -122 |          0 |        -40 |       -162 |
+| /home/developer/projects/oral-health-policy-pulse/QUICKSTART.md                                           | Markdown         |       -140 |          0 |        -63 |       -203 |
+| /home/developer/projects/oral-health-policy-pulse/QUICKSTART_DATABRICKS_APP.md                            | Markdown         |       -156 |          0 |        -53 |       -209 |
+| /home/developer/projects/oral-health-policy-pulse/QUICK_REFERENCE.md                                      | Markdown         |        -89 |          0 |        -28 |       -117 |
+| /home/developer/projects/oral-health-policy-pulse/REACT_REFACTORING.md                                    | Markdown         |       -430 |          0 |       -117 |       -547 |
+| /home/developer/projects/oral-health-policy-pulse/README.md                                               | Markdown         |       -651 |          0 |       -166 |       -817 |
+| /home/developer/projects/oral-health-policy-pulse/README_HF.md                                            | Markdown         |         92 |          0 |         30 |        122 |
+| /home/developer/projects/oral-health-policy-pulse/REFACTORING_SUMMARY.md                                  | Markdown         |       -374 |          0 |       -112 |       -486 |
+| /home/developer/projects/oral-health-policy-pulse/TUSCALOOSA_COMPLETE_REPORT.md                           | Markdown         |       -266 |          0 |        -85 |       -351 |
+| /home/developer/projects/oral-health-policy-pulse/TUSCALOOSA_DISCOVERY_REPORT.md                          | Markdown         |       -332 |          0 |       -112 |       -444 |
+| /home/developer/projects/oral-health-policy-pulse/TUSCALOOSA_PIPELINE_GUIDE.md                            | Markdown         |       -867 |          0 |       -267 |     -1,134 |
+| /home/developer/projects/oral-health-policy-pulse/api/auth.py                                             | Python           |         74 |         52 |         28 |        154 |
+| /home/developer/projects/oral-health-policy-pulse/api/database.py                                         | Python           |         35 |         18 |         10 |         63 |
+| /home/developer/projects/oral-health-policy-pulse/api/main.py                                             | Python           |        130 |          8 |         11 |        149 |
+| /home/developer/projects/oral-health-policy-pulse/api/models.py                                           | Python           |        148 |         41 |         64 |        253 |
+| /home/developer/projects/oral-health-policy-pulse/api/routes/__init__.py                                  | Python           |          0 |          3 |          1 |          4 |
+| /home/developer/projects/oral-health-policy-pulse/api/routes/auth.py                                      | Python           |        306 |         45 |         75 |        426 |
+| /home/developer/projects/oral-health-policy-pulse/api/routes/social.py                                    | Python           |        393 |         43 |        109 |        545 |
+| /home/developer/projects/oral-health-policy-pulse/api/static/communityone_logo.svg                        | XML              |         13 |          5 |          5 |         23 |
+| /home/developer/projects/oral-health-policy-pulse/api/static/index.html                                   | HTML             |         17 |          0 |          1 |         18 |
+| /home/developer/projects/oral-health-policy-pulse/api/static/privacyfacebook.html                         | HTML             |        244 |          0 |         33 |        277 |
+| /home/developer/projects/oral-health-policy-pulse/deploy-huggingface.sh                                   | Shell Script     |        110 |         18 |         21 |        149 |
+| /home/developer/projects/oral-health-policy-pulse/discovery/meetingbank_ingestion.py                      | Python           |          0 |         20 |          0 |         20 |
+| /home/developer/projects/oral-health-policy-pulse/frontend/index.html                                     | HTML             |          2 |          0 |          0 |          2 |
+| /home/developer/projects/oral-health-policy-pulse/frontend/policy-dashboards/public/communityone_logo.svg | XML              |         13 |          5 |          5 |         23 |
+| /home/developer/projects/oral-health-policy-pulse/frontend/public/communityone_logo.svg                   | XML              |         13 |          5 |          5 |         23 |
+| /home/developer/projects/oral-health-policy-pulse/frontend/public/privacyfacebook.html                    | HTML             |        244 |          0 |         33 |        277 |
+| /home/developer/projects/oral-health-policy-pulse/frontend/src/App.tsx                                    | TypeScript JSX   |          2 |          0 |          0 |          2 |
+| /home/developer/projects/oral-health-policy-pulse/frontend/src/components/AddressLookup.tsx               | TypeScript JSX   |        394 |         19 |         40 |        453 |
+| /home/developer/projects/oral-health-policy-pulse/frontend/src/components/FollowButton.tsx                | TypeScript JSX   |        147 |          4 |         10 |        161 |
+| /home/developer/projects/oral-health-policy-pulse/frontend/src/components/Layout.tsx                      | TypeScript JSX   |        246 |          7 |          6 |        259 |
+| /home/developer/projects/oral-health-policy-pulse/frontend/src/components/RegistrationModal.tsx           | TypeScript JSX   |        192 |          7 |         18 |        217 |
+| /home/developer/projects/oral-health-policy-pulse/frontend/src/components/SocialStats.tsx                 | TypeScript JSX   |        106 |          2 |         14 |        122 |
+| /home/developer/projects/oral-health-policy-pulse/frontend/src/contexts/AuthContext.tsx                   | TypeScript JSX   |        134 |          7 |         21 |        162 |
+| /home/developer/projects/oral-health-policy-pulse/frontend/src/contexts/LocationContext.tsx               | TypeScript JSX   |         66 |          4 |         12 |         82 |
+| /home/developer/projects/oral-health-policy-pulse/frontend/src/main.tsx                                   | TypeScript JSX   |          6 |          0 |          0 |          6 |
+| /home/developer/projects/oral-health-policy-pulse/frontend/src/pages/Documents.tsx                        | TypeScript JSX   |         83 |          1 |          1 |         85 |
+| /home/developer/projects/oral-health-policy-pulse/frontend/src/pages/Home.tsx                             | TypeScript JSX   |        160 |          3 |         13 |        176 |
+| /home/developer/projects/oral-health-policy-pulse/frontend/src/pages/PeopleFinder.tsx                     | TypeScript JSX   |         10 |          1 |          1 |         12 |
+| /home/developer/projects/oral-health-policy-pulse/frontend/src/pages/Profile.tsx                          | TypeScript JSX   |        381 |          9 |         20 |        410 |
+| /home/developer/projects/oral-health-policy-pulse/frontend/src/pages/Settings.tsx                         | TypeScript JSX   |         88 |          9 |          8 |        105 |
+| /home/developer/projects/oral-health-policy-pulse/frontend/src/vite-env.d.ts                              | TypeScript       |          6 |          2 |          3 |         11 |
+| /home/developer/projects/oral-health-policy-pulse/hf-dataset-cleanup.sh                                   | Shell Script     |         28 |          4 |          7 |         39 |
+| /home/developer/projects/oral-health-policy-pulse/requirements.txt                                        | pip requirements |          4 |          1 |          1 |          6 |
+| /home/developer/projects/oral-health-policy-pulse/scripts/migrate_social_features.py                      | Python           |         28 |         14 |          9 |         51 |
+| /home/developer/projects/oral-health-policy-pulse/setup-huggingface.sh                                    | Shell Script     |        111 |         12 |         23 |        146 |
+| /home/developer/projects/oral-health-policy-pulse/start-all.sh                                            | Shell Script     |         25 |          3 |          1 |         29 |
+| /home/developer/projects/oral-health-policy-pulse/test-huggingface-build.sh                               | Shell Script     |          8 |          9 |          4 |         21 |
+| /home/developer/projects/oral-health-policy-pulse/test_oauth_flow.py                                      | Python           |         52 |          6 |         13 |         71 |
+| /home/developer/projects/oral-health-policy-pulse/update-repo-urls.sh                                     | Shell Script     |         36 |          5 |          7 |         48 |
+| /home/developer/projects/oral-health-policy-pulse/website/DOCUMENTATION_MIGRATION.md                      | Markdown         |        167 |          0 |         37 |        204 |
+| /home/developer/projects/oral-health-policy-pulse/website/docs/architecture.md                            | Markdown         |        163 |          0 |         44 |        207 |
+| /home/developer/projects/oral-health-policy-pulse/website/docs/case-studies/tuscaloosa-complete.md        | Markdown         |        269 |          0 |         86 |        355 |
+| /home/developer/projects/oral-health-policy-pulse/website/docs/case-studies/tuscaloosa-discovery.md       | Markdown         |        335 |          0 |        113 |        448 |
+| /home/developer/projects/oral-health-policy-pulse/website/docs/case-studies/tuscaloosa-pipeline.md        | Markdown         |        870 |          0 |        268 |      1,138 |
+| /home/developer/projects/oral-health-policy-pulse/website/docs/dashboard.md                               | Markdown         |         10 |          0 |          6 |         16 |
+| /home/developer/projects/oral-health-policy-pulse/website/docs/data-sources/_civic-tech-sources.md        | Markdown         |        189 |          0 |         67 |        256 |
+| /home/developer/projects/oral-health-policy-pulse/website/docs/data-sources/_confirmed-datasets.md        | Markdown         |        250 |          0 |         91 |        341 |
+| /home/developer/projects/oral-health-policy-pulse/website/docs/data-sources/civic-tech-sources.md         | Markdown         |       -188 |          0 |        -67 |       -255 |
+| /home/developer/projects/oral-health-policy-pulse/website/docs/data-sources/confirmed-datasets.md         | Markdown         |       -250 |          0 |        -91 |       -341 |
+| /home/developer/projects/oral-health-policy-pulse/website/docs/data-sources/overview.md                   | Markdown         |         14 |          0 |          4 |         18 |
+| /home/developer/projects/oral-health-policy-pulse/website/docs/deployment/authentication-setup.md         | Markdown         |        326 |          0 |        124 |        450 |
+| /home/developer/projects/oral-health-policy-pulse/website/docs/deployment/databricks-apps.md              | Markdown         |        298 |          0 |        104 |        402 |
+| /home/developer/projects/oral-health-policy-pulse/website/docs/deployment/databricks-migration.md         | Markdown         |        224 |          0 |         53 |        277 |
+| /home/developer/projects/oral-health-policy-pulse/website/docs/deployment/huggingface-spaces.md           | Markdown         |        253 |          0 |         92 |        345 |
+| /home/developer/projects/oral-health-policy-pulse/website/docs/deployment/oauth-providers-setup.md        | Markdown         |        342 |          0 |        143 |        485 |
+| /home/developer/projects/oral-health-policy-pulse/website/docs/deployment/quickstart-databricks.md        | Markdown         |        159 |          0 |         54 |        213 |
+| /home/developer/projects/oral-health-policy-pulse/website/docs/deployment/rename-repository.md            | Markdown         |        219 |          0 |         89 |        308 |
+| /home/developer/projects/oral-health-policy-pulse/website/docs/development/dashboard-redesign.md          | Markdown         |         87 |          0 |         22 |        109 |
+| /home/developer/projects/oral-health-policy-pulse/website/docs/development/docs-migration.md              | Markdown         |         73 |          0 |         23 |         96 |
+| /home/developer/projects/oral-health-policy-pulse/website/docs/development/port-guide.md                  | Markdown         |        125 |          0 |         41 |        166 |
+| /home/developer/projects/oral-health-policy-pulse/website/docs/development/react-refactoring.md           | Markdown         |        433 |          0 |        118 |        551 |
+| /home/developer/projects/oral-health-policy-pulse/website/docs/development/readme-migration.md            | Markdown         |        131 |          0 |         40 |        171 |
+| /home/developer/projects/oral-health-policy-pulse/website/docs/development/refactoring-summary.md         | Markdown         |        377 |          0 |        113 |        490 |
+| /home/developer/projects/oral-health-policy-pulse/website/docs/for-advocates.md                           | Markdown         |        141 |          0 |         67 |        208 |
+| /home/developer/projects/oral-health-policy-pulse/website/docs/for-developers.md                          | Markdown         |        315 |          0 |        109 |        424 |
+| /home/developer/projects/oral-health-policy-pulse/website/docs/intro.md                                   | Markdown         |        215 |          0 |         65 |        280 |
+| /home/developer/projects/oral-health-policy-pulse/website/docs/quick-reference.md                         | Markdown         |         92 |          0 |         29 |        121 |
+| /home/developer/projects/oral-health-policy-pulse/website/docs/quickstart.md                              | Markdown         |        143 |          0 |         64 |        207 |
+| /home/developer/projects/oral-health-policy-pulse/website/sidebars.ts                                     | TypeScript       |         69 |         11 |          2 |         82 |
+| /home/developer/projects/oral-health-policy-pulse/website/src/pages/index.tsx                             | TypeScript JSX   |        186 |          3 |         10 |        199 |
+| /home/developer/projects/oral-health-policy-pulse/website/static/img/communityone_logo.svg                | XML              |         13 |          5 |          5 |         23 |
+| Total                                                                                                     |                  |      6,379 |        437 |      1,431 |      8,247 |
++-----------------------------------------------------------------------------------------------------------+------------------+------------+------------+------------+------------+

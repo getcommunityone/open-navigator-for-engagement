@@ -208,6 +208,19 @@ export default function Layout() {
                       <Menu.Item>
                         {({ active }) => (
                           <button
+                            onClick={() => navigate('/profile')}
+                            className={`${
+                              active ? 'bg-gray-50' : ''
+                            } flex items-center gap-3 w-full px-4 py-2.5 text-sm text-gray-700 hover:text-gray-900`}
+                          >
+                            <UserCircleIcon className="h-5 w-5" />
+                            <span>My Profile</span>
+                          </button>
+                        )}
+                      </Menu.Item>
+                      <Menu.Item>
+                        {({ active }) => (
+                          <button
                             onClick={() => navigate('/settings')}
                             className={`${
                               active ? 'bg-gray-50' : ''
