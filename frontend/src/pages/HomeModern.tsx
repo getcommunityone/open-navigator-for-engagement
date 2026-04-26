@@ -622,7 +622,7 @@ export default function HomeModern() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             {/* Getting Started - Everyone */}
             <a
-              href="http://localhost:3000/docs/intro"
+              href="/docs/intro"
               target="_blank"
               rel="noopener noreferrer"
               className="bg-white rounded-2xl p-8 shadow-xl hover:shadow-2xl transform hover:-translate-y-1 transition-all group"
@@ -641,7 +641,7 @@ export default function HomeModern() {
 
             {/* Policy Makers & Advocates - Non-Technical */}
             <a
-              href="http://localhost:3000/docs/category/for-policy-makers--advocates"
+              href="/docs/for-advocates"
               target="_blank"
               rel="noopener noreferrer"
               className="bg-white rounded-2xl p-8 shadow-xl hover:shadow-2xl transform hover:-translate-y-1 transition-all group"
@@ -660,7 +660,7 @@ export default function HomeModern() {
 
             {/* Developers & Technical Users */}
             <a
-              href="http://localhost:3000/docs/category/for-developers--technical-users"
+              href="/docs/for-developers"
               target="_blank"
               rel="noopener noreferrer"
               className="bg-white rounded-2xl p-8 shadow-xl hover:shadow-2xl transform hover:-translate-y-1 transition-all group"
@@ -679,7 +679,7 @@ export default function HomeModern() {
 
             {/* Full Documentation */}
             <a
-              href="http://localhost:3000/docs/intro"
+              href="/docs/intro"
               target="_blank"
               rel="noopener noreferrer"
               className="bg-white rounded-2xl p-8 shadow-xl hover:shadow-2xl transform hover:-translate-y-1 transition-all group"
