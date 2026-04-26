@@ -21,6 +21,7 @@ export default function AddressLookup({ onLocationFound, initialAddress = '', co
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [suggestions, setSuggestions] = useState<any[]>([])
+  const [foundLocation, setFoundLocation] = useState<LocationData | null>(null)
 
   const lookupAddress = async (addressToLookup: string) => {
     if (!addressToLookup.trim()) {
@@ -95,6 +96,7 @@ export default function AddressLookup({ onLocationFound, initialAddress = '', co
     }
 
     setSuggestions([])
+    setFoundLocation(locationData)
     onLocationFound(locationData)
   }
 
@@ -183,7 +185,7 @@ export default function AddressLookup({ onLocationFound, initialAddress = '', co
           ) : (
             <>
               <MagnifyingGlassIcon className="h-5 w-5" />
-              <span>Find My Local Government</span>
+              <span>Find My Community</span>
             </>
           )}
         </button>
@@ -219,6 +221,130 @@ export default function AddressLookup({ onLocationFound, initialAddress = '', co
                 </p>
               </button>
             ))}
+          </div>
+        </div>
+      )}
+
+      {/* Location Results */}
+      {foundLocation && !compact && (
+        <div className="mt-6 border-2 border-primary-200 rounded-lg overflow-hidden bg-primary-50">
+          <div className="bg-primary-600 px-4 py-3">
+            <h3 className="text-lg font-semibold text-white flex items-center gap-2">
+              <MapPinIcon className="h-5 w-5" />
+              Your Local Community
+            </h3>
+          </div>
+          <div className="p-6 space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* City */}
+              {foundLocation.city && (
+                <div className="bg-white rounded-lg p-4 shadow-sm">
+                  <div className="flex items-start gap-3">
+                    <div className="p-2 bg-blue-100 rounded-lg">
+                      <svg className="h-6 w-6 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                      </svg>
+                    </div>
+                    <div>
+                      <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">City</p>
+                      <p className="text-lg font-semibold text-gray-900 mt-1">{foundLocation.city}</p>
+                      <p className="text-sm text-gray-600 mt-1">City Council</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* County */}
+              {foundLocation.county && (
+                <div className="bg-white rounded-lg p-4 shadow-sm">
+                  <div className="flex items-start gap-3">
+                    <div className="p-2 bg-green-100 rounded-lg">
+                      <svg className="h-6 w-6 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
+                      </svg>
+                    </div>
+                    <div>
+                      <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">County</p>
+                      <p className="text-lg font-semibold text-gray-900 mt-1">{foundLocation.county}</p>
+                      <p className="text-sm text-gray-600 mt-1">County Board</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* State */}
+              {foundLocation.state && (
+                <div className="bg-white rounded-lg p-4 shadow-sm">
+                  <div className="flex items-start gap-3">
+                    <div className="p-2 bg-purple-100 rounded-lg">
+                      <svg className="h-6 w-6 text-purple-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 21v-4m0 0V5a2 2 0 012-2h6.5l1 1H21l-3 6 3 6h-8.5l-1-1H5a2 2 0 00-2 2zm9-13.5V9" />
+                      </svg>
+                    </div>
+                    <div>
+                      <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">State</p>
+                      <p className="text-lg font-semibold text-gray-900 mt-1">{foundLocation.state}</p>
+                      <p className="text-sm text-gray-600 mt-1">State Legislature</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* School District */}
+              {foundLocation.city && (
+                <div className="bg-white rounded-lg p-4 shadow-sm">
+                  <div className="flex items-start gap-3">
+                    <div className="p-2 bg-amber-100 rounded-lg">
+                      <svg className="h-6 w-6 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                      </svg>
+                    </div>
+                    <div>
+                      <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">School District</p>
+                      <p className="text-lg font-semibold text-gray-900 mt-1">{foundLocation.city} Unified</p>
+                      <p className="text-sm text-gray-600 mt-1">School Board</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Action Buttons */}
+            <div className="pt-4 border-t border-primary-200">
+              <div className="flex flex-wrap gap-3">
+                <button
+                  onClick={() => {
+                    // Navigate to search with location context
+                    window.location.href = `/documents?state=${foundLocation.state}&city=${foundLocation.city}`
+                  }}
+                  className="flex-1 min-w-[200px] px-4 py-2 bg-white border-2 border-primary-600 text-primary-700 rounded-lg hover:bg-primary-50 transition-colors font-medium"
+                >
+                  View Meeting Minutes
+                </button>
+                <button
+                  onClick={() => {
+                    window.location.href = `/nonprofits?state=${foundLocation.state}&city=${foundLocation.city}`
+                  }}
+                  className="flex-1 min-w-[200px] px-4 py-2 bg-white border-2 border-primary-600 text-primary-700 rounded-lg hover:bg-primary-50 transition-colors font-medium"
+                >
+                  Find Local Charities
+                </button>
+              </div>
+            </div>
+
+            {/* Start Over */}
+            <div className="text-center pt-2">
+              <button
+                onClick={() => {
+                  setFoundLocation(null)
+                  setAddress('')
+                  setError(null)
+                }}
+                className="text-sm text-primary-600 hover:text-primary-700 font-medium underline"
+              >
+                Search Different Address
+              </button>
+            </div>
           </div>
         </div>
       )}
