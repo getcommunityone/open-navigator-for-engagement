@@ -15,7 +15,7 @@ function HomepageHeader() {
       <div className="container">
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '1rem' }}>
           <img 
-            src="/img/communityone_logo.png" 
+            src="/img/communityone_logo.jpg" 
             alt="CommunityOne Logo" 
             style={{ height: '80px', marginRight: '1rem' }}
           />

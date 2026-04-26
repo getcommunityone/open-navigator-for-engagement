@@ -67,7 +67,7 @@ export default function Home() {
         <div className="text-center">
           <div className="flex items-center justify-center gap-4 mb-6">
             <img 
-              src="/communityone_logo.png" 
+              src="/communityone_logo.jpg" 
               alt="CommunityOne Logo" 
               style={{ height: '80px' }}
             />
