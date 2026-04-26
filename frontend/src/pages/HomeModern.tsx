@@ -731,10 +731,10 @@ export default function HomeModern() {
             Empowering communities through transparency and engagement
           </p>
           <div className="flex justify-center gap-8 text-sm text-gray-400">
-            <Link to="/docs" className="hover:text-white transition-colors">Documentation</Link>
-            <Link to="/api/docs" className="hover:text-white transition-colors">API</Link>
-            <a href="#" className="hover:text-white transition-colors">Privacy</a>
-            <a href="#" className="hover:text-white transition-colors">Terms</a>
+            <a href="/docs/intro" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">Documentation</a>
+            <a href="/api/docs" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">API</a>
+            <Link to="/explore" className="hover:text-white transition-colors">Explore</Link>
+            <a href="https://github.com/getcommunityone/open-navigator-for-engagement" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">GitHub</a>
           </div>
           <p className="text-gray-500 text-sm mt-6">
             © 2026 CommunityOne. All rights reserved.
