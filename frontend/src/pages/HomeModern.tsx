@@ -13,7 +13,11 @@ import {
   CheckCircleIcon,
   RocketLaunchIcon,
   ArrowRightIcon,
-  HeartIcon
+  HeartIcon,
+  BookOpenIcon,
+  CodeBracketIcon,
+  AcademicCapIcon,
+  CommandLineIcon
 } from '@heroicons/react/24/outline'
 import { useLocation as useLocationContext } from '../contexts/LocationContext'
 import AddressLookup from '../components/AddressLookup'
@@ -152,7 +156,7 @@ export default function HomeModern() {
     { id: 'features', label: 'Features' },
     { id: 'how-it-works', label: 'How It Works' },
     { id: 'stats', label: 'Impact' },
-    { id: 'get-started', label: 'Get Started' },
+    { id: 'get-started', label: 'Documentation' },
   ]
 
   const features = [
@@ -548,40 +552,110 @@ export default function HomeModern() {
         </div>
       </section>
 
-      {/* Get Started Section */}
+      {/* Documentation Section */}
       <section id="get-started" className="py-20 px-4" style={{ background: 'linear-gradient(135deg, #354F52 0%, #52796F 100%)' }}>
-        <div className="max-w-4xl mx-auto text-center">
-          <RocketLaunchIcon className="h-16 w-16 mx-auto mb-6 text-white" />
-          <h2 className="text-4xl md:text-5xl font-bold mb-6 text-white">
-            Ready to Get Started?
-          </h2>
-          <p className="text-xl text-white/90 mb-8">
-            Join thousands of engaged citizens tracking local decisions
-          </p>
-
-          {/* Address Lookup */}
-          <div className="bg-white rounded-2xl p-8 shadow-2xl">
-            <h3 className="text-2xl font-bold mb-4" style={{ color: '#354F52' }}>
-              Find Your Local Community
-            </h3>
-            <p className="text-gray-600 mb-6">
-              Enter your address to discover local leaders, meetings, and charities
+        <div className="max-w-7xl mx-auto">
+          <div className="text-center mb-12">
+            <BookOpenIcon className="h-16 w-16 mx-auto mb-6 text-white" />
+            <h2 className="text-4xl md:text-5xl font-bold mb-6 text-white">
+              Documentation & Resources
+            </h2>
+            <p className="text-xl text-white/90">
+              Choose your path based on your role and technical expertise
             </p>
-            <AddressLookup onLocationFound={handleAddressFound} />
           </div>
 
-          {/* Alternative CTAs */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-8">
+          {/* Documentation Tiles */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {/* Getting Started - Everyone */}
+            <a
+              href="http://localhost:3000/docs/intro"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="bg-white rounded-2xl p-8 shadow-xl hover:shadow-2xl transform hover:-translate-y-1 transition-all group"
+            >
+              <RocketLaunchIcon className="h-12 w-12 mb-4 group-hover:scale-110 transition-transform" style={{ color: '#354F52' }} />
+              <h3 className="text-2xl font-bold mb-3" style={{ color: '#354F52' }}>
+                🚀 Getting Started
+              </h3>
+              <p className="text-gray-600 mb-4">
+                New here? Start with our quick introduction and dashboard overview.
+              </p>
+              <div className="text-sm font-semibold" style={{ color: '#354F52' }}>
+                For Everyone →
+              </div>
+            </a>
+
+            {/* Policy Makers & Advocates - Non-Technical */}
+            <a
+              href="http://localhost:3000/docs/category/for-policy-makers--advocates"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="bg-white rounded-2xl p-8 shadow-xl hover:shadow-2xl transform hover:-translate-y-1 transition-all group"
+            >
+              <AcademicCapIcon className="h-12 w-12 mb-4 group-hover:scale-110 transition-transform" style={{ color: '#354F52' }} />
+              <h3 className="text-2xl font-bold mb-3" style={{ color: '#354F52' }}>
+                📊 Policy Makers
+              </h3>
+              <p className="text-gray-600 mb-4">
+                Case studies, data insights, and how to use the platform for advocacy.
+              </p>
+              <div className="text-sm font-semibold" style={{ color: '#354F52' }}>
+                Non-Technical →
+              </div>
+            </a>
+
+            {/* Developers & Technical Users */}
+            <a
+              href="http://localhost:3000/docs/category/for-developers--technical-users"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="bg-white rounded-2xl p-8 shadow-xl hover:shadow-2xl transform hover:-translate-y-1 transition-all group"
+            >
+              <CodeBracketIcon className="h-12 w-12 mb-4 group-hover:scale-110 transition-transform" style={{ color: '#354F52' }} />
+              <h3 className="text-2xl font-bold mb-3" style={{ color: '#354F52' }}>
+                🛠️ Developers
+              </h3>
+              <p className="text-gray-600 mb-4">
+                Setup guides, API docs, deployment instructions, and integrations.
+              </p>
+              <div className="text-sm font-semibold" style={{ color: '#354F52' }}>
+                Technical →
+              </div>
+            </a>
+
+            {/* Full Documentation */}
+            <a
+              href="http://localhost:3000/docs/intro"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="bg-white rounded-2xl p-8 shadow-xl hover:shadow-2xl transform hover:-translate-y-1 transition-all group"
+            >
+              <CommandLineIcon className="h-12 w-12 mb-4 group-hover:scale-110 transition-transform" style={{ color: '#354F52' }} />
+              <h3 className="text-2xl font-bold mb-3" style={{ color: '#354F52' }}>
+                📚 Full Docs
+              </h3>
+              <p className="text-gray-600 mb-4">
+                Complete documentation including data sources, guides, and more.
+              </p>
+              <div className="text-sm font-semibold" style={{ color: '#354F52' }}>
+                Browse All →
+              </div>
+            </a>
+          </div>
+
+          {/* Quick Actions Below */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-12 max-w-4xl mx-auto">
             <Link
               to="/people"
-              className="px-8 py-4 bg-white rounded-xl font-semibold hover:shadow-xl transition-all"
+              className="px-8 py-4 bg-white rounded-xl font-semibold hover:shadow-xl transition-all text-center"
               style={{ color: '#354F52' }}
             >
               Browse Leaders →
             </Link>
             <Link
               to="/nonprofits"
-              className="px-8 py-4 bg-white/10 border-2 border-white rounded-xl text-white font-semibold hover:bg-white/20 transition-all"
+              className="px-8 py-4 bg-white/10 border-2 border-white rounded-xl text-white font-semibold hover:bg-white/20 transition-all text-center"
             >
               Explore Charities →
             </Link>
