@@ -39,6 +39,13 @@ export default function Home() {
     }
   }, [searchParams])
 
+  // When location is set, default to city search if currently on 'community' (placeholder)
+  useEffect(() => {
+    if (location && searchScope === 'community') {
+      setSearchScope('city')
+    }
+  }, [location, searchScope])
+
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault()
     if (keyword || location) {
