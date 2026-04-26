@@ -302,27 +302,27 @@ export default function HomeModern() {
       {/* Hero Section */}
       <section id="hero" className="pt-32 pb-20 px-4" style={{ background: 'linear-gradient(135deg, #F1F5F9 0%, #E8EEF2 100%)' }}>
         <div className="max-w-7xl mx-auto text-center">
-          <div className="inline-flex items-center gap-2 px-4 py-2 bg-white rounded-full shadow-sm mb-6">
+          <div className="inline-flex items-center gap-2 px-4 py-2 bg-white rounded-full shadow-sm mb-6 animate-[slideUp_0.6s_ease-out]">
             <SparklesIcon className="h-5 w-5" style={{ color: '#354F52' }} />
             <span className="text-sm font-medium" style={{ color: '#354F52' }}>
               Civic Engagement Reimagined
             </span>
           </div>
 
-          <h1 className="text-6xl md:text-7xl font-bold mb-6" style={{ color: '#354F52' }}>
+          <h1 className="text-6xl md:text-7xl font-bold mb-6 animate-[slideUp_0.8s_ease-out_0.2s_both]" style={{ color: '#354F52' }}>
             Track Local Decisions.<br />
             <span className="bg-gradient-to-r from-[#52796F] to-[#84A98C] bg-clip-text text-transparent">
               Take Action.
             </span>
           </h1>
 
-          <p className="text-xl md:text-2xl text-gray-600 mb-12 max-w-3xl mx-auto">
+          <p className="text-xl md:text-2xl text-gray-600 mb-12 max-w-3xl mx-auto animate-[slideUp_0.8s_ease-out_0.4s_both]">
             Follow leaders, charities, and causes in your community.<br />
             90,000+ cities • 3M+ nonprofits • 100% free
           </p>
 
           {/* Tabbed Search Interface */}
-          <div className="max-w-5xl mx-auto mb-8">
+          <div className="max-w-5xl mx-auto mb-8 animate-[slideUp_0.8s_ease-out_0.6s_both]">
             <Tab.Group selectedIndex={selectedTab} onChange={setSelectedTab}>
               <Tab.List className="flex space-x-2 rounded-xl bg-white p-2 shadow-lg mb-6 max-w-2xl mx-auto">
                 <Tab as={Fragment}>
@@ -458,7 +458,7 @@ export default function HomeModern() {
           </div>
 
           {/* Quick Stats */}
-          <div className="flex flex-wrap justify-center gap-8 text-sm text-gray-600">
+          <div className="flex flex-wrap justify-center gap-8 text-sm text-gray-600 animate-[slideUp_0.8s_ease-out_0.8s_both]">
             <div className="flex items-center gap-2">
               <CheckCircleIcon className="h-5 w-5 text-green-500" />
               <span>90,000+ Jurisdictions</span>
