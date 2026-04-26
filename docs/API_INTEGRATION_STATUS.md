@@ -50,6 +50,81 @@ python -m discovery.nces_ingestion
 
 ---
 
+### 3. Wikidata ✅ **NEW!**
+**Status:** INTEGRATED  
+**File:** `discovery/wikidata_integration.py`  
+**API Docs:** https://www.wikidata.org/wiki/Wikidata:SPARQL_query_service  
+**What it provides:**
+- Structured knowledge base (powers Wikipedia infoboxes)
+- Best for connecting people → organizations → locations
+- SPARQL queries for complex relationships
+- Millions of interconnected entities
+
+**Why it's amazing:**
+- ✅ **Completely FREE** - no API key required
+- ✅ **Highly interconnected** - find person → see all linked organizations
+- ✅ **Structured data** - triples (subject-predicate-object)
+- ✅ **Real Wikipedia data** - millions of entities
+- ✅ **Perfect for relationships** - "All school board members in Alabama"
+
+**Usage:**
+```python
+from discovery.wikidata_integration import WikidataQuery
+
+wikidata = WikidataQuery()
+
+# Find school board members
+members = await wikidata.find_school_board_members(state="Alabama")
+
+# Find cities in a county
+cities = await wikidata.find_cities_in_county("Tuscaloosa County", "Alabama")
+
+# Find organizations a person is affiliated with
+orgs = await wikidata.find_person_organizations("Walt Maddox")
+```
+
+**API Key:** Not required (completely free)
+
+---
+
+### 4. DBpedia ✅ **NEW!**
+**Status:** INTEGRATED  
+**File:** `discovery/dbpedia_integration.py`  
+**API Docs:** http://lookup.dbpedia.org/api/doc/  
+**What it provides:**
+- Structured data from Wikipedia infoboxes
+- Perfect for autocomplete/type-ahead search
+- Every Wikipedia page as a structured "resource"
+- Mayor, population, school district info
+
+**Why it's perfect for search:**
+- ✅ **Completely FREE** - no API key required
+- ✅ **Designed for autocomplete** - Lookup API is type-ahead optimized
+- ✅ **Instant context** - Get Mayor, population for "Tuscaloosa"
+- ✅ **Rich data** - Structured triples from Wikipedia
+- ✅ **Fast** - Optimized for search box suggestions
+
+**Usage:**
+```python
+from discovery.dbpedia_integration import DBpediaLookup
+
+dbpedia = DBpediaLookup()
+
+# Autocomplete search
+results = await dbpedia.search("Tuscaloosa", max_results=10)
+
+# Get detailed info
+info = await dbpedia.get_resource_info("Tuscaloosa,_Alabama")
+
+# Search by type
+cities = await dbpedia.find_cities(state="Alabama")
+people = await dbpedia.find_people("Alabama mayor")
+```
+
+**API Key:** Not required (completely free)
+
+---
+
 ## � Reference Implementations (Paid Services)
 
 These integrations are provided as reference code but require paid API access.
@@ -180,9 +255,11 @@ measures = await discovery.get_ballot_measures("Alabama", year=2024)
 
 | API | Status | Free? | File | Key Required? |
 |-----|--------|-------|------|---------------|
+| **Wikidata** | ✅ Integrated | Yes | `wikidata_integration.py` | No |
+| **DBpedia** | ✅ Integrated | Yes | `dbpedia_integration.py` | No |
 | **Open States** | ✅ Integrated | Yes | `openstates_sources.py` | Yes (free) |
 | **NCES** | ✅ Integrated | Yes | `nces_ingestion.py` | No |
-| **Google Civic** | ❌ Not Yet | Yes | - | Yes (free) |
+| **Google Civic** | ❌ Not Yet | Yes | `google_civic_integration.py` | Yes (free) |
 
 **Reference Only (Paid Services):**
 - **Ballotpedia API v3.0** - Paid service, code available for reference in `ballotpedia_integration.py`
@@ -190,16 +267,96 @@ measures = await discovery.get_ballot_measures("Alabama", year=2024)
 
 ---
 
+## 🎯 The "Free Stack" for School Boards & Civic Data
+
+Since school board data is the **hardest to find for free**, here's how to combine FREE sources:
+
+| Source | Best Use Case | API Type | File |
+|--------|---------------|----------|------|
+| **Wikidata** | Relationships (People → Boards) | SPARQL | `wikidata_integration.py` |
+| **Google Civic** | Address → Specific Board | REST | `google_civic_integration.py` |
+| **NCES** | Official District IDs & Boundaries | CSV | `nces_ingestion.py` |
+| **DBpedia** | Autocomplete & Context | Lookup | `dbpedia_integration.py` |
+| **Open States** | State-Level Officials & Bills | REST | `openstates_sources.py` |
+
+### How They Work Together:
+
+**1. User enters address in search box:**
+- **DBpedia Lookup** → Autocomplete suggestions as they type
+- **Google Civic API** → Maps address to exact school board district
+- **NCES Data** → Official district ID, boundaries, demographics
+
+**2. User wants to see school board members:**
+- **Wikidata SPARQL** → "Find all members of [School Board Name]"
+- **Wikidata** → Links each person to their organizations
+- **DBpedia** → Rich context from Wikipedia (photos, bio, etc.)
+
+**3. User wants state-level info:**
+- **Open States API** → State legislators, bills, committees
+- **Wikidata** → State government structure, officials
+- **DBpedia** → State context and background
+
+**Example Query Flow:**
+```
+User types: "Tuscaloosa schools"
+  ↓
+DBpedia: Autocomplete → "Tuscaloosa City Schools"
+  ↓
+User enters address: "123 Main St, Tuscaloosa, AL"
+  ↓
+Google Civic: → Maps to "Tuscaloosa City School District"
+  ↓
+NCES: → Gets official district ID, enrollment, demographics
+  ↓
+Wikidata: → Finds all school board members
+  ↓
+DBpedia: → Gets rich Wikipedia context for each member
+```
+
+---
+
 ## 🎯 Recommended Integration Priority
 
-### High Priority (Free + High Value)
-1. ✅ **Open States** - Already done
-2. ✅ **NCES** - Already done
-3. 🔴 **Google Civic API** - Should integrate next (best for address→officials)
+### ✅ Already Integrated (Free + High Value)
+1. ✅ **Wikidata** - BEST for relationships (people → organizations) - **FREE, no key**
+2. ✅ **DBpedia** - BEST for autocomplete/search - **FREE, no key**
+3. ✅ **Open States** - State legislature data - **FREE, key required**
+4. ✅ **NCES** - School district data - **FREE, no key**
 
-### Not Recommended (Paid Services)
+### 🔴 High Priority (Not Yet Integrated)
+5. 🔴 **Google Civic API** - Address → officials mapping - **FREE, key required**
+   - Code ready in `google_civic_integration.py`
+   - Just need API key from Google Cloud Console
+   - 25,000 requests/day free tier
+
+### ❌ Not Recommended (Paid Services)
 - ❌ **Ballotpedia API** - Paid service, use free alternatives
-- ❌ **Cicero API** - Enterprise pricing, use Google Civic instead
+- ❌ **Cicero API** - Enterprise pricing, use Google Civic + Wikidata instead
+
+---
+
+## 🏆 Why Wikidata + DBpedia are Game-Changers
+
+### **Wikidata = The Relationship Database**
+- Find **all school board members** in a state
+- See **every organization** a person belongs to
+- Link **people → positions → locations**
+- Example: "Walt Maddox" → Mayor → Tuscaloosa → School Board connections
+
+### **DBpedia = The Autocomplete Engine**
+- **Perfect for search boxes** - Lookup API designed for type-ahead
+- Type "Tusc" → Get instant suggestions
+- Every Wikipedia page = structured data
+- Get Mayor, population, district info instantly
+
+### **Together They're Unbeatable:**
+1. **DBpedia** for autocomplete (fast, optimized for search)
+2. **Wikidata** for relationships (deep, interconnected data)
+3. **Google Civic** for address mapping (precise, official)
+4. **NCES** for official IDs (authoritative, complete)
+5. **Open States** for state-level (comprehensive, up-to-date)
+
+**All FREE. No paid services needed!** 🎉
 
 ---
 
