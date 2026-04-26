@@ -22,6 +22,8 @@ class Settings(BaseSettings):
     huggingface_token: Optional[str] = Field(None, description="HuggingFace API token for dataset uploads")
     dataverse_api_key: Optional[str] = Field(None, description="Harvard Dataverse API key (optional, improves rate limits)")
     openstates_api_key: Optional[str] = Field(None, description="Open States API key (free tier: 50k requests/month)")
+    google_civic_api_key: Optional[str] = Field(None, description="Google Civic Information API key (free tier: 25k requests/day)")
+    cicero_api_key: Optional[str] = Field(None, description="Cicero API key (paid service for district boundaries)")
     
     # HuggingFace Configuration
     hf_organization: Optional[str] = Field(None, description="HuggingFace organization name (e.g., 'CommunityOne')")
