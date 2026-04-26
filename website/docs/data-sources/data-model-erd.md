@@ -3,13 +3,17 @@ displayed_sidebar: developersSidebar
 sidebar_position: 1
 ---
 
+import ZoomableMermaid from '@site/src/components/ZoomableMermaid';
+
 # Data Model & Entity Relationship Diagram
 
 Comprehensive overview of all data entities extracted, processed, and uploaded to HuggingFace datasets.
 
 ## 📊 Complete Data Model (ERD)
 
-```mermaid
+<ZoomableMermaid 
+  title="Interactive Entity Relationship Diagram"
+  value={`
 erDiagram
     %% Core Jurisdiction Entities
     JURISDICTION ||--o{ MEETING : hosts
@@ -453,7 +457,8 @@ erDiagram
         string split
         datetime ingested_at
     }
-```
+`}
+/>
 
 ## 📦 HuggingFace Dataset Structure
 
