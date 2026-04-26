@@ -11,10 +11,7 @@ Comprehensive overview of all data entities extracted, processed, and uploaded t
 
 ```mermaid
 erDiagram
-    %% ========================================
-    %% CORE JURISDICTION ENTITIES
-    %% ========================================
-    
+    %% Core Jurisdiction Entities
     JURISDICTION ||--o{ MEETING : hosts
     JURISDICTION ||--o{ LEADER : employs
     JURISDICTION ||--o{ YOUTUBE_CHANNEL : operates
@@ -23,7 +20,7 @@ erDiagram
     JURISDICTION {
         string jurisdiction_id PK
         string name
-        string type "city|county|township"
+        string jurisdiction_type
         string state_code
         string county_name
         int population
@@ -32,35 +29,32 @@ erDiagram
         float longitude
         string fips_code
         int completeness_score
-        timestamp discovered_at
+        datetime discovered_at
     }
     
-    %% ========================================
-    %% CENSUS & GOVERNMENT DATA
-    %% ========================================
-    
+    %% Census and Government Data
     JURISDICTION ||--o| CENSUS_DATA : has
     CENSUS_DATA {
-        string jurisdiction_id PK_FK
+        string jurisdiction_id PK
         int population_2020
         int population_2024
         string county_fips
         string place_fips
         float median_income
         float poverty_rate
-        timestamp census_year
+        datetime census_year
     }
     
     JURISDICTION ||--o| GSA_DOMAIN : uses
     GSA_DOMAIN {
         string domain PK
         string jurisdiction_id FK
-        string domain_type "Federal|State|County|City|Special"
+        string domain_type
         string agency_name
         string organization_type
         string city
         string state
-        timestamp created_date
+        datetime created_date
     }
     
     %% ========================================
@@ -81,7 +75,7 @@ erDiagram
         string phone
         string website
         string superintendent
-        timestamp school_year
+        datetime school_year
     }
     
     %% ========================================
@@ -95,61 +89,61 @@ erDiagram
     MEETING {
         string meeting_id PK
         string jurisdiction_id FK
-        string meeting_type "council|board|commission"
+        string meeting_type
         datetime meeting_date
         string meeting_title
         string body_name
-        string status "scheduled|completed|cancelled"
-        string platform "legistar|suiteone|granicus"
+        string status
+        string platform
         string source_url
         boolean oral_health_related
-        timestamp extracted_at
+        datetime extracted_at
     }
     
     AGENDA {
         string agenda_id PK
         string meeting_id FK
         string title
-        text full_text
+        string full_text
         string pdf_url
         int page_count
-        array keywords_found
-        timestamp published_at
+        string keywords_found
+        datetime published_at
     }
     
     MINUTES {
         string minutes_id PK
         string meeting_id FK
-        text full_text
+        string full_text
         string pdf_url
         string summary_text
-        array action_items
-        array votes
-        timestamp approved_at
+        string action_items
+        string votes
+        datetime approved_at
     }
     
     VIDEO {
         string video_id PK
         string meeting_id FK
-        string platform "youtube|vimeo|granicus"
+        string platform
         string video_url
         string thumbnail_url
         int duration_seconds
         int view_count
         string transcript_text
-        timestamp published_at
+        datetime published_at
     }
     
     DOCUMENT {
         string document_id PK
         string meeting_id FK
-        string document_type "resolution|ordinance|report|presentation"
+        string document_type
         string title
-        text content_text
+        string content_text
         string file_url
-        string file_type "pdf|docx|pptx"
+        string file_type
         int file_size_bytes
-        timestamp uploaded_at
+        datetime uploaded_at
     }
     
     %% ========================================
@@ -163,7 +157,7 @@ erDiagram
         string jurisdiction_id FK
         string full_name
         string title
-        string position_type "elected|appointed|staff"
+        string position_type
         string office
         string party_affiliation
         string email
@@ -173,7 +167,7 @@ erDiagram
         datetime term_start
         datetime term_end
         boolean is_active
-        timestamp verified_at
+        datetime verified_at
     }
     
     VOTE {
@@ -181,7 +175,7 @@ erDiagram
         string leader_id FK
         string meeting_id FK
         string item_description
-        string vote_value "yes|no|abstain|absent"
+        string vote_value
         datetime vote_date
     }
     
@@ -193,10 +187,10 @@ erDiagram
     ORGANIZATION ||--o{ LEADER : employs
     ORGANIZATION {
         string org_id PK
-        string ein "IRS EIN"
+        string ein
         string name
         string ntee_code
-        string org_type "501c3|501c4|government"
+        string org_type
         string state_code
         string city
         string address
@@ -206,7 +200,7 @@ erDiagram
         string mission_statement
         string website
         boolean is_verified
-        timestamp irs_filing_date
+        datetime irs_filing_date
     }
     
     %% ========================================
@@ -223,32 +217,32 @@ erDiagram
         int total_views
         string description
         datetime created_date
-        timestamp last_scraped
+        datetime last_scraped
     }
     
     SOCIAL_MEDIA {
         string account_id PK
-        string entity_id FK "leader_id|org_id|jurisdiction_id"
-        string entity_type "leader|organization|jurisdiction"
-        string platform "twitter|facebook|instagram|linkedin"
+        string entity_id FK
+        string entity_type
+        string platform
         string handle
         string profile_url
         int follower_count
         int post_count
         boolean is_verified
-        timestamp last_updated
+        datetime last_updated
     }
     
     MEETING_PLATFORM {
         string platform_id PK
         string jurisdiction_id FK
-        string platform_name "legistar|suiteone|granicus|civicclerk"
+        string platform_name
         string base_url
         string api_endpoint
         string calendar_url
         string archive_url
         boolean has_api
-        timestamp discovered_at
+        datetime discovered_at
     }
     
     %% ========================================
@@ -262,7 +256,7 @@ erDiagram
         string legislature_id PK
         string state_code
         string session_year
-        string session_type "regular|special"
+        string session_type
         datetime session_start
         datetime session_end
     }
@@ -273,7 +267,7 @@ erDiagram
         string full_name
         string party
         string district
-        string chamber "upper|lower"
+        string chamber
         string email
         string capitol_phone
         string photo_url
@@ -285,9 +279,9 @@ erDiagram
         string legislature_id FK
         string bill_number
         string title
-        text summary
+        string summary
         string status
-        array sponsors
+        string sponsors
         datetime introduced_date
         datetime last_action_date
         string openstates_url
@@ -299,7 +293,7 @@ erDiagram
         string name
         string chamber
         string parent_id FK
-        array members
+        string members
     }
     
     %% ========================================
@@ -309,25 +303,25 @@ erDiagram
     WIKIDATA_ENTITY ||--o{ WIKIDATA_RELATIONSHIP : source
     WIKIDATA_ENTITY ||--o{ WIKIDATA_RELATIONSHIP : target
     WIKIDATA_ENTITY {
-        string wikidata_id PK "Q-number"
-        string entity_type "person|organization|location|position"
+        string wikidata_id PK
+        string entity_type
         string label
-        text description
+        string description
         string wikipedia_url
         string image_url
-        array aliases
-        json properties
-        timestamp last_updated
+        string aliases
+        string properties
+        datetime last_updated
     }
     
     WIKIDATA_RELATIONSHIP {
         string relationship_id PK
-        string source_id FK "wikidata_id"
-        string target_id FK "wikidata_id"
-        string predicate "position_held|member_of|located_in"
+        string source_id FK
+        string target_id FK
+        string predicate
         datetime start_date
         datetime end_date
-        json qualifiers
+        string qualifiers
     }
     
     %% ========================================
@@ -337,13 +331,13 @@ erDiagram
     DBPEDIA_RESOURCE {
         string resource_uri PK
         string label
-        text description
-        array categories
-        array classes
-        json infobox_properties
+        string description
+        string categories
+        string classes
+        string infobox_properties
         string wikipedia_url
         int ref_count
-        timestamp extracted_at
+        datetime extracted_at
     }
     
     %% ========================================
@@ -352,13 +346,13 @@ erDiagram
     
     CIVIC_DIVISION ||--o{ CIVIC_REPRESENTATIVE : has
     CIVIC_DIVISION {
-        string ocd_id PK "Open Civic Data ID"
+        string ocd_id PK
         string division_name
         string division_type
         string state
         string county
-        array office_types
-        json boundaries_geojson
+        string office_types
+        string boundaries_geojson
     }
     
     CIVIC_REPRESENTATIVE {
@@ -367,10 +361,10 @@ erDiagram
         string name
         string office_name
         string party
-        array phones
-        array emails
-        array urls
-        array social_channels
+        string phones
+        string emails
+        string urls
+        string social_channels
         string photo_url
     }
     
@@ -379,8 +373,8 @@ erDiagram
         string name
         datetime election_day
         string ocd_division FK
-        array contests
-        json polling_locations
+        string contests
+        string polling_locations
     }
     
     %% ========================================
@@ -402,28 +396,28 @@ erDiagram
         string city
         string school_board
         boolean profile_completed
-        timestamp created_at
+        datetime created_at
     }
     
     USER_FOLLOW {
         int id PK
         int follower_id FK
         int following_id FK
-        timestamp created_at
+        datetime created_at
     }
     
     LEADER_FOLLOW {
         int id PK
         int user_id FK
         string leader_id FK
-        timestamp created_at
+        datetime created_at
     }
     
     ORG_FOLLOW {
         int id PK
         int user_id FK
         string org_id FK
-        timestamp created_at
+        datetime created_at
     }
     
     CAUSE ||--o{ CAUSE_FOLLOW : followed_by
@@ -431,8 +425,8 @@ erDiagram
         int cause_id PK
         string name
         string slug
-        text description
-        string category "health|education|housing"
+        string description
+        string category
         string icon_url
         string color
         int follower_count
@@ -442,7 +436,7 @@ erDiagram
         int id PK
         int user_id FK
         int cause_id FK
-        timestamp created_at
+        datetime created_at
     }
     
     %% ========================================
@@ -453,11 +447,11 @@ erDiagram
         string instance_id PK
         string city_name
         datetime meeting_date
-        text transcript_text
-        text summary_text
+        string transcript_text
+        string summary_text
         string source_url
-        string split "train|validation|test"
-        timestamp ingested_at
+        string split
+        datetime ingested_at
     }
 ```
 
@@ -474,8 +468,8 @@ oral-health-policy-data/
 │   └── social_media       # Twitter, Facebook accounts
 │
 ├── meetings/               # Meeting data
-│   ├── agendas            # Meeting agendas (text extracted)
-│   ├── minutes            # Meeting minutes (text extracted)
+│   ├── agendas            # Meeting agendas (string extracted)
+│   ├── minutes            # Meeting minutes (string extracted)
 │   ├── videos             # YouTube/Vimeo video metadata
 │   └── documents          # Associated documents
 │
