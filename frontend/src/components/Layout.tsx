@@ -114,12 +114,20 @@ export default function Layout() {
                       src={user.avatar_url} 
                       alt={user.full_name || user.email}
                       className="h-9 w-9 rounded-full border-2 border-primary-500 shadow-sm"
+                      onError={(e) => {
+                        // If image fails to load, hide it and show fallback
+                        e.currentTarget.style.display = 'none';
+                        const fallback = e.currentTarget.nextElementSibling;
+                        if (fallback) fallback.style.display = 'flex';
+                      }}
                     />
-                  ) : (
-                    <div className="h-9 w-9 rounded-full bg-gradient-to-br from-primary-500 to-primary-600 flex items-center justify-center text-white font-bold text-sm shadow-sm">
-                      {(user.full_name || user.username || user.email).charAt(0).toUpperCase()}
-                    </div>
-                  )}
+                  ) : null}
+                  <div 
+                    className="h-9 w-9 rounded-full bg-gradient-to-br from-primary-500 to-primary-600 flex items-center justify-center text-white font-bold text-sm shadow-sm"
+                    style={{ display: user.avatar_url ? 'none' : 'flex' }}
+                  >
+                    {(user.full_name || user.username || user.email).charAt(0).toUpperCase()}
+                  </div>
                   <span className="hidden md:inline text-sm font-medium text-gray-700">
                     {user.full_name || user.username || user.email.split('@')[0]}
                   </span>
@@ -143,12 +151,20 @@ export default function Layout() {
                             src={user.avatar_url} 
                             alt={user.full_name || user.email}
                             className="h-12 w-12 rounded-full border-2 border-primary-500"
+                            onError={(e) => {
+                              // If image fails to load, hide it and show fallback
+                              e.currentTarget.style.display = 'none';
+                              const fallback = e.currentTarget.nextElementSibling;
+                              if (fallback) fallback.style.display = 'flex';
+                            }}
                           />
-                        ) : (
-                          <div className="h-12 w-12 rounded-full bg-gradient-to-br from-primary-500 to-primary-600 flex items-center justify-center text-white font-bold text-lg">
-                            {(user.full_name || user.username || user.email).charAt(0).toUpperCase()}
-                          </div>
-                        )}
+                        ) : null}
+                        <div 
+                          className="h-12 w-12 rounded-full bg-gradient-to-br from-primary-500 to-primary-600 flex items-center justify-center text-white font-bold text-lg"
+                          style={{ display: user.avatar_url ? 'none' : 'flex' }}
+                        >
+                          {(user.full_name || user.username || user.email).charAt(0).toUpperCase()}
+                        </div>
                         <div>
                           <p className="text-sm font-semibold text-gray-900">
                             {user.full_name || user.username || user.email.split('@')[0]}
