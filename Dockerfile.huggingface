@@ -10,19 +10,9 @@ RUN npm config set fetch-retry-mintimeout 20000 && \
 COPY website/ ./
 RUN npm run build
 
-FROM node:20-slim AS frontend-builder
-WORKDIR /build
-COPY frontend/package*.json ./
-RUN npm config set fetch-retry-mintimeout 20000 && \
-    npm config set fetch-retry-maxtimeout 120000 && \
-    npm ci --prefer-offline --no-audit || npm install --prefer-offline --no-audit
-COPY frontend/ ./
-# Build with base path for serving under /app
-RUN npm run build
-
 FROM python:3.11-slim
 
-# Install system dependencies and nginx for reverse proxy
+# Install system dependencies, nginx, and Node.js for frontend build
 RUN apt-get update && apt-get install -y \
     build-essential \
     curl \
@@ -30,6 +20,8 @@ RUN apt-get update && apt-get install -y \
     tesseract-ocr \
     nginx \
     supervisor \
+    && curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
+    && apt-get install -y nodejs \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
@@ -41,9 +33,11 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy application code
 COPY . .
 
-# Copy built static files from previous stages
+# Copy built static files from docs stage
 COPY --from=docs-builder /build/build /app/static/docs
-COPY --from=frontend-builder /api/static /app/static/frontend
+
+# Build frontend inline to avoid cache issues (already copied above)
+RUN cd /app/frontend && npm ci && npm run build && cp -r dist /app/static/frontend
 
 # Create necessary directories
 RUN mkdir -p /app/logs /app/data /var/log/supervisor
