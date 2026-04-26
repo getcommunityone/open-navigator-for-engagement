@@ -274,8 +274,8 @@ async def oauth_callback(
     db.delete(oauth_state)
     db.commit()
     
-    # Create JWT token
-    jwt_token = create_access_token(data={"sub": user.id})
+    # Create JWT token (sub must be string, not int)
+    jwt_token = create_access_token(data={"sub": str(user.id)})
     
     # Redirect to frontend with token
     frontend_url = os.getenv('FRONTEND_URL', 'http://localhost:5173')
@@ -367,7 +367,7 @@ def get_current_user_info(
     # Decode token and get user
     from api.auth import decode_access_token
     payload = decode_access_token(token)
-    user_id = payload.get('sub')
+    user_id = int(payload.get('sub'))  # Convert back to int for DB query
     
     user = db.query(User).filter(User.id == user_id).first()
     if not user:
