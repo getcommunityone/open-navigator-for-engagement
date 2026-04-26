@@ -24,6 +24,9 @@ export default function Home() {
   const [keyword, setKeyword] = useState('')
   const [location, setLocation] = useState('')
 
+  // Use /docs in production, localhost:3000 in dev
+  const DOCS_URL = import.meta.env.PROD ? '/docs' : 'http://localhost:3000'
+
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault()
     if (keyword || location) {
@@ -36,7 +39,7 @@ export default function Home() {
 
   const categories = [
     { name: 'People', icon: UserGroupIcon, query: '', route: '/people' },
-    { name: 'Civic Tech', icon: CodeBracketIcon, query: '', route: 'http://localhost:3000/docs/data-sources/open-source-repositories' },
+    { name: 'Community', icon: CodeBracketIcon, query: 'community engagement' },
     { name: 'Budget', icon: CurrencyDollarIcon, query: 'budget funding' },
     { name: 'Housing', icon: HomeIcon, query: 'housing affordable' },
     { name: 'Transport', icon: TruckIcon, query: 'transportation transit' },
@@ -185,19 +188,19 @@ export default function Home() {
             </Link>
 
             <a 
-              href="http://localhost:3000" 
+              href={DOCS_URL} 
               target="_blank" 
               rel="noopener noreferrer"
               className="group"
             >
               <div className="bg-white border-2 border-gray-200 rounded-lg p-6 hover:border-primary-500 transition-colors">
                 <BookOpenIcon className="h-10 w-10 text-primary-600 mb-4" />
-                <h3 className="text-xl font-semibold mb-2" style={{ color: '#354F52' }}>Documentation</h3>
+                <h3 className="text-xl font-semibold mb-2" style={{ color: '#354F52' }}>Learn More</h3>
                 <p className="text-gray-600 mb-4">
-                  Comprehensive guides, API reference, and getting started tutorials
+                  Discover how to track local government decisions and find nonprofit organizations
                 </p>
                 <span className="text-primary-600 font-medium inline-flex items-center">
-                  Read Docs <ArrowRightIcon className="h-4 w-4 ml-2" />
+                  Getting Started <ArrowRightIcon className="h-4 w-4 ml-2" />
                 </span>
               </div>
             </a>
