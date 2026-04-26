@@ -4,9 +4,29 @@ MeetingBank Dataset Integration
 MeetingBank is an academic benchmark dataset containing 1,366 city council meetings
 from 6 major U.S. cities (Alameda, Boston, Denver, King County, Long Beach, Seattle).
 
-Paper: "MeetingBank: A Benchmark Dataset for Meeting Summarization" (ACL 2023)
-HuggingFace: https://huggingface.co/datasets/huuuyeah/meetingbank
-Zenodo: https://zenodo.org/record/7989108
+Dataset Citation (REQUIRED):
+    Yebowen Hu, Tim Ganter, Hanieh Deilamsalehy, Franck Dernoncourt, Hassan Foroosh, Fei Liu.
+    "MeetingBank: A Benchmark Dataset for Meeting Summarization"
+    In Proceedings of the 61st Annual Meeting of the Association for Computational Linguistics (ACL),
+    July 2023, Toronto, Canada.
+    
+    BibTeX:
+    @inproceedings{hu-etal-2023-meetingbank,
+        title = "MeetingBank: A Benchmark Dataset for Meeting Summarization",
+        author = "Yebowen Hu and Tim Ganter and Hanieh Deilamsalehy and 
+                  Franck Dernoncourt and Hassan Foroosh and Fei Liu",
+        booktitle = "Proceedings of the 61st Annual Meeting of the Association for 
+                     Computational Linguistics (ACL)",
+        month = July,
+        year = "2023",
+        address = "Toronto, Canada",
+        publisher = "Association for Computational Linguistics",
+    }
+
+Resources:
+- Paper: https://arxiv.org/abs/2305.17529
+- HuggingFace: https://huggingface.co/datasets/huuuyeah/meetingbank
+- Zenodo: https://zenodo.org/record/7989108
 
 What you get:
 - 1,366 meetings with full transcripts (avg 28k tokens)

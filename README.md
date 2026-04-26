@@ -389,6 +389,18 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for details.
 
 ---
 
+## Citations
+
+This project uses several open datasets and research contributions. **Please see [CITATIONS.md](CITATIONS.md) for complete citation information.**
+
+**Key Dataset:**
+- **MeetingBank**: Hu et al., "MeetingBank: A Benchmark Dataset for Meeting Summarization", ACL 2023
+  - Used for meeting discovery and analysis
+  - 1,366 city council meetings from 6 U.S. cities
+  - See [CITATIONS.md](CITATIONS.md) for full citation and BibTeX
+
+---
+
 ## License
 
 MIT License - see [LICENSE](LICENSE) file for details.
