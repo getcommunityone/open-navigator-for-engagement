@@ -164,7 +164,7 @@ export default function Home() {
                             placeholder="Try: housing, health, education, budget..."
                             value={keyword}
                             onChange={(e) => setKeyword(e.target.value)}
-                            className="w-full px-4 py-3 text-lg border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                            className="w-full px-4 py-3 text-lg border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent text-gray-900"
                           />
                         </div>
 
