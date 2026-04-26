@@ -7,7 +7,7 @@ const sidebars: SidebarsConfig = {
   gettingStartedSidebar: [
     {
       type: 'category',
-      label: '🚀 Getting Started',
+      label: 'Getting Started',
       collapsed: false,
       items: [
         'intro',
@@ -22,7 +22,7 @@ const sidebars: SidebarsConfig = {
   policyMakersSidebar: [
     {
       type: 'category',
-      label: '📊 Policy Makers & Advocates',
+      label: 'Policy Makers & Advocates',
       collapsed: false,
       items: [
         'for-advocates',
@@ -65,7 +65,7 @@ const sidebars: SidebarsConfig = {
   developersSidebar: [
     {
       type: 'category',
-      label: '🛠️ Developers & Technical Users',
+      label: 'Developers & Technical Users',
       collapsed: false,
       items: [
         'for-developers',
@@ -148,7 +148,7 @@ const sidebars: SidebarsConfig = {
   docsSidebar: [
     {
       type: 'category',
-      label: '🚀 Getting Started',
+      label: 'Getting Started',
       collapsed: false,
       items: [
         'intro',
@@ -157,7 +157,7 @@ const sidebars: SidebarsConfig = {
     },
     {
       type: 'category',
-      label: '📊 Policy Makers & Advocates',
+      label: 'Policy Makers & Advocates',
       collapsed: false,
       link: {
         type: 'doc',
@@ -196,7 +196,7 @@ const sidebars: SidebarsConfig = {
     },
     {
       type: 'category',
-      label: '🛠️ Developers & Technical Users',
+      label: 'Developers & Technical Users',
       collapsed: true,
       link: {
         type: 'doc',

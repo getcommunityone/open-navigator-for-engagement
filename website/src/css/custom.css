@@ -98,6 +98,38 @@ aside.theme-doc-sidebar-container {
   border-radius: 8px;
 }
 
+/* Professional navbar styling - clean without emojis */
+.navbar__item.navbar__link {
+  font-weight: 600;
+  letter-spacing: 0.025em;
+  transition: all 0.2s ease;
+}
+
+.navbar__item.navbar__link:hover {
+  transform: translateY(-1px);
+}
+
+/* Sidebar category labels - bold and professional */
+.menu__list-item-collapsible > .menu__link {
+  font-weight: 700;
+  font-size: 1.05em;
+  text-transform: none;
+  padding: 0.5rem 0.75rem;
+  border-left: 3px solid transparent;
+  transition: all 0.2s ease;
+}
+
+.menu__list-item-collapsible > .menu__link:hover {
+  border-left-color: #354F52;
+  background-color: rgba(53, 79, 82, 0.05);
+}
+
+/* Active sidebar section */
+.theme-doc-sidebar-item-category-level-1 > .menu__list-item-collapsible > .menu__link {
+  color: #354F52 !important;
+  font-size: 1.1em;
+}
+
 /* Main content area - keep white */
 .theme-doc-markdown,
 article {

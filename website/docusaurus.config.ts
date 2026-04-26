@@ -87,19 +87,19 @@ const config: Config = {
           type: 'docSidebar',
           sidebarId: 'gettingStartedSidebar',
           position: 'left',
-          label: '🚀 Getting Started',
+          label: 'Getting Started',
         },
         {
           type: 'docSidebar',
           sidebarId: 'policyMakersSidebar',
           position: 'left',
-          label: '📊 Policy Makers',
+          label: 'Policy Makers',
         },
         {
           type: 'docSidebar',
           sidebarId: 'developersSidebar',
           position: 'left',
-          label: '🛠️ Developers',
+          label: 'Developers',
         },
         {to: '/blog', label: 'Blog', position: 'left'},
         {
