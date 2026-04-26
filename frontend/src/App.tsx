@@ -11,6 +11,7 @@ import Settings from './pages/Settings'
 import PeopleFinder from './pages/PeopleFinder'
 import DebateFinder from './pages/DebateGrader'
 import Profile from './pages/Profile'
+import Explore from './pages/Explore'
 
 function App() {
   return (
@@ -25,6 +26,7 @@ function App() {
       
       {/* All other pages with sidebar layout */}
       <Route path="/" element={<Layout />}>
+        <Route path="explore" element={<Explore />} />
         <Route path="analytics" element={<Dashboard />} />
         <Route path="people" element={<PeopleFinder />} />
         <Route path="heatmap" element={<Heatmap />} />

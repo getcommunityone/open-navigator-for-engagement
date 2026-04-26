@@ -244,7 +244,7 @@ export default function HomeModern() {
 
             {/* Desktop CTA Button */}
             <Link
-              to="/people"
+              to="/explore"
               className="hidden md:block px-6 py-2.5 rounded-lg text-white font-semibold hover:shadow-lg transition-all"
               style={{ backgroundColor: '#354F52' }}
             >
@@ -287,7 +287,7 @@ export default function HomeModern() {
                 </button>
               ))}
               <Link
-                to="/people"
+                to="/explore"
                 className="block w-full text-center px-4 py-3 mt-2 rounded-lg text-white font-semibold"
                 style={{ backgroundColor: '#354F52' }}
                 onClick={() => setMobileMenuOpen(false)}
