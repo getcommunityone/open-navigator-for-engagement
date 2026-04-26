@@ -166,10 +166,10 @@ export default function PeopleFinder() {
     <div className="p-8">
       <div className="mb-8">
         <h1 className="text-3xl font-bold mb-2" style={{ color: '#354F52' }}>
-          People Finder
+          Find Leaders
         </h1>
         <p className="text-gray-600">
-          Find decision makers, support staff, open source contributors, and community advocates
+          Discover elected officials, decision makers, and community leaders in your area
         </p>
       </div>
 

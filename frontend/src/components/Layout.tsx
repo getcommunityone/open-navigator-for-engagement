@@ -25,13 +25,13 @@ import { useLocation as useLocationContext } from '../contexts/LocationContext'
 
 const navigation = [
   { name: 'Home', href: '/', icon: HomeIcon },
-  { name: 'Analytics', href: '/analytics', icon: ChartBarIcon },
-  { name: 'People Finder', href: '/people', icon: UserGroupIcon },
-  { name: 'Heatmap', href: '/heatmap', icon: MapIcon },
-  { name: 'Documents', href: '/documents', icon: DocumentTextIcon },
-  { name: 'Causes', href: '/opportunities', icon: BellAlertIcon },
-  { name: 'Nonprofits', href: '/nonprofits', icon: BuildingLibraryIcon },
-  { name: 'Debate Finder', href: '/debate-grader', icon: AcademicCapIcon },
+  { name: 'Find Leaders', href: '/people', icon: UserGroupIcon },
+  { name: 'Meeting Minutes', href: '/documents', icon: DocumentTextIcon },
+  { name: 'Local Charities', href: '/nonprofits', icon: BuildingLibraryIcon },
+  { name: 'Map View', href: '/heatmap', icon: MapIcon },
+  { name: 'Data & Trends', href: '/analytics', icon: ChartBarIcon },
+  { name: 'Take Action', href: '/opportunities', icon: BellAlertIcon },
+  { name: 'Policy Debates', href: '/debate-grader', icon: AcademicCapIcon },
   { name: 'Settings', href: '/settings', icon: Cog6ToothIcon },
 ]
 

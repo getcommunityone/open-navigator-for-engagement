@@ -76,9 +76,9 @@ export default function Nonprofits() {
     <div className="min-h-screen p-8" style={{ backgroundColor: '#F1F5F9' }}>
       <div className="max-w-7xl mx-auto space-y-6">
         <div>
-          <h1 className="text-3xl font-bold mb-2" style={{ color: '#354F52' }}>Nonprofit Solutions</h1>
+          <h1 className="text-3xl font-bold mb-2" style={{ color: '#354F52' }}>Local Charities</h1>
           <p className="text-gray-600">
-            Discover nonprofits already providing services that governments claim are "impossible"
+            Find charities and nonprofits providing services in your community
           </p>
         </div>
 

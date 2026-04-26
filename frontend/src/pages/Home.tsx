@@ -351,12 +351,12 @@ export default function Home() {
             <Link to="/analytics" className="group">
               <div className="bg-white border-2 border-gray-200 rounded-lg p-6 hover:border-primary-500 transition-colors">
                 <ChartBarIcon className="h-10 w-10 text-primary-600 mb-4" />
-                <h3 className="text-xl font-semibold mb-2" style={{ color: '#354F52' }}>Analytics</h3>
+                <h3 className="text-xl font-semibold mb-2" style={{ color: '#354F52' }}>Data & Trends</h3>
                 <p className="text-gray-600 mb-4">
-                  Real-time statistics, charts, and insights. Track causes across communities.
+                  Statistics, charts, and insights. See what's happening across communities.
                 </p>
                 <span className="text-primary-600 font-medium inline-flex items-center">
-                  View Analytics <ArrowRightIcon className="h-4 w-4 ml-2" />
+                  View Data <ArrowRightIcon className="h-4 w-4 ml-2" />
                 </span>
               </div>
             </Link>
@@ -364,12 +364,12 @@ export default function Home() {
             <Link to="/documents" className="group">
               <div className="bg-white border-2 border-gray-200 rounded-lg p-6 hover:border-primary-500 transition-colors">
                 <DocumentTextIcon className="h-10 w-10 text-primary-600 mb-4" />
-                <h3 className="text-xl font-semibold mb-2" style={{ color: '#354F52' }}>Documents</h3>
+                <h3 className="text-xl font-semibold mb-2" style={{ color: '#354F52' }}>Meeting Minutes</h3>
                 <p className="text-gray-600 mb-4">
-                  Search meeting minutes, budgets, and financial reports
+                  See what local governments are discussing, deciding, and spending
                 </p>
                 <span className="text-primary-600 font-medium inline-flex items-center">
-                  Browse Documents <ArrowRightIcon className="h-4 w-4 ml-2" />
+                  Browse Minutes <ArrowRightIcon className="h-4 w-4 ml-2" />
                 </span>
               </div>
             </Link>

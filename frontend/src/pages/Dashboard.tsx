@@ -45,9 +45,9 @@ export default function Dashboard() {
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold mb-2" style={{ color: '#354F52' }}>Analytics</h1>
+          <h1 className="text-3xl font-bold mb-2" style={{ color: '#354F52' }}>Data & Trends</h1>
           <p className="text-gray-600">
-            Real-time statistics and insights across all monitored jurisdictions and nonprofits
+            Statistics and insights across communities - see what's happening in local government
           </p>
         </div>
 
