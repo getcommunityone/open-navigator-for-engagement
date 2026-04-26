@@ -1,5 +1,6 @@
-import { Link, useNavigate } from 'react-router-dom'
-import { useState, useEffect } from 'react'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
+import { useState, useEffect, Fragment } from 'react'
+import { Tab } from '@headlessui/react'
 import { 
   MagnifyingGlassIcon, 
   DocumentTextIcon, 
@@ -19,9 +20,60 @@ import AddressLookup from '../components/AddressLookup'
 
 export default function HomeModern() {
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
   const [keyword, setKeyword] = useState('')
   const [activeSection, setActiveSection] = useState('hero')
-  const { setLocation } = useLocationContext()
+  const [selectedTab, setSelectedTab] = useState(0)
+  const [searchScope, setSearchScope] = useState('city')
+  const [showSuggestions, setShowSuggestions] = useState(false)
+  const [filteredSuggestions, setFilteredSuggestions] = useState<string[]>([])
+  const { location, setLocation } = useLocationContext()
+
+  // Search suggestions
+  const searchSuggestions = [
+    'housing', 'affordable housing', 'health', 'dental health', 'oral health',
+    'education', 'school funding', 'budget', 'city budget', 'transportation',
+    'public transit', 'infrastructure', 'parks', 'recreation', 'zoning',
+    'development', 'public safety', 'police', 'fire department', 'water',
+    'utilities', 'taxes', 'property taxes', 'employment', 'jobs',
+    'economic development', 'environment', 'climate', 'sustainability',
+    'waste management', 'recycling',
+  ]
+
+  // Handle tab parameter from URL
+  useEffect(() => {
+    const tabParam = searchParams.get('tab')
+    if (tabParam === 'community') {
+      setSelectedTab(1)
+    }
+  }, [searchParams])
+
+  // When location is set, default to city search
+  useEffect(() => {
+    if (location && searchScope === 'community') {
+      setSearchScope('city')
+    }
+  }, [location, searchScope])
+
+  const handleKeywordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value
+    setKeyword(value)
+
+    if (value.length > 0) {
+      const filtered = searchSuggestions.filter(suggestion =>
+        suggestion.toLowerCase().includes(value.toLowerCase())
+      ).slice(0, 8)
+      setFilteredSuggestions(filtered)
+      setShowSuggestions(filtered.length > 0)
+    } else {
+      setShowSuggestions(false)
+    }
+  }
+
+  const handleSelectSuggestion = (suggestion: string) => {
+    setKeyword(suggestion)
+    setShowSuggestions(false)
+  }
 
   // Smooth scroll to section
   const scrollToSection = (sectionId: string) => {
@@ -62,8 +114,25 @@ export default function HomeModern() {
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault()
-    if (keyword.trim()) {
-      navigate(`/documents?search=${encodeURIComponent(keyword)}`)
+    if (keyword || location) {
+      const params = new URLSearchParams()
+      if (keyword) params.set('search', keyword)
+      if (searchScope) params.set('scope', searchScope)
+      
+      // Add location context based on scope
+      if (location && searchScope !== 'national') {
+        if (searchScope === 'state' || searchScope === 'county' || searchScope === 'city' || searchScope === 'community') {
+          params.set('state', location.state)
+        }
+        if (searchScope === 'county' || searchScope === 'city' || searchScope === 'community') {
+          if (location.county) params.set('county', location.county)
+        }
+        if (searchScope === 'city' || searchScope === 'community') {
+          params.set('city', location.city)
+        }
+      }
+      
+      navigate(`/documents?${params.toString()}`)
     }
   }
 
@@ -200,28 +269,141 @@ export default function HomeModern() {
             90,000+ cities • 3M+ nonprofits • 100% free
           </p>
 
-          {/* Search Box */}
-          <form onSubmit={handleSearch} className="max-w-2xl mx-auto mb-8">
-            <div className="flex gap-3">
-              <div className="relative flex-1">
-                <MagnifyingGlassIcon className="absolute left-4 top-1/2 -translate-y-1/2 h-6 w-6 text-gray-400" />
-                <input
-                  type="text"
-                  placeholder="Search topics: housing, health, education..."
-                  value={keyword}
-                  onChange={(e) => setKeyword(e.target.value)}
-                  className="w-full pl-12 pr-4 py-4 text-lg border-2 border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#354F52] focus:border-transparent text-gray-900"
-                />
-              </div>
-              <button
-                type="submit"
-                className="px-8 py-4 rounded-xl text-white font-semibold hover:shadow-lg transition-all"
-                style={{ backgroundColor: '#354F52' }}
-              >
-                Search
-              </button>
-            </div>
-          </form>
+          {/* Tabbed Search Interface */}
+          <div className="max-w-5xl mx-auto mb-8">
+            <Tab.Group selectedIndex={selectedTab} onChange={setSelectedTab}>
+              <Tab.List className="flex space-x-2 rounded-xl bg-white p-2 shadow-lg mb-6 max-w-2xl mx-auto">
+                <Tab as={Fragment}>
+                  {({ selected }) => (
+                    <button
+                      className={`w-full rounded-lg py-3 px-6 text-base font-medium leading-5 focus:outline-none transition-all ${
+                        selected ? 'text-white shadow-md' : 'text-gray-700 hover:bg-gray-100'
+                      }`}
+                      style={selected ? { backgroundColor: '#354F52' } : {}}
+                    >
+                      🔍 Search Topics
+                    </button>
+                  )}
+                </Tab>
+                <Tab as={Fragment}>
+                  {({ selected }) => (
+                    <button
+                      className={`w-full rounded-lg py-3 px-6 text-base font-medium leading-5 focus:outline-none transition-all ${
+                        selected ? 'text-white shadow-md' : 'text-gray-700 hover:bg-gray-100'
+                      }`}
+                      style={selected ? { backgroundColor: '#354F52' } : {}}
+                    >
+                      📍 Find My Community
+                    </button>
+                  )}
+                </Tab>
+              </Tab.List>
+
+              <Tab.Panels>
+                {/* Search Topics Tab */}
+                <Tab.Panel>
+                  <div className="bg-white rounded-2xl shadow-xl p-8">
+                    <form onSubmit={handleSearch}>
+                      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-end">
+                        <div className="lg:col-span-7">
+                          <label className="block text-left text-sm font-medium text-gray-700 mb-2">
+                            What are you looking for?
+                          </label>
+                          <div className="relative">
+                            <input
+                              type="text"
+                              placeholder="Try: housing, health, education, budget..."
+                              value={keyword}
+                              onChange={handleKeywordChange}
+                              onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
+                              onFocus={() => {
+                                if (keyword.length > 0 && filteredSuggestions.length > 0) {
+                                  setShowSuggestions(true)
+                                }
+                              }}
+                              className="w-full px-4 py-3 text-lg border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#354F52] focus:border-transparent text-gray-900"
+                            />
+                            
+                            {/* Autocomplete Suggestions */}
+                            {showSuggestions && filteredSuggestions.length > 0 && (
+                              <div className="absolute z-10 w-full mt-1 bg-white border-2 border-gray-300 rounded-lg shadow-lg max-h-64 overflow-y-auto">
+                                {filteredSuggestions.map((suggestion, index) => (
+                                  <button
+                                    key={index}
+                                    type="button"
+                                    onClick={() => handleSelectSuggestion(suggestion)}
+                                    className="w-full text-left px-4 py-2 hover:bg-primary-50 text-gray-900 text-base border-b border-gray-100 last:border-b-0"
+                                  >
+                                    {suggestion}
+                                  </button>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+
+                        <div className="lg:col-span-3">
+                          <label className="block text-left text-sm font-medium text-gray-700 mb-2">
+                            Search In
+                          </label>
+                          <select
+                            value={searchScope}
+                            onChange={(e) => {
+                              const newValue = e.target.value
+                              setSearchScope(newValue)
+                              if (newValue === 'community' && !location) {
+                                navigate('/?tab=community')
+                              }
+                            }}
+                            className="w-full px-4 py-3 text-lg border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#354F52] focus:border-transparent bg-white text-gray-900"
+                          >
+                            {location ? (
+                              <>
+                                <option value="city">My City ({location.city})</option>
+                                <option value="county">My County ({location.county || 'County'})</option>
+                                <option value="state">My State ({location.state})</option>
+                                <option value="community">School Board ({location.city})</option>
+                                <option value="national">Nationwide</option>
+                              </>
+                            ) : (
+                              <>
+                                <option value="community">Set your location first</option>
+                                <option value="national">Nationwide</option>
+                              </>
+                            )}
+                          </select>
+                        </div>
+
+                        <div className="lg:col-span-2">
+                          <button
+                            type="submit"
+                            className="w-full text-white px-6 py-3 rounded-lg transition-all text-lg font-semibold flex items-center justify-center gap-2 hover:shadow-lg"
+                            style={{ backgroundColor: '#354F52' }}
+                          >
+                            <MagnifyingGlassIcon className="h-6 w-6" />
+                            Search
+                          </button>
+                        </div>
+                      </div>
+                    </form>
+                  </div>
+                </Tab.Panel>
+
+                {/* Find My Community Tab */}
+                <Tab.Panel>
+                  <div className="bg-white rounded-2xl shadow-xl p-8">
+                    <h2 className="text-2xl font-bold mb-3 text-center" style={{ color: '#354F52' }}>
+                      What's Happening in Your Community?
+                    </h2>
+                    <p className="text-gray-600 text-center mb-6">
+                      Enter your address to find local organizations, city councils, county boards, school districts, and charities near you
+                    </p>
+                    <AddressLookup onLocationFound={handleAddressFound} />
+                  </div>
+                </Tab.Panel>
+              </Tab.Panels>
+            </Tab.Group>
+          </div>
 
           {/* Quick Stats */}
           <div className="flex flex-wrap justify-center gap-8 text-sm text-gray-600">
