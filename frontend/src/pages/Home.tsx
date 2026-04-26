@@ -27,9 +27,46 @@ export default function Home() {
   const [keyword, setKeyword] = useState('')
   const [searchScope, setSearchScope] = useState('city') // city, county, state, community (school), national
   const [selectedTab, setSelectedTab] = useState(0)
+  const [showSuggestions, setShowSuggestions] = useState(false)
+  const [filteredSuggestions, setFilteredSuggestions] = useState<string[]>([])
   const { location, setLocation } = useLocationContext()
 
   const DOCS_URL = import.meta.env.PROD ? '/docs' : 'http://localhost:3000'
+
+  // Common search suggestions
+  const searchSuggestions = [
+    'housing',
+    'affordable housing',
+    'health',
+    'dental health',
+    'oral health',
+    'education',
+    'school funding',
+    'budget',
+    'city budget',
+    'transportation',
+    'public transit',
+    'infrastructure',
+    'parks',
+    'recreation',
+    'zoning',
+    'development',
+    'public safety',
+    'police',
+    'fire department',
+    'water',
+    'utilities',
+    'taxes',
+    'property taxes',
+    'employment',
+    'jobs',
+    'economic development',
+    'environment',
+    'climate',
+    'sustainability',
+    'waste management',
+    'recycling',
+  ]
 
   // Handle tab parameter from URL
   useEffect(() => {
@@ -45,6 +82,26 @@ export default function Home() {
       setSearchScope('city')
     }
   }, [location, searchScope])
+
+  const handleKeywordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value
+    setKeyword(value)
+
+    if (value.length > 0) {
+      const filtered = searchSuggestions.filter(suggestion =>
+        suggestion.toLowerCase().includes(value.toLowerCase())
+      ).slice(0, 8) // Limit to 8 suggestions
+      setFilteredSuggestions(filtered)
+      setShowSuggestions(filtered.length > 0)
+    } else {
+      setShowSuggestions(false)
+    }
+  }
+
+  const handleSelectSuggestion = (suggestion: string) => {
+    setKeyword(suggestion)
+    setShowSuggestions(false)
+  }
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault()
