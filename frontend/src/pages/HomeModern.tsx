@@ -36,6 +36,14 @@ export default function HomeModern() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const { location, setLocation } = useLocationContext()
 
+  // Environment-aware URLs for docs and API
+  // In development: Docusaurus on localhost:3000, API on localhost:8000
+  // In production (HF Spaces): Served via nginx at /docs/ and /api/
+  const docsBaseUrl = import.meta.env.VITE_DOCS_URL || 
+    (import.meta.env.DEV ? 'http://localhost:3000' : '')
+  const apiBaseUrl = import.meta.env.VITE_API_URL || 
+    (import.meta.env.DEV ? 'http://localhost:8000' : '')
+
   // Search suggestions
   const searchSuggestions = [
     'housing', 'affordable housing', 'health', 'dental health', 'oral health',
@@ -622,7 +630,7 @@ export default function HomeModern() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             {/* Getting Started - Everyone */}
             <a
-              href="/docs/intro"
+              href={`${docsBaseUrl}/docs/intro`}
               target="_blank"
               rel="noopener noreferrer"
               className="bg-white rounded-2xl p-8 shadow-xl hover:shadow-2xl transform hover:-translate-y-1 transition-all group"
@@ -641,7 +649,7 @@ export default function HomeModern() {
 
             {/* Policy Makers & Advocates - Non-Technical */}
             <a
-              href="/docs/for-advocates"
+              href={`${docsBaseUrl}/docs/for-advocates`}
               target="_blank"
               rel="noopener noreferrer"
               className="bg-white rounded-2xl p-8 shadow-xl hover:shadow-2xl transform hover:-translate-y-1 transition-all group"
@@ -660,7 +668,7 @@ export default function HomeModern() {
 
             {/* Developers & Technical Users */}
             <a
-              href="/docs/for-developers"
+              href={`${docsBaseUrl}/docs/for-developers`}
               target="_blank"
               rel="noopener noreferrer"
               className="bg-white rounded-2xl p-8 shadow-xl hover:shadow-2xl transform hover:-translate-y-1 transition-all group"
@@ -679,7 +687,7 @@ export default function HomeModern() {
 
             {/* Full Documentation */}
             <a
-              href="/docs/intro"
+              href={`${docsBaseUrl}/docs/intro`}
               target="_blank"
               rel="noopener noreferrer"
               className="bg-white rounded-2xl p-8 shadow-xl hover:shadow-2xl transform hover:-translate-y-1 transition-all group"
@@ -731,8 +739,8 @@ export default function HomeModern() {
             Empowering communities through transparency and engagement
           </p>
           <div className="flex justify-center gap-8 text-sm text-gray-400">
-            <a href="/docs/intro" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">Documentation</a>
-            <a href="/api/docs" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">API</a>
+            <a href={`${docsBaseUrl}/docs/intro`} target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">Documentation</a>
+            <a href={`${apiBaseUrl}/api/docs`} target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">API</a>
             <Link to="/explore" className="hover:text-white transition-colors">Explore</Link>
             <a href="https://github.com/getcommunityone/open-navigator-for-engagement" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">GitHub</a>
           </div>
