@@ -1,5 +1,6 @@
 import { Link, useNavigate } from 'react-router-dom'
-import { useState } from 'react'
+import { useState, Fragment } from 'react'
+import { Tab } from '@headlessui/react'
 import { 
   MagnifyingGlassIcon, 
   DocumentTextIcon, 
@@ -27,7 +28,6 @@ export default function Home() {
   const [searchLocation, setSearchLocation] = useState('')
   const { location, setLocation, clearLocation, hasLocation } = useLocationContext()
 
-  // Use /docs in production, localhost:3000 in dev
   const DOCS_URL = import.meta.env.PROD ? '/docs' : 'http://localhost:3000'
 
   const handleSearch = (e: React.FormEvent) => {
@@ -36,7 +36,6 @@ export default function Home() {
       const params = new URLSearchParams()
       if (keyword) params.set('search', keyword)
       if (searchLocation) params.set('location', searchLocation)
-      // Also include stored location if available
       if (location) {
         params.set('state', location.state)
         params.set('city', location.city)
@@ -66,12 +65,11 @@ export default function Home() {
     { name: 'Education', icon: AcademicCapIcon, query: 'education school' },
     { name: 'Jobs', icon: BriefcaseIcon, query: 'employment jobs' },
     { name: 'Legal', icon: ScaleIcon, query: 'legal services' },
-    { name: 'Nonprofits', icon: BuildingLibraryIcon, query: '', route: '/nonprofits' },
+    { name: 'Charities', icon: BuildingLibraryIcon, query: '', route: '/nonprofits' },
   ]
 
   const quickSearch = (category: { query: string, route?: string }) => {
     if (category.route) {
-      // External links (like docs) open in new tab
       if (category.route.startsWith('http')) {
         window.open(category.route, '_blank')
       } else {
@@ -84,34 +82,18 @@ export default function Home() {
 
   return (
     <div className="min-h-screen" style={{ backgroundColor: '#F1F5F9' }}>
-      {/* Hero Section */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-20 pb-16">
         <div className="text-center">
           <h1 className="text-5xl font-bold mb-6" style={{ color: '#354F52' }}>
             Open Navigator for Engagement
           </h1>
           <p className="text-xl mb-12 max-w-3xl mx-auto" style={{ color: '#354F52' }}>
-            Track what local governments and nonprofits say, spend—and block.
+            Track what local governments and charities say, spend—and block.
             <br />
-            Find leaders by name. Discover causes. 90,000+ cities. 3M+ nonprofits. All free.
+            Find leaders by name. Discover causes. 90,000+ cities. 3M+ charities. All free.
           </p>
 
-          {/* Address Lookup Section */}
-          {!hasLocation && (
-            <div className="max-w-2xl mx-auto mb-8">
-              <div className="bg-white rounded-xl shadow-lg p-8">
-                <h2 className="text-2xl font-bold mb-2 text-center" style={{ color: '#354F52' }}>
-                  Find Your Local Government Entities
-                </h2>
-                <p className="text-gray-600 text-center mb-6">
-                  Enter your address to discover city councils, county boards, school districts, and nonprofits in your area
-                </p>
-                <AddressLookup onLocationFound={handleAddressFound} />
-              </div>
-            </div>
-          )}
-
-          {/* Location Confirmation Banner */}
+          {/* Location Banner */}
           {hasLocation && location && (
             <div className="max-w-3xl mx-auto mb-8">
               <div className="bg-primary-50 border-2 border-primary-200 rounded-lg p-4 flex items-center justify-between">
@@ -119,7 +101,7 @@ export default function Home() {
                   <MapPinIcon className="h-6 w-6 text-primary-600" />
                   <div>
                     <p className="font-medium text-primary-900">
-                      Showing results for: {location.city}, {location.state}
+                      {location.city}, {location.state}
                     </p>
                     {location.county && (
                       <p className="text-sm text-primary-700">{location.county}</p>
@@ -130,66 +112,113 @@ export default function Home() {
                   onClick={clearLocation}
                   className="text-sm text-primary-600 hover:text-primary-700 font-medium underline"
                 >
-                  Change Location
+                  Change
                 </button>
               </div>
             </div>
           )}
-          
-          {/* Search Form */}
-          <form onSubmit={handleSearch} className="max-w-5xl mx-auto mb-8">
-            <div className="bg-white rounded-xl shadow-lg p-8">
-              <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-end">
-                {/* What are you looking for? */}
-                <div className="lg:col-span-7">
-                  <label className="block text-left text-sm font-medium text-gray-700 mb-2">
-                    What are you looking for today?
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="Enter a topic, keyword, or program name..."
-                    value={keyword}
-                    onChange={(e) => setKeyword(e.target.value)}
-                    className="w-full px-4 py-3 text-lg border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                  />
-                </div>
 
-                {/* Where? */}
-                <div className="lg:col-span-3">
-                  <label className="block text-left text-sm font-medium text-gray-700 mb-2">
-                    Where?
-                  </label>
-                  <div className="relative">
-                    <input
-                      type="text"
-                      placeholder={hasLocation && location ? `${location.city}, ${location.state}` : "City, County, or ZIP"}
-                      value={searchLocation}
-                      onChange={(e) => setSearchLocation(e.target.value)}
-                      className="w-full px-4 py-3 pl-10 text-lg border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                    />
-                    <MapPinIcon className="absolute left-3 top-3.5 h-6 w-6 text-gray-400" />
+          {/* Tabbed Interface */}
+          <div className="max-w-5xl mx-auto mb-8">
+            <Tab.Group>
+              <Tab.List className="flex space-x-2 rounded-xl bg-white p-2 shadow-lg mb-6">
+                <Tab as={Fragment}>
+                  {({ selected }) => (
+                    <button
+                      className={`w-full rounded-lg py-3 px-4 text-base font-medium leading-5 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 ${
+                        selected ? 'text-white shadow' : 'text-gray-700 hover:bg-gray-100'
+                      }`}
+                      style={selected ? { backgroundColor: '#354F52' } : {}}
+                    >
+                      🔍 Search Topics
+                    </button>
+                  )}
+                </Tab>
+                <Tab as={Fragment}>
+                  {({ selected }) => (
+                    <button
+                      className={`w-full rounded-lg py-3 px-4 text-base font-medium leading-5 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 ${
+                        selected ? 'text-white shadow' : 'text-gray-700 hover:bg-gray-100'
+                      }`}
+                      style={selected ? { backgroundColor: '#354F52' } : {}}
+                    >
+                      📍 Find My Community
+                    </button>
+                  )}
+                </Tab>
+              </Tab.List>
+
+              <Tab.Panels>
+                {/* Search Tab */}
+                <Tab.Panel>
+                  <div className="bg-white rounded-xl shadow-lg p-8">
+                    <form onSubmit={handleSearch}>
+                      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-end">
+                        <div className="lg:col-span-7">
+                          <label className="block text-left text-sm font-medium text-gray-700 mb-2">
+                            What are you looking for?
+                          </label>
+                          <input
+                            type="text"
+                            placeholder="Try: housing, health, education, budget..."
+                            value={keyword}
+                            onChange={(e) => setKeyword(e.target.value)}
+                            className="w-full px-4 py-3 text-lg border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                          />
+                        </div>
+
+                        <div className="lg:col-span-3">
+                          <label className="block text-left text-sm font-medium text-gray-700 mb-2">
+                            Where?
+                          </label>
+                          <div className="relative">
+                            <input
+                              type="text"
+                              placeholder={hasLocation && location ? `${location.city}, ${location.state}` : "City or ZIP code"}
+                              value={searchLocation}
+                              onChange={(e) => setSearchLocation(e.target.value)}
+                              className="w-full px-4 py-3 pl-10 text-lg border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                            />
+                            <MapPinIcon className="absolute left-3 top-3.5 h-6 w-6 text-gray-400" />
+                          </div>
+                        </div>
+
+                        <div className="lg:col-span-2">
+                          <button
+                            type="submit"
+                            className="w-full text-white px-6 py-3 rounded-lg transition-colors text-lg font-semibold flex items-center justify-center gap-2"
+                            style={{ backgroundColor: '#354F52' }}
+                            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#2e4346'}
+                            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#354F52'}
+                          >
+                            <MagnifyingGlassIcon className="h-6 w-6" />
+                            Search
+                          </button>
+                        </div>
+                      </div>
+                    </form>
                   </div>
-                </div>
+                </Tab.Panel>
 
-                {/* Find Button */}
-                <div className="lg:col-span-2">
-                  <button
-                    type="submit"
-                    className="w-full text-white px-6 py-3 rounded-lg transition-colors text-lg font-semibold flex items-center justify-center gap-2"
-                    style={{ backgroundColor: '#354F52' }}
-                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#2e4346'}
-                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#354F52'}
-                  >
-                    <MagnifyingGlassIcon className="h-6 w-6" />
-                    Find
-                  </button>
-                </div>
-              </div>
-            </div>
-          </form>
+                {/* Find My Community Tab */}
+                <Tab.Panel>
+                  <div className="bg-white rounded-xl shadow-lg p-8">
+                    <h2 className="text-2xl font-bold mb-3 text-center" style={{ color: '#354F52' }}>
+                      What's Happening in Your Community?
+                    </h2>
+                    <p className="text-gray-600 text-center mb-6">
+                      Enter your address to find city councils, county boards, school districts, and charities near you
+                    </p>
+                    <AddressLookup onLocationFound={handleAddressFound} />
+                  </div>
+                </Tab.Panel>
+              </Tab.Panels>
+            </Tab.Group>
+          </div>
 
-          {/* Category Quick Buttons */}
+          {/* Quick Topics */}
           <div className="max-w-5xl mx-auto mb-6">
+            <p className="text-sm text-gray-600 text-center mb-3">Popular topics:</p>
             <div className="flex flex-wrap justify-center gap-3">
               {categories.map((category) => (
                 <button
@@ -204,7 +233,7 @@ export default function Home() {
             </div>
           </div>
 
-          {/* Terms Note */}
+          {/* Terms */}
           <p className="text-sm text-gray-500">
             By continuing, you agree to the{' '}
             <a href="#" className="text-primary-600 hover:underline">Terms</a>
@@ -225,7 +254,7 @@ export default function Home() {
                 <ChartBarIcon className="h-10 w-10 text-primary-600 mb-4" />
                 <h3 className="text-xl font-semibold mb-2" style={{ color: '#354F52' }}>Analytics</h3>
                 <p className="text-gray-600 mb-4">
-                Real-time statistics, charts, and insights. Track causes across jurisdictions.
+                  Real-time statistics, charts, and insights. Track causes across communities.
                 </p>
                 <span className="text-primary-600 font-medium inline-flex items-center">
                   View Analytics <ArrowRightIcon className="h-4 w-4 ml-2" />
@@ -236,9 +265,9 @@ export default function Home() {
             <Link to="/documents" className="group">
               <div className="bg-white border-2 border-gray-200 rounded-lg p-6 hover:border-primary-500 transition-colors">
                 <DocumentTextIcon className="h-10 w-10 text-primary-600 mb-4" />
-                <h3 className="text-xl font-semibold mb-2" style={{ color: '#354F52' }}>Document Explorer</h3>
+                <h3 className="text-xl font-semibold mb-2" style={{ color: '#354F52' }}>Documents</h3>
                 <p className="text-gray-600 mb-4">
-                  Search and analyze meeting minutes, budgets, and financial reports
+                  Search meeting minutes, budgets, and financial reports
                 </p>
                 <span className="text-primary-600 font-medium inline-flex items-center">
                   Browse Documents <ArrowRightIcon className="h-4 w-4 ml-2" />
@@ -246,17 +275,12 @@ export default function Home() {
               </div>
             </Link>
 
-            <a 
-              href={DOCS_URL} 
-              target="_blank" 
-              rel="noopener noreferrer"
-              className="group"
-            >
+            <a href={DOCS_URL} target="_blank" rel="noopener noreferrer" className="group">
               <div className="bg-white border-2 border-gray-200 rounded-lg p-6 hover:border-primary-500 transition-colors">
                 <BookOpenIcon className="h-10 w-10 text-primary-600 mb-4" />
                 <h3 className="text-xl font-semibold mb-2" style={{ color: '#354F52' }}>Learn More</h3>
                 <p className="text-gray-600 mb-4">
-                  Discover how to track local government decisions and find nonprofit organizations
+                  Discover how to track local decisions and find charities
                 </p>
                 <span className="text-primary-600 font-medium inline-flex items-center">
                   Getting Started <ArrowRightIcon className="h-4 w-4 ml-2" />
@@ -273,7 +297,7 @@ export default function Home() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 text-center">
             <div>
               <div className="text-4xl font-bold text-primary-600 mb-2">2,500+</div>
-              <div className="text-gray-600">Advocacy Causes Tracked</div>
+              <div className="text-gray-600">Causes Tracked</div>
             </div>
             <div>
               <div className="text-4xl font-bold text-emerald-600 mb-2">15,000+</div>
@@ -281,7 +305,7 @@ export default function Home() {
             </div>
             <div>
               <div className="text-4xl font-bold text-amber-600 mb-2">8 Years</div>
-              <div className="text-gray-600">Historical Data Coverage</div>
+              <div className="text-gray-600">Historical Coverage</div>
             </div>
             <div>
               <div className="text-4xl font-bold text-cyan-600 mb-2">5,000+</div>
@@ -289,11 +313,11 @@ export default function Home() {
             </div>
             <div>
               <div className="text-4xl font-bold mb-2" style={{ color: '#354F52' }}>12,000+</div>
-              <div className="text-gray-600">Hours of Video Archived</div>
+              <div className="text-gray-600">Hours of Video</div>
             </div>
             <div>
               <div className="text-4xl font-bold text-purple-600 mb-2">100%</div>
-              <div className="text-gray-600">Free & Open Data</div>
+              <div className="text-gray-600">Free & Open</div>
             </div>
           </div>
         </div>
