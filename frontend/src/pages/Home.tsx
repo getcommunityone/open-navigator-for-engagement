@@ -167,7 +167,14 @@ export default function Home() {
                           </label>
                           <select
                             value={searchScope}
-                            onChange={(e) => setSearchScope(e.target.value)}
+                            onChange={(e) => {
+                              const newValue = e.target.value
+                              setSearchScope(newValue)
+                              // If user clicks "Set your location first", navigate to community tab
+                              if (newValue === 'community' && !location) {
+                                navigate('/?tab=community')
+                              }
+                            }}
                             className="w-full px-4 py-3 text-lg border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-white text-gray-900"
                           >
                             {location ? (
