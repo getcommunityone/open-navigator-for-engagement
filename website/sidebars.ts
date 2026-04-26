@@ -82,6 +82,7 @@ const sidebars: SidebarsConfig = {
           type: 'category',
           label: 'Data Sources (Technical)',
           items: [
+            'data-sources/data-model-erd',
             'data-sources/jurisdiction-discovery',
             'data-sources/census-data',
             // 'data-sources/civic-tech-sources', // Temporarily disabled - MDX parsing issue
@@ -216,6 +217,7 @@ const sidebars: SidebarsConfig = {
           type: 'category',
           label: 'Data Sources (Technical)',
           items: [
+            'data-sources/data-model-erd',
             'data-sources/jurisdiction-discovery',
             'data-sources/census-data',
             'data-sources/huggingface-datasets',
