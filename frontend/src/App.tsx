@@ -1,6 +1,7 @@
 import { Routes, Route } from 'react-router-dom'
 import Layout from './components/Layout'
 import Home from './pages/Home'
+import HomeModern from './pages/HomeModern'
 import Dashboard from './pages/Dashboard'
 import Heatmap from './pages/Heatmap'
 import Documents from './pages/Documents'
@@ -14,8 +15,16 @@ import Profile from './pages/Profile'
 function App() {
   return (
     <Routes>
-      <Route path="/" element={<Layout />}>
+      {/* Modern home page without Layout (has its own header) */}
+      <Route path="/" element={<HomeModern />} />
+      
+      {/* Classic home page (if needed) */}
+      <Route path="/classic" element={<Layout />}>
         <Route index element={<Home />} />
+      </Route>
+      
+      {/* All other pages with sidebar layout */}
+      <Route path="/" element={<Layout />}>
         <Route path="analytics" element={<Dashboard />} />
         <Route path="people" element={<PeopleFinder />} />
         <Route path="heatmap" element={<Heatmap />} />
