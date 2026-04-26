@@ -195,7 +195,7 @@ export default function HomeModern() {
     {
       icon: MapIcon,
       title: 'Map View',
-      description: 'Visualize advocacy opportunities and civic engagement across regions',
+      description: 'Visualize advocacy opportunities and community impact across regions',
       link: '/heatmap',
       color: '#4A90E2'
     },
@@ -313,7 +313,7 @@ export default function HomeModern() {
           <div className="inline-flex items-center gap-2 px-4 py-2 bg-white rounded-full shadow-sm mb-6 animate-[slideUp_0.6s_ease-out]">
             <SparklesIcon className="h-5 w-5" style={{ color: '#354F52' }} />
             <span className="text-sm font-medium" style={{ color: '#354F52' }}>
-              Civic Engagement Reimagined
+              Community Impact Made Easy
             </span>
           </div>
 
@@ -736,7 +736,7 @@ export default function HomeModern() {
             <span className="text-xl font-bold">Open Navigator</span>
           </div>
           <p className="text-gray-400 mb-6">
-            Empowering communities through transparency and engagement
+            Making community impact accessible to everyone
           </p>
           <div className="flex justify-center gap-8 text-sm text-gray-400">
             <a href={`${docsBaseUrl}/docs/intro`} target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">Documentation</a>

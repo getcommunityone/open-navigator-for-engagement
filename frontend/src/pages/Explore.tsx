@@ -62,7 +62,7 @@ const exploreOptions: ExploreCard[] = [
   },
   {
     title: 'Analytics Dashboard',
-    description: 'View trends, insights, and data visualizations about civic engagement.',
+    description: 'View trends, insights, and data visualizations about community impact.',
     icon: ChartBarIcon,
     path: '/analytics',
     color: '#52796F',
@@ -78,7 +78,7 @@ const exploreOptions: ExploreCard[] = [
   },
   {
     title: 'My Profile',
-    description: 'Follow leaders, organizations, and causes. Track your civic engagement journey.',
+    description: 'Follow leaders, organizations, and causes. Track your community impact journey.',
     icon: HeartIcon,
     path: '/profile',
     color: '#CAD2C5',
@@ -94,7 +94,7 @@ export default function Explore() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="text-center">
             <h1 className="text-4xl font-bold text-gray-900 mb-3">
-              Explore Civic Engagement
+              Explore Community Impact
             </h1>
             <p className="text-xl text-gray-600 max-w-3xl mx-auto">
               Discover leaders, organizations, and opportunities to make an impact in your community.
