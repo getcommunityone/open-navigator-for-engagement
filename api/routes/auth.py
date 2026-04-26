@@ -2,6 +2,7 @@
 OAuth authentication routes - HuggingFace, Google, Facebook, GitHub
 """
 import os
+import httpx
 from datetime import datetime, timedelta
 from typing import Optional
 from urllib.parse import urlencode
@@ -9,7 +10,6 @@ from urllib.parse import urlencode
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
-from authlib.integrations.starlette_client import OAuth
 from pydantic import BaseModel
 
 from api.database import get_db
@@ -18,47 +18,41 @@ from api.auth import create_access_token, generate_state_token
 
 router = APIRouter(prefix="/auth", tags=["authentication"])
 
-# OAuth client configuration
-oauth = OAuth()
-
-# HuggingFace OAuth
-oauth.register(
-    name='huggingface',
-    client_id=os.getenv('HUGGINGFACE_CLIENT_ID'),
-    client_secret=os.getenv('HUGGINGFACE_CLIENT_SECRET'),
-    authorize_url='https://huggingface.co/oauth/authorize',
-    access_token_url='https://huggingface.co/oauth/token',
-    client_kwargs={'scope': 'openid profile email'},
-)
-
-# Google OAuth
-oauth.register(
-    name='google',
-    client_id=os.getenv('GOOGLE_CLIENT_ID'),
-    client_secret=os.getenv('GOOGLE_CLIENT_SECRET'),
-    server_metadata_url='https://accounts.google.com/.well-known/openid-configuration',
-    client_kwargs={'scope': 'openid email profile'},
-)
-
-# Facebook OAuth
-oauth.register(
-    name='facebook',
-    client_id=os.getenv('FACEBOOK_APP_ID'),
-    client_secret=os.getenv('FACEBOOK_APP_SECRET'),
-    authorize_url='https://www.facebook.com/v18.0/dialog/oauth',
-    access_token_url='https://graph.facebook.com/v18.0/oauth/access_token',
-    client_kwargs={'scope': 'email public_profile'},
-)
-
-# GitHub OAuth
-oauth.register(
-    name='github',
-    client_id=os.getenv('GITHUB_CLIENT_ID'),
-    client_secret=os.getenv('GITHUB_CLIENT_SECRET'),
-    authorize_url='https://github.com/login/oauth/authorize',
-    access_token_url='https://github.com/login/oauth/access_token',
-    client_kwargs={'scope': 'user:email'},
-)
+# OAuth provider configurations
+OAUTH_PROVIDERS = {
+    'huggingface': {
+        'authorize_url': 'https://huggingface.co/oauth/authorize',
+        'token_url': 'https://huggingface.co/oauth/token',
+        'userinfo_url': 'https://huggingface.co/api/whoami-v2',
+        'scope': 'openid profile email',
+        'client_id_env': 'HUGGINGFACE_CLIENT_ID',
+        'client_secret_env': 'HUGGINGFACE_CLIENT_SECRET',
+    },
+    'google': {
+        'authorize_url': 'https://accounts.google.com/o/oauth2/v2/auth',
+        'token_url': 'https://oauth2.googleapis.com/token',
+        'userinfo_url': 'https://www.googleapis.com/oauth2/v2/userinfo',
+        'scope': 'openid email profile',
+        'client_id_env': 'GOOGLE_CLIENT_ID',
+        'client_secret_env': 'GOOGLE_CLIENT_SECRET',
+    },
+    'facebook': {
+        'authorize_url': 'https://www.facebook.com/v18.0/dialog/oauth',
+        'token_url': 'https://graph.facebook.com/v18.0/oauth/access_token',
+        'userinfo_url': 'https://graph.facebook.com/me?fields=id,name,email,picture',
+        'scope': 'email public_profile',
+        'client_id_env': 'FACEBOOK_APP_ID',
+        'client_secret_env': 'FACEBOOK_APP_SECRET',
+    },
+    'github': {
+        'authorize_url': 'https://github.com/login/oauth/authorize',
+        'token_url': 'https://github.com/login/oauth/access_token',
+        'userinfo_url': 'https://api.github.com/user',
+        'scope': 'user:email',
+        'client_id_env': 'GITHUB_CLIENT_ID',
+        'client_secret_env': 'GITHUB_CLIENT_SECRET',
+    },
+}
 
 
 # Response models
