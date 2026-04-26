@@ -216,13 +216,37 @@ export default function Home() {
                           <label className="block text-left text-sm font-medium text-gray-700 mb-2">
                             What are you looking for?
                           </label>
-                          <input
-                            type="text"
-                            placeholder="Try: housing, health, education, budget..."
-                            value={keyword}
-                            onChange={(e) => setKeyword(e.target.value)}
-                            className="w-full px-4 py-3 text-lg border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent text-gray-900"
-                          />
+                          <div className="relative">
+                            <input
+                              type="text"
+                              placeholder="Try: housing, health, education, budget..."
+                              value={keyword}
+                              onChange={handleKeywordChange}
+                              onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
+                              onFocus={() => {
+                                if (keyword.length > 0 && filteredSuggestions.length > 0) {
+                                  setShowSuggestions(true)
+                                }
+                              }}
+                              className="w-full px-4 py-3 text-lg border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent text-gray-900"
+                            />
+                            
+                            {/* Autocomplete Suggestions */}
+                            {showSuggestions && filteredSuggestions.length > 0 && (
+                              <div className="absolute z-10 w-full mt-1 bg-white border-2 border-gray-300 rounded-lg shadow-lg max-h-64 overflow-y-auto">
+                                {filteredSuggestions.map((suggestion, index) => (
+                                  <button
+                                    key={index}
+                                    type="button"
+                                    onClick={() => handleSelectSuggestion(suggestion)}
+                                    className="w-full text-left px-4 py-2 hover:bg-primary-50 text-gray-900 text-base border-b border-gray-100 last:border-b-0"
+                                  >
+                                    {suggestion}
+                                  </button>
+                                ))}
+                              </div>
+                            )}
+                          </div>
                         </div>
 
                         <div className="lg:col-span-3">
