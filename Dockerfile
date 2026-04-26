@@ -36,8 +36,12 @@ COPY . .
 # Copy built static files from docs stage
 COPY --from=docs-builder /build/build /app/static/docs
 
-# Build frontend inline to avoid cache issues (already copied above)
-RUN cd /app/frontend && npm ci && npm run build && cp -r dist /app/static/frontend
+# Build frontend inline (vite.config.ts outputs to ../api/static/)
+RUN cd /app/frontend && npm ci && npm run build
+
+# Frontend is already built to /app/api/static/ via vite.config.ts
+# Create frontend directory in /app/static for nginx
+RUN mkdir -p /app/static/frontend && cp -r /app/api/static/* /app/static/frontend/
 
 # Create necessary directories
 RUN mkdir -p /app/logs /app/data /var/log/supervisor
