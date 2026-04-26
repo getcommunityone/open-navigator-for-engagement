@@ -31,27 +31,36 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   // Load user from localStorage on mount
   useEffect(() => {
-    const storedToken = localStorage.getItem('auth_token');
-    console.log('🔐 Auth initialization - Token found:', !!storedToken);
+    console.log('🔐 Auth initialization starting...');
+    console.log('🔐 Current URL:', window.location.href);
     
-    if (storedToken) {
-      setToken(storedToken);
-      fetchUser(storedToken);
-    } else {
-      setIsLoading(false);
-    }
-
-    // Check for token in URL (OAuth callback)
+    // Check for token in URL FIRST (OAuth callback)
     const urlParams = new URLSearchParams(window.location.search);
     const urlToken = urlParams.get('token');
+    
     if (urlToken) {
       console.log('🔐 OAuth callback - Token received from URL');
+      console.log('🔐 Token preview:', urlToken.substring(0, 20) + '...');
       localStorage.setItem('auth_token', urlToken);
       setToken(urlToken);
       fetchUser(urlToken);
       
-      // Clean URL
+      // Clean URL (remove token from address bar)
       window.history.replaceState({}, document.title, window.location.pathname);
+      return; // Exit early, fetchUser will handle loading state
+    }
+    
+    // Check for stored token
+    const storedToken = localStorage.getItem('auth_token');
+    console.log('🔐 Stored token found:', !!storedToken);
+    
+    if (storedToken) {
+      console.log('🔐 Token preview:', storedToken.substring(0, 20) + '...');
+      setToken(storedToken);
+      fetchUser(storedToken);
+    } else {
+      console.log('🔐 No token found - user not authenticated');
+      setIsLoading(false);
     }
   }, []);
 
