@@ -142,7 +142,7 @@ export default function Home() {
                       }`}
                       style={selected ? { backgroundColor: '#354F52' } : {}}
                     >
-                      📍 Find My Local Organizations
+                      📍 Find My Local Community
                     </button>
                   )}
                 </Tab>
