@@ -532,14 +532,19 @@ export default function HomeModern() {
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             {[
               { value: '90,000+', label: 'Cities & Counties', color: '#354F52' },
               { value: '3M+', label: 'Nonprofits Tracked', color: '#52796F' },
               { value: '15,000+', label: 'Decisions Analyzed', color: '#84A98C' },
-              { value: '100%', label: 'Free & Open', color: '#4A90E2' },
+              { value: '50 States', label: 'Nationwide Coverage', color: '#4A90E2' },
+              { value: '13,000+', label: 'School Districts', color: '#6B8E23' },
+              { value: '500K+', label: 'Meeting Minutes', color: '#8B4513' },
+              { value: '$2T+', label: 'Budget Dollars Tracked', color: '#DC143C' },
+              { value: '100K+', label: 'Public Officials', color: '#9370DB' },
+              { value: '100%', label: 'Free & Open Source', color: '#2E8B57' },
             ].map((stat, index) => (
-              <div key={index} className="text-center p-8 rounded-2xl bg-gradient-to-br from-gray-50 to-white">
+              <div key={index} className="text-center p-8 rounded-2xl bg-gradient-to-br from-gray-50 to-white shadow-md hover:shadow-xl transition-shadow">
                 <div className="text-5xl font-bold mb-3" style={{ color: stat.color }}>
                   {stat.value}
                 </div>
