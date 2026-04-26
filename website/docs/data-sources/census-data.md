@@ -1,3 +1,7 @@
+---
+displayed_sidebar: developersSidebar
+---
+
 # Census Bureau Data URL Fix
 
 ## Problem

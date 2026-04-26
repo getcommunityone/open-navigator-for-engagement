@@ -85,9 +85,21 @@ const config: Config = {
       items: [
         {
           type: 'docSidebar',
-          sidebarId: 'docsSidebar',
+          sidebarId: 'gettingStartedSidebar',
           position: 'left',
-          label: 'Documentation',
+          label: '🚀 Getting Started',
+        },
+        {
+          type: 'docSidebar',
+          sidebarId: 'policyMakersSidebar',
+          position: 'left',
+          label: '📊 For Policy Makers',
+        },
+        {
+          type: 'docSidebar',
+          sidebarId: 'developersSidebar',
+          position: 'left',
+          label: '🛠️ For Developers',
         },
         {to: '/blog', label: 'Blog', position: 'left'},
         {

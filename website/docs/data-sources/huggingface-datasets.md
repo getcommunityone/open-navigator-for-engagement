@@ -1,3 +1,7 @@
+---
+displayed_sidebar: developersSidebar
+---
+
 # ✅ Confirmed: HuggingFace Datasets That WILL Help
 
 ## Quick Answer: YES, 2 of 4 will help significantly!

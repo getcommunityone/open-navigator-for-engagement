@@ -1,5 +1,6 @@
 ---
 sidebar_position: 1
+displayed_sidebar: developersSidebar
 ---
 
 # For Developers & Technical Users

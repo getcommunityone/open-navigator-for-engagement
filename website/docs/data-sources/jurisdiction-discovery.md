@@ -1,3 +1,7 @@
+---
+displayed_sidebar: developersSidebar
+---
+
 # Jurisdiction Discovery System
 
 ## Overview

@@ -1,3 +1,7 @@
+---
+displayed_sidebar: policyMakersSidebar
+---
+
 # Complete Video Channel Discovery Sources
 
 **Comprehensive guide to all data sources for discovering local government video channels**

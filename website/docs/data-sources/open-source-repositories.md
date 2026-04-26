@@ -1,3 +1,7 @@
+---
+displayed_sidebar: developersSidebar
+---
+
 # Open Source Repository Data Sources
 
 Open Navigator treats **open source community projects as first-class citizens** alongside government jurisdictions and nonprofit organizations. This document lists civic tech and community infrastructure repositories related to public engagement.

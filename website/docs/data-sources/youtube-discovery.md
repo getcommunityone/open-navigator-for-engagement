@@ -1,3 +1,7 @@
+---
+displayed_sidebar: developersSidebar
+---
+
 # YouTube Channel Discovery - Issues & Solutions
 
 **Generated:** April 22, 2026  

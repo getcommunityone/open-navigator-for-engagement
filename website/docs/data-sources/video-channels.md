@@ -1,3 +1,7 @@
+---
+displayed_sidebar: developersSidebar
+---
+
 # Video Channel Discovery: Current State & Enhancement Plan
 
 ## Executive Summary

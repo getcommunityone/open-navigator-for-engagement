@@ -1,3 +1,7 @@
+---
+displayed_sidebar: policyMakersSidebar
+---
+
 # Impact-Driven Navigation Guide
 
 The frontend has been transformed from a technical data audit to a **citizen mobilization tool** with persona-based navigation.

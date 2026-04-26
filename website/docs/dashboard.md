@@ -1,5 +1,7 @@
 ---
 title: Open Navigator
+sidebar_position: 2
+displayed_sidebar: gettingStartedSidebar
 ---
 
 # Open Navigator

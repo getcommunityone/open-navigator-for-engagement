@@ -1,3 +1,7 @@
+---
+displayed_sidebar: policyMakersSidebar
+---
+
 # Which Dashboard Makes Board Members Most Uncomfortable?
 
 ## TL;DR Answer

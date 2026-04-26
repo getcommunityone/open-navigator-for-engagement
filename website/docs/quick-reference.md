@@ -1,5 +1,6 @@
 ---
 sidebar_position: 4
+displayed_sidebar: developersSidebar
 ---
 
 # 🚀 Quick Reference Card - Databricks App

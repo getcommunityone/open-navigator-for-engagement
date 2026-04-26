@@ -1,5 +1,6 @@
 ---
 sidebar_position: 3
+displayed_sidebar: developersSidebar
 ---
 
 # Quick Start Guide
