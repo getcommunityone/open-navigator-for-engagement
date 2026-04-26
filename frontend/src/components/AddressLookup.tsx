@@ -109,6 +109,79 @@ export default function AddressLookup({ onLocationFound, initialAddress = '', co
     processResult(suggestion)
   }
 
+  const useMyLocation = () => {
+    if (!navigator.geolocation) {
+      setError('Geolocation is not supported by your browser')
+      return
+    }
+
+    setIsLoading(true)
+    setError(null)
+    setSuggestions([])
+
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        const { latitude, longitude } = position.coords
+
+        try {
+          // Reverse geocode using Nominatim
+          const response = await fetch(
+            `https://nominatim.openstreetmap.org/reverse?` +
+            `lat=${latitude}&` +
+            `lon=${longitude}&` +
+            `format=json&` +
+            `addressdetails=1`,
+            {
+              headers: {
+                'User-Agent': 'CommunityOne-Navigator/1.0'
+              }
+            }
+          )
+
+          if (!response.ok) {
+            throw new Error('Failed to reverse geocode location')
+          }
+
+          const data = await response.json()
+          
+          // Update the address input field
+          setAddress(data.display_name)
+          
+          // Process the result
+          processResult(data)
+        } catch (err) {
+          console.error('Reverse geocoding error:', err)
+          setError('Failed to determine your location. Please enter your address manually.')
+        } finally {
+          setIsLoading(false)
+        }
+      },
+      (error) => {
+        console.error('Geolocation error:', error)
+        setIsLoading(false)
+        
+        switch (error.code) {
+          case error.PERMISSION_DENIED:
+            setError('Location access denied. Please enter your address manually or enable location permissions.')
+            break
+          case error.POSITION_UNAVAILABLE:
+            setError('Location information unavailable. Please enter your address manually.')
+            break
+          case error.TIMEOUT:
+            setError('Location request timed out. Please try again or enter your address manually.')
+            break
+          default:
+            setError('An error occurred while getting your location. Please enter your address manually.')
+        }
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 0
+      }
+    )
+  }
+
   if (compact) {
     return (
       <form onSubmit={handleSubmit} className="w-full">
@@ -167,6 +240,32 @@ export default function AddressLookup({ onLocationFound, initialAddress = '', co
           <p className="mt-1 text-xs text-gray-500">
             We'll find your local organizations based on your address
           </p>
+          
+          {/* Use My Location Button */}
+          <div className="mt-3">
+            <button
+              type="button"
+              onClick={useMyLocation}
+              disabled={isLoading}
+              className="w-full px-4 py-2 bg-white border-2 border-primary-300 text-primary-700 rounded-lg hover:bg-primary-50 hover:border-primary-500 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+            >
+              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+              </svg>
+              <span>Use My Current Location</span>
+            </button>
+          </div>
+
+          {/* Divider */}
+          <div className="relative my-4">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-gray-300"></div>
+            </div>
+            <div className="relative flex justify-center text-xs">
+              <span className="px-2 bg-white text-gray-500">or enter manually</span>
+            </div>
+          </div>
         </div>
 
         <button
