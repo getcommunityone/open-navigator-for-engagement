@@ -7,6 +7,11 @@ interface User {
   full_name?: string;
   avatar_url?: string;
   oauth_provider?: string;
+  state?: string;
+  county?: string;
+  city?: string;
+  school_board?: string;
+  profile_completed?: boolean;
 }
 
 interface AuthContextType {

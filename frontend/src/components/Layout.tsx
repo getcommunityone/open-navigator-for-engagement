@@ -1,5 +1,5 @@
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom'
-import { useState, Fragment } from 'react'
+import { useState, Fragment, useEffect } from 'react'
 import { Menu, Transition } from '@headlessui/react'
 import {
   HomeIcon,
@@ -20,6 +20,7 @@ import {
   ChevronDownIcon,
 } from '@heroicons/react/24/outline'
 import { useAuth } from '../contexts/AuthContext'
+import RegistrationModal from './RegistrationModal'
 
 const navigation = [
   { name: 'Home', href: '/', icon: HomeIcon },
@@ -39,7 +40,39 @@ export default function Layout() {
   const [searchQuery, setSearchQuery] = useState('')
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [showLoginMenu, setShowLoginMenu] = useState(false)
+  const [showRegistrationModal, setShowRegistrationModal] = useState(false)
   const { user, isAuthenticated, login, logout, isLoading } = useAuth()
+
+  const API_URL = import.meta.env.PROD ? '/api' : 'http://localhost:8000'
+
+  // Show registration modal for new users who haven't completed their profile
+  useEffect(() => {
+    if (isAuthenticated && user && !user.profile_completed) {
+      setShowRegistrationModal(true)
+    }
+  }, [isAuthenticated, user])
+
+  const handleRegistrationComplete = async (data: { state: string; county: string; city: string; school_board: string }) => {
+    try {
+      const token = localStorage.getItem('auth_token')
+      const response = await fetch(`${API_URL}/auth/profile`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({ ...data, profile_completed: true }),
+      })
+
+      if (response.ok) {
+        setShowRegistrationModal(false)
+        // Reload to refresh user data
+        window.location.reload()
+      }
+    } catch (error) {
+      console.error('Failed to complete registration:', error)
+    }
+  }
 
   // Environment-aware URLs
   const docsUrl = import.meta.env.PROD ? '/docs' : 'http://localhost:3000'
@@ -222,7 +255,7 @@ export default function Layout() {
                   onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#354F52'}
                 >
                   <UserCircleIcon className="h-5 w-5" />
-                  <span className="hidden md:inline">Login</span>
+                  <span className="hidden md:inline">Register</span>
                   <ChevronDownIcon className="h-4 w-4" />
                 </button>
                 
@@ -363,6 +396,13 @@ export default function Layout() {
           <Outlet />
         </main>
       </div>
+
+      {/* Registration Modal */}
+      <RegistrationModal
+        isOpen={showRegistrationModal}
+        onClose={() => setShowRegistrationModal(false)}
+        onComplete={handleRegistrationComplete}
+      />
     </div>
   )
 }

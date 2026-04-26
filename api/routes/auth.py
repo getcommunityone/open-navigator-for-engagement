@@ -73,6 +73,11 @@ class UserResponse(BaseModel):
     full_name: Optional[str]
     avatar_url: Optional[str]
     oauth_provider: Optional[str]
+    state: Optional[str]
+    county: Optional[str]
+    city: Optional[str]
+    school_board: Optional[str]
+    profile_completed: Optional[bool]
 
 
 # Helper functions
@@ -373,6 +378,43 @@ def get_current_user_info(
     user = db.query(User).filter(User.id == user_id).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
+    
+    return user
+
+
+@router.patch("/profile", response_model=UserResponse)
+def update_user_profile(
+    profile_data: dict,
+    request: Request,
+    db: Session = Depends(get_db)
+):
+    """Update user profile (location preferences)"""
+    
+    # Get token from Authorization header
+    auth_header = request.headers.get('Authorization')
+    if not auth_header or not auth_header.startswith('Bearer '):
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    
+    token = auth_header.split(' ')[1]
+    
+    # Decode token and get user
+    from api.auth import decode_access_token
+    payload = decode_access_token(token)
+    user_id = int(payload.get('sub'))
+    
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    # Update allowed fields
+    allowed_fields = ['state', 'county', 'city', 'school_board', 'profile_completed']
+    for field, value in profile_data.items():
+        if field in allowed_fields and hasattr(user, field):
+            setattr(user, field, value)
+    
+    user.updated_at = datetime.utcnow()
+    db.commit()
+    db.refresh(user)
     
     return user
 

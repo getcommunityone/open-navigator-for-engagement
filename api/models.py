@@ -28,6 +28,15 @@ class User(Base):
     is_active = Column(Boolean, default=True)
     is_verified = Column(Boolean, default=False)
     
+    # Location preferences
+    state = Column(String(100), nullable=True)  # US State
+    county = Column(String(100), nullable=True)  # County
+    city = Column(String(100), nullable=True)  # City
+    school_board = Column(String(255), nullable=True)  # School board/district
+    
+    # Profile completion
+    profile_completed = Column(Boolean, default=False)
+    
     # Timestamps
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
