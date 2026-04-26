@@ -65,16 +65,9 @@ export default function Home() {
       {/* Hero Section */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-20 pb-16">
         <div className="text-center">
-          <div className="flex items-center justify-center gap-4 mb-6">
-            <img 
-              src="/communityone_logo.svg" 
-              alt="CommunityOne Logo" 
-              style={{ height: '80px' }}
-            />
-            <h1 className="text-5xl font-bold" style={{ color: '#354F52' }}>
-              Open Navigator for Engagement
-            </h1>
-          </div>
+          <h1 className="text-5xl font-bold mb-6" style={{ color: '#354F52' }}>
+            Open Navigator for Engagement
+          </h1>
           <p className="text-xl mb-12 max-w-3xl mx-auto" style={{ color: '#354F52' }}>
             Track what local governments and nonprofits say, spend—and block.
             <br />
