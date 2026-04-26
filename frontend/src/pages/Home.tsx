@@ -18,23 +18,42 @@ import {
   UserGroupIcon,
   CodeBracketIcon
 } from '@heroicons/react/24/outline'
+import AddressLookup from '../components/AddressLookup'
+import { useLocation as useLocationContext } from '../contexts/LocationContext'
 
 export default function Home() {
   const navigate = useNavigate()
   const [keyword, setKeyword] = useState('')
-  const [location, setLocation] = useState('')
+  const [searchLocation, setSearchLocation] = useState('')
+  const { location, setLocation, clearLocation, hasLocation } = useLocationContext()
 
   // Use /docs in production, localhost:3000 in dev
   const DOCS_URL = import.meta.env.PROD ? '/docs' : 'http://localhost:3000'
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault()
-    if (keyword || location) {
+    if (keyword || searchLocation) {
       const params = new URLSearchParams()
       if (keyword) params.set('search', keyword)
-      if (location) params.set('location', location)
+      if (searchLocation) params.set('location', searchLocation)
+      // Also include stored location if available
+      if (location) {
+        params.set('state', location.state)
+        params.set('city', location.city)
+      }
       navigate(`/documents?${params.toString()}`)
     }
+  }
+
+  const handleAddressFound = (locationData: any) => {
+    setLocation({
+      address: locationData.address,
+      state: locationData.state,
+      county: locationData.county,
+      city: locationData.city,
+      latitude: locationData.latitude,
+      longitude: locationData.longitude,
+    })
   }
 
   const categories = [
@@ -76,8 +95,48 @@ export default function Home() {
             <br />
             Find leaders by name. Discover causes. 90,000+ cities. 3M+ nonprofits. All free.
           </p>
+
+          {/* Address Lookup Section */}
+          {!hasLocation && (
+            <div className="max-w-2xl mx-auto mb-8">
+              <div className="bg-white rounded-xl shadow-lg p-8">
+                <h2 className="text-2xl font-bold mb-2 text-center" style={{ color: '#354F52' }}>
+                  Find Your Local Government Entities
+                </h2>
+                <p className="text-gray-600 text-center mb-6">
+                  Enter your address to discover city councils, county boards, school districts, and nonprofits in your area
+                </p>
+                <AddressLookup onLocationFound={handleAddressFound} />
+              </div>
+            </div>
+          )}
+
+          {/* Location Confirmation Banner */}
+          {hasLocation && location && (
+            <div className="max-w-3xl mx-auto mb-8">
+              <div className="bg-primary-50 border-2 border-primary-200 rounded-lg p-4 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <MapPinIcon className="h-6 w-6 text-primary-600" />
+                  <div>
+                    <p className="font-medium text-primary-900">
+                      Showing results for: {location.city}, {location.state}
+                    </p>
+                    {location.county && (
+                      <p className="text-sm text-primary-700">{location.county}</p>
+                    )}
+                  </div>
+                </div>
+                <button
+                  onClick={clearLocation}
+                  className="text-sm text-primary-600 hover:text-primary-700 font-medium underline"
+                >
+                  Change Location
+                </button>
+              </div>
+            </div>
+          )}
           
-          {/* Two-Part Search */}
+          {/* Search Form */}
           <form onSubmit={handleSearch} className="max-w-5xl mx-auto mb-8">
             <div className="bg-white rounded-xl shadow-lg p-8">
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-end">
@@ -103,9 +162,9 @@ export default function Home() {
                   <div className="relative">
                     <input
                       type="text"
-                      placeholder="City, County, or ZIP"
-                      value={location}
-                      onChange={(e) => setLocation(e.target.value)}
+                      placeholder={hasLocation && location ? `${location.city}, ${location.state}` : "City, County, or ZIP"}
+                      value={searchLocation}
+                      onChange={(e) => setSearchLocation(e.target.value)}
                       className="w-full px-4 py-3 pl-10 text-lg border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                     />
                     <MapPinIcon className="absolute left-3 top-3.5 h-6 w-6 text-gray-400" />

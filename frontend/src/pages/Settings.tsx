@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useAuth } from '../contexts/AuthContext'
+import AddressLookup from '../components/AddressLookup'
 import { 
   MapPinIcon, 
   UserCircleIcon, 
@@ -9,6 +10,7 @@ import {
 
 export default function Settings() {
   const { user } = useAuth()
+  const [useAddressLookup, setUseAddressLookup] = useState(false)
   const [locationData, setLocationData] = useState({
     state: user?.state || '',
     county: user?.county || '',
@@ -32,6 +34,16 @@ export default function Settings() {
       })
     }
   }, [user])
+
+  const handleAddressFound = (location: any) => {
+    setLocationData({
+      state: location.state,
+      county: location.county,
+      city: location.city,
+      school_board: locationData.school_board, // Keep existing school board
+    })
+    setUseAddressLookup(false) // Switch back to manual mode after lookup
+  }
 
   const handleChange = (field: string, value: string) => {
     setLocationData(prev => ({ ...prev, [field]: value }))
@@ -163,6 +175,31 @@ export default function Settings() {
           </p>
         </div>
         <form onSubmit={handleSubmit} className="px-6 py-4">
+          {/* Address Lookup Toggle */}
+          <div className="mb-6 p-4 bg-gray-50 rounded-lg">
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={useAddressLookup}
+                onChange={(e) => setUseAddressLookup(e.target.checked)}
+                className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+              />
+              <span className="text-sm font-medium text-gray-700">
+                Use address lookup to auto-fill location
+              </span>
+            </label>
+          </div>
+
+          {/* Address Lookup Section */}
+          {useAddressLookup ? (
+            <div className="mb-6">
+              <AddressLookup onLocationFound={handleAddressFound} />
+              <p className="mt-2 text-sm text-gray-500">
+                After finding your address, you can review and edit the details below
+              </p>
+            </div>
+          ) : null}
+
           <div className="space-y-4">
             {/* State */}
             <div>
