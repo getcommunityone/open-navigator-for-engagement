@@ -102,29 +102,28 @@ export default function Layout() {
             </form>
           )}
 
-          {/* Location Banner - Compact */}
-          {hasLocation && userLocation && (
-            <div className="hidden lg:flex items-center gap-2 px-3 py-1.5 bg-primary-50 border border-primary-200 rounded-lg">
-              <MapPinIcon className="h-4 w-4 text-primary-600 flex-shrink-0" />
-              <div className="text-xs">
-                <div className="font-semibold text-primary-900">
-                  {userLocation.city}, {userLocation.state}
-                </div>
-                {userLocation.county && (
-                  <div className="text-primary-700">{userLocation.county}</div>
-                )}
-              </div>
-              <button
-                onClick={clearLocation}
-                className="text-xs text-primary-600 hover:text-primary-700 font-medium underline ml-2 flex-shrink-0"
-              >
-                Change
-              </button>
-            </div>
-          )}
-
           {/* Header Actions */}
           <div className="flex items-center gap-2 md:gap-4">
+            {/* Location Banner - Compact */}
+            {hasLocation && userLocation && (
+              <div className="hidden lg:flex items-center gap-2 px-3 py-1.5 bg-primary-50 border border-primary-200 rounded-lg">
+                <MapPinIcon className="h-4 w-4 text-primary-600 flex-shrink-0" />
+                <div className="text-xs">
+                  <div className="font-semibold text-gray-900">
+                    {userLocation.city}, {userLocation.state}
+                  </div>
+                  {userLocation.county && (
+                    <div className="text-gray-700">{userLocation.county}</div>
+                  )}
+                </div>
+                <button
+                  onClick={clearLocation}
+                  className="text-xs text-primary-600 hover:text-primary-700 font-medium underline ml-2 flex-shrink-0"
+                >
+                  Change
+                </button>
+              </div>
+            )}
             {/* Authentication */}
             {isLoading ? (
               <div className="px-3 py-2">
