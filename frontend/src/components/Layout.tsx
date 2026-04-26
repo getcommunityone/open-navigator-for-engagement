@@ -66,7 +66,7 @@ export default function Layout() {
 
             <Link to="/" className="flex items-center gap-2 md:gap-3">
               <img 
-                src="/communityone_logo.jpg" 
+                src="/communityone_logo.svg" 
                 alt="CommunityOne Logo" 
                 className="h-10 md:h-12"
               />

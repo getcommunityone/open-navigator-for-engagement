@@ -413,7 +413,7 @@ export default function App() {
           <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 12 }}>
             {/* CommunityOne Logo */}
             <img 
-              src="/communityone_logo.jpg" 
+              src="/communityone_logo.svg" 
               alt="CommunityOne"
               onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
               style={{
