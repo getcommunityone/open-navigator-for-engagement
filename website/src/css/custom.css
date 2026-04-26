@@ -60,8 +60,8 @@ body {
 
 /* Logo styling */
 .navbar__logo img {
-  height: 64px !important;
-  max-height: 64px !important;
+  height: 40px !important;
+  max-height: 40px !important;
 }
 
 /* Sidebar backgrounds */
