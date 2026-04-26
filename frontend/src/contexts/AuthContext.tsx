@@ -32,6 +32,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   // Load user from localStorage on mount
   useEffect(() => {
     const storedToken = localStorage.getItem('auth_token');
+    console.log('🔐 Auth initialization - Token found:', !!storedToken);
+    
     if (storedToken) {
       setToken(storedToken);
       fetchUser(storedToken);
@@ -43,6 +45,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const urlParams = new URLSearchParams(window.location.search);
     const urlToken = urlParams.get('token');
     if (urlToken) {
+      console.log('🔐 OAuth callback - Token received from URL');
       localStorage.setItem('auth_token', urlToken);
       setToken(urlToken);
       fetchUser(urlToken);
@@ -54,6 +57,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const fetchUser = async (authToken: string) => {
     try {
+      console.log('🔐 Fetching user data from:', `${API_URL}/auth/me`);
       const response = await fetch(`${API_URL}/auth/me`, {
         headers: {
           'Authorization': `Bearer ${authToken}`,
@@ -62,14 +66,16 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
       if (response.ok) {
         const userData = await response.json();
+        console.log('✅ User data loaded:', userData.email);
         setUser(userData);
       } else {
+        console.error('❌ Failed to fetch user:', response.status, response.statusText);
         // Token is invalid
         localStorage.removeItem('auth_token');
         setToken(null);
       }
     } catch (error) {
-      console.error('Failed to fetch user:', error);
+      console.error('❌ Error fetching user:', error);
       localStorage.removeItem('auth_token');
       setToken(null);
     } finally {
@@ -84,6 +90,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   const logout = () => {
+    console.log('🔐 Logging out - removing token');
     localStorage.removeItem('auth_token');
     setToken(null);
     setUser(null);
