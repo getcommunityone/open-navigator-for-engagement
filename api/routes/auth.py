@@ -144,8 +144,17 @@ async def oauth_login(
     
     Supported providers: huggingface, google, facebook, github
     """
-    if provider not in ['huggingface', 'google', 'facebook', 'github']:
+    if provider not in OAUTH_PROVIDERS:
         raise HTTPException(status_code=400, detail=f"Unsupported provider: {provider}")
+    
+    config = OAUTH_PROVIDERS[provider]
+    client_id = os.getenv(config['client_id_env'])
+    
+    if not client_id:
+        raise HTTPException(
+            status_code=500, 
+            detail=f"OAuth not configured for {provider}. Missing {config['client_id_env']}"
+        )
     
     # Generate state token for CSRF protection
     state = generate_state_token()
@@ -163,30 +172,39 @@ async def oauth_login(
     # Build callback URL
     callback_url = str(request.url_for('oauth_callback', provider=provider))
     
-    # Redirect to OAuth provider
-    client = getattr(oauth, provider)
-    return await client.authorize_redirect(request, callback_url, state=state)
+    # Build authorization URL
+    params = {
+        'client_id': client_id,
+        'redirect_uri': callback_url,
+        'scope': config['scope'],
+        'state': state,
+        'response_type': 'code',
+    }
+    
+    auth_url = f"{config['authorize_url']}?{urlencode(params)}"
+    return RedirectResponse(url=auth_url)
 
 
 @router.get("/callback/{provider}", name="oauth_callback")
 async def oauth_callback(
     provider: str,
-    request: Request,
+    code: Optional[str] = None,
+    state: Optional[str] = None,
+    error: Optional[str] = None,
     db: Session = Depends(get_db)
 ):
     """OAuth callback handler"""
     
-    # Get OAuth client
-    client = getattr(oauth, provider)
+    if error:
+        raise HTTPException(status_code=400, detail=f"OAuth error: {error}")
     
-    # Exchange code for token
-    try:
-        token = await client.authorize_access_token(request)
-    except Exception as e:
-        raise HTTPException(status_code=400, detail=f"OAuth error: {str(e)}")
+    if not code or not state:
+        raise HTTPException(status_code=400, detail="Missing code or state parameter")
+    
+    if provider not in OAUTH_PROVIDERS:
+        raise HTTPException(status_code=400, detail=f"Unsupported provider: {provider}")
     
     # Verify state token
-    state = request.query_params.get('state')
     oauth_state = db.query(OAuthState).filter(
         OAuthState.state_token == state,
         OAuthState.provider == provider
@@ -195,63 +213,44 @@ async def oauth_callback(
     if not oauth_state or oauth_state.expires_at < datetime.utcnow():
         raise HTTPException(status_code=400, detail="Invalid or expired state token")
     
-    # Get user info from provider
-    user_info = None
+    config = OAUTH_PROVIDERS[provider]
+    client_id = os.getenv(config['client_id_env'])
+    client_secret = os.getenv(config['client_secret_env'])
     
-    if provider == 'huggingface':
-        resp = await client.get('https://huggingface.co/api/whoami-v2', token=token)
-        data = resp.json()
-        user_info = {
-            'email': data.get('email'),
-            'oauth_id': data.get('id'),
-            'full_name': data.get('fullname') or data.get('name'),
-            'avatar_url': data.get('avatarUrl'),
-            'username': data.get('name'),
-        }
+    # Build callback URL (must match the one sent to authorize)
+    from fastapi import Request
+    # We need to reconstruct the callback URL - for now use a simple approach
+    base_url = os.getenv('API_BASE_URL', 'http://localhost:8000')
+    callback_url = f"{base_url}/auth/callback/{provider}"
     
-    elif provider == 'google':
-        user_info_dict = token.get('userinfo')
-        user_info = {
-            'email': user_info_dict.get('email'),
-            'oauth_id': user_info_dict.get('sub'),
-            'full_name': user_info_dict.get('name'),
-            'avatar_url': user_info_dict.get('picture'),
-            'username': user_info_dict.get('email').split('@')[0],
-        }
-    
-    elif provider == 'facebook':
-        resp = await client.get(
-            'https://graph.facebook.com/me?fields=id,name,email,picture',
-            token=token
+    # Exchange code for access token
+    async with httpx.AsyncClient() as client:
+        token_response = await client.post(
+            config['token_url'],
+            data={
+                'client_id': client_id,
+                'client_secret': client_secret,
+                'code': code,
+                'redirect_uri': callback_url,
+                'grant_type': 'authorization_code',
+            },
+            headers={'Accept': 'application/json'}
         )
-        data = resp.json()
-        user_info = {
-            'email': data.get('email'),
-            'oauth_id': data.get('id'),
-            'full_name': data.get('name'),
-            'avatar_url': data.get('picture', {}).get('data', {}).get('url'),
-            'username': data.get('name').replace(' ', '_').lower(),
-        }
-    
-    elif provider == 'github':
-        # Get user profile
-        resp = await client.get('https://api.github.com/user', token=token)
-        data = resp.json()
         
-        # Get user email if not public
-        email = data.get('email')
-        if not email:
-            resp_emails = await client.get('https://api.github.com/user/emails', token=token)
-            emails = resp_emails.json()
-            email = next((e['email'] for e in emails if e['primary']), emails[0]['email'])
+        if token_response.status_code != 200:
+            raise HTTPException(
+                status_code=400, 
+                detail=f"Token exchange failed: {token_response.text}"
+            )
         
-        user_info = {
-            'email': email,
-            'oauth_id': str(data.get('id')),
-            'full_name': data.get('name'),
-            'avatar_url': data.get('avatar_url'),
-            'username': data.get('login'),
-        }
+        token_data = token_response.json()
+        access_token = token_data.get('access_token')
+        
+        if not access_token:
+            raise HTTPException(status_code=400, detail="No access token received")
+        
+        # Get user info from provider
+        user_info = await get_user_info(provider, access_token, config)
     
     if not user_info or not user_info.get('email'):
         raise HTTPException(status_code=400, detail="Could not retrieve user email from provider")
@@ -272,15 +271,79 @@ async def oauth_callback(
     db.commit()
     
     # Create JWT token
-    access_token = create_access_token(data={"sub": user.id})
+    jwt_token = create_access_token(data={"sub": user.id})
     
     # Redirect to frontend with token
     frontend_url = os.getenv('FRONTEND_URL', 'http://localhost:5173')
     redirect_url = oauth_state.redirect_uri or frontend_url
     
     # Append token as URL parameter
-    params = urlencode({'token': access_token})
+    params = urlencode({'token': jwt_token})
     return RedirectResponse(url=f"{redirect_url}?{params}")
+
+
+async def get_user_info(provider: str, access_token: str, config: dict) -> dict:
+    """Get user information from OAuth provider"""
+    
+    async with httpx.AsyncClient() as client:
+        headers = {'Authorization': f'Bearer {access_token}'}
+        
+        user_info = {}
+        
+        if provider == 'huggingface':
+            resp = await client.get(config['userinfo_url'], headers=headers)
+            data = resp.json()
+            user_info = {
+                'email': data.get('email'),
+                'oauth_id': str(data.get('id')),
+                'full_name': data.get('fullname') or data.get('name'),
+                'avatar_url': data.get('avatarUrl'),
+                'username': data.get('name'),
+            }
+        
+        elif provider == 'google':
+            resp = await client.get(config['userinfo_url'], headers=headers)
+            data = resp.json()
+            user_info = {
+                'email': data.get('email'),
+                'oauth_id': data.get('id'),
+                'full_name': data.get('name'),
+                'avatar_url': data.get('picture'),
+                'username': data.get('email', '').split('@')[0],
+            }
+        
+        elif provider == 'facebook':
+            resp = await client.get(config['userinfo_url'], headers={'Authorization': f'Bearer {access_token}'})
+            data = resp.json()
+            user_info = {
+                'email': data.get('email'),
+                'oauth_id': str(data.get('id')),
+                'full_name': data.get('name'),
+                'avatar_url': data.get('picture', {}).get('data', {}).get('url') if isinstance(data.get('picture'), dict) else None,
+                'username': data.get('name', '').replace(' ', '_').lower(),
+            }
+        
+        elif provider == 'github':
+            # Get user profile
+            resp = await client.get(config['userinfo_url'], headers=headers)
+            data = resp.json()
+            
+            # Get user email if not public
+            email = data.get('email')
+            if not email:
+                resp_emails = await client.get('https://api.github.com/user/emails', headers=headers)
+                emails = resp_emails.json()
+                email = next((e['email'] for e in emails if e.get('primary')), emails[0]['email'] if emails else None)
+            
+            user_info = {
+                'email': email,
+                'oauth_id': str(data.get('id')),
+                'full_name': data.get('name'),
+                'avatar_url': data.get('avatar_url'),
+                'username': data.get('login'),
+            }
+        
+        return user_info
 
 
 @router.get("/me", response_model=UserResponse)

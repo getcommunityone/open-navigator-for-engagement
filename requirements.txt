@@ -60,7 +60,6 @@ python-multipart==0.0.6
 # Authentication & OAuth
 python-jose[cryptography]==3.3.0  # JWT tokens
 passlib[bcrypt]==1.7.4            # Password hashing
-authlib==1.3.0                     # OAuth 2.0 client
 itsdangerous==2.1.2                # Secure tokens
 psycopg2-binary==2.9.9             # PostgreSQL driver
 
