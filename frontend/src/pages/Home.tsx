@@ -168,40 +168,23 @@ export default function Home() {
                           <select
                             value={searchScope}
                             onChange={(e) => setSearchScope(e.target.value)}
-                            className="w-full px-4 py-3 text-lg border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-white"
+                            className="w-full px-4 py-3 text-lg border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-white text-gray-900"
                           >
                             {location ? (
                               <>
-                                <option value="city">🏙️ My City - {location.city}</option>
-                                <option value="county">🗺️ My County - {location.county || 'County'}</option>
-                                <option value="state">🏛️ My State - {location.state}</option>
-                                <option value="community">📚 School Board - {location.city}</option>
-                                <option value="national">🌎 Nationwide</option>
+                                <option value="city">My City ({location.city})</option>
+                                <option value="county">My County ({location.county || 'County'})</option>
+                                <option value="state">My State ({location.state})</option>
+                                <option value="community">School Board ({location.city})</option>
+                                <option value="national">Nationwide</option>
                               </>
                             ) : (
                               <>
-                                <option value="community">📍 Set your location first</option>
-                                <option value="national">🌎 Nationwide</option>
+                                <option value="community">Set your location first</option>
+                                <option value="national">Nationwide</option>
                               </>
                             )}
                           </select>
-                          {location ? (
-                            <button
-                              type="button"
-                              onClick={() => navigate('/?tab=community')}
-                              className="mt-1 text-xs text-primary-600 hover:text-primary-700 font-medium underline"
-                            >
-                              Change location
-                            </button>
-                          ) : (
-                            <button
-                              type="button"
-                              onClick={() => navigate('/?tab=community')}
-                              className="mt-1 text-xs text-primary-600 hover:text-primary-700 font-medium underline"
-                            >
-                              Set your location
-                            </button>
-                          )}
                         </div>
 
                         <div className="lg:col-span-2">
