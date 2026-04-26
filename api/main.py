@@ -99,6 +99,22 @@ from api.database import init_db
 
 app.include_router(auth_routes.router)
 
+# Custom Swagger UI with logo
+@app.get("/docs", include_in_schema=False)
+async def custom_swagger_ui_html():
+    """Custom Swagger UI with CommunityOne logo"""
+    return get_swagger_ui_html(
+        openapi_url=app.openapi_url,
+        title=f"{app.title} - API Documentation",
+        swagger_favicon_url="/static/communityone_logo_64.png",
+        swagger_ui_parameters={
+            "defaultModelsExpandDepth": -1,
+            "docExpansion": "list",
+            "filter": True,
+            "syntaxHighlight.theme": "monokai"
+        }
+    )
+
 # Initialize database on startup
 @app.on_event("startup")
 async def init_database():
@@ -174,17 +190,74 @@ async def root():
         <head>
             <title>Open Navigator for Engagement API</title>
             <style>
-                body { font-family: Arial, sans-serif; max-width: 800px; margin: 50px auto; padding: 20px; }
-                h1 { color: #1976d2; }
-                .endpoint { background: #f5f5f5; padding: 10px; margin: 10px 0; border-radius: 5px; }
-                code { background: #e0e0e0; padding: 2px 5px; border-radius: 3px; }
+                body { 
+                    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+                    max-width: 900px; 
+                    margin: 50px auto; 
+                    padding: 20px;
+                    line-height: 1.6;
+                }
+                .header {
+                    display: flex;
+                    align-items: center;
+                    gap: 20px;
+                    margin-bottom: 30px;
+                    border-bottom: 2px solid #1976d2;
+                    padding-bottom: 20px;
+                }
+                .logo {
+                    width: 80px;
+                    height: 80px;
+                }
+                h1 { 
+                    color: #1976d2;
+                    margin: 0;
+                }
+                .tagline {
+                    color: #666;
+                    font-size: 1.1em;
+                }
+                .endpoint { 
+                    background: linear-gradient(135deg, #f5f5f5 0%, #e8f4f8 100%);
+                    padding: 15px;
+                    margin: 10px 0;
+                    border-radius: 8px;
+                    border-left: 4px solid #1976d2;
+                }
+                .endpoint strong {
+                    color: #1976d2;
+                }
+                code { 
+                    background: #e0e0e0;
+                    padding: 3px 8px;
+                    border-radius: 4px;
+                    font-family: 'Courier New', monospace;
+                }
+                .docs-link {
+                    display: inline-block;
+                    background: #1976d2;
+                    color: white;
+                    padding: 12px 24px;
+                    text-decoration: none;
+                    border-radius: 6px;
+                    margin-top: 20px;
+                    transition: background 0.3s;
+                }
+                .docs-link:hover {
+                    background: #1565c0;
+                }
             </style>
         </head>
         <body>
-            <h1>🦷 Open Navigator for Engagement API</h1>
-            <p>Multi-agent system for analyzing local government oral health policy discussions.</p>
+            <div class="header">
+                <img src="/static/communityone_logo.svg" alt="CommunityOne Logo" class="logo">
+                <div>
+                    <h1>Open Navigator for Engagement API</h1>
+                    <p class="tagline">Multi-agent system for analyzing local government policy discussions</p>
+                </div>
+            </div>
             
-            <h2>Key Endpoints:</h2>
+            <h2>🔑 Key Endpoints:</h2>
             <div class="endpoint">
                 <strong>POST /workflow/start</strong> - Start a new analysis workflow
             </div>
@@ -197,8 +270,11 @@ async def root():
             <div class="endpoint">
                 <strong>GET /status</strong> - System status and health
             </div>
+            <div class="endpoint">
+                <strong>POST /auth/login/{provider}</strong> - OAuth login (HuggingFace, Google, Facebook, GitHub)
+            </div>
             
-            <p>View full API documentation at <a href="/docs">/docs</a></p>
+            <a href="/docs" class="docs-link">📚 View Full API Documentation</a>
         </body>
     </html>
     """
