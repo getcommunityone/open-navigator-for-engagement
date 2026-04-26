@@ -5,6 +5,7 @@ import os
 import secrets
 from datetime import datetime, timedelta
 from typing import Optional, Dict, Any
+from dotenv import load_dotenv
 
 from jose import JWTError, jwt
 from passlib.context import CryptContext
@@ -14,6 +15,9 @@ from sqlalchemy.orm import Session
 
 from api.database import get_db
 from api.models import User
+
+# Load environment variables
+load_dotenv()
 
 # Security configuration
 SECRET_KEY = os.getenv("JWT_SECRET_KEY", secrets.token_urlsafe(32))
