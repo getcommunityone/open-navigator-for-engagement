@@ -112,6 +112,7 @@ export default function AddressLookup({ onLocationFound, initialAddress = '', co
       <form onSubmit={handleSubmit} className="w-full">
         <div className="relative">
           <input
+            key="address-input-compact"
             type="text"
             value={address}
             onChange={(e) => setAddress(e.target.value)}
@@ -150,6 +151,7 @@ export default function AddressLookup({ onLocationFound, initialAddress = '', co
           </label>
           <div className="relative">
             <input
+              key="address-input"
               type="text"
               id="address"
               name="addresslookup"
@@ -161,7 +163,7 @@ export default function AddressLookup({ onLocationFound, initialAddress = '', co
             />
           </div>
           <p className="mt-1 text-xs text-gray-500">
-            We'll find your local government entities based on your address
+            We'll find your local organizations based on your address
           </p>
         </div>
 

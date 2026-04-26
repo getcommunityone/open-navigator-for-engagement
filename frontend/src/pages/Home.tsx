@@ -142,7 +142,7 @@ export default function Home() {
                       }`}
                       style={selected ? { backgroundColor: '#354F52' } : {}}
                     >
-                      📍 Find My Community
+                      📍 Find My Local Organizations
                     </button>
                   )}
                 </Tab>
@@ -207,7 +207,7 @@ export default function Home() {
                       What's Happening in Your Community?
                     </h2>
                     <p className="text-gray-600 text-center mb-6">
-                      Enter your address to find city councils, county boards, school districts, and charities near you
+                      Enter your address to find local organizations, city councils, county boards, school districts, and charities near you
                     </p>
                     <AddressLookup onLocationFound={handleAddressFound} />
                   </div>
