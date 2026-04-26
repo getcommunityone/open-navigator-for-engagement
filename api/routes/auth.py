@@ -284,12 +284,23 @@ async def oauth_callback(
     jwt_token = create_access_token(data={"sub": str(user.id)})
     
     # Redirect to frontend with token
-    frontend_url = os.getenv('FRONTEND_URL', 'http://localhost:5173')
-    redirect_url = oauth_state.redirect_uri or frontend_url
+    # On HuggingFace/production, frontend and backend are same domain - use relative path
+    # On local dev, frontend is separate server - use FRONTEND_URL
+    frontend_url = os.getenv('FRONTEND_URL', '')
+    
+    # If FRONTEND_URL is localhost or not set, assume same-domain deployment (HuggingFace)
+    if not frontend_url or 'localhost' in frontend_url:
+        # Use relative redirect (works on HuggingFace where both are same domain)
+        redirect_url = oauth_state.redirect_uri or '/'
+    else:
+        # Use absolute URL for separate frontend server
+        redirect_url = oauth_state.redirect_uri or frontend_url
     
     # Append token as URL parameter
     params = urlencode({'token': jwt_token})
-    return RedirectResponse(url=f"{redirect_url}?{params}")
+    full_redirect_url = f"{redirect_url}?{params}" if '?' not in redirect_url else f"{redirect_url}&{params}"
+    
+    return RedirectResponse(url=full_redirect_url)
 
 
 async def get_user_info(provider: str, access_token: str, config: dict) -> dict:
