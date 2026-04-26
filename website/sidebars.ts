@@ -2,7 +2,7 @@ import type {SidebarsConfig} from '@docusaurus/plugin-content-docs';
 
 const sidebars: SidebarsConfig = {
   // ========================================
-  // 🚀 GETTING STARTED - For Everyone
+  // GETTING STARTED - For Everyone
   // ========================================
   gettingStartedSidebar: [
     {
@@ -17,12 +17,12 @@ const sidebars: SidebarsConfig = {
   ],
 
   // ========================================
-  // 📊 POLICY MAKERS - Non-Technical
+  // POLICY MAKERS - Non-Technical
   // ========================================
   policyMakersSidebar: [
     {
       type: 'category',
-      label: '📊 For Policy Makers & Advocates',
+      label: '📊 Policy Makers & Advocates',
       collapsed: false,
       items: [
         'for-advocates',
@@ -60,12 +60,12 @@ const sidebars: SidebarsConfig = {
   ],
 
   // ========================================
-  // 🛠️ DEVELOPERS - Technical
+  // DEVELOPERS - Technical
   // ========================================
   developersSidebar: [
     {
       type: 'category',
-      label: '🛠️ For Developers & Technical Users',
+      label: '🛠️ Developers & Technical Users',
       collapsed: false,
       items: [
         'for-developers',
@@ -157,7 +157,7 @@ const sidebars: SidebarsConfig = {
     },
     {
       type: 'category',
-      label: '📊 For Policy Makers & Advocates',
+      label: '📊 Policy Makers & Advocates',
       collapsed: false,
       link: {
         type: 'doc',
@@ -196,7 +196,7 @@ const sidebars: SidebarsConfig = {
     },
     {
       type: 'category',
-      label: '🛠️ For Developers & Technical Users',
+      label: '🛠️ Developers & Technical Users',
       collapsed: true,
       link: {
         type: 'doc',

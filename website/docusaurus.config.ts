@@ -93,13 +93,13 @@ const config: Config = {
           type: 'docSidebar',
           sidebarId: 'policyMakersSidebar',
           position: 'left',
-          label: '📊 For Policy Makers',
+          label: '📊 Policy Makers',
         },
         {
           type: 'docSidebar',
           sidebarId: 'developersSidebar',
           position: 'left',
-          label: '🛠️ For Developers',
+          label: '🛠️ Developers',
         },
         {to: '/blog', label: 'Blog', position: 'left'},
         {
