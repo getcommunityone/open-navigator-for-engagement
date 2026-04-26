@@ -42,6 +42,22 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Include authentication routes
+from api.routes import auth as auth_routes
+from api.database import init_db
+
+app.include_router(auth_routes.router)
+
+# Initialize database on startup
+@app.on_event("startup")
+async def init_database():
+    """Initialize authentication database"""
+    try:
+        init_db()
+        logger.info("✅ Authentication database initialized")
+    except Exception as e:
+        logger.warning(f"⚠️  Database initialization skipped: {e}")
+
 # Initialize components
 orchestrator = OrchestratorAgent()
 pipeline = DeltaLakePipeline()
