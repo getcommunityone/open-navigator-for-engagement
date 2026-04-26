@@ -42,7 +42,7 @@ export default function Layout() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [showLoginMenu, setShowLoginMenu] = useState(false)
   const { user, isAuthenticated, login, logout, isLoading } = useAuth()
-  const { location: userLocation, clearLocation, hasLocation } = useLocationContext()
+  const { location: userLocation, hasLocation } = useLocationContext()
 
   // Environment-aware URLs
   const docsUrl = import.meta.env.PROD ? '/docs' : 'http://localhost:3000'
