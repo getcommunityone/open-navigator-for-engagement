@@ -8,7 +8,7 @@ app_port: 7860
 pinned: false
 ---
 
-# 🦷 Open Navigator for Engagement
+# Open Navigator for Engagement
 
 > *AI-powered advocacy opportunity finder with React + FastAPI web interface*
 
