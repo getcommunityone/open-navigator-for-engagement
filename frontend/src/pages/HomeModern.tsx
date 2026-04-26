@@ -17,7 +17,9 @@ import {
   BookOpenIcon,
   CodeBracketIcon,
   AcademicCapIcon,
-  CommandLineIcon
+  CommandLineIcon,
+  Bars3Icon,
+  XMarkIcon
 } from '@heroicons/react/24/outline'
 import { useLocation as useLocationContext } from '../contexts/LocationContext'
 import AddressLookup from '../components/AddressLookup'
@@ -31,6 +33,7 @@ export default function HomeModern() {
   const [searchScope, setSearchScope] = useState('city')
   const [showSuggestions, setShowSuggestions] = useState(false)
   const [filteredSuggestions, setFilteredSuggestions] = useState<string[]>([])
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const { location, setLocation } = useLocationContext()
 
   // Search suggestions
@@ -222,7 +225,7 @@ export default function HomeModern() {
               </span>
             </Link>
 
-            {/* Centered Navigation Links */}
+            {/* Desktop Navigation Links */}
             <div className="hidden md:flex items-center gap-8">
               {navLinks.map((link) => (
                 <button
@@ -239,16 +242,61 @@ export default function HomeModern() {
               ))}
             </div>
 
-            {/* CTA Button */}
+            {/* Desktop CTA Button */}
             <Link
               to="/people"
-              className="px-6 py-2.5 rounded-lg text-white font-semibold hover:shadow-lg transition-all"
+              className="hidden md:block px-6 py-2.5 rounded-lg text-white font-semibold hover:shadow-lg transition-all"
               style={{ backgroundColor: '#354F52' }}
             >
               Explore Now
             </Link>
+
+            {/* Mobile Menu Button */}
+            <button
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              className="md:hidden p-2 rounded-lg text-gray-600 hover:bg-gray-100 transition-colors"
+              aria-label="Toggle menu"
+            >
+              {mobileMenuOpen ? (
+                <XMarkIcon className="h-6 w-6" />
+              ) : (
+                <Bars3Icon className="h-6 w-6" />
+              )}
+            </button>
           </div>
         </div>
+
+        {/* Mobile Menu */}
+        {mobileMenuOpen && (
+          <div className="md:hidden border-t border-gray-200 bg-white">
+            <div className="px-4 py-3 space-y-1">
+              {navLinks.map((link) => (
+                <button
+                  key={link.id}
+                  onClick={() => {
+                    scrollToSection(link.id)
+                    setMobileMenuOpen(false)
+                  }}
+                  className={`block w-full text-left px-4 py-3 rounded-lg text-base font-medium transition-colors ${
+                    activeSection === link.id
+                      ? 'bg-[#354F52] text-white'
+                      : 'text-gray-700 hover:bg-gray-100'
+                  }`}
+                >
+                  {link.label}
+                </button>
+              ))}
+              <Link
+                to="/people"
+                className="block w-full text-center px-4 py-3 mt-2 rounded-lg text-white font-semibold"
+                style={{ backgroundColor: '#354F52' }}
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                Explore Now
+              </Link>
+            </div>
+          </div>
+        )}
       </nav>
 
       {/* Hero Section */}
