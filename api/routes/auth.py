@@ -173,8 +173,9 @@ async def oauth_login(
     db.add(oauth_state)
     db.commit()
     
-    # Build callback URL
-    callback_url = str(request.url_for('oauth_callback', provider=provider))
+    # Build callback URL using API_BASE_URL to ensure correct protocol (http vs https)
+    base_url = os.getenv('API_BASE_URL', 'http://localhost:8000')
+    callback_url = f"{base_url}/auth/callback/{provider}"
     
     # Build authorization URL
     params = {
