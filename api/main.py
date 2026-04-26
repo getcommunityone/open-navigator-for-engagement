@@ -13,8 +13,10 @@ from datetime import datetime, date
 from fastapi import FastAPI, HTTPException, Query, BackgroundTasks
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 from loguru import logger
+import os
 
 from agents.orchestrator import OrchestratorAgent
 from agents.scraper import ScraperAgent
@@ -30,8 +32,47 @@ from config import settings
 app = FastAPI(
     title="Open Navigator for Engagement API",
     description="Multi-agent system for analyzing local government oral health policy discussions",
-    version="1.0.0"
+    version="1.0.0",
+    openapi_tags=[
+        {
+            "name": "auth",
+            "description": "Authentication and user management"
+        },
+        {
+            "name": "workflows",
+            "description": "Policy analysis workflows"
+        },
+        {
+            "name": "opportunities",
+            "description": "Advocacy opportunities"
+        }
+    ]
 )
+
+# Custom OpenAPI schema with logo
+def custom_openapi():
+    if app.openapi_schema:
+        return app.openapi_schema
+    
+    from fastapi.openapi.utils import get_openapi
+    
+    openapi_schema = get_openapi(
+        title=app.title,
+        version=app.version,
+        description=app.description,
+        routes=app.routes,
+    )
+    
+    # Add custom logo
+    openapi_schema["info"]["x-logo"] = {
+        "url": "/static/communityone_logo.svg",
+        "altText": "CommunityOne Logo"
+    }
+    
+    app.openapi_schema = openapi_schema
+    return app.openapi_schema
+
+app.openapi = custom_openapi
 
 # Add CORS middleware
 app.add_middleware(
@@ -41,6 +82,13 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Mount static files for logo
+static_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "frontend", "public")
+if os.path.exists(static_dir):
+    app.mount("/static", StaticFiles(directory=static_dir), name="static")
+else:
+    logger.warning(f"Static directory not found: {static_dir}")
 
 # Include authentication routes
 from api.routes import auth as auth_routes
