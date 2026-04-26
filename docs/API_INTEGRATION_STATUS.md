@@ -50,14 +50,17 @@ python -m discovery.nces_ingestion
 
 ---
 
-## 🚧 Partially Integrated
+## � Reference Implementations (Paid Services)
 
-### 3. Ballotpedia API v3.0 ⚠️
-**Status:** PARTIAL - Official API v3.0 + Web scraping fallback  
-**File:** `discovery/ballotpedia_integration.py`  
+These integrations are provided as reference code but require paid API access.
+
+### Ballotpedia API v3.0 💰
+**Status:** REFERENCE ONLY - Paid service  
+**File:** `discovery/ballotpedia_integration.py` (reference implementation)  
 **Website:** https://ballotpedia.org  
 **API Docs:** https://ballotpedia.org/API_documentation  
 **API Announcement:** https://ballotpedia.org/Just_launched:_Ballotpedia's_API_Version_3.0  
+**Pricing:** Contact Ballotpedia for pricing (not free)  
 
 **What it provides:**
 - Elected officials (federal, state, local)
@@ -107,16 +110,22 @@ measures = await discovery.get_ballot_measures("Alabama", year=2024)
 ```
 
 **Notes:**
-- **Ballotpedia launched API v3.0** - official REST API now available!
-- For production, use official API (contact Ballotpedia for key)
-- Web scraping included as development/testing fallback
-- API provides more reliable, structured data than scraping
+- ⚠️ **Paid Service** - Ballotpedia API requires payment
+- Not recommended for free/open-source projects
+- Code provided as reference for those with API access
+- Consider alternatives: Google Civic API (free) for officials, Open States (free) for state data
+- Web scraping may violate terms of service - use at own risk
+
+**Alternative Free APIs:**
+- Google Civic Information API - Free, 25k requests/day
+- Open States API - Free, 50k requests/month
+- NCES - Free public data for school boards
 
 ---
 
 ## ❌ Not Yet Integrated
 
-### 4. Google Civic Information API ❌
+### 3. Google Civic Information API ❌
 **Status:** NOT INTEGRATED  
 **API Docs:** https://developers.google.com/civic-information  
 **What it would provide:**
@@ -146,8 +155,8 @@ measures = await discovery.get_ballot_measures("Alabama", year=2024)
 
 ---
 
-### 5. Cicero API ❌
-**Status:** NOT INTEGRATED  
+### Cicero API 💰 (Reference Only)
+**Status:** NOT INTEGRATED - Paid service  
 **API Docs:** https://cicerodata.com  
 **What it would provide:**
 - Local district boundaries (very accurate)
@@ -155,20 +164,15 @@ measures = await discovery.get_ballot_measures("Alabama", year=2024)
 - Non-legislative officials (school boards, water districts, etc.)
 - Real-time updates
 
-**Why integrate:**
-- Professional-grade district mapping
-- Best source for local officials
-- Includes special districts (school boards, water, transit, etc.)
-- Very accurate boundary data
+**Why NOT integrating:**
+- ⚠️ **Paid Service** - Enterprise/professional pricing
+- Not suitable for free/open-source projects
+- Free alternatives available (Google Civic, Open States)
 
-**API Key Required:** Yes (paid service)  
-**Pricing:** Enterprise/professional (not free)  
-**Sign up:** https://cicerodata.com/contact
-
-**Next Steps:**
-1. Evaluate cost vs. value (this is a paid service)
-2. Consider for enterprise deployment
-3. Alternative: Use Google Civic API + Ballotpedia (free)
+**Free Alternatives:**
+- Google Civic Information API - Address-to-representative mapping
+- Open States API - State-level officials and districts
+- Census TIGER/Line - Free boundary shapefiles
 
 ---
 
@@ -178,11 +182,11 @@ measures = await discovery.get_ballot_measures("Alabama", year=2024)
 |-----|--------|-------|------|---------------|
 | **Open States** | ✅ Integrated | Yes | `openstates_sources.py` | Yes (free) |
 | **NCES** | ✅ Integrated | Yes | `nces_ingestion.py` | No |
-| **Ballotpedia** | ⚠️ Partial | Contact | `ballotpedia_integration.py` | Yes (contact for API) |
 | **Google Civic** | ❌ Not Yet | Yes | - | Yes (free) |
-| **Cicero** | ❌ Not Yet | No | - | Yes (paid) |
 
-**Note:** Ballotpedia has both official API v3.0 (contact for access) and web scraping fallback.
+**Reference Only (Paid Services):**
+- **Ballotpedia API v3.0** - Paid service, code available for reference in `ballotpedia_integration.py`
+- **Cicero API** - Enterprise-grade district boundaries (paid)
 
 ---
 
@@ -191,11 +195,11 @@ measures = await discovery.get_ballot_measures("Alabama", year=2024)
 ### High Priority (Free + High Value)
 1. ✅ **Open States** - Already done
 2. ✅ **NCES** - Already done
-3. ⚠️ **Ballotpedia** - Partial (web scraping works, needs cleanup)
-4. 🔴 **Google Civic API** - Should integrate next (best for address→officials)
+3. 🔴 **Google Civic API** - Should integrate next (best for address→officials)
 
-### Medium Priority (Value vs. Cost)
-5. 🟡 **Cicero API** - Evaluate cost for enterprise deployment
+### Not Recommended (Paid Services)
+- ❌ **Ballotpedia API** - Paid service, use free alternatives
+- ❌ **Cicero API** - Enterprise pricing, use Google Civic instead
 
 ---
 

@@ -1,5 +1,9 @@
 """
-Ballotpedia Integration for Leader & Ballot Measure Data
+Ballotpedia Integration - REFERENCE IMPLEMENTATION ONLY
+
+⚠️ WARNING: Ballotpedia API is a PAID SERVICE
+   This code is provided for reference only for those with API access.
+   NOT RECOMMENDED for free/open-source projects.
 
 Ballotpedia.org is the definitive source for:
 - Elected officials (federal, state, local)
@@ -7,12 +11,18 @@ Ballotpedia.org is the definitive source for:
 - Election results and candidates
 - Political positions and voting records
 
-INTEGRATION METHODS:
-1. **Ballotpedia API v3.0** - Official REST API (RECOMMENDED)
-   - Sign up: https://ballotpedia.org/API_documentation
-   - Announcement: https://ballotpedia.org/Just_launched:_Ballotpedia's_API_Version_3.0
-   - Pricing: Contact Ballotpedia for API access
-   
+PRICING:
+- Ballotpedia API v3.0 requires payment (contact for pricing)
+- API Docs: https://ballotpedia.org/API_documentation
+- Announcement: https://ballotpedia.org/Just_launched:_Ballotpedia's_API_Version_3.0
+
+FREE ALTERNATIVES (RECOMMENDED):
+- Google Civic Information API - Free, 25k requests/day
+- Open States API - Free, 50k requests/month (state-level)
+- NCES - Free public data for school boards
+
+INTEGRATION METHODS (if you have paid API access):
+1. **Ballotpedia API v3.0** - Official REST API (REQUIRES PAYMENT)
 2. **Web Scraping** - Fallback for public data (rate-limited, respectful)
 
 OFFICIAL API (v3.0):

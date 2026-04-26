@@ -23,8 +23,10 @@ class Settings(BaseSettings):
     dataverse_api_key: Optional[str] = Field(None, description="Harvard Dataverse API key (optional, improves rate limits)")
     openstates_api_key: Optional[str] = Field(None, description="Open States API key (free tier: 50k requests/month)")
     google_civic_api_key: Optional[str] = Field(None, description="Google Civic Information API key (free tier: 25k requests/day)")
-    ballotpedia_api_key: Optional[str] = Field(None, description="Ballotpedia API v3.0 key (contact Ballotpedia for access)")
-    cicero_api_key: Optional[str] = Field(None, description="Cicero API key (paid service for district boundaries)")
+    
+    # Paid services (for reference only - not recommended for free/OSS projects)
+    ballotpedia_api_key: Optional[str] = Field(None, description="Ballotpedia API v3.0 key (PAID SERVICE - contact Ballotpedia)")
+    cicero_api_key: Optional[str] = Field(None, description="Cicero API key (PAID SERVICE - enterprise pricing)")
     
     # HuggingFace Configuration
     hf_organization: Optional[str] = Field(None, description="HuggingFace organization name (e.g., 'CommunityOne')")
