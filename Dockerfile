@@ -37,11 +37,16 @@ COPY . .
 COPY --from=docs-builder /build/build /app/static/docs
 
 # Build frontend inline (vite.config.ts outputs to ../api/static/)
+# CACHE BUST 2026-04-26 15:30 UTC - Force rebuild to fix dist path issue
 RUN cd /app/frontend && npm ci && npm run build
 
 # Frontend is already built to /app/api/static/ via vite.config.ts
 # Create frontend directory in /app/static for nginx
-RUN mkdir -p /app/static/frontend && cp -r /app/api/static/* /app/static/frontend/
+RUN mkdir -p /app/static/frontend && \
+    echo "Listing /app/api/static/ contents:" && \
+    ls -la /app/api/static/ && \
+    cp -r /app/api/static/* /app/static/frontend/ && \
+    echo "Frontend copied successfully"
 
 # Create necessary directories
 RUN mkdir -p /app/logs /app/data /var/log/supervisor
