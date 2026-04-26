@@ -117,7 +117,7 @@ export default function Layout() {
                   )}
                 </div>
                 <button
-                  onClick={clearLocation}
+                  onClick={() => navigate('/?tab=community')}
                   className="text-xs text-primary-600 hover:text-primary-700 font-medium underline ml-2 flex-shrink-0"
                 >
                   Change

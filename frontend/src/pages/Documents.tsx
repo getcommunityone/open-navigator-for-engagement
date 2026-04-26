@@ -19,6 +19,7 @@ export default function Documents() {
   const [searchParams, setSearchParams] = useSearchParams()
   const [searchQuery, setSearchQuery] = useState(searchParams.get('search') || '')
   const [page, setPage] = useState(1)
+  const [activeFilter, setActiveFilter] = useState('all') // all, meetings, budgets, people, organizations
 
   useEffect(() => {
     const searchFromUrl = searchParams.get('search')
@@ -78,6 +79,90 @@ export default function Documents() {
               </button>
             </div>
           </form>
+        </div>
+
+        {/* Filter Pills */}
+        <div className="bg-white rounded-lg shadow-sm p-4 mb-6 border-b border-gray-200">
+          <div className="flex flex-wrap gap-2">
+            <button
+              onClick={() => setActiveFilter('all')}
+              className={`px-4 py-2 rounded-full font-medium transition-colors ${
+                activeFilter === 'all'
+                  ? 'bg-primary-600 text-white'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}
+            >
+              All
+            </button>
+            <button
+              onClick={() => setActiveFilter('meetings')}
+              className={`px-4 py-2 rounded-full font-medium transition-colors ${
+                activeFilter === 'meetings'
+                  ? 'bg-primary-600 text-white'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}
+            >
+              Meeting Minutes
+            </button>
+            <button
+              onClick={() => setActiveFilter('budgets')}
+              className={`px-4 py-2 rounded-full font-medium transition-colors ${
+                activeFilter === 'budgets'
+                  ? 'bg-primary-600 text-white'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}
+            >
+              Budgets
+            </button>
+            <button
+              onClick={() => setActiveFilter('people')}
+              className={`px-4 py-2 rounded-full font-medium transition-colors ${
+                activeFilter === 'people'
+                  ? 'bg-primary-600 text-white'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}
+            >
+              People
+            </button>
+            <button
+              onClick={() => setActiveFilter('organizations')}
+              className={`px-4 py-2 rounded-full font-medium transition-colors ${
+                activeFilter === 'organizations'
+                  ? 'bg-primary-600 text-white'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}
+            >
+              Organizations
+            </button>
+            <button
+              onClick={() => setActiveFilter('charities')}
+              className={`px-4 py-2 rounded-full font-medium transition-colors ${
+                activeFilter === 'charities'
+                  ? 'bg-primary-600 text-white'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}
+            >
+              Charities
+            </button>
+            <button
+              onClick={() => setActiveFilter('events')}
+              className={`px-4 py-2 rounded-full font-medium transition-colors ${
+                activeFilter === 'events'
+                  ? 'bg-primary-600 text-white'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}
+            >
+              Events
+            </button>
+            <button
+              className="px-4 py-2 rounded-full font-medium bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors flex items-center gap-1"
+            >
+              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
+              </svg>
+              All filters
+            </button>
+          </div>
         </div>
 
         {/* Results */}
