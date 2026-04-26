@@ -14,6 +14,7 @@ from fastapi import FastAPI, HTTPException, Query, BackgroundTasks
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+from fastapi.openapi.docs import get_swagger_ui_html
 from pydantic import BaseModel, Field
 from loguru import logger
 import os
@@ -33,6 +34,8 @@ app = FastAPI(
     title="Open Navigator for Engagement API",
     description="Multi-agent system for analyzing local government oral health policy discussions",
     version="1.0.0",
+    docs_url=None,  # Disable default docs to use custom
+    redoc_url="/redoc",  # Keep ReDoc at /redoc
     openapi_tags=[
         {
             "name": "auth",
