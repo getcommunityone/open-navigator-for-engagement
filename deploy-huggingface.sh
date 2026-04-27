@@ -64,21 +64,21 @@ if [ -d ".venv" ]; then
     source .venv/bin/activate
 fi
 
-# Check if huggingface-cli is installed
-if ! command -v huggingface-cli &> /dev/null; then
+# Check if huggingface-hub is installed
+if ! command -v hf &> /dev/null; then
     echo "📦 Installing huggingface-hub..."
     pip install huggingface-hub
 fi
 
 # Check if logged in
 echo "🔐 Checking Hugging Face authentication..."
-if ! huggingface-cli whoami &> /dev/null; then
+if ! hf whoami &> /dev/null; then
     echo "❌ Not logged in to Hugging Face"
-    echo "Please run: huggingface-cli login"
+    echo "Please run: hf auth login"
     exit 1
 fi
 
-echo "✅ Authenticated as: $(huggingface-cli whoami)"
+echo "✅ Authenticated as: $(hf whoami)"
 echo ""
 
 # Run Docker build test before deployment (unless skipped)
@@ -118,7 +118,7 @@ fi
 
 # Ask to create space if it doesn't exist
 echo "🌟 Creating Hugging Face Space (if it doesn't exist)..."
-huggingface-cli repo create "$SPACE_NAME" --type space --space-sdk docker --exist-ok || true
+hf repo create --type space --space-sdk docker "${HF_USERNAME}/${SPACE_NAME}" --exist-ok || true
 echo ""
 
 # Create deployment branch
