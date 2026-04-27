@@ -60,11 +60,12 @@ open-navigator-data/
 │   ├── state_legislators  # From Open States API
 │   └── school_board       # School board members
 │
-├── nonprofits/             # 🏢 Nonprofit organizations
-│   ├── irs_nonprofits     # IRS 990 data (3M+ organizations)
+├── nonprofits/             # 🏢 Nonprofit organizations & churches
+│   ├── irs_nonprofits     # IRS 990 data (3M+ organizations including 300K+ churches)
 │   ├── propublica_data    # ProPublica API (financials, NTEE codes)
 │   ├── everyorg_data      # Every.org API (missions, causes, logos)
 │   ├── nonprofit_990s     # Detailed Form 990 financials (yearly filings)
+│   ├── congregations      # 🛐 Church & congregation data (ARDA, HIFLD, NCS)
 │   ├── constituents       # 🤝 Donors, volunteers, members, beneficiaries (Microsoft CDM)
 │   ├── donations          # 💝 Financial contributions and in-kind gifts (Microsoft CDM)
 │   ├── campaigns          # 📣 Fundraising campaigns and appeals (Microsoft CDM)
@@ -244,14 +245,17 @@ standards-schema-org.parquet
 ### Phase 2: Enrichment (Silver Layer)
 1. **ProPublica Nonprofit Explorer** → Financial data, NTEE codes, 990 filings
 2. **Every.org API** → Nonprofit causes, missions, logos
-3. **NCES F-33 Finance Survey** → School district budgets, per-pupil spending
-4. **Census Annual Survey** → State/local government finances
-5. **Municipal Securities Rulemaking Board (EMMA)** → Bond debt data
-6. **YouTube API** → Channel statistics
-7. **Open States** → Legislative data
-8. **Wikidata SPARQL** → Entity relationships
-9. **DBpedia** → Wikipedia structured data
-10. **Google Civic** → Representatives
+3. **ARDA (Association of Religion Data Archives)** → Congregation characteristics, health ministries
+4. **HIFLD Places of Worship** → Geospatial church locations (350K+ congregations)
+5. **National Congregations Study** → Social service provision patterns
+6. **NCES F-33 Finance Survey** → School district budgets, per-pupil spending
+7. **Census Annual Survey** → State/local government finances
+8. **Municipal Securities Rulemaking Board (EMMA)** → Bond debt data
+9. **YouTube API** → Channel statistics
+10. **Open States** → Legislative data
+11. **Wikidata SPARQL** → Entity relationships
+12. **DBpedia** → Wikipedia structured data
+13. **Google Civic** → Representatives
 
 ### Phase 3: Processing (Gold Layer)
 1. **Meeting Extraction** → Agenda/minutes text
@@ -629,17 +633,18 @@ erDiagram
     }
     
     %% ========================================
-    %% ORGANIZATIONS (NONPROFITS)
+    %% ORGANIZATIONS (NONPROFITS & CHURCHES)
     %% ========================================
     %% Based on Popolo Project schema for organizations
     %% See: https://github.com/popolo-project/popolo-spec
-    %% Schema.org types: Organization, NGO
+    %% Schema.org types: Organization, NGO, Church, WorshipPlace
     
     ORGANIZATION ||--o{ SOCIAL_MEDIA : maintains
     ORGANIZATION ||--o{ LEADER : employs
     ORGANIZATION ||--o{ NONPROFIT_FINANCES : files
     ORGANIZATION ||--o{ CAMPAIGN : runs
     ORGANIZATION ||--o{ PROGRAM_DELIVERY : delivers
+    ORGANIZATION ||--o{ CONGREGATION : has
     ORGANIZATION {
         string org_id PK
         string ein
@@ -657,6 +662,32 @@ erDiagram
         string logo_url
         string website
         boolean is_verified
+    }
+    
+    %% Churches & Congregations (org_type='church', ntee_code='X20')
+    %% Data sources: IRS TEOS, ARDA, HIFLD Places of Worship, National Congregations Study
+    %% Many churches provide health ministries, food programs, and community services
+    CONGREGATION {
+        string congregation_id PK
+        string org_id FK
+        string denomination
+        string religious_tradition
+        int congregation_size
+        int weekly_attendance
+        boolean has_health_ministry
+        boolean has_food_program
+        boolean has_youth_program
+        boolean has_senior_program
+        string service_schedule
+        string clergy_name
+        string clergy_title
+        int volunteer_count
+        float community_outreach_budget
+        string facility_type
+        int seating_capacity
+        datetime founded_year
+        string parent_denomination
+        boolean serves_underserved
     }
     
     %% Nonprofit 990 Financial Data

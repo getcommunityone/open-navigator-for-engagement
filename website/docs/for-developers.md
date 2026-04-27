@@ -62,6 +62,7 @@ Includes:
 - **Data Models**: Microsoft CDM for Nonprofits, OMOP vocabulary system
 - **Fact-Checking**: Google Fact Check API, PolitiFact, FactCheck.org
 - **Nonprofit Data**: ProPublica API (3M+ orgs), Every.org, Findhelp (400K+ programs)
+- **Churches & Faith-Based**: ARDA Congregations, HIFLD Places of Worship (350K+ locations), National Congregations Study
 - **Enterprise Tech**: Microsoft (Nonprofit CDM), Google (Data Commons), AWS (Open Data), Databricks (Unity Catalog, MLflow), Snowflake, Salesforce (NPSP)
 - **BibTeX citations** for academic papers and research use
 :::

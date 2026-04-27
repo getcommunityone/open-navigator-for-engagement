@@ -60,6 +60,7 @@ Includes:
 - **Civic Tech Standards**: OCD-ID, Popolo, Schema.org, CEDS
 - **Fact-Checking**: Google API, PolitiFact, FactCheck.org
 - **Nonprofit Data**: ProPublica (3M+ orgs), Every.org, Findhelp (400K+ programs)
+- **Churches & Congregations**: ARDA (300K+ congregations), HIFLD Places of Worship (350K+ locations)
 - **Enterprise Partnerships**: Microsoft, Google, AWS, Databricks for data infrastructure
 :::
 

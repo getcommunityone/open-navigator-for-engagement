@@ -10,7 +10,7 @@ Welcome to **Open Navigator for Engagement** - an AI-powered platform that analy
 :::tip **All Data is Cited & Properly Attributed**
 Every dataset, standard, and research source used in this platform is properly cited with complete attribution, licenses, and BibTeX references.
 
-**[View Complete Citations & Data Sources](/data-sources/citations)** - Academic research (MeetingBank, LocalView, Council Data Project, City Scrapers), Government data (U.S. Census, NCES, IRS), Civic tech standards (OCD-ID, Popolo, Schema.org, CEDS, OMOP CDM), Nonprofit data (ProPublica, Every.org, Findhelp), Enterprise tech partnerships (Microsoft, Google, AWS, Databricks, Snowflake, Salesforce), and more.
+**[View Complete Citations & Data Sources](/data-sources/citations)** - Academic research (MeetingBank, LocalView, Council Data Project, City Scrapers), Government data (U.S. Census, NCES, IRS), Civic tech standards (OCD-ID, Popolo, Schema.org, CEDS, OMOP CDM), Nonprofit data (ProPublica, Every.org, Findhelp), Church & congregation data (ARDA, HIFLD, National Congregations Study), Enterprise tech partnerships (Microsoft, Google, AWS, Databricks, Snowflake, Salesforce), and more.
 :::
 
 ## 👋 Choose Your Path

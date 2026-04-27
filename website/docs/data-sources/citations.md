@@ -38,7 +38,7 @@ This page documents all data sources, standards, and research contributions used
   </a>
   <a href="#nonprofit--philanthropy" className="card" style={{textDecoration: 'none', padding: '15px', borderLeft: '4px solid #F44336'}}>
     <strong>🏢 Nonprofit & Philanthropy</strong><br/>
-    <span style={{fontSize: '0.9em', color: '#666'}}>ProPublica, IRS, Every.org, Findhelp, 211, Microsoft CDM</span>
+    <span style={{fontSize: '0.9em', color: '#666'}}>ProPublica, IRS, Every.org, Findhelp, 211, Microsoft CDM, ARDA, HIFLD, NCS</span>
   </a>
   <a href="#international-aid-transparency" className="card" style={{textDecoration: 'none', padding: '15px', borderLeft: '4px solid #00BCD4'}}>
     <strong>🌍 International Aid</strong><br/>
@@ -496,15 +496,31 @@ concept_id_1 | concept_id_2 | relationship_id
 ### IRS Tax-Exempt Organization Search (TEOS)
 
 **Organization:** Internal Revenue Service (IRS), U.S. Department of Treasury  
-**What we use:** Official tax-exempt status verification, Pub 78 deductibility data, bulk downloads of all U.S. nonprofits.
+**What we use:** Official tax-exempt status verification, Pub 78 deductibility data, bulk downloads of all U.S. nonprofits including 300,000+ churches and religious organizations.
 
 - **Source:** https://www.irs.gov/charities-non-profits/tax-exempt-organization-search
 - **Bulk Data Downloads:** https://www.irs.gov/charities-non-profits/tax-exempt-organization-search-bulk-data-downloads
-- **Coverage:** All registered 501(c)(3) and other tax-exempt organizations
+- **Coverage:** All registered 501(c)(3) and other tax-exempt organizations (3M+)
+  - **Churches & Religious Organizations:** 300,000+ (NTEE codes X, X20, X21, X22, X30, X40)
+  - **Health Organizations:** 50,000+ (NTEE codes E)
+  - **Human Services:** 150,000+ (NTEE codes P)
 - **Update Frequency:** Monthly
 - **License:** Public domain (U.S. government data)
 
+**NTEE Codes for Churches:**
+- **X** - Religion Related, Spiritual Development
+- **X20** - Christian (churches, ministries)
+- **X21** - Protestant
+- **X22** - Roman Catholic
+- **X30** - Jewish
+- **X40** - Islamic
+
 **Note:** ProPublica API already includes this data in a more accessible format. Direct IRS access primarily used for bulk downloads and verification.
+
+**Complements:**
+- **ARDA** for congregation characteristics and health ministry programs
+- **HIFLD** for geospatial location data
+- **National Congregations Study** for social service provision patterns
 
 ---
 
@@ -560,6 +576,121 @@ concept_id_1 | concept_id_2 | relationship_id
   - Languages and accessibility
 - **Access:** Public search, some regions offer data partnerships
 - **License:** Varies by region
+
+---
+
+### Association of Religion Data Archives (ARDA)
+
+**Organization:** Pennsylvania State University  
+**What we use:** U.S. Congregational Life Survey and denominational data for understanding church characteristics, programs, and community services including health ministries.
+
+- **Source:** https://www.thearda.com/
+- **Data Portal:** https://www.thearda.com/data-archive
+- **U.S. Congregational Life Survey:** https://www.thearda.com/Archive/Files/Descriptions/USCONGLIFE.asp
+- **Coverage:** 300,000+ congregations with detailed program data
+- **License:** Free for research and non-commercial use
+
+**Key Datasets:**
+
+| Dataset | Coverage | Variables |
+|---------|----------|----------|
+| **U.S. Congregations** | All denominations, 50 states | Congregation size, programs, community services |
+| **Religious Congregations & Membership Study** | County-level data | Adherents, congregations by denomination |
+| **National Congregations Study** | Representative sample of 1,200+ | Worship, programs, social services |
+
+**What We Extract:**
+- Congregation size and attendance
+- Health ministry programs (dental, medical, mental health)
+- Food programs and community meals
+- Youth and senior programs
+- Community outreach budget
+- Social service partnerships
+
+**Example Use Case:**  
+Identify churches with active health ministries in Tuscaloosa, AL that provide free dental kits, health screenings, or partner with mobile dental units.
+
+**Citation:**
+```bibtex
+@misc{arda_congregations,
+  author = {{Association of Religion Data Archives}},
+  title = {U.S. Congregational Life Survey},
+  year = {2024},
+  publisher = {Pennsylvania State University},
+  url = {https://www.thearda.com/},
+  note = {Free for research use}
+}
+```
+
+---
+
+### Homeland Infrastructure Foundation-Level Data (HIFLD): Places of Worship
+
+**Organization:** U.S. Department of Homeland Security (DHS)  
+**What we use:** Geospatial database of 350,000+ places of worship for mapping faith-based health service locations and identifying service gaps.
+
+- **Source:** https://hifld-geoplatform.opendata.arcgis.com/
+- **Dataset:** https://hifld-geoplatform.opendata.arcgis.com/datasets/places-of-worship
+- **Format:** Shapefile, GeoJSON, CSV
+- **Coverage:** 350,000+ churches, mosques, synagogues, temples
+- **License:** Public Domain (U.S. Government)
+
+**Fields Available:**
+- Name of place of worship
+- Address (street, city, state, ZIP)
+- Latitude/Longitude (precise geolocation)
+- Denomination
+- Religious tradition
+- Facility type
+
+**Use Cases:**
+1. **Map faith-based health providers** - Overlay churches with health ministries on city maps
+2. **Identify service deserts** - Find areas underserved by both clinics and church programs
+3. **Route mobile dental units** - Plan stops at large congregations
+4. **Partnership outreach** - Locate churches near schools or clinics
+
+**Citation:**
+> "Homeland Infrastructure Foundation-Level Data (HIFLD): Places of Worship. U.S. Department of Homeland Security. https://hifld-geoplatform.opendata.arcgis.com/"
+
+---
+
+### National Congregations Study (NCS)
+
+**Organization:** Duke University  
+**What we use:** Representative survey of U.S. congregations to understand social service provision, health programs, and civic engagement patterns.
+
+- **Source:** https://sites.duke.edu/ncsweb/
+- **Principal Investigator:** Mark Chaves, Duke University Divinity School
+- **Coverage:** 1,200+ congregations (representative sample)
+- **Waves:** 1998, 2006-07, 2012, 2018-19
+- **License:** Free for academic and research use
+
+**Key Findings:**
+- **60% of congregations** provide social services (food, housing, health)
+- **15% of congregations** have health-related programs
+- **Large urban churches** (500+ attendees) more likely to have formal health ministries
+- **25% collaborate** with clinics, hospitals, or health departments
+
+**Variables We Use:**
+
+| Variable | Description | Relevance |
+|----------|-------------|-----------|
+| `HLTHPROG` | Has health-related program | Health ministry presence |
+| `FOODPROG` | Operates food program | Nutrition education opportunity |
+| `YOUTHPROG` | Youth programs | Reach children for dental education |
+| `SENIORPROG` | Senior programs | Medicare enrollment help |
+| `PARTNERSHIP` | Partners with nonprofits | Collaboration potential |
+
+**Citation:**
+```bibtex
+@misc{ncs_2018,
+  author = {Chaves, Mark and Anderson, Shawna},
+  title = {National Congregations Study: Cumulative Dataset (1998, 2006-07, 2012, 2018-19)},
+  year = {2020},
+  publisher = {Duke University},
+  url = {https://sites.duke.edu/ncsweb/},
+  doi = {10.1093/soc/swaa029}
+}
+```
 
 ---
 
