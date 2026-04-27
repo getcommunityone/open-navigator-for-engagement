@@ -25,13 +25,24 @@ import { useLocation as useLocationContext } from '../contexts/LocationContext'
 
 const navigation = [
   { name: 'Home', href: '/', icon: HomeIcon },
-  { name: 'Find Leaders', href: '/people', icon: UserGroupIcon },
-  { name: 'Meeting Minutes', href: '/documents', icon: DocumentTextIcon },
-  { name: 'Local Charities', href: '/nonprofits', icon: BuildingLibraryIcon },
-  { name: 'Map View', href: '/heatmap', icon: MapIcon },
-  { name: 'Data & Trends', href: '/analytics', icon: ChartBarIcon },
-  { name: 'Take Action', href: '/opportunities', icon: BellAlertIcon },
-  { name: 'Policy Debates', href: '/debate-grader', icon: AcademicCapIcon },
+  { name: 'Explore Data', href: '/explore', icon: MagnifyingGlassIcon },
+  { 
+    section: 'Policy & Government',
+    items: [
+      { name: 'Policy Decisions', href: '/documents', icon: DocumentTextIcon },
+      { name: 'Budget Analysis', href: '/analytics', icon: ChartBarIcon },
+      { name: 'Elected Officials', href: '/people', icon: UserGroupIcon },
+      { name: 'Demographics', href: '/heatmap', icon: MapIcon },
+    ]
+  },
+  { 
+    section: 'Community & Advocacy',
+    items: [
+      { name: 'Nonprofits', href: '/nonprofits', icon: BuildingLibraryIcon },
+      { name: 'Advocacy Topics', href: '/opportunities', icon: BellAlertIcon },
+      { name: 'Fact-Checking', href: '/debate-grader', icon: AcademicCapIcon },
+    ]
+  },
   { name: 'Settings', href: '/settings', icon: Cog6ToothIcon },
 ]
 
@@ -349,37 +360,75 @@ export default function Layout() {
         ${mobileMenuOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
       `}>
         <nav className="mt-6 px-4 overflow-y-auto h-[calc(100vh-10rem)]">
-          {navigation.map((item) => {
-            const isActive = location.pathname === item.href
-            return (
-              <Link
-                key={item.name}
-                to={item.href}
-                onClick={() => setMobileMenuOpen(false)}
-                className={`
-                  flex items-center gap-3 px-4 py-3 mb-2 rounded-lg transition-colors
-                  ${
-                    isActive
-                      ? 'bg-primary-50 text-primary-700 font-medium'
-                      : 'text-gray-700 hover:bg-gray-100'
-                  }
-                `}
-              >
-                <item.icon className="h-6 w-6" />
-                <span>{item.name}</span>
-              </Link>
-            )
+          {navigation.map((item, index) => {
+            // Handle section headers with nested items
+            if ('section' in item && item.section && item.items) {
+              return (
+                <div key={index} className="mb-6">
+                  <div className="px-4 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                    {item.section}
+                  </div>
+                  {item.items.map((subItem) => {
+                    const isActive = location.pathname === subItem.href
+                    return (
+                      <Link
+                        key={subItem.name}
+                        to={subItem.href}
+                        onClick={() => setMobileMenuOpen(false)}
+                        className={`
+                          flex items-center gap-3 px-4 py-3 mb-1 rounded-lg transition-colors
+                          ${
+                            isActive
+                              ? 'bg-primary-50 text-primary-700 font-medium'
+                              : 'text-gray-700 hover:bg-gray-100'
+                          }
+                        `}
+                      >
+                        <subItem.icon className="h-5 w-5" />
+                        <span className="text-sm">{subItem.name}</span>
+                      </Link>
+                    )
+                  })}
+                </div>
+              )
+            }
+            
+            // Handle regular navigation items
+            if ('href' in item && item.href) {
+              const isActive = location.pathname === item.href
+              return (
+                <Link
+                  key={item.name}
+                  to={item.href}
+                  onClick={() => setMobileMenuOpen(false)}
+                  className={`
+                    flex items-center gap-3 px-4 py-3 mb-2 rounded-lg transition-colors
+                    ${
+                      isActive
+                        ? 'bg-primary-50 text-primary-700 font-medium'
+                        : 'text-gray-700 hover:bg-gray-100'
+                    }
+                  `}
+                >
+                  <item.icon className="h-6 w-6" />
+                  <span>{item.name}</span>
+                </Link>
+              )
+            }
+            
+            return null
           })}
         </nav>
 
         {/* Sidebar Footer */}
         <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-gray-200 bg-white">
           <div className="text-sm text-gray-600">
-            <div className="font-medium mb-1">Data Sources</div>
+            <div className="font-medium mb-1">Open Data Sources</div>
             <div className="text-xs">
-              • Census Bureau<br />
-              • NCES Districts<br />
-              • ProPublica Nonprofits
+              • 90K+ Jurisdictions<br />
+              • 3M+ Nonprofits<br />
+              • 500K+ Meeting Pages<br />
+              • 100K+ Officials
             </div>
           </div>
         </div>

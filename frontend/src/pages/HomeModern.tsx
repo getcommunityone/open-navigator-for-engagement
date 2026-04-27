@@ -172,45 +172,45 @@ export default function HomeModern() {
 
   const features = [
     {
-      icon: UserGroupIcon,
-      title: 'Find Leaders',
-      description: 'Discover elected officials, decision makers, and community leaders in your area',
-      link: '/people',
+      icon: DocumentTextIcon,
+      title: 'Policy Decisions',
+      description: 'Track 500K+ meeting pages with decision analysis, deferral patterns, and stakeholder positions',
+      link: '/documents',
       color: '#354F52'
     },
     {
-      icon: DocumentTextIcon,
-      title: 'Meeting Minutes',
-      description: 'See what local governments are discussing, deciding, and spending',
-      link: '/documents',
+      icon: ChartBarIcon,
+      title: 'Budget Analysis',
+      description: 'Compare budget rhetoric to reality with $2T+ in tracked spending and delta analysis',
+      link: '/analytics',
       color: '#52796F'
     },
     {
-      icon: BuildingLibraryIcon,
-      title: 'Local Charities',
-      description: 'Find charities and nonprofits providing services in your community',
-      link: '/nonprofits',
+      icon: UserGroupIcon,
+      title: 'Elected Officials',
+      description: 'Follow 100K+ officials across 90K+ jurisdictions with voting records and decision patterns',
+      link: '/people',
       color: '#84A98C'
     },
     {
       icon: MapIcon,
-      title: 'Map View',
-      description: 'Visualize advocacy opportunities and community impact across regions',
+      title: 'Demographics & Data',
+      description: 'Census demographics, income, education, housing, and health data for every jurisdiction',
       link: '/heatmap',
       color: '#4A90E2'
     },
     {
-      icon: ChartBarIcon,
-      title: 'Data & Trends',
-      description: 'Statistics and insights across 90,000+ communities',
-      link: '/analytics',
+      icon: BuildingLibraryIcon,
+      title: 'Nonprofits & Churches',
+      description: '3M+ nonprofits including 300K+ churches with financial data, programs, and impact metrics',
+      link: '/nonprofits',
       color: '#9B59B6'
     },
     {
       icon: BellAlertIcon,
-      title: 'Take Action',
-      description: 'Get involved with causes and opportunities in your area',
-      link: '/opportunities',
+      title: 'Fact-Checking',
+      description: 'Verify claims with integrated PolitiFact, FactCheck.org, and Google Fact Check data',
+      link: '/debate-grader',
       color: '#E74C3C'
     },
   ]
@@ -491,7 +491,7 @@ export default function HomeModern() {
               Everything You Need
             </h2>
             <p className="text-xl text-gray-600">
-              Powerful tools to stay informed and engaged
+              Powerful tools to stay informed and engaged with the most impactful details
             </p>
           </div>
 
@@ -584,28 +584,34 @@ export default function HomeModern() {
               Our Impact
             </h2>
             <p className="text-xl text-gray-600">
-              Real numbers from real communities
+              Real numbers from real communities with impactful KPIs
             </p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             {[
-              { value: '90,000+', label: 'Cities & Counties', color: '#354F52' },
-              { value: '3M+', label: 'Nonprofits Tracked', color: '#52796F' },
-              { value: '15,000+', label: 'Decisions Analyzed', color: '#84A98C' },
-              { value: '50 States', label: 'Nationwide Coverage', color: '#4A90E2' },
-              { value: '13,000+', label: 'School Districts', color: '#6B8E23' },
-              { value: '500K+', label: 'Meeting Minutes', color: '#8B4513' },
-              { value: '$2T+', label: 'Budget Dollars Tracked', color: '#DC143C' },
-              { value: '100K+', label: 'Public Officials', color: '#9370DB' },
-              { value: '100%', label: 'Free & Open Source', color: '#2E8B57' },
+              { value: '90,000+', label: 'Jurisdictions Tracked', description: 'Cities, counties, states, and tribal governments', color: '#354F52' },
+              { value: '3M+', label: 'Nonprofits & Churches', description: 'With financials, programs, and impact data', color: '#52796F' },
+              { value: '500K+', label: 'Meeting Pages Analyzed', description: 'AI-extracted decisions and budget items', color: '#84A98C' },
+              { value: '$2T+', label: 'Budget Dollars', description: 'Real-time tracking and delta analysis', color: '#4A90E2' },
+              { value: '100K+', label: 'Elected Officials', description: 'Voting records and decision patterns', color: '#9B59B6' },
+              { value: '300K+', label: 'Churches & Congregations', description: 'Community-based organizations mapped', color: '#6B8E23' },
+              { value: '15,000+', label: 'Policy Decisions', description: 'With deferral tracking and stakeholder positions', color: '#DC143C' },
+              { value: '13,000+', label: 'School Districts', description: 'NCES-validated educational boundaries', color: '#8B4513' },
+              { value: '50 States', label: 'Nationwide Coverage', description: 'Including territories and tribal nations', color: '#2E8B57' },
+              { value: '1,000s', label: 'Grant Opportunities', description: 'Federal, state, and foundation funding', color: '#FF6B6B' },
+              { value: '10K+', label: 'Fact-Checked Claims', description: 'PolitiFact, FactCheck.org integration', color: '#4ECDC4' },
+              { value: '100%', label: 'Free & Open Source', description: 'MIT License, HuggingFace datasets', color: '#95E1D3' },
             ].map((stat, index) => (
-              <div key={index} className="text-center p-8 rounded-2xl bg-gradient-to-br from-gray-50 to-white shadow-md hover:shadow-xl transition-shadow">
-                <div className="text-5xl font-bold mb-3" style={{ color: stat.color }}>
+              <div key={index} className="text-center p-8 rounded-2xl bg-gradient-to-br from-gray-50 to-white shadow-md hover:shadow-xl transition-shadow group">
+                <div className="text-5xl font-bold mb-2 group-hover:scale-110 transition-transform" style={{ color: stat.color }}>
                   {stat.value}
                 </div>
-                <div className="text-gray-600 font-medium">
+                <div className="text-gray-800 font-semibold mb-1">
                   {stat.label}
+                </div>
+                <div className="text-sm text-gray-600">
+                  {stat.description}
                 </div>
               </div>
             ))}
@@ -627,7 +633,7 @@ export default function HomeModern() {
           </div>
 
           {/* Documentation Tiles */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6">
             {/* Getting Started - Everyone */}
             <a
               href={`${docsBaseUrl}/intro`}
@@ -644,6 +650,25 @@ export default function HomeModern() {
               </p>
               <div className="text-sm font-semibold" style={{ color: '#354F52' }}>
                 For Everyone →
+              </div>
+            </a>
+
+            {/* Families & Individuals */}
+            <a
+              href={`${docsBaseUrl}/for-families`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="bg-white rounded-2xl p-8 shadow-xl hover:shadow-2xl transform hover:-translate-y-1 transition-all group"
+            >
+              <HeartIcon className="h-12 w-12 mb-4 group-hover:scale-110 transition-transform" style={{ color: '#354F52' }} />
+              <h3 className="text-2xl font-bold mb-3" style={{ color: '#354F52' }}>
+                Families & Individuals
+              </h3>
+              <p className="text-gray-600 mb-4">
+                Community events, voter registration, services, and how to engage locally.
+              </p>
+              <div className="text-sm font-semibold" style={{ color: '#354F52' }}>
+                Community Resources →
               </div>
             </a>
 

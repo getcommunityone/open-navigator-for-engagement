@@ -113,6 +113,12 @@ const config: Config = {
         },
         {
           type: 'docSidebar',
+          sidebarId: 'familiesSidebar',
+          position: 'left',
+          label: 'Families & Individuals',
+        },
+        {
+          type: 'docSidebar',
           sidebarId: 'policyMakersSidebar',
           position: 'left',
           label: 'Policy Makers',

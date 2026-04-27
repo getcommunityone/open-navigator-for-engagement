@@ -22,6 +22,30 @@ const sidebars: SidebarsConfig = {
   ],
 
   // ========================================
+  // FAMILIES & INDIVIDUALS - Community Resources
+  // ========================================
+  familiesSidebar: [
+    {
+      type: 'category',
+      label: 'Families & Individuals',
+      collapsed: false,
+      items: [
+        'for-families',
+        {
+          type: 'doc',
+          id: 'dashboard',
+          label: 'Getting Started with Dashboard',
+        },
+        {
+          type: 'doc',
+          id: 'data-sources/citations',
+          label: 'Citations & Data Sources',
+        },
+      ],
+    },
+  ],
+
+  // ========================================
   // POLICY MAKERS - Non-Technical
   // ========================================
   policyMakersSidebar: [
@@ -168,6 +192,27 @@ const sidebars: SidebarsConfig = {
       items: [
         'intro',
         'dashboard',
+      ],
+    },
+    {
+      type: 'category',
+      label: 'Families & Individuals',
+      collapsed: false,
+      link: {
+        type: 'doc',
+        id: 'for-families',
+      },
+      items: [
+        {
+          type: 'doc',
+          id: 'dashboard',
+          label: 'Getting Started with Dashboard',
+        },
+        {
+          type: 'doc',
+          id: 'data-sources/citations',
+          label: 'Citations & Data Sources',
+        },
       ],
     },
     {
