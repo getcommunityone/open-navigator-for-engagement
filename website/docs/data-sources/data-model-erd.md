@@ -127,6 +127,24 @@ open-navigator-data/
 │   ├── factcheck_org       # FactCheck.org verified claims
 │   └── verified_claims     # Aggregated fact-check database
 │
+├── civic_tech/             # 💻 Open source projects & hackathons
+│   ├── github_repositories # Civic tech projects (GitHub API)
+│   ├── project_metadata    # Code for America, USDR, Civic Tech Field Guide
+│   ├── contributors        # Maintainers and core contributors
+│   ├── project_issues      # Good first issues, contribution opportunities
+│   ├── hackathons          # Civic hackathon events
+│   ├── hackathon_projects  # Projects built at hackathons
+│   ├── brigade_chapters    # Code for America brigade locations
+│   └── project_funding     # GitHub Sponsors, grants, OpenCollective
+│
+├── community_solutions/    # 🌟 Community engagement & use cases
+│   ├── engagement_spectrum # Spectrum of Community Engagement to Ownership
+│   ├── use_case_catalog   # Harvard Data-Smart City Solutions examples
+│   ├── data_academies     # Brookings Institution training programs
+│   ├── success_stories    # Real-world outcomes (Providence, Portland, Tempe)
+│   ├── metric_templates   # Pre-built analytics for common challenges
+│   └── workflow_guides    # Step-by-step community data workflows
+│
 ├── analytics/              # 📊 Time dimensions & metric views
 │   ├── date_dimension      # Date/time reference table (YYYY-MM-DD, day_of_week, fiscal_year)
 │   ├── temporal_relationships  # Time-series joins for all entities
@@ -256,6 +274,10 @@ standards-schema-org.parquet
 11. **Wikidata SPARQL** → Entity relationships
 12. **DBpedia** → Wikipedia structured data
 13. **Google Civic** → Representatives
+14. **GitHub API** → Civic tech projects, contributors, issues
+15. **Civic Tech Field Guide** → Curated project taxonomy
+16. **Code for America** → Brigade projects and hackathons
+17. **Digital Public Goods Alliance** → DPG-certified open source projects
 
 ### Phase 3: Processing (Gold Layer)
 1. **Meeting Extraction** → Agenda/minutes text
@@ -844,6 +866,161 @@ erDiagram
     }
     
     %% ========================================
+    %% CIVIC TECH & OPEN SOURCE PROJECTS
+    %% ========================================
+    %% Data sources: GitHub API, Civic Tech Field Guide, Code for America, USDR, Digital Public Goods Alliance
+    %% Treats open source projects as first-class civic entities
+    
+    CIVIC_TECH_PROJECT ||--o{ PROJECT_CONTRIBUTOR : has
+    CIVIC_TECH_PROJECT ||--o{ PROJECT_ISSUE : tracks
+    CIVIC_TECH_PROJECT ||--o{ PROJECT_FUNDING : receives
+    CIVIC_TECH_PROJECT ||--o{ HACKATHON_PROJECT : originates_from
+    CIVIC_TECH_PROJECT {
+        string project_id PK
+        string repository_url
+        string github_owner
+        string github_repo
+        string project_name
+        string description
+        string readme_content
+        string primary_language
+        string tech_stack
+        int star_count
+        int fork_count
+        int contributor_count
+        int open_issue_count
+        string license_type
+        string project_category
+        string civic_tech_topics
+        string issue_area
+        boolean is_dpg_certified
+        string project_status
+        string homepage_url
+        string documentation_url
+        datetime created_at
+        datetime last_commit
+        datetime last_updated
+    }
+    
+    PROJECT_CONTRIBUTOR {
+        string contributor_id PK
+        string project_id FK
+        string github_username
+        string display_name
+        string email
+        string role
+        int commit_count
+        int pr_count
+        int issue_count
+        boolean is_maintainer
+        boolean is_core_contributor
+        string sponsor_url
+        datetime first_contribution
+        datetime last_contribution
+    }
+    
+    PROJECT_ISSUE {
+        string issue_id PK
+        string project_id FK
+        int issue_number
+        string title
+        string description
+        string status
+        string labels
+        boolean is_good_first_issue
+        boolean is_help_wanted
+        int reaction_count
+        int comment_count
+        string assigned_to
+        datetime created_at
+        datetime closed_at
+    }
+    
+    PROJECT_FUNDING {
+        string funding_id PK
+        string project_id FK
+        string funding_source
+        float monthly_revenue
+        int sponsor_count
+        string grant_name
+        float grant_amount
+        string funding_platform
+        datetime funding_date
+    }
+    
+    %% Hackathons & Civic Tech Events
+    HACKATHON ||--o{ HACKATHON_PROJECT : produces
+    HACKATHON ||--o{ HACKATHON_PARTICIPANT : includes
+    HACKATHON {
+        string hackathon_id PK
+        string event_name
+        string organizer
+        string location
+        string city
+        string state
+        datetime start_date
+        datetime end_date
+        string event_type
+        string focus_area
+        int participant_count
+        int project_count
+        string event_url
+        string registration_url
+        boolean is_virtual
+        string brigade_chapter
+        string sponsor_organizations
+        datetime created_at
+    }
+    
+    HACKATHON_PROJECT {
+        string hackathon_project_id PK
+        string hackathon_id FK
+        string project_id FK
+        string project_name
+        string description
+        string team_members
+        string repository_url
+        string demo_url
+        string presentation_url
+        boolean won_award
+        string award_category
+        boolean became_ongoing_project
+        datetime created_at
+    }
+    
+    HACKATHON_PARTICIPANT {
+        string participant_id PK
+        string hackathon_id FK
+        string participant_name
+        string email
+        string github_username
+        string role
+        string skills
+        string team_name
+        datetime registered_at
+    }
+    
+    %% Code for America Brigades
+    BRIGADE_CHAPTER ||--o{ HACKATHON : hosts
+    BRIGADE_CHAPTER ||--o{ CIVIC_TECH_PROJECT : maintains
+    BRIGADE_CHAPTER {
+        string brigade_id PK
+        string brigade_name
+        string city
+        string state
+        string website_url
+        string github_org
+        string meetup_url
+        int member_count
+        int project_count
+        string meeting_schedule
+        string contact_email
+        boolean is_active
+        datetime founded_date
+        datetime last_activity
+    }
+    
+    %% ========================================
     %% WIKIDATA ENTITIES
     %% ========================================
     
@@ -869,6 +1046,58 @@ erDiagram
         datetime start_date
         datetime end_date
         string qualifiers
+    }
+    
+    %% ========================================
+    %% COMMUNITY SOLUTIONS - USE CASE TEMPLATES
+    %% ========================================
+    
+    COMMUNITY_SOLUTION ||--o{ SOLUTION_STAKEHOLDER : involves
+    COMMUNITY_SOLUTION ||--o{ SOLUTION_METRIC : tracks
+    COMMUNITY_SOLUTION {
+        string solution_id PK
+        string title
+        string challenge_description
+        string engagement_level "Spectrum: Inform/Consult/Involve/Collaborate/Defer"
+        string sector_focus "CBOs/City-County/Philanthropy/Facilitative Leaders"
+        string harvard_use_case_id "Links to Harvard Data-Smart catalog"
+        string brookings_academy_id "Links to Data Academy programs"
+        string ocd_division_id FK "Jurisdiction implementing solution"
+        date implementation_start
+        date implementation_end
+        string status "Planning/Active/Completed"
+        string outcome_summary
+        string data_sources "Which datasets used"
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    SOLUTION_STAKEHOLDER {
+        string stakeholder_id PK
+        string solution_id FK
+        string stakeholder_type "CBO/Government/Funder/Facilitator"
+        string organization_id "Links to NONPROFIT/JURISDICTION/GRANT_MAKER/OFFICIAL"
+        string role_description
+        string engagement_level
+        boolean is_lead_organization
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    SOLUTION_METRIC {
+        string metric_id PK
+        string solution_id FK
+        string metric_name
+        string metric_type "KPI/Output/Outcome/Impact"
+        string data_source "Which dataset(s)"
+        string metric_view_id "Links to /analytics/metric_views"
+        decimal baseline_value
+        decimal target_value
+        decimal current_value
+        date measurement_date
+        string notes
+        timestamp created_at
+        timestamp updated_at
     }
     
     %% ========================================
