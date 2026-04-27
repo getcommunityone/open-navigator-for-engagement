@@ -119,6 +119,11 @@ const config: Config = {
           position: 'left',
           label: 'Developers',
         },
+        {
+          to: '/docs/data-sources/citations',
+          label: '📚 Citations',
+          position: 'left',
+        },
         {to: '/blog', label: 'Blog', position: 'left'},
         {
           href: 'https://github.com/getcommunityone/open-navigator-for-engagement',
@@ -136,6 +141,10 @@ const config: Config = {
             {
               label: 'Getting Started',
               to: '/docs/intro',
+            },
+            {
+              label: '📚 Citations & Data Sources',
+              to: '/docs/data-sources/citations',
             },
             {
               label: 'Data Sources',
