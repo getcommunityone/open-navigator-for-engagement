@@ -1,0 +1,54 @@
+name: Deploy to Hugging Face Spaces
+
+on:
+  push:
+    branches:
+      - deploy
+  workflow_dispatch:
+    inputs:
+      hf_username:
+        description: "Hugging Face username (overrides HF_USERNAME secret)"
+        required: false
+        type: string
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install Hugging Face Hub CLI
+        run: pip install huggingface-hub
+
+      - name: Login to Hugging Face
+        run: huggingface-cli login --token ${{ secrets.HF_TOKEN }}
+
+      - name: Configure Git identity
+        run: |
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git config --global user.name "github-actions[bot]"
+
+      - name: Configure Git credentials for Hugging Face
+        env:
+          HF_USERNAME: ${{ inputs.hf_username || secrets.HF_USERNAME }}
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        run: |
+          git config --global url."https://${HF_USERNAME}:${HF_TOKEN}@huggingface.co/".insteadOf "https://huggingface.co/"
+
+      - name: Deploy to Hugging Face Spaces
+        env:
+          HF_USERNAME: ${{ inputs.hf_username || secrets.HF_USERNAME }}
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        run: |
+          chmod +x ./deploy-huggingface.sh
+          ./deploy-huggingface.sh
