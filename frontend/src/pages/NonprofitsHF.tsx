@@ -23,7 +23,7 @@ interface Nonprofit {
   activity_codes?: string
 }
 
-const DATASET_NAME = "CommunityOne/oral-health-nonprofits"
+const DATASET_NAME = "CommunityOne/one-nonprofits-organizations"
 
 // NTEE Code categories
 const NTEE_CATEGORIES = [

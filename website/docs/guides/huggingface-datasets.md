@@ -56,14 +56,14 @@ python scripts/upload_nonprofits_to_hf.py --all --repo "your-username/nonprofits
 **Expected Output:**
 ```
 ✅ Logged in to Hugging Face
-✅ Repository ready: https://huggingface.co/datasets/CommunityOne/oral-health-nonprofits
+✅ Repository ready: https://huggingface.co/datasets/CommunityOne/one-nonprofits
 📤 Uploading organizations from data/gold/nonprofits_organizations.parquet
   Rows: 1,952,238
   Columns: 28
   Size: 156.43 MB
-  Pushing to CommunityOne/oral-health-nonprofits (split: organizations)
+  Pushing to CommunityOne/one-nonprofits (split: organizations)
 ✅ Uploaded organizations: 1,952,238 records
-   View at: https://huggingface.co/datasets/CommunityOne/oral-health-nonprofits/viewer/organizations
+   View at: https://huggingface.co/datasets/CommunityOne/one-nonprofits/viewer/organizations
 📤 Uploading financials from data/gold/nonprofits_financials.parquet
   ...
 🎉 All uploads complete!
@@ -86,7 +86,7 @@ python scripts/upload_nonprofits_to_hf.py --all --repo "your-username/nonprofits
 from datasets import load_dataset
 
 # Load the dataset
-dataset = load_dataset("CommunityOne/oral-health-nonprofits")
+dataset = load_dataset("CommunityOne/one-nonprofits")
 
 # Access specific tables (splits)
 orgs = dataset["organizations"]
@@ -160,7 +160,7 @@ import { fetchHFRows, searchHFDataset } from '../utils/huggingface';
 
 // Fetch first 100 nonprofits
 const response = await fetchHFRows({
-  dataset: "CommunityOne/oral-health-nonprofits",
+  dataset: "CommunityOne/one-nonprofits",
   split: "organizations"
 }, 0, 100);
 
@@ -183,7 +183,7 @@ function NonprofitSearch() {
     queryKey: ['nonprofits', searchTerm, state],
     queryFn: async () => {
       return await searchNonprofits({
-        dataset: "CommunityOne/oral-health-nonprofits",
+        dataset: "CommunityOne/one-nonprofits",
         query: searchTerm,
         state: state,
         limit: 100
@@ -221,7 +221,7 @@ function NonprofitList() {
     queryKey: ['nonprofits', page],
     queryFn: async () => {
       return await fetchHFRows({
-        dataset: "CommunityOne/oral-health-nonprofits",
+        dataset: "CommunityOne/one-nonprofits",
         split: "organizations"
       }, page * pageSize, pageSize);
     }
@@ -257,7 +257,7 @@ Edit [`frontend/src/pages/Nonprofits.tsx`](../../frontend/src/pages/Nonprofits.t
 import { useQuery } from '@tanstack/react-query';
 import { searchNonprofits } from '../utils/huggingface';
 
-const DATASET_NAME = "CommunityOne/oral-health-nonprofits";
+const DATASET_NAME = "CommunityOne/one-nonprofits";
 
 export default function Nonprofits() {
   const [state, setState] = useState<string>('');
@@ -350,7 +350,7 @@ function NonprofitAutocomplete() {
     
     const fetchSuggestions = async () => {
       const response = await searchHFDataset({
-        dataset: "CommunityOne/oral-health-nonprofits",
+        dataset: "CommunityOne/one-nonprofits",
         split: "organizations"
       }, query, 0, 10);
       
@@ -395,7 +395,7 @@ function NonprofitMap() {
     queryKey: ['nonprofits-map', selectedState],
     queryFn: async () => {
       return await fetchNonprofitsByState(
-        "CommunityOne/oral-health-nonprofits",
+        "CommunityOne/one-nonprofits",
         selectedState,
         1000
       );
@@ -429,7 +429,7 @@ from datasets import load_dataset
 import pandas as pd
 
 # Load dataset
-dataset = load_dataset("CommunityOne/oral-health-nonprofits")
+dataset = load_dataset("CommunityOne/one-nonprofits")
 
 # Get specific split
 orgs = dataset["organizations"]
@@ -465,13 +465,13 @@ import {
 
 ```bash
 # Get first 100 organizations
-curl "https://datasets-server.huggingface.co/rows?dataset=CommunityOne/oral-health-nonprofits&config=default&split=organizations&offset=0&length=100"
+curl "https://datasets-server.huggingface.co/rows?dataset=CommunityOne/one-nonprofits&config=default&split=organizations&offset=0&length=100"
 
 # Search for "dental"
-curl "https://datasets-server.huggingface.co/search?dataset=CommunityOne/oral-health-nonprofits&config=default&split=organizations&query=dental&offset=0&length=100"
+curl "https://datasets-server.huggingface.co/search?dataset=CommunityOne/one-nonprofits&config=default&split=organizations&query=dental&offset=0&length=100"
 
 # Get dataset size
-curl "https://datasets-server.huggingface.co/size?dataset=CommunityOne/oral-health-nonprofits&config=default&split=organizations"
+curl "https://datasets-server.huggingface.co/size?dataset=CommunityOne/one-nonprofits&config=default&split=organizations"
 ```
 
 ## 🎯 Next Steps

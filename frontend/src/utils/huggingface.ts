@@ -211,7 +211,7 @@ export async function fetchAllNonprofits(
  * 
  * @example
  * const alabamaNonprofits = await fetchNonprofitsByState(
- *   "CommunityOne/oral-health-nonprofits",
+ *   "CommunityOne/one-nonprofits-organizations",
  *   "AL",
  *   5000
  * );
@@ -235,7 +235,7 @@ export async function fetchNonprofitsByState(
  * 
  * @example
  * const healthOrgs = await fetchNonprofitsByNTEE(
- *   "CommunityOne/oral-health-nonprofits",
+ *   "CommunityOne/one-nonprofits-organizations",
  *   "E",
  *   10000
  * );
@@ -257,7 +257,7 @@ export async function fetchNonprofitsByNTEE(
  * 
  * @example
  * const results = await searchNonprofits({
- *   dataset: "CommunityOne/oral-health-nonprofits",
+ *   dataset: "CommunityOne/one-nonprofits-organizations",
  *   query: "dental",
  *   state: "CA",
  *   nteeCode: "E",

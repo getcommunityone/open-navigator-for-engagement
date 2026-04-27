@@ -55,7 +55,7 @@ python scripts/upload_nonprofits_to_hf.py --all
 
 # Output:
 # ✅ Logged in to Hugging Face
-# ✅ Repository ready: https://huggingface.co/datasets/CommunityOne/oral-health-nonprofits
+# ✅ Repository ready: https://huggingface.co/datasets/CommunityOne/one-nonprofits
 # 📤 Uploading organizations from data/gold/nonprofits_organizations.parquet
 #   Rows: 1,952,238
 #   Columns: 28
@@ -75,10 +75,10 @@ python scripts/upload_nonprofits_to_hf.py --all
 
 ```bash
 # Test with curl (no auth required for public datasets!)
-curl "https://datasets-server.huggingface.co/rows?dataset=CommunityOne/oral-health-nonprofits&config=default&split=organizations&offset=0&length=10" | jq .
+curl "https://datasets-server.huggingface.co/rows?dataset=CommunityOne/one-nonprofits&config=default&split=organizations&offset=0&length=10" | jq .
 
 # Search for "dental"
-curl "https://datasets-server.huggingface.co/search?dataset=CommunityOne/oral-health-nonprofits&config=default&split=organizations&query=dental" | jq .
+curl "https://datasets-server.huggingface.co/search?dataset=CommunityOne/one-nonprofits&config=default&split=organizations&query=dental" | jq .
 ```
 
 Expected response:
@@ -149,7 +149,7 @@ from datasets import load_dataset
 import pandas as pd
 
 # Load dataset
-dataset = load_dataset("CommunityOne/oral-health-nonprofits")
+dataset = load_dataset("CommunityOne/one-nonprofits")
 
 # Get organizations table
 orgs = dataset["organizations"]
@@ -179,7 +179,7 @@ import { searchNonprofits } from '../utils/huggingface'
 
 // Search for dental orgs in California
 const results = await searchNonprofits({
-  dataset: "CommunityOne/oral-health-nonprofits",
+  dataset: "CommunityOne/one-nonprofits",
   query: "dental",
   state: "CA",
   nteeCode: "E",
@@ -193,13 +193,13 @@ console.log(`Found ${results.length} dental orgs in California`)
 
 ```bash
 # Get first 100 organizations
-curl "https://datasets-server.huggingface.co/rows?dataset=CommunityOne/oral-health-nonprofits&config=default&split=organizations&offset=0&length=100"
+curl "https://datasets-server.huggingface.co/rows?dataset=CommunityOne/one-nonprofits&config=default&split=organizations&offset=0&length=100"
 
 # Search for "dental"
-curl "https://datasets-server.huggingface.co/search?dataset=CommunityOne/oral-health-nonprofits&config=default&split=organizations&query=dental"
+curl "https://datasets-server.huggingface.co/search?dataset=CommunityOne/one-nonprofits&config=default&split=organizations&query=dental"
 
 # Get dataset size
-curl "https://datasets-server.huggingface.co/size?dataset=CommunityOne/oral-health-nonprofits&config=default&split=organizations"
+curl "https://datasets-server.huggingface.co/size?dataset=CommunityOne/one-nonprofits&config=default&split=organizations"
 ```
 
 ---
@@ -313,7 +313,7 @@ python scripts/create_all_gold_tables.py --nonprofits-only --use-irs --download-
 
 **Solution:** Change the repo name or create it manually:
 1. Visit: https://huggingface.co/new-dataset
-2. Name: `oral-health-nonprofits`
+2. Name: `one-nonprofits`
 3. License: CC0-1.0 (Public Domain)
 4. Click "Create"
 
@@ -326,7 +326,7 @@ python scripts/create_all_gold_tables.py --nonprofits-only --use-irs --download-
 ## 🎉 Next Steps
 
 1. **Upload datasets:** `python scripts/upload_nonprofits_to_hf.py --all`
-2. **Test API:** Visit https://huggingface.co/datasets/CommunityOne/oral-health-nonprofits
+2. **Test API:** Visit https://huggingface.co/datasets/CommunityOne/one-nonprofits
 3. **Update React app:** Use `NonprofitsHF.tsx` example
 4. **Add features:**
    - Map visualization with locations table

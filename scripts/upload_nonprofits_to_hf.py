@@ -73,10 +73,15 @@ class NonprofitHFUploader:
         Initialize uploader.
         
         Args:
-            repo_name: HF repo name (e.g., "CommunityOne/oral-health-nonprofits")
+            repo_name: HF repo prefix (e.g., "CommunityOne/oral-health-nonprofits")
+                      Each table will be uploaded to its own dataset:
+                      - CommunityOne/oral-health-nonprofits-organizations
+                      - CommunityOne/oral-health-nonprofits-financials
+                      - CommunityOne/oral-health-nonprofits-programs
+                      - CommunityOne/oral-health-nonprofits-locations
             token: HF token (or set HUGGINGFACE_TOKEN environment variable)
         """
-        self.repo_name = repo_name or "CommunityOne/oral-health-nonprofits"
+        self.repo_prefix = repo_name or "CommunityOne/one-nonprofits"
         self.token = token or os.getenv("HUGGINGFACE_TOKEN")
         self.gold_path = Path("data/gold")
         
@@ -90,22 +95,11 @@ class NonprofitHFUploader:
         # Login
         login(token=self.token)
         logger.info(f"✅ Logged in to Hugging Face")
-        
-        # Create repo if doesn't exist
-        try:
-            create_repo(
-                repo_id=self.repo_name,
-                repo_type="dataset",
-                private=False,  # Public = FREE unlimited storage!
-                exist_ok=True
-            )
-            logger.info(f"✅ Repository ready: https://huggingface.co/datasets/{self.repo_name}")
-        except Exception as e:
-            logger.warning(f"Repository may already exist: {e}")
+        logger.info(f"📦 Dataset prefix: {self.repo_prefix}")
     
     def upload_table(self, table_name: str):
         """
-        Upload a single nonprofit table to HuggingFace.
+        Upload a single nonprofit table to its own HuggingFace dataset.
         
         Args:
             table_name: Name of table (organizations, financials, programs, locations)
@@ -116,10 +110,25 @@ class NonprofitHFUploader:
         table_info = self.NONPROFIT_TABLES[table_name]
         file_path = self.gold_path / table_info["file"]
         
+        # Create dataset-specific repo name
+        repo_name = f"{self.repo_prefix}-{table_name}"
+        
         if not file_path.exists():
             logger.error(f"File not found: {file_path}")
             logger.error(f"Run: python scripts/create_all_gold_tables.py --nonprofits-only --use-irs --download-all-irs")
             return False
+        
+        # Create repo
+        try:
+            create_repo(
+                repo_id=repo_name,
+                repo_type="dataset",
+                private=False,
+                exist_ok=True
+            )
+            logger.info(f"✅ Repository ready: https://huggingface.co/datasets/{repo_name}")
+        except Exception as e:
+            logger.warning(f"Repository may already exist: {e}")
         
         logger.info(f"📤 Uploading {table_name} from {file_path}")
         
@@ -132,16 +141,15 @@ class NonprofitHFUploader:
         # Convert to HuggingFace Dataset
         dataset = Dataset.from_pandas(df)
         
-        # Upload
-        logger.info(f"  Pushing to {self.repo_name} (split: {table_info['split']})")
+        # Upload to table-specific dataset
+        logger.info(f"  Pushing to {repo_name}")
         dataset.push_to_hub(
-            repo_id=self.repo_name,
-            split=table_info["split"],
+            repo_id=repo_name,
             commit_message=f"Update {table_name} table - {len(df):,} records"
         )
         
         logger.success(f"✅ Uploaded {table_name}: {len(df):,} records")
-        logger.success(f"   View at: https://huggingface.co/datasets/{self.repo_name}/viewer/{table_info['split']}")
+        logger.success(f"   View at: https://huggingface.co/datasets/{repo_name}")
         
         return True
     
@@ -164,10 +172,11 @@ class NonprofitHFUploader:
             logger.info(f"  {status}: {table_name}")
         
         logger.success(f"\n🎉 All uploads complete!")
-        logger.success(f"   View dataset: https://huggingface.co/datasets/{self.repo_name}")
+        logger.success(f"   View datasets:")
+        for table_name in self.NONPROFIT_TABLES.keys():
+            logger.success(f"   - https://huggingface.co/datasets/{self.repo_prefix}-{table_name}")
         
-        # Create README if needed
-        self.create_readme()
+        # Don't create README - each dataset will have its own auto-generated one
     
     def create_readme(self):
         """Create README.md for the dataset."""
