@@ -13,13 +13,13 @@ RUN npm config set fetch-retry-mintimeout 20000 && \
     npm ci --prefer-offline --no-audit || npm install --prefer-offline --no-audit
 
 # Add cache-busting argument to force rebuild when needed
-ARG CACHE_BUST=2026-04-27-03-20-force-rebuild
+ARG CACHE_BUST=2026-04-27-04-15-nginx-routing-fix
 
 COPY website/ ./
 
 # Verify environment variable is set and build
 RUN echo "Building Docusaurus with DOCUSAURUS_BASE_URL=$DOCUSAURUS_BASE_URL" && \
-    echo "Cache bust: 2026-04-27-03-20-force-rebuild" && \
+    echo "Cache bust: 2026-04-27-04-15-nginx-routing-fix" && \
     npm run build && \
     echo "Verifying baseUrl in build output..." && \
     grep -r "baseUrl" build/ | head -5 || true
