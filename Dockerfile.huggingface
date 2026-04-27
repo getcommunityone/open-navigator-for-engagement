@@ -4,7 +4,8 @@
 FROM node:20-slim AS docs-builder
 WORKDIR /build
 
-# Set baseUrl BEFORE copying files to ensure cache invalidation
+# Set baseUrl to /docs/ for HuggingFace deployment  # Docs are served at nginx /docs/ location
+# routeBasePath: '/' in docusaurus.config.ts prevents /docs/docs/ nesting
 ENV DOCUSAURUS_BASE_URL=/docs/
 
 COPY website/package*.json ./
@@ -13,13 +14,13 @@ RUN npm config set fetch-retry-mintimeout 20000 && \
     npm ci --prefer-offline --no-audit || npm install --prefer-offline --no-audit
 
 # Add cache-busting argument to force rebuild when needed
-ARG CACHE_BUST=2026-04-27-04-15-nginx-routing-fix
+ARG CACHE_BUST=2026-04-27-12-00-fix-double-docs-prefix
 
 COPY website/ ./
 
 # Verify environment variable is set and build
 RUN echo "Building Docusaurus with DOCUSAURUS_BASE_URL=$DOCUSAURUS_BASE_URL" && \
-    echo "Cache bust: 2026-04-27-04-15-nginx-routing-fix" && \
+    echo "Cache bust: 2026-04-27-12-00-fix-double-docs-prefix" && \
     npm run build && \
     echo "Verifying baseUrl in build output..." && \
     grep -r "baseUrl" build/ | head -5 || true
