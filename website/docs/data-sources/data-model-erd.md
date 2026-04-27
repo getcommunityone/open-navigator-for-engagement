@@ -20,8 +20,16 @@ open-navigator-data/
 │   ├── counties            # 3,144 U.S. counties
 │   ├── states              # 50 states + DC, territories
 │   ├── school_districts    # 13,000+ districts (NCES data)
-│   ├── census_data         # Basic population & geographic data
-│   └── demographics        # 👥 Comprehensive demographics (race, age, income, education, etc.)
+│   └── census_data         # Basic FIPS codes & census year reference
+│
+├── demographics/           # 👥 Comprehensive demographic data (U.S. Census)
+│   ├── population          # Total population, age distribution
+│   ├── race_ethnicity      # Race and ethnicity breakdowns
+│   ├── income_economics    # Income, poverty, SNAP benefits
+│   ├── education           # Educational attainment levels
+│   ├── housing             # Housing units, ownership, values
+│   ├── employment          # Unemployment, labor force participation
+│   └── health_insurance    # Insurance coverage (uninsured, Medicaid, Medicare)
 │
 ├── social/                 # 📱 Social media presence
 │   ├── twitter             # Twitter/X accounts
