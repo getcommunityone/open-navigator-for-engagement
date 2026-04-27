@@ -1,0 +1,64 @@
+#!/bin/bash
+
+# Pre-push Git hook to prevent broken builds from being pushed
+# This runs quick build checks before allowing a push to remote
+
+echo "🔍 Running pre-push checks..."
+echo ""
+
+FAILED=false
+
+# Check 1: Frontend TypeScript
+echo "📝 Checking frontend TypeScript..."
+cd frontend
+if ! npx tsc --noEmit 2>&1 | head -20; then
+    echo "❌ TypeScript errors found in frontend/"
+    FAILED=true
+else
+    echo "✅ Frontend TypeScript OK"
+fi
+cd ..
+echo ""
+
+# Check 2: Python syntax
+echo "🐍 Checking Python syntax..."
+if ! python -m py_compile main.py 2>&1; then
+    echo "❌ Python syntax error in main.py"
+    FAILED=true
+else
+    echo "✅ Python syntax OK"
+fi
+echo ""
+
+# Check 3: Frontend build (quick check)
+echo "🏗️  Testing frontend build..."
+cd frontend
+if ! npm run build > /dev/null 2>&1; then
+    echo "❌ Frontend build failed"
+    echo "Run 'cd frontend && npm run build' to see details"
+    FAILED=true
+else
+    echo "✅ Frontend builds successfully"
+fi
+cd ..
+echo ""
+
+if [ "$FAILED" = true ]; then
+    echo ""
+    echo "═══════════════════════════════════════════════════════════"
+    echo "❌ PRE-PUSH CHECK FAILED"
+    echo "═══════════════════════════════════════════════════════════"
+    echo ""
+    echo "Please fix the errors above before pushing."
+    echo ""
+    echo "To bypass this check (NOT recommended):"
+    echo "  git push --no-verify"
+    echo ""
+    exit 1
+fi
+
+echo "═══════════════════════════════════════════════════════════"
+echo "✅ All pre-push checks passed!"
+echo "═══════════════════════════════════════════════════════════"
+echo ""
+exit 0

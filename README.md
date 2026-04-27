@@ -69,6 +69,9 @@ cd oral-health-policy-pulse
 cd frontend && npm install && cd ..   # React app
 cd website && npm install && cd ..    # Documentation
 
+# Setup git hooks for build protection (one-time)
+./setup-git-hooks.sh
+
 # Start all services in tmux
 ./start-all.sh
 ```

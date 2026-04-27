@@ -12,7 +12,15 @@ on:
         type: string
 
 jobs:
+  # First: Run all CI tests
+  ci-tests:
+    name: Run CI Tests Before Deploy
+    uses: ./.github/workflows/ci-build-test.yml
+
+  # Then: Deploy only if tests pass
   deploy:
+    name: Deploy to HuggingFace
+    needs: ci-tests
     runs-on: ubuntu-latest
     permissions:
       contents: read
