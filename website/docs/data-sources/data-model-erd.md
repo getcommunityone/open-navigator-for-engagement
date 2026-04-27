@@ -712,6 +712,44 @@ open-navigator-data/
     └── advocacy_alerts     # Opportunities for engagement
 ```
 
+### Parquet File Naming Convention
+
+**Rule:** Use underscores (`_`) consistently, NOT hyphens (`-`)
+
+**Format:** `{category}_{subcategory}.parquet`
+
+**Examples:**
+```
+✅ CORRECT (using underscores):
+jurisdictions_cities.parquet
+jurisdictions_counties.parquet
+jurisdictions_states.parquet
+jurisdictions_school_districts.parquet
+social_twitter.parquet
+social_facebook.parquet
+videos_youtube_channels.parquet
+meetings_government_meetings.parquet
+nonprofits_irs_nonprofits.parquet
+grants_federal_grants.parquet
+budgets_city_budgets.parquet
+
+❌ INCORRECT (using hyphens):
+jurisdictions-cities.parquet
+social-twitter.parquet
+meetings-government-meetings.parquet
+```
+
+**Why Underscores?**
+- ✅ Python-friendly variable names (can use `data.jurisdictions_cities`)
+- ✅ SQL-compatible column names
+- ✅ Consistent with folder structure (`school_districts`, not `school-districts`)
+- ✅ Better for programmatic access
+- ✅ Avoids shell escaping issues
+
+**Repository Name Exception:**
+- HuggingFace repo: `CommunityOne/open-navigator-data` (hyphen is fine for URLs)
+- File names inside repo: Use underscores (`jurisdictions_cities.parquet`)
+
 ## 🔄 Data Extraction Pipeline
 
 ### Phase 1: Discovery (Bronze Layer)
