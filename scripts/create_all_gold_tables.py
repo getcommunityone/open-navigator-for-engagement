@@ -61,6 +61,12 @@ def main():
         help="State codes for nonprofit discovery (e.g., AL MI NY)"
     )
     parser.add_argument(
+        "--ntee-codes",
+        nargs="+",
+        default=None,
+        help="NTEE codes to search (e.g., E P K). Default: E P K L S W. Use 'ALL' to skip filtering."
+    )
+    parser.add_argument(
         "--skip-discovery",
         action="store_true",
         help="Skip nonprofit API discovery, use existing bronze data"
