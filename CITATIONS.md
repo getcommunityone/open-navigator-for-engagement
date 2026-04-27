@@ -148,6 +148,63 @@ gt990datalake-rawdata/
 
 ---
 
+### **Google Cloud Public Datasets: IRS 990** ⭐
+
+Google hosts the complete IRS Form 990 dataset in BigQuery for fast SQL-based querying.
+
+**Platform:** Google Cloud BigQuery  
+**Dataset:** `bigquery-public-data.irs_990`  
+**Table:** `bigquery-public-data.irs_990.irs_990_xml`  
+**Documentation:** https://console.cloud.google.com/marketplace/product/internal-revenue-service/irs-990  
+**Cost:** First 1 TB of queries per month is **FREE**  
+**Coverage:** All e-filed Form 990s (2011-present, 5M+ records)
+
+**What we use:**
+- **Mission statements**: Extracted from `return_header` or `part_i_mission_desc` fields
+- **Website URLs**: Found in `website_address_txt` field
+- **Financial data**: All Form 990 fields accessible via SQL
+- **Fast bulk queries**: Extract data for 1M+ orgs in seconds (vs hours downloading XMLs)
+
+**Advantages:**
+- ✅ No local XML downloads needed
+- ✅ Single SQL query to bulk-extract fields
+- ✅ Serverless (no infrastructure to manage)
+- ✅ Fast (queries complete in seconds)
+- ✅ Free tier covers most research use cases
+
+**Example Query:**
+```sql
+SELECT 
+  ein,
+  org_name,
+  website_address_txt,
+  part_i_mission_desc,
+  total_revenue_current_year,
+  total_expenses_current_year
+FROM `bigquery-public-data.irs_990.irs_990_2023`
+WHERE state = 'AL'
+  AND ntee_code LIKE 'E%'
+LIMIT 1000;
+```
+
+**BibTeX:**
+```bibtex
+@misc{googlecloud_irs990,
+    title = {IRS 990 Public Dataset},
+    author = {{Google Cloud Public Datasets}},
+    year = {2024},
+    publisher = {Google Cloud Platform},
+    url = {https://console.cloud.google.com/marketplace/product/internal-revenue-service/irs-990},
+    note = {BigQuery public dataset of IRS Form 990 e-file data}
+}
+```
+
+**Attribution:** When using BigQuery 990 data, cite:
+1. IRS 990 Public Dataset (Google Cloud)
+2. Internal Revenue Service (original data source)
+
+---
+
 ### **IRS Exempt Organizations Business Master File (EO-BMF)**
 
 Basic nonprofit registration data (name, EIN, address, NTEE code).

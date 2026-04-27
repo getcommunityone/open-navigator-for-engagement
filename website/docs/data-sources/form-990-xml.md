@@ -25,10 +25,11 @@ The [990 Data Infrastructure](https://990data.givingtuesday.org/) is a collabora
 
 ### What's the Difference?
 
-| Data Source | Type | Records | Data Richness | What You Get |
-|-------------|------|---------|---------------|--------------|
-| **EO-BMF CSV** ✅ Currently using | Basic registry | 1.9M+ | ⭐ Low | Name, EIN, address, NTEE code, subsection |
-| **Form 990 XML** 🚀 Enhancement | Tax returns | ~300K/year | ⭐⭐⭐⭐⭐ High | Revenue, expenses, assets, grants, programs, officer compensation, mission statements |
+| Data Source | Type | Records | Data Richness | Access Method | Best For |
+|-------------|------|---------|---------------|---------------|----------|
+| **EO-BMF CSV** ✅ Currently using | Basic registry | 1.9M+ | ⭐ Low | Direct download | Initial org list |
+| **Google BigQuery** ⚡ Recommended | SQL queries | 5M+ | ⭐⭐⭐⭐⭐ High | SQL (serverless) | **Bulk mission/website extraction** |
+| **GivingTuesday Data Lake** 🚀 Advanced | XML files | 5.4M+ | ⭐⭐⭐⭐⭐ Very High | S3 download | Detailed parsing, custom fields |
 
 ## 📊 What Additional Data You Can Get
 
@@ -48,8 +49,287 @@ The [990 Data Infrastructure](https://990data.givingtuesday.org/) is a collabora
 - Grants awarded: $500K to 10 community health centers
 - Mission: "Improve oral health access in underserved communities"
 - Officers: CEO Sarah Johnson ($150K salary)
+- Website: https://alabamaoralhealth.org
 
-## 🚀 Accessing the GivingTuesday Data Lake
+---
+
+## ⚡ Google BigQuery (Recommended for Bulk Queries)
+
+**Fastest way to enrich 1M+ organizations with missions and websites!**
+
+### Why BigQuery?
+
+Google Cloud hosts the complete IRS 990 dataset in BigQuery - a serverless SQL database that lets you query **5 million Form 990s in seconds** without downloading any files.
+
+**Key advantages:**
+- ✅ **No downloads**: Query directly in the cloud
+- ✅ **Blazing fast**: Bulk queries complete in <30 seconds
+- ✅ **Free tier**: First 1 TB/month is free (enough for most research)
+- ✅ **SQL interface**: Easy to extract specific fields
+- ✅ **No infrastructure**: Serverless, nothing to manage
+
+**Cost:** Form 990 text fields are small - you can query **all 1.9M nonprofits for ~$0** using the free tier.
+
+### Quick Start
+
+**1. Set up Google Cloud (one-time)**
+```bash
+# Install Google Cloud SDK
+# Visit: https://cloud.google.com/sdk/docs/install
+
+# Authenticate
+gcloud auth login
+
+# Set project
+gcloud config set project YOUR_PROJECT_ID
+```
+
+**2. Extract mission statements & websites for all Alabama health orgs**
+
+```sql
+-- Query in BigQuery Console or via bq CLI
+SELECT 
+  ein,
+  organization_name,
+  website_address_txt AS website,
+  activity_or_mission_desc AS mission,
+  total_revenue_current_year AS revenue,
+  total_expenses_current_year AS expenses,
+  tax_period
+FROM `bigquery-public-data.irs_990.irs_990_2023`
+WHERE state = 'AL'
+  AND ntee_code LIKE 'E%'
+  AND activity_or_mission_desc IS NOT NULL
+ORDER BY total_revenue_current_year DESC
+LIMIT 10000;
+```
+
+**3. Run query from Python**
+
+```python
+from google.cloud import bigquery
+import pandas as pd
+
+# Initialize BigQuery client
+client = bigquery.Client()
+
+# Query for Alabama + Michigan health nonprofits with missions
+query = """
+SELECT 
+  ein,
+  organization_name,
+  website_address_txt AS website,
+  activity_or_mission_desc AS mission,
+  total_revenue_current_year AS revenue,
+  total_expenses_current_year AS expenses,
+  total_assets_eoy AS assets,
+  state,
+  tax_period
+FROM `bigquery-public-data.irs_990.irs_990_2023`
+WHERE state IN ('AL', 'MI')
+  AND ntee_code LIKE 'E%'
+  AND total_revenue_current_year > 0
+  AND activity_or_mission_desc IS NOT NULL
+"""
+
+# Execute query and load to DataFrame
+df = client.query(query).to_dataframe()
+print(f"Retrieved {len(df):,} organizations with missions")
+
+# Clean XML tags from mission text
+import re
+df['mission_clean'] = df['mission'].str.replace(r'<[^>]+>', '', regex=True).str.strip()
+
+# Save locally
+df.to_parquet('data/gold/nonprofits_990_bigquery.parquet')
+```
+
+**4. Merge with existing nonprofit data**
+
+```python
+import pandas as pd
+
+# Load your existing nonprofit data (from IRS EO-BMF)
+orgs = pd.read_parquet('data/gold/nonprofits_organizations.parquet')
+print(f"Existing orgs: {len(orgs):,}")
+
+# Load BigQuery results with missions & websites
+bq_data = pd.read_parquet('data/gold/nonprofits_990_bigquery.parquet')
+print(f"BigQuery results: {len(bq_data):,}")
+
+# Merge on EIN
+enriched = orgs.merge(
+    bq_data[['ein', 'mission_clean', 'website', 'revenue', 'expenses', 'assets']],
+    on='ein',
+    how='left',
+    suffixes=('', '_990')
+)
+
+# Fill missing data from 990 fields
+if 'mission' not in enriched.columns:
+    enriched['mission'] = enriched['mission_clean']
+if 'website' not in enriched.columns:
+    enriched['website'] = enriched['website_990']
+
+# Show enrichment stats
+missions_added = enriched['mission'].notna().sum()
+websites_added = enriched['website'].notna().sum()
+print(f"✅ Missions: {missions_added:,} ({100*missions_added/len(enriched):.1f}%)")
+print(f"✅ Websites: {websites_added:,} ({100*websites_added/len(enriched):.1f}%)")
+
+# Save enriched dataset
+enriched.to_parquet('data/gold/nonprofits_enriched_bigquery.parquet')
+print(f"💾 Saved {len(enriched):,} enriched organizations")
+```
+
+**Expected results:**
+- 30-50% of orgs will have missions (larger orgs file Form 990)
+- 20-40% will have websites listed
+- 100% will have EIN matching for revenue/expense data
+
+
+### BigQuery Table Structure
+
+The IRS 990 dataset is organized into **multiple tables** matching Form 990 schedules:
+
+#### Master Index Table
+**`bigquery-public-data.irs_990.irs_990_index`**
+- Links all returns together
+- Fields: `ein`, `organization_name`, `tax_period`, `return_id` (foreign key)
+
+#### Main Return Tables (by year)
+**`bigquery-public-data.irs_990.irs_990_YYYY`** - Full Form 990
+- **Mission**: `activity_or_mission_desc` ⭐
+- **Website**: `website_address_txt` ⭐
+- **Financials**: `total_revenue_current_year`, `total_expenses_current_year`
+- **Assets**: `total_assets_eoy`, `total_liabilities_eoy`
+- **State/NTEE**: `state`, `ntee_code`
+
+**`bigquery-public-data.irs_990.irs_990_ez_YYYY`** - Form 990-EZ (smaller orgs)
+- **Mission**: `mission_description` ⭐
+- **Website**: `website_address_txt` ⭐
+- **Financials**: `total_revenue`, `total_expenses`
+
+**`bigquery-public-data.irs_990.irs_990_pf_YYYY`** - Form 990-PF (Private Foundations)
+- **Grants**: Largest grants awarded (for grantmakers)
+- **Financials**: Foundation-specific fields
+
+#### Schedule Tables (Detailed Information)
+**`bigquery-public-data.irs_990.irs_990_schedule_a_YYYY`**
+- Public charity status and public support calculations
+
+**`bigquery-public-data.irs_990.irs_990_schedule_j_YYYY`**
+- **Executive compensation** (CEO, CFO, board member salaries) 💰
+
+**`bigquery-public-data.irs_990.irs_990_schedule_r_YYYY`**
+- Related organizations and transactions
+
+### Complete Field Mapping
+
+| Data Point | Table Name | Field Name | Notes |
+|------------|------------|------------|-------|
+| **Organization Name** | `irs_990_index` | `organization_name` | Master list |
+| **EIN** (Primary Key) | All tables | `ein` | 9-digit ID |
+| **Mission (990-EZ)** | `irs_990_ez_YYYY` | `mission_description` | Smaller orgs |
+| **Mission (Full 990)** | `irs_990_YYYY` | `activity_or_mission_desc` | Larger orgs |
+| **Website URL** | `irs_990_YYYY`, `irs_990_ez_YYYY` | `website_address_txt` | Both forms |
+| **Total Revenue** | `irs_990_YYYY` | `total_revenue_current_year` | Annual revenue |
+| **Total Expenses** | `irs_990_YYYY` | `total_expenses_current_year` | Annual expenses |
+| **Program Expenses** | `irs_990_YYYY` | `program_service_revenue` | Program revenue |
+| **Assets** | `irs_990_YYYY` | `total_assets_eoy` | End of year |
+| **Liabilities** | `irs_990_YYYY` | `total_liabilities_eoy` | End of year |
+| **Executive Salaries** | `irs_990_schedule_j_YYYY` | Compensation fields | CEO, CFO pay |
+| **Grants Paid** | `irs_990_pf_YYYY` | Grant fields | For foundations |
+| **Tax Period** | All tables | `tax_period` | YYYYMMDD format |
+| **State** | `irs_990_YYYY` | `state` | 2-letter code |
+
+### Query Examples for All Key Fields
+
+**Extract mission, website, AND revenue from both 990 and 990-EZ:**
+
+```sql
+-- Combine Full 990 and 990-EZ for complete coverage
+WITH full_990 AS (
+  SELECT 
+    ein,
+    activity_or_mission_desc AS mission,
+    website_address_txt AS website,
+    total_revenue_current_year AS revenue,
+    total_expenses_current_year AS expenses,
+    '990' AS form_type
+  FROM `bigquery-public-data.irs_990.irs_990_2023`
+  WHERE state IN ('AL', 'MI')
+    AND activity_or_mission_desc IS NOT NULL
+),
+ez_990 AS (
+  SELECT 
+    ein,
+    mission_description AS mission,
+    website_address_txt AS website,
+    total_revenue AS revenue,
+    total_expenses AS expenses,
+    '990-EZ' AS form_type
+  FROM `bigquery-public-data.irs_990.irs_990_ez_2023`
+  WHERE state IN ('AL', 'MI')
+    AND mission_description IS NOT NULL
+)
+SELECT * FROM full_990
+UNION ALL
+SELECT * FROM ez_990
+ORDER BY revenue DESC;
+```
+
+**Add executive compensation:**
+
+```sql
+-- Get mission + CEO salary
+SELECT 
+  f.ein,
+  f.activity_or_mission_desc AS mission,
+  f.website_address_txt AS website,
+  f.total_revenue_current_year AS revenue,
+  j.compensation_amount AS ceo_compensation
+FROM `bigquery-public-data.irs_990.irs_990_2023` f
+LEFT JOIN `bigquery-public-data.irs_990.irs_990_schedule_j_2023` j
+  ON f.ein = j.ein
+WHERE f.state = 'AL'
+  AND j.title_txt LIKE '%CEO%' OR j.title_txt LIKE '%President%'
+ORDER BY revenue DESC
+LIMIT 100;
+```
+
+### Data Cleaning Tips
+
+**The catch:** Some fields have messy XML tags embedded (like `<MissionDesc>`). Clean with regex:
+
+```python
+import re
+import pandas as pd
+
+# Clean XML tags from missions
+df['mission_clean'] = df['mission'].str.replace(r'<[^>]+>', '', regex=True)
+
+# Trim whitespace
+df['mission_clean'] = df['mission_clean'].str.strip()
+
+# Remove common artifacts
+df['mission_clean'] = df['mission_clean'].str.replace(r'\s+', ' ', regex=True)
+```
+
+### Cost Estimation
+
+**Free tier:** 1 TB of queries per month (resets monthly)
+
+**Typical query costs:**
+- Extract missions for 1M orgs: **~50 GB scanned = FREE**
+- Extract all fields for 1M orgs: **~200 GB scanned = FREE**
+- Full table scan of all years: **~2 TB = $10** (one-time cost)
+
+**Tip:** Use `WHERE` clauses to filter by state/NTEE to reduce data scanned.
+
+---
+
+## 🚀 GivingTuesday Data Lake (For Advanced Parsing)
 
 ### Option 1: Via AWS Console (Free Account)
 
