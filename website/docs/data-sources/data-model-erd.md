@@ -1053,6 +1053,356 @@ grants/
 └── federal_grants      # USASpending.gov federal grants
 ```
 
+## ⏰ Time Dimension Modeling
+
+To enable robust time-series analysis, trend tracking, and temporal comparisons, we implement a comprehensive time dimension alongside our fact tables.
+
+### Time Dimension Table
+
+```sql
+DATE_DIMENSION {
+    date date PK
+    year int
+    quarter int
+    quarter_name string
+    month int
+    month_name string
+    month_abbr string
+    day_of_month int
+    day_of_week int
+    day_name string
+    day_abbr string
+    week_of_year int
+    fiscal_year int
+    fiscal_quarter int
+    fiscal_month int
+    is_weekend boolean
+    is_holiday boolean
+    holiday_name string
+    is_business_day boolean
+    days_in_month int
+    year_month string
+    year_quarter string
+}
+```
+
+### Temporal Relationships
+
+All time-bound entities link to the date dimension for consistent temporal analysis:
+
+```mermaid
+erDiagram
+    DATE_DIMENSION ||--o{ MEETING : "meeting_date"
+    DATE_DIMENSION ||--o{ GOVERNMENT_BUDGET : "fiscal_year_start"
+    DATE_DIMENSION ||--o{ BALLOT_MEASURE : "election_date"
+    DATE_DIMENSION ||--o{ LEGISLATION : "introduced_date"
+    DATE_DIMENSION ||--o{ GRANT : "start_date, end_date"
+    DATE_DIMENSION ||--o{ NONPROFIT_FILING : "tax_period_end"
+    DATE_DIMENSION ||--o{ POLICY_TRACKER : "tracked_date"
+    DATE_DIMENSION ||--o{ SURVEY : "field_date_start, field_date_end"
+    DATE_DIMENSION ||--o{ FACT_CHECK : "published_date"
+    
+    DATE_DIMENSION {
+        date date PK
+        year int
+        quarter int
+        month int
+        fiscal_year int
+        is_business_day boolean
+    }
+```
+
+### Temporal Analysis Patterns
+
+**Year-over-Year Comparisons:**
+```sql
+SELECT 
+    d.year,
+    d.quarter_name,
+    COUNT(m.meeting_id) as meeting_count,
+    COUNT(m.meeting_id) - LAG(COUNT(m.meeting_id)) OVER (ORDER BY d.year, d.quarter) as yoy_change
+FROM MEETING m
+JOIN DATE_DIMENSION d ON m.meeting_date = d.date
+WHERE d.year BETWEEN 2023 AND 2025
+GROUP BY d.year, d.quarter, d.quarter_name
+ORDER BY d.year, d.quarter;
+```
+
+**Fiscal Period Aggregation:**
+```sql
+SELECT 
+    d.fiscal_year,
+    d.fiscal_quarter,
+    SUM(b.total_expenditures) as total_spending,
+    AVG(b.total_expenditures) as avg_spending
+FROM GOVERNMENT_BUDGET b
+JOIN DATE_DIMENSION d ON b.fiscal_year = d.fiscal_year
+WHERE b.jurisdiction_type = 'city'
+GROUP BY d.fiscal_year, d.fiscal_quarter;
+```
+
+**Trend Detection:**
+```sql
+-- Identify growing advocacy momentum
+SELECT 
+    d.year_month,
+    COUNT(DISTINCT pt.topic_id) as active_topics,
+    COUNT(m.meeting_id) as related_meetings,
+    COUNT(bm.measure_id) as ballot_initiatives
+FROM DATE_DIMENSION d
+LEFT JOIN MEETING m ON m.meeting_date = d.date AND m.oral_health_related = true
+LEFT JOIN POLICY_TRACKER pt ON d.date BETWEEN pt.start_date AND COALESCE(pt.end_date, CURRENT_DATE)
+LEFT JOIN BALLOT_MEASURE bm ON bm.election_date = d.date
+WHERE d.date >= DATE_SUB(CURRENT_DATE, INTERVAL 24 MONTH)
+GROUP BY d.year_month
+ORDER BY d.year_month;
+```
+
+## 📊 Metric Views
+
+Metric views provide pre-aggregated, analysis-ready datasets combining multiple source tables with built-in dimensions, measures, and filters.
+
+### Core Metric View Components
+
+| Component | Description | Example |
+|-----------|-------------|---------|
+| **Source** | Base table, view, or SQL query containing the data | `MEETING`, `GOVERNMENT_BUDGET`, `NONPROFIT_FILING` |
+| **Dimensions** | Column attributes used to segment or group metrics | `jurisdiction_type`, `fiscal_year`, `policy_topic` |
+| **Measures** | Column aggregations that produce metrics | `COUNT(meeting_id) as meeting_count`, `SUM(grant_amount) as total_funding` |
+| **Filters** | Conditions applied to source data to define scope | `oral_health_related = true`, `fiscal_year > 2020` |
+| **Joins** | Relationships between tables to enrich data | `JOIN JURISDICTION ON meeting.jurisdiction_id = jurisdiction.jurisdiction_id` |
+
+### Example Metric Views
+
+#### 1. Advocacy Activity Metrics
+
+**Purpose:** Track oral health advocacy momentum across jurisdictions
+
+```sql
+CREATE VIEW metric_advocacy_activity AS
+SELECT 
+    -- Dimensions
+    j.jurisdiction_id,
+    j.jurisdiction_type,
+    j.state_code,
+    j.county_name,
+    d.year,
+    d.quarter_name,
+    d.month_name,
+    pt.topic_name,
+    
+    -- Measures
+    COUNT(DISTINCT m.meeting_id) as meeting_count,
+    COUNT(DISTINCT bm.measure_id) as ballot_measure_count,
+    COUNT(DISTINCT l.bill_id) as legislation_count,
+    COUNT(DISTINCT fc.claim_id) as fact_check_count,
+    
+    -- Calculated Metrics
+    SUM(CASE WHEN m.oral_health_related THEN 1 ELSE 0 END) as oral_health_meeting_count,
+    AVG(CASE WHEN bm.result = 'passed' THEN 1 ELSE 0 END) as ballot_success_rate,
+    COUNT(DISTINCT n.nonprofit_id) as active_nonprofit_count
+
+FROM JURISDICTION j
+JOIN DATE_DIMENSION d ON d.date BETWEEN DATE_SUB(CURRENT_DATE, INTERVAL 365 DAY) AND CURRENT_DATE
+LEFT JOIN MEETING m ON m.jurisdiction_id = j.jurisdiction_id AND m.meeting_date = d.date
+LEFT JOIN POLICY_TRACKER pt ON pt.jurisdiction_id = j.jurisdiction_id
+LEFT JOIN BALLOT_MEASURE bm ON bm.jurisdiction_id = j.jurisdiction_id AND bm.election_date = d.date
+LEFT JOIN LEGISLATION l ON l.state_code = j.state_code AND l.introduced_date = d.date
+LEFT JOIN FACT_CHECK fc ON fc.published_date = d.date
+LEFT JOIN NONPROFIT n ON n.jurisdiction_id = j.jurisdiction_id
+
+WHERE 
+    -- Filters
+    d.is_business_day = true
+    AND (
+        m.oral_health_related = true 
+        OR pt.topic_area LIKE '%oral health%'
+        OR pt.topic_area LIKE '%dental%'
+        OR pt.topic_area LIKE '%fluoride%'
+    )
+
+GROUP BY 
+    j.jurisdiction_id, j.jurisdiction_type, j.state_code, j.county_name,
+    d.year, d.quarter_name, d.month_name, pt.topic_name;
+```
+
+**Usage:**
+```sql
+-- Find top 10 most active jurisdictions for oral health advocacy
+SELECT 
+    jurisdiction_id,
+    state_code,
+    jurisdiction_type,
+    SUM(meeting_count) as total_meetings,
+    SUM(ballot_measure_count) as total_ballot_measures,
+    SUM(oral_health_meeting_count) as oral_health_meetings
+FROM metric_advocacy_activity
+WHERE year = 2025
+GROUP BY jurisdiction_id, state_code, jurisdiction_type
+ORDER BY total_meetings DESC
+LIMIT 10;
+```
+
+#### 2. Government Spending Metrics
+
+**Purpose:** Analyze government budget allocations and trends
+
+```sql
+CREATE VIEW metric_government_spending AS
+SELECT 
+    -- Dimensions
+    j.jurisdiction_id,
+    j.jurisdiction_type,
+    j.state_code,
+    j.population,
+    d.fiscal_year,
+    d.fiscal_quarter,
+    bc.category_name as budget_category,
+    
+    -- Measures
+    SUM(gb.total_revenue) as total_revenue,
+    SUM(gb.total_expenditures) as total_expenditures,
+    SUM(gb.total_debt) as total_debt,
+    SUM(gb.property_tax_revenue) as property_tax_revenue,
+    SUM(gb.federal_grants) as federal_grants,
+    SUM(gb.state_grants) as state_grants,
+    
+    -- Calculated Metrics
+    SUM(gb.total_revenue) / NULLIF(j.population, 0) as revenue_per_capita,
+    SUM(gb.total_expenditures) / NULLIF(j.population, 0) as spending_per_capita,
+    SUM(gb.total_debt) / NULLIF(j.population, 0) as debt_per_capita,
+    (SUM(gb.total_revenue) - SUM(gb.total_expenditures)) as budget_surplus_deficit,
+    SUM(bc.amount) / NULLIF(SUM(gb.total_expenditures), 0) * 100 as category_pct_of_budget
+
+FROM JURISDICTION j
+JOIN DATE_DIMENSION d ON d.fiscal_year BETWEEN 2020 AND 2025
+JOIN GOVERNMENT_BUDGET gb ON gb.jurisdiction_id = j.jurisdiction_id AND gb.fiscal_year = d.fiscal_year
+LEFT JOIN BUDGET_CATEGORY bc ON bc.budget_id = gb.budget_id
+
+WHERE 
+    -- Filters
+    gb.total_expenditures > 0
+    AND j.population > 0
+
+GROUP BY 
+    j.jurisdiction_id, j.jurisdiction_type, j.state_code, j.population,
+    d.fiscal_year, d.fiscal_quarter, bc.category_name;
+```
+
+**Usage:**
+```sql
+-- Compare spending per capita across jurisdiction types
+SELECT 
+    jurisdiction_type,
+    fiscal_year,
+    AVG(spending_per_capita) as avg_spending_per_capita,
+    AVG(revenue_per_capita) as avg_revenue_per_capita,
+    AVG(debt_per_capita) as avg_debt_per_capita
+FROM metric_government_spending
+GROUP BY jurisdiction_type, fiscal_year
+ORDER BY fiscal_year DESC, avg_spending_per_capita DESC;
+```
+
+#### 3. Nonprofit Impact Metrics
+
+**Purpose:** Measure nonprofit activity, funding, and service delivery
+
+```sql
+CREATE VIEW metric_nonprofit_impact AS
+SELECT 
+    -- Dimensions
+    n.nonprofit_id,
+    n.organization_name,
+    n.state,
+    n.city,
+    nc.ntee_code,
+    nc.category_name,
+    d.tax_year,
+    
+    -- Measures
+    SUM(nf.total_revenue) as total_revenue,
+    SUM(nf.total_expenses) as total_expenses,
+    SUM(nf.total_assets) as total_assets,
+    SUM(nf.program_service_expenses) as program_expenses,
+    SUM(nf.fundraising_expenses) as fundraising_expenses,
+    SUM(nf.management_expenses) as management_expenses,
+    COUNT(DISTINCT g.grant_id) as grants_received_count,
+    SUM(g.grant_amount) as total_grants_received,
+    
+    -- Calculated Metrics
+    SUM(nf.program_service_expenses) / NULLIF(SUM(nf.total_expenses), 0) * 100 as program_expense_ratio,
+    SUM(nf.fundraising_expenses) / NULLIF(SUM(nf.total_revenue), 0) * 100 as fundraising_efficiency,
+    (SUM(nf.total_revenue) - SUM(nf.total_expenses)) as net_income,
+    COUNT(DISTINCT nf.year) as years_active
+
+FROM NONPROFIT n
+JOIN DATE_DIMENSION d ON d.year BETWEEN 2020 AND 2025
+JOIN NONPROFIT_FILING nf ON nf.ein = n.ein AND nf.tax_year = d.year
+LEFT JOIN NONPROFIT_CAUSE nc ON nc.cause_id = n.primary_cause_id
+LEFT JOIN GRANT g ON g.recipient_ein = n.ein AND g.tax_year = d.year
+
+WHERE 
+    -- Filters
+    nf.total_revenue > 0
+    AND (
+        nc.category_name LIKE '%health%'
+        OR nc.category_name LIKE '%dental%'
+        OR n.mission_statement LIKE '%oral health%'
+    )
+
+GROUP BY 
+    n.nonprofit_id, n.organization_name, n.state, n.city,
+    nc.ntee_code, nc.category_name, d.tax_year;
+```
+
+**Usage:**
+```sql
+-- Identify high-performing health nonprofits by program efficiency
+SELECT 
+    organization_name,
+    state,
+    tax_year,
+    total_revenue,
+    program_expense_ratio,
+    fundraising_efficiency
+FROM metric_nonprofit_impact
+WHERE 
+    tax_year = 2024
+    AND total_revenue > 1000000
+    AND program_expense_ratio > 75  -- More than 75% goes to programs
+ORDER BY program_expense_ratio DESC, total_revenue DESC
+LIMIT 20;
+```
+
+### Metric View Best Practices
+
+1. **Grain Definition**: Clearly define the granularity of each metric view (e.g., per jurisdiction per month)
+2. **Performance**: Pre-aggregate expensive calculations to improve query performance
+3. **Incremental Updates**: Design views to support incremental refresh rather than full rebuilds
+4. **Documentation**: Document all dimension values, measure calculations, and filter logic
+5. **Naming Convention**: Use `metric_` prefix followed by descriptive name (e.g., `metric_advocacy_activity`)
+6. **Testing**: Validate measure calculations against source data to ensure accuracy
+
+### Query Optimization
+
+For large-scale analytics, metric views can be materialized:
+
+```sql
+-- Materialize for fast querying
+CREATE MATERIALIZED VIEW metric_advocacy_activity_mat AS
+SELECT * FROM metric_advocacy_activity;
+
+-- Refresh incrementally
+REFRESH MATERIALIZED VIEW metric_advocacy_activity_mat;
+
+-- Add indexes on common filter/join columns
+CREATE INDEX idx_advocacy_state_year 
+ON metric_advocacy_activity_mat(state_code, year);
+
+CREATE INDEX idx_advocacy_jurisdiction 
+ON metric_advocacy_activity_mat(jurisdiction_id);
+```
+
 ## 🎯 Missing Datasets to Add
 
 ### High Priority
