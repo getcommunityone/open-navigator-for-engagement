@@ -638,7 +638,8 @@ open-navigator-data/
 │   ├── counties            # 3,144 U.S. counties
 │   ├── states              # 50 states + DC, territories
 │   ├── school_districts    # 13,000+ districts (NCES data)
-│   └── census_data         # Demographics, population, income
+│   ├── census_data         # Basic population & geographic data
+│   └── demographics        # 👥 Comprehensive demographics (race, age, income, education, etc.)
 │
 ├── social/                 # 📱 Social media presence
 │   ├── twitter             # Twitter/X accounts
