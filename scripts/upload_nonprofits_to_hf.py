@@ -340,7 +340,7 @@ def main():
     parser = argparse.ArgumentParser(description="Upload nonprofit gold tables to HuggingFace")
     parser.add_argument("--all", action="store_true", help="Upload all tables")
     parser.add_argument("--table", choices=["organizations", "financials", "programs", "locations"], help="Upload specific table")
-    parser.add_argument("--repo", default="CommunityOne/oral-health-nonprofits", help="HuggingFace repo name")
+    parser.add_argument("--repo", default="CommunityOne/one-nonprofits", help="HuggingFace repo name")
     
     args = parser.parse_args()
     
