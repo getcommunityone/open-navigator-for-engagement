@@ -13,7 +13,7 @@ import {
 interface ExploreCard {
   title: string;
   description: string;
-  icon: React.ComponentType<{ className?: string; style?: React.CSSProperties }>;
+  icon: React.ComponentType<{ className?: string }>;
   path: string;
   color: string;
   stats?: string;
@@ -121,10 +121,9 @@ export default function Explore() {
                     className="w-14 h-14 rounded-lg flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300"
                     style={{ backgroundColor: `${option.color}15` }}
                   >
-                    <Icon
-                      className="h-7 w-7"
-                      style={{ color: option.color }}
-                    />
+                    <div style={{ color: option.color }}>
+                      <Icon className="h-7 w-7" />
+                    </div>
                   </div>
 
                   {/* Title and Stats */}
