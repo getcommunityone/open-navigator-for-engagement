@@ -12,6 +12,10 @@ import PeopleFinder from './pages/PeopleFinder'
 import DebateFinder from './pages/DebateGrader'
 import Profile from './pages/Profile'
 import Explore from './pages/Explore'
+import Events from './pages/Events'
+import Services from './pages/Services'
+import Developers from './pages/Developers'
+import Hackathons from './pages/Hackathons'
 
 function App() {
   return (
@@ -36,6 +40,10 @@ function App() {
         <Route path="debate-grader" element={<DebateFinder />} />
         <Route path="profile" element={<Profile />} />
         <Route path="settings" element={<Settings />} />
+        <Route path="events" element={<Events />} />
+        <Route path="services" element={<Services />} />
+        <Route path="developers" element={<Developers />} />
+        <Route path="hackathons" element={<Hackathons />} />
       </Route>
     </Routes>
   )

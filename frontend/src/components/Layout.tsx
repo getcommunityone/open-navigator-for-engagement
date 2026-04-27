@@ -48,15 +48,15 @@ const navigation = [
   { 
     section: 'Families & Individuals',
     items: [
-      { name: 'Community Events', href: '/documents?filter=upcoming', icon: BookOpenIcon },
-      { name: 'Services & Resources', href: '/nonprofits?category=family-services', icon: HeartIcon },
+      { name: 'Community Events', href: '/events', icon: BookOpenIcon },
+      { name: 'Services & Resources', href: '/services', icon: HeartIcon },
     ]
   },
   { 
     section: 'Developers',
     items: [
       { name: 'Open Source', href: 'https://github.com/getcommunityone/open-navigator-for-engagement', icon: CodeBracketIcon, external: true },
-      { name: 'Hackathons', href: '/opportunities?type=hackathon', icon: AcademicCapIcon },
+      { name: 'Hackathons', href: '/hackathons', icon: AcademicCapIcon },
     ]
   },
   { name: 'Settings', href: '/settings', icon: Cog6ToothIcon },
