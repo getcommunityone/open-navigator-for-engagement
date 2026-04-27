@@ -83,15 +83,34 @@ if ! command -v hf &> /dev/null; then
     pip install huggingface-hub
 fi
 
-# Check if logged in
+# Authenticate with HuggingFace
 echo "🔐 Checking Hugging Face authentication..."
 if ! hf whoami &> /dev/null; then
-    echo "❌ Not logged in to Hugging Face"
-    echo "Please run: hf auth login"
-    exit 1
+    # Not logged in - try to login with token from .env
+    if [ -n "$HUGGINGFACE_TOKEN" ]; then
+        echo "🔑 Logging in with HUGGINGFACE_TOKEN from .env..."
+        echo "$HUGGINGFACE_TOKEN" | hf auth login --token-stdin
+        if ! hf whoami &> /dev/null; then
+            echo "❌ Failed to authenticate with HUGGINGFACE_TOKEN"
+            echo "Please check your token in .env file"
+            exit 1
+        fi
+        echo "✅ Successfully authenticated with token from .env"
+    else
+        echo "❌ Not logged in to Hugging Face"
+        echo ""
+        echo "Option 1: Add HUGGINGFACE_TOKEN to .env file (RECOMMENDED)"
+        echo "  Get token from: https://huggingface.co/settings/tokens"
+        echo "  Add to .env: HUGGINGFACE_TOKEN=hf_..."
+        echo ""
+        echo "Option 2: Login manually"
+        echo "  hf auth login"
+        echo ""
+        exit 1
+    fi
+else
+    echo "✅ Already authenticated as: $(hf whoami)"
 fi
-
-echo "✅ Authenticated as: $(hf whoami)"
 echo ""
 
 # Run Docker build test before deployment (unless skipped)
