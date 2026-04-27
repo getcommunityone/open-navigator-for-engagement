@@ -102,6 +102,36 @@ July 2023, Toronto, Canada.
 - Used for: Topic definitions, validated question wording, national opinion baselines, messaging optimization
 - Citation: "Roper Center for Public Opinion Research, Cornell University. iPoll Databank. https://ropercenter.cornell.edu/ipoll/"
 
+### **Google Fact Check Tools API**
+- Aggregated fact-checking data with ClaimReview structured data
+- Organization: Google LLC
+- Source: https://toolbox.google.com/factcheck/explorer
+- API: https://developers.google.com/fact-check/tools/api
+- Schema: https://developers.google.com/search/docs/appearance/structured-data/factcheck
+- License: Free API with quota (10,000 queries/day)
+- Coverage: 100+ fact-checking organizations worldwide, all claim types
+- Used for: Verifying claims from meetings/legislation, tracking misinformation, accountability scoring
+- Citation: "Google Fact Check Tools API. Google LLC. https://developers.google.com/fact-check/tools/api"
+
+### **FactCheck.org**
+- Nonpartisan fact-checking of political claims and viral misinformation
+- Organization: Annenberg Public Policy Center, University of Pennsylvania
+- Source: https://www.factcheck.org/
+- License: Free (web scraping allowed with rate limiting)
+- Coverage: National politics, health claims, science, viral content (2003-present)
+- Used for: Verifying political claims, health policy fact-checking, scientific claim verification
+- Citation: "FactCheck.org. Annenberg Public Policy Center, University of Pennsylvania. https://www.factcheck.org/"
+
+### **PolitiFact**
+- Pulitzer Prize-winning fact-checking with Truth-O-Meter ratings
+- Organization: Poynter Institute
+- Source: https://www.politifact.com/
+- License: Free (web scraping allowed with rate limiting)
+- Coverage: All 50 states, federal politics, ballot measures (2007-present)
+- Rating Scale: 6-point (True, Mostly True, Half True, Mostly False, False, Pants on Fire)
+- Used for: State-level fact-checking, tracking politician claims, ballot measure verification
+- Citation: "PolitiFact. Poynter Institute. https://www.politifact.com/"
+
 ---
 
 ## 🙏 **Acknowledgments**

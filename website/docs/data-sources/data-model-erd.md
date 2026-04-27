@@ -743,11 +743,17 @@ meetings_government_meetings.parquet
 nonprofits_irs_nonprofits.parquet
 grants_federal_grants.parquet
 budgets_city_budgets.parquet
+surveys_national_polls.parquet
+surveys_roper_questions.parquet
+factchecks_claim_reviews.parquet
+factchecks_politifact.parquet
 
 ❌ INCORRECT (using hyphens):
 jurisdictions-cities.parquet
 social-twitter.parquet
 meetings-government-meetings.parquet
+surveys-national-polls.parquet
+factchecks-claim-reviews.parquet
 ```
 
 **Why Underscores?**
