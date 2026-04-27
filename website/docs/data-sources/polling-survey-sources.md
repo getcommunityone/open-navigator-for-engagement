@@ -384,7 +384,7 @@ erDiagram
 ### Phase 3: National Benchmarking
 - [ ] Add `national_support_pct` to all topics
 - [ ] Compare local meeting sentiment to national baselines
-- [ ] Alert when local support diverges >15% from national
+- [ ] Alert when local support diverges more than 15% from national
 - [ ] Track trends over time
 
 ### Phase 4: Messaging Optimization
@@ -445,8 +445,8 @@ Have experience with other public opinion data sources? Please contribute!
    - Note subtle differences in framing
 
 3. **Check methodology**
-   - Sample size >800 for national surveys
-   - Margin of error <+/- 5%
+   - Sample size: 800+ for national surveys
+   - Margin of error: under 5% preferred
    - Random sampling preferred
 
 4. **Track polling organization**
