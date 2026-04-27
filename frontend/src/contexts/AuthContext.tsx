@@ -36,16 +36,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   // Load user from localStorage on mount
   useEffect(() => {
-    console.log('🔐 Auth initialization starting...');
-    console.log('🔐 Current URL:', window.location.href);
-    
     // Check for token in URL FIRST (OAuth callback)
     const urlParams = new URLSearchParams(window.location.search);
     const urlToken = urlParams.get('token');
     
     if (urlToken) {
-      console.log('🔐 OAuth callback - Token received from URL');
-      console.log('🔐 Token preview:', urlToken.substring(0, 20) + '...');
       localStorage.setItem('auth_token', urlToken);
       setToken(urlToken);
       fetchUser(urlToken);
@@ -57,80 +52,48 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     
     // Check for stored token
     const storedToken = localStorage.getItem('auth_token');
-    console.log('🔐 Stored token found:', !!storedToken);
     
     if (storedToken) {
-      console.log('🔐 Token preview:', storedToken.substring(0, 20) + '...');
       setToken(storedToken);
       fetchUser(storedToken);
     } else {
-      console.log('🔐 No token found - user not authenticated');
       setIsLoading(false);
     }
   }, []);
 
-  // Debug: Log user state changes
-  useEffect(() => {
-    console.log('🔐 User state changed:', {
-      user: user ? { id: user.id, email: user.email } : null,
-      isAuthenticated: !!user,
-      token: token ? token.substring(0, 20) + '...' : null,
-    });
-  }, [user, token]);
-
   const fetchUser = async (authToken: string) => {
     try {
-      console.log('🔐 Fetching user data from:', `${API_URL}/auth/me`);
-      console.log('🔐 Using token:', authToken.substring(0, 30) + '...');
-      
       const response = await fetch(`${API_URL}/auth/me`, {
         headers: {
           'Authorization': `Bearer ${authToken}`,
         },
       });
 
-      console.log('🔐 Response status:', response.status);
-      console.log('🔐 Response headers:', Object.fromEntries(response.headers.entries()));
-
       if (response.ok) {
         const userData = await response.json();
-        console.log('✅ User data loaded:', userData);
-        console.log('✅ Setting user state with:', {
-          id: userData.id,
-          email: userData.email,
-          avatar_url: userData.avatar_url,
-          full_name: userData.full_name,
-        });
         setUser(userData);
       } else {
-        const errorText = await response.text();
-        console.error('❌ Failed to fetch user:', response.status, response.statusText);
-        console.error('❌ Error details:', errorText);
         // Token is invalid
         localStorage.removeItem('auth_token');
         setToken(null);
       }
     } catch (error) {
-      console.error('❌ Error fetching user:', error);
+      console.error('Error fetching user:', error);
       localStorage.removeItem('auth_token');
       setToken(null);
     } finally {
       setIsLoading(false);
-      console.log('🔐 Loading complete. User:', user ? user.email : 'null');
     }
   };
 
   const login = (provider: string) => {
-    console.log('🔐 Starting OAuth flow for provider:', provider);
     // Redirect to OAuth endpoint
     const redirectUri = encodeURIComponent(window.location.origin);
     const authUrl = `${API_URL}/auth/login/${provider}?redirect_uri=${redirectUri}`;
-    console.log('🔐 Redirecting to:', authUrl);
     window.location.href = authUrl;
   };
 
   const logout = () => {
-    console.log('🔐 Logging out - removing token');
     localStorage.removeItem('auth_token');
     setToken(null);
     setUser(null);
