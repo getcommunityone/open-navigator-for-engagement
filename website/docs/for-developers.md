@@ -50,10 +50,10 @@ Open Navigator processes data at scale across the United States:
 - OpenAI API: Pay per token (required for LLM features)
 - Harvard Dataverse: API key recommended (free registration)
 
-:::info 📚 **Complete Technical Citations & Standards**
+:::info **Complete Technical Citations & Standards**
 For full citations, licenses, API documentation, and technical specifications:
 
-👉 **[Citations & Data Sources](/docs/data-sources/citations)**
+**[Citations & Data Sources](/data-sources/citations)**
 
 Includes:
 - **Academic Research**: MeetingBank (ACL 2023), Roper Center iPoll

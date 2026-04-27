@@ -17,7 +17,7 @@ const sidebars: SidebarsConfig = {
     {
       type: 'doc',
       id: 'data-sources/citations',
-      label: '📚 Citations & Data Sources',
+      label: 'Citations & Data Sources',
     },
   ],
 
@@ -39,7 +39,7 @@ const sidebars: SidebarsConfig = {
             {
               type: 'doc',
               id: 'data-sources/citations',
-              label: '📚 Citations & Data Sources',
+              label: 'Citations & Data Sources',
             },
             'data-sources/nonprofit-sources',
             'data-sources/video-sources',
@@ -94,7 +94,7 @@ const sidebars: SidebarsConfig = {
             {
               type: 'doc',
               id: 'data-sources/citations',
-              label: '📚 Citations & Data Sources',
+              label: 'Citations & Data Sources',
             },
             'data-sources/data-model-erd',
             'data-sources/jurisdiction-discovery',
@@ -187,7 +187,7 @@ const sidebars: SidebarsConfig = {
             {
               type: 'doc',
               id: 'data-sources/citations',
-              label: '📚 Citations & Data Sources',
+              label: 'Citations & Data Sources',
             },
             'data-sources/nonprofit-sources',
             'data-sources/video-sources',
@@ -239,7 +239,7 @@ const sidebars: SidebarsConfig = {
             {
               type: 'doc',
               id: 'data-sources/citations',
-              label: '📚 Citations & Data Sources',
+              label: 'Citations & Data Sources',
             },
             'data-sources/data-model-erd',
             'data-sources/jurisdiction-discovery',

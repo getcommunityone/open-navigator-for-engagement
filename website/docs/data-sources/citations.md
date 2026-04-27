@@ -1,9 +1,9 @@
 ---
 sidebar_position: 2
-sidebar_label: 📚 Citations & Data Sources
+sidebar_label: Citations & Data Sources
 ---
 
-# 📚 Citations & Data Sources
+# Citations & Data Sources
 
 :::tip **Why This Page Matters**
 **All data used in Open Navigator for Engagement is properly cited and attributed.** This page provides complete citations, licenses, BibTeX references, and links to original sources for academic research, government data, civic tech standards, and more.

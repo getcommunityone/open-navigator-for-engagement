@@ -120,8 +120,8 @@ const config: Config = {
           label: 'Developers',
         },
         {
-          to: '/docs/data-sources/citations',
-          label: '📚 Citations',
+          to: '/data-sources/citations',
+          label: 'Citations',
           position: 'left',
         },
         {to: '/blog', label: 'Blog', position: 'left'},
@@ -143,8 +143,8 @@ const config: Config = {
               to: '/docs/intro',
             },
             {
-              label: '📚 Citations & Data Sources',
-              to: '/docs/data-sources/citations',
+              label: 'Citations & Data Sources',
+              to: '/data-sources/citations',
             },
             {
               label: 'Data Sources',

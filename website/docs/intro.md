@@ -7,10 +7,10 @@ displayed_sidebar: gettingStartedSidebar
 
 Welcome to **Open Navigator for Engagement** - an AI-powered platform that analyzes municipal meeting minutes and financial documents to identify policy opportunities for advocacy.
 
-:::tip 📚 **All Data is Cited & Properly Attributed**
+:::tip **All Data is Cited & Properly Attributed**
 Every dataset, standard, and research source used in this platform is properly cited with complete attribution, licenses, and BibTeX references.
 
-👉 **[View Complete Citations & Data Sources](/docs/data-sources/citations)** - Academic research, government data, civic tech standards, nonprofit data models, and more.
+**[View Complete Citations & Data Sources](/data-sources/citations)** - Academic research, government data, civic tech standards, nonprofit data models, and more.
 :::
 
 ## 👋 Choose Your Path
@@ -197,10 +197,10 @@ These are the most powerful ways to use Open Navigator:
   <p style={{marginTop: '20px', fontSize: '0.9em', color: '#666'}}><strong>Data Used:</strong> <code>JURISDICTION</code>, <code>BUDGET</code>, <code>DEMOGRAPHICS</code>, <code>METRIC_VIEW</code></p>
 </div>
 
-:::info 📐 **Explore the Complete Data Model**
+:::info **Explore the Complete Data Model**
 These use cases are powered by a comprehensive data model with 40+ entities including jurisdictions, meetings, budgets, nonprofits, officials, videos, and more.
 
-👉 **[View Complete Data Model ERD](/docs/data-sources/data-model-erd)** - Interactive diagram with all entity relationships
+**[View Complete Data Model ERD](/data-sources/data-model-erd)** - Interactive diagram with all entity relationships
 :::
 
 ---
@@ -237,7 +237,7 @@ For production deployment options, see:
 <div style={{display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '20px', margin: '30px 0'}}>
 
 <div className="card" style={{padding: '20px'}}>
-  <h3>📚 For Policy Makers</h3>
+  <h3>For Policy Makers</h3>
   <p>Learn how to find advocacy opportunities and track government accountability.</p>
   <p><strong><a href="/docs/for-advocates">Go to Advocacy Guide →</a></strong></p>
 </div>
@@ -249,15 +249,15 @@ For production deployment options, see:
 </div>
 
 <div className="card" style={{padding: '20px'}}>
-  <h3>📐 Data Model</h3>
+  <h3>Data Model</h3>
   <p>Explore the complete ERD with 40+ entities and data relationships.</p>
-  <p><strong><a href="/docs/data-sources/data-model-erd">View ERD →</a></strong></p>
+  <p><strong><a href="/data-sources/data-model-erd">View ERD →</a></strong></p>
 </div>
 
 <div className="card" style={{padding: '20px'}}>
-  <h3>📚 Citations</h3>
+  <h3>Citations</h3>
   <p>View complete citations, licenses, and data source attribution.</p>
-  <p><strong><a href="/docs/data-sources/citations">View Citations →</a></strong></p>
+  <p><strong><a href="/data-sources/citations">View Citations →</a></strong></p>
 </div>
 
 </div>

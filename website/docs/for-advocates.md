@@ -49,17 +49,16 @@ Open Navigator gives you access to comprehensive accountability data across the 
 
 **All data is free and public** - sourced from official government registries and IRS filings.
 
-:::tip 📚 **Complete Data Source Citations**
-Want to know where all this data comes from? View our comprehensive citations:
+:::tip **Complete Data Source Citations**
+All data sources are properly cited with licenses, BibTeX references, and attribution.
 
-👉 **[Citations & Data Sources](/docs/data-sources/citations)**
+**[Citations & Data Sources](/data-sources/citations)**
 
-Includes full citations, BibTeX references, licenses, and links to:
-- Academic research datasets (MeetingBank, Roper Center)
-- Government data sources (U.S. Census, NCES, IRS)
-- Civic tech standards (OCD-ID, Popolo, Schema.org, CEDS)
-- Fact-checking APIs (Google, PolitiFact, FactCheck.org)
-- International standards (IATI, Microsoft CDM for Nonprofits)
+Includes:
+- **Academic Research**: MeetingBank, Harvard Dataverse (LocalView)
+- **Government Data**: U.S. Census Bureau, NCES, IRS Tax-Exempt Organization Search
+- **Civic Tech Standards**: OCD-ID, Popolo, Schema.org, CEDS
+- **Fact-Checking**: Google API, PolitiFact, FactCheck.org
 :::
 
 ---
@@ -81,7 +80,7 @@ Powerful frameworks for accountability and advocacy:
 - **[Accountability Strategy](/docs/guides/accountability-strategy)** - Track gaps between talk and action
 - **[Impact Navigation](/docs/guides/impact-navigation)** - Find opportunities for policy change
 
-### 📚 Real-World Examples
+### Real-World Examples
 
 See how it works in practice:
 - **[Tuscaloosa Complete Analysis](/docs/case-studies/tuscaloosa-complete)** - Full data sources and statistics
