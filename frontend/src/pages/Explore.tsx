@@ -13,7 +13,7 @@ import {
 interface ExploreCard {
   title: string;
   description: string;
-  icon: React.ComponentType<{ className?: string }>;
+  icon: React.ComponentType<{ className?: string; style?: React.CSSProperties }>;
   path: string;
   color: string;
   stats?: string;
