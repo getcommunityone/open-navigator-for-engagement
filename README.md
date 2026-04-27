@@ -298,7 +298,39 @@ oral-health-policy-pulse/
 
 ## Deployment Options
 
-### 1. Databricks Apps (Production)
+### 1. 🤗 Hugging Face Spaces (Recommended)
+
+Deploy all three apps (Documentation, Frontend, API) to a single Docker Space:
+
+**Quick start (first time):**
+```bash
+# Add your HF username to .env
+echo "HF_USERNAME=your_hf_username" >> .env
+
+# Run the interactive setup wizard (login, verify env vars, deploy)
+./setup-huggingface.sh
+```
+
+**Redeploy after changes:**
+```bash
+./deploy-huggingface.sh
+# or pass username as argument:
+./deploy-huggingface.sh YOUR_HF_USERNAME
+```
+
+The script will:
+1. Authenticate with Hugging Face (`huggingface-cli login`)
+2. Create or update the Space
+3. Push code to `https://huggingface.co/spaces/YOUR_USERNAME/open-navigator-for-engagement`
+4. Build takes ~10-15 minutes
+
+**After deployment, configure your Space:**
+- Settings → Resource configuration → Select **CPU Basic** (~$22/month, required for Docker)
+- Settings → Variables & Secrets → Add `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `HUGGINGFACE_TOKEN`
+
+See [Hugging Face Spaces Deployment Guide](website/docs/deployment/huggingface-spaces.md) for the complete walkthrough.
+
+### 2. Databricks Apps (Enterprise)
 
 ```bash
 export DATABRICKS_HOST=https://your-workspace.cloud.databricks.com
@@ -310,7 +342,7 @@ export OPENAI_API_KEY=sk-...
 
 See [DATABRICKS_APP_GUIDE.md](DATABRICKS_APP_GUIDE.md) for details.
 
-### 2. Docker
+### 3. Docker (Local / Self-hosted)
 
 ```bash
 docker-compose up -d
@@ -321,7 +353,7 @@ Starts:
 - Qdrant vector database (port 6333)
 - Jupyter notebook (port 8888)
 
-### 3. Local Development
+### 4. Local Development
 
 See [Quick Start](#quick-start) above.
 
