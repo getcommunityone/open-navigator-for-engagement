@@ -22,6 +22,7 @@ from typing import Optional, Dict
 import time
 from tqdm import tqdm
 import sys
+from datetime import datetime
 
 # Add project root to path
 sys.path.insert(0, str(Path(__file__).parent.parent))
@@ -164,6 +165,7 @@ class ProPublicaEnricher:
         enriched['filing_type'] = None
         enriched['asset_code'] = None
         enriched['income_code'] = None
+        enriched['propublica_last_updated'] = None
         
         # Enrich each sampled row
         enriched_count = 0
@@ -183,6 +185,9 @@ class ProPublicaEnricher:
                 # Update the row
                 for field, value in fields.items():
                     enriched.at[idx, field] = value
+                
+                # Add timestamp
+                enriched.at[idx, 'propublica_last_updated'] = datetime.utcnow().isoformat()
                 
                 enriched_count += 1
         

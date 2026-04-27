@@ -44,7 +44,7 @@ except ImportError:
 class NonprofitHFUploader:
     """Upload nonprofit gold tables to HuggingFace."""
     
-    # Define the 4 nonprofit gold tables
+    # Define the 5 nonprofit gold tables
     NONPROFIT_TABLES = {
         "organizations": {
             "file": "nonprofits_organizations.parquet",
@@ -65,6 +65,11 @@ class NonprofitHFUploader:
             "file": "nonprofits_locations.parquet",
             "description": "Geographic locations (address, city, state, ZIP)",
             "split": "locations"
+        },
+        "fundraisers": {
+            "file": "nonprofits_fundraisers.parquet",
+            "description": "Fundraising campaigns and donation info (Every.org enriched data)",
+            "split": "fundraisers"
         }
     }
     

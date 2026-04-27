@@ -1,6 +1,7 @@
 ---
 sidebar_position: 2
 sidebar_label: Citations & Data Sources
+sidebar: citationsSidebar
 ---
 
 # Citations & Data Sources

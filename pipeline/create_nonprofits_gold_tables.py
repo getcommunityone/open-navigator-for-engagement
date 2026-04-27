@@ -376,6 +376,39 @@ class NonprofitGoldTableCreator:
         
         return location_df
     
+    def create_nonprofits_fundraisers(self, df: pd.DataFrame) -> pd.DataFrame:
+        """
+        Create nonprofits_fundraisers gold table
+        
+        Fundraising campaigns and donation info from Every.org enrichment
+        """
+        logger.info("Creating nonprofits_fundraisers gold table...")
+        
+        fundraiser_data = []
+        
+        for _, row in df.iterrows():
+            # Only include if has Every.org data
+            if pd.notna(row.get('profile_url')) or pd.notna(row.get('is_disbursable')):
+                fundraiser_data.append({
+                    'ein': row.get('ein'),
+                    'organization_name': row.get('name') or row.get('organization_name'),
+                    'everyorg_slug': row.get('primary_slug'),
+                    'profile_url': row.get('profile_url'),
+                    'is_disbursable': row.get('is_disbursable'),
+                    'causes': row.get('causes'),
+                    'logo_url': row.get('logo_url'),
+                    'cover_image_url': row.get('cover_image_url'),
+                })
+        
+        fundraiser_df = pd.DataFrame(fundraiser_data)
+        
+        # Save to parquet
+        output_path = self.gold_dir / "nonprofits_fundraisers.parquet"
+        fundraiser_df.to_parquet(output_path, index=False)
+        logger.success(f"Created {output_path} with {len(fundraiser_df):,} records")
+        
+        return fundraiser_df
+    
     def create_all_gold_tables(
         self,
         states: Optional[List[str]] = None,
@@ -434,6 +467,7 @@ class NonprofitGoldTableCreator:
         self.create_nonprofits_financials(df)
         self.create_nonprofits_programs(df)
         self.create_nonprofits_locations(df)
+        self.create_nonprofits_fundraisers(df)
         
         logger.success("=" * 60)
         logger.success("ALL NONPROFIT GOLD TABLES CREATED!")

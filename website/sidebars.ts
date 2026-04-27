@@ -367,6 +367,17 @@ const sidebars: SidebarsConfig = {
       ],
     },
   ],
+
+  // ========================================
+  // CITATIONS - Standalone Sidebar
+  // ========================================
+  citationsSidebar: [
+    {
+      type: 'doc',
+      id: 'data-sources/citations',
+      label: 'Citations & Data Sources',
+    },
+  ],
 };
 
 export default sidebars;

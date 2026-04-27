@@ -24,6 +24,7 @@ from loguru import logger
 from typing import List, Optional, Dict
 import time
 from io import StringIO
+from datetime import datetime
 
 class IRSBMFIngestion:
     """
@@ -284,7 +285,8 @@ class IRSBMFIngestion:
             'exempt_org_status_code': df.get('status', ''),
             'tax_period': df.get('tax_period', ''),
             'sort_name': df.get('sort_name', ''),
-            'data_source': 'IRS_EO_BMF'
+            'data_source': 'IRS_EO_BMF',
+            'irs_last_updated': datetime.utcnow().isoformat()
         })
         
         logger.success(f"Standardized {len(standardized):,} organizations")
