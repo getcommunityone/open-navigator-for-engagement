@@ -5,12 +5,27 @@
 
 set -e
 
+# Parse command line arguments
+SKIP_TEST=false
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        --skip-test)
+            SKIP_TEST=true
+            shift
+            ;;
+        *)
+            HF_USERNAME_ARG="$1"
+            shift
+            ;;
+    esac
+done
+
 echo "🚀 Open Navigator for Engagement - Hugging Face Deployment"
 echo "==========================================================="
 echo ""
 
 # Check if HF username is provided (env var or argument)
-if [ -z "$HF_USERNAME" ] && [ -z "$1" ]; then
+if [ -z "$HF_USERNAME" ] && [ -z "$HF_USERNAME_ARG" ]; then
     echo "❌ Error: Hugging Face username required"
     echo ""
     echo "Usage Option 1 (Environment Variable):"
@@ -20,6 +35,9 @@ if [ -z "$HF_USERNAME" ] && [ -z "$1" ]; then
     echo "Usage Option 2 (Command Argument):"
     echo "  ./deploy-huggingface.sh YOUR_HF_USERNAME"
     echo ""
+    echo "Usage Option 3 (Skip Docker test - not recommended):"
+    echo "  ./deploy-huggingface.sh YOUR_HF_USERNAME --skip-test"
+    echo ""
     echo "Example:"
     echo "  export HF_USERNAME=getcommunityone"
     echo "  ./deploy-huggingface.sh"
@@ -28,8 +46,8 @@ if [ -z "$HF_USERNAME" ] && [ -z "$1" ]; then
 fi
 
 # Use argument if provided, otherwise use env var
-if [ -n "$1" ]; then
-    HF_USERNAME="$1"
+if [ -n "$HF_USERNAME_ARG" ]; then
+    HF_USERNAME="$HF_USERNAME_ARG"
 fi
 SPACE_NAME="open-navigator-for-engagement"
 HF_REPO="https://huggingface.co/spaces/${HF_USERNAME}/${SPACE_NAME}"
@@ -62,6 +80,41 @@ fi
 
 echo "✅ Authenticated as: $(huggingface-cli whoami)"
 echo ""
+
+# Run Docker build test before deployment (unless skipped)
+if [ "$SKIP_TEST" = true ]; then
+    echo "⚠️  Skipping pre-deployment Docker build test (--skip-test flag)"
+    echo ""
+else
+    echo "🧪 Running pre-deployment Docker build test..."
+    echo "This ensures the build works before pushing to Hugging Face"
+    echo ""
+
+    if [ -f "./test-huggingface-build.sh" ]; then
+        chmod +x ./test-huggingface-build.sh
+        
+        if ./test-huggingface-build.sh; then
+            echo ""
+            echo "✅ Pre-deployment test passed!"
+            echo ""
+        else
+            echo ""
+            echo "❌ Pre-deployment test failed!"
+            echo ""
+            echo "Please fix the Docker build issues before deploying."
+            echo "Run './test-huggingface-build.sh' to test locally."
+            echo ""
+            echo "To deploy anyway (not recommended), use:"
+            echo "  ./deploy-huggingface.sh $HF_USERNAME --skip-test"
+            echo ""
+            exit 1
+        fi
+    else
+        echo "⚠️  Warning: test-huggingface-build.sh not found"
+        echo "Skipping pre-deployment test"
+        echo ""
+    fi
+fi
 
 # Ask to create space if it doesn't exist
 echo "🌟 Creating Hugging Face Space (if it doesn't exist)..."
