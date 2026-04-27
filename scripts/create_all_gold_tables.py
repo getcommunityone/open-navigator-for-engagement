@@ -37,6 +37,7 @@ sys.path.insert(0, str(project_root))
 
 from pipeline.create_meetings_gold_tables import MeetingGoldTableCreator
 from pipeline.create_nonprofits_gold_tables import NonprofitGoldTableCreator
+from pipeline.create_contacts_gold_tables import ContactsGoldTableCreator
 
 
 def main():
@@ -81,6 +82,11 @@ def main():
         action="store_true",
         help="Download ALL 1.9M+ nonprofits from IRS (4 regional files). Requires --use-irs."
     )
+    parser.add_argument(
+        "--extract-contacts",
+        action="store_true",
+        help="Extract contacts (officials) from meeting transcripts after creating meeting tables"
+    )
     
     args = parser.parse_args()
     
@@ -108,6 +114,15 @@ def main():
             meeting_creator = MeetingGoldTableCreator()
             meeting_creator.create_all_gold_tables()
             logger.success("✅ Meetings pipeline completed successfully!")
+            
+            # Extract contacts if requested
+            if args.extract_contacts:
+                logger.info("")
+                logger.info("👥 EXTRACTING CONTACTS FROM MEETINGS")
+                logger.info("-" * 70)
+                contacts_creator = ContactsGoldTableCreator()
+                contacts_creator.create_all_contacts_tables()
+                logger.success("✅ Contacts extraction completed successfully!")
         except Exception as e:
             logger.error(f"❌ Meetings pipeline failed: {e}")
             import traceback
@@ -157,11 +172,19 @@ def main():
             # Separate by category
             meeting_files = [f for f in all_gold_files if 'meeting' in f.name]
             nonprofit_files = [f for f in all_gold_files if 'nonprofit' in f.name]
-            other_files = [f for f in all_gold_files if f not in meeting_files + nonprofit_files]
+            contacts_files = [f for f in all_gold_files if 'contacts_' in f.name]
+            other_files = [f for f in all_gold_files if f not in meeting_files + nonprofit_files + contacts_files]
             
             if meeting_files:
                 logger.info("📅 Meeting Tables:")
                 for file in meeting_files:
+                    df = pd.read_parquet(file)
+                    size_mb = file.stat().st_size / (1024 * 1024)
+                    logger.info(f"   • {file.name}: {len(df):,} records ({size_mb:.2f} MB)")
+            
+            if contacts_files:
+                logger.info("\n👥 Contacts Tables:")
+                for file in contacts_files:
                     df = pd.read_parquet(file)
                     size_mb = file.stat().st_size / (1024 * 1024)
                     logger.info(f"   • {file.name}: {len(df):,} records ({size_mb:.2f} MB)")
