@@ -97,7 +97,23 @@ open-navigator-data/
 │   ├── county_budgets     # County budgets & expenditures
 │   ├── state_budgets      # State government finances
 │   ├── school_budgets     # School district finances (NCES F-33)
-│   └── bond_debt          # Municipal bonds & debt obligations
+│   ├── bond_debt          # Municipal bonds & debt obligations
+│   ├── budget_line_items  # 📊 Detailed budget categories & line items
+│   └── budget_deltas      # 🔍 Budget-to-Minutes Delta analysis (political economy)
+│
+├── decisions/              # ⚖️ Policy decisions & political economy analysis
+│   ├── policy_decisions   # Extracted decisions from meetings
+│   ├── decision_frames    # Frame analysis (rhetoric patterns)
+│   ├── decision_options   # Options considered & rejected
+│   ├── decision_tradeoffs # Tradeoffs discussed (cost vs benefit, etc.)
+│   ├── stakeholder_positions # 👥 Who spoke for/against (Influence Radar)
+│   ├── decision_votes     # Detailed vote records per decision
+│   ├── keyword_density    # Quantitative indicators (grant/taxpayer/emergency)
+│   └── deferral_patterns  # Tabled/delayed decisions (temporal analysis)
+│
+├── elections/              # 📅 Election cycles & temporal analysis
+│   ├── election_cycles    # Election dates & periods
+│   └── election_influences # Pre/post-election decision patterns
 │
 ├── civic/                  # 🗳️ Google Civic & Wikidata
 │   ├── civic_divisions    # OCD divisions
@@ -539,6 +555,151 @@ erDiagram
         string file_type
         int file_size_bytes
         datetime uploaded_at
+    }
+    
+    %% ========================================
+    %% POLITICAL ECONOMY ANALYSIS
+    %% ========================================
+    %% Entities supporting the 4-step advocacy framework:
+    %%   Step 1: Rhetoric Gap (Frame Analysis)
+    %%   Step 2: Displacement Matrix (Budget Delta)
+    %%   Step 3: Influence Radar (Stakeholder Analysis)
+    %%   Step 4: Deferral Pattern (Temporal Voting Analysis)
+    %% See: extraction/decision_analyzer.py, extraction/budget_analyzer.py
+    
+    MEETING ||--o{ POLICY_DECISION : produces
+    POLICY_DECISION ||--o{ DECISION_FRAME : framed_as
+    POLICY_DECISION ||--o{ DECISION_OPTION : considered
+    POLICY_DECISION ||--o{ DECISION_TRADEOFF : discussed
+    POLICY_DECISION ||--o{ STAKEHOLDER_POSITION : influenced_by
+    POLICY_DECISION ||--o{ DECISION_VOTE : voted_on
+    POLICY_DECISION {
+        string decision_id PK
+        string meeting_id FK
+        string decision_summary
+        string outcome "approved/rejected/tabled/amended"
+        string chosen_option
+        string primary_frame "Economic Development/Public Safety/Equity"
+        string primary_rationale
+        string vote_result "5-2/unanimous/voice vote"
+        int contention_score "0-100: Ratio of dissent"
+        string implementation_timeline
+        string cost_estimate
+        float confidence_score
+        datetime meeting_date
+        datetime extracted_at
+    }
+    
+    %% STEP 1: RHETORIC GAP - Frame Analysis
+    DECISION_FRAME {
+        string frame_id PK
+        string decision_id FK
+        string frame_type "primary/competing"
+        string frame_name "public health/fiscal responsibility/equity"
+        string framing_language "Specific phrases used"
+        int mention_count
+    }
+    
+    DECISION_OPTION {
+        string option_id PK
+        string decision_id FK
+        string option_description
+        boolean was_chosen
+        string rejection_reason
+        string opportunity_cost
+    }
+    
+    DECISION_TRADEOFF {
+        string tradeoff_id PK
+        string decision_id FK
+        string tradeoff_type "cost vs benefit/autonomy vs community"
+        string discussion_text
+        string evidence_cited
+    }
+    
+    %% STEP 3: INFLUENCE RADAR - Stakeholder Analysis
+    STAKEHOLDER_POSITION {
+        string position_id PK
+        string decision_id FK
+        string stakeholder_name
+        string stakeholder_role "Health Dept/PTA/Taxpayer Assoc"
+        string stakeholder_affiliation
+        string position_type "supporter/opponent/undecided"
+        string main_argument
+        string evidence_type "study/expert opinion/data"
+        int speaking_order "Track who speaks when"
+    }
+    
+    %% STEP 4: DEFERRAL PATTERN - Temporal Voting Analysis
+    DECISION_VOTE {
+        string vote_record_id PK
+        string decision_id FK
+        string leader_id FK
+        string vote_value "yes/no/abstain/absent"
+        string stated_reason
+        boolean switched_position
+        int days_since_election "Temporal context"
+    }
+    
+    %% STEP 2: DISPLACEMENT MATRIX - Budget-to-Minutes Delta
+    GOVERNMENT_BUDGET ||--o{ BUDGET_LINE_ITEM : contains
+    BUDGET_LINE_ITEM ||--o{ BUDGET_DELTA : analyzed_as
+    BUDGET_LINE_ITEM {
+        string line_item_id PK
+        string budget_id FK
+        string category "Education/Health/Infrastructure"
+        string subcategory
+        string description
+        float current_amount
+        float previous_amount
+        float change_amount
+        float percent_change
+        string funding_source "grants/taxpayer/bonds"
+        int fiscal_year
+    }
+    
+    BUDGET_DELTA {
+        string delta_id PK
+        string line_item_id FK
+        int meeting_mentions "How many times discussed"
+        string praise_level "High/Medium/Low/None"
+        string funding_change "Expansion/Stagnant/Decreased"
+        string delta_type "Expansion/Lip Service/Hidden Priority/Aligned"
+        float delta_score "-1 to +1: rhetoric vs reality gap"
+        string stated_rationale "What they said in meetings"
+        string inferred_rationale "What budget reveals"
+        string underlying_logic "Genuine/Performative/Bureaucratic"
+        datetime analyzed_at
+    }
+    
+    %% QUANTITATIVE INDICATORS
+    MEETING ||--o{ KEYWORD_DENSITY : measured_by
+    KEYWORD_DENSITY {
+        string density_id PK
+        string meeting_id FK
+        string keyword "grant/taxpayer/emergency/equity"
+        string keyword_category "funding_source/urgency/values"
+        int occurrence_count
+        float per_1000_words
+        datetime analyzed_at
+    }
+    
+    %% ELECTION CYCLE ANALYSIS
+    JURISDICTION ||--o{ ELECTION_CYCLE : holds
+    ELECTION_CYCLE ||--o{ POLICY_DECISION : influences
+    ELECTION_CYCLE {
+        string election_id PK
+        string jurisdiction_id FK
+        datetime election_date
+        string election_type "municipal/school board/state"
+        int decisions_12mo_before
+        int decisions_6mo_before
+        int decisions_3mo_before
+        int decisions_6mo_after
+        float avg_project_cost_before
+        float avg_project_cost_after
+        boolean pre_election_spike_detected
+        string inference "incumbency protection/normal variance"
     }
     
     %% ========================================
