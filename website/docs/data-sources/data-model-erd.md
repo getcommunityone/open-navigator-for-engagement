@@ -162,13 +162,10 @@ open-navigator-data/
 │
 ├── vocabulary/             # 🔧 OMOP-inspired concept & terminology (SYSTEM-INTERNAL)
 │   ├── concept             # Master concept table (cities, causes, officials)
-│   ├── vocabulary          # Vocabulary sources (OCD_ID, IRS_NTEE, US_Census, OHDSI)
+│   ├── vocabulary          # Vocabulary sources (OCD_ID, IRS_NTEE, US_Census)
 │   ├── concept_class       # Concept classifications (City, County, 501c3, Mayor)
 │   ├── concept_relationship # Relationships (City → County, Topic → Legislation)
-│   ├── domain              # Domain groupings (Jurisdiction, Nonprofit, Policy)
-│   ├── athena_gender       # OHDSI Gender vocabulary from Athena
-│   ├── athena_race         # OHDSI Race vocabulary from Athena
-│   └── athena_ethnicity    # OHDSI Ethnicity vocabulary from Athena
+│   └── domain              # Domain groupings (Jurisdiction, Nonprofit, Policy)
 │
 └── exports/                # 📤 API-ready formatted exports
     ├── csv_bulk            # CSV downloads for all datasets
@@ -224,9 +221,6 @@ vocabulary_concept.parquet
 vocabulary_vocabulary.parquet
 vocabulary_concept_class.parquet
 vocabulary_concept_relationship.parquet
-vocabulary_athena_gender.parquet
-vocabulary_athena_race.parquet
-vocabulary_athena_ethnicity.parquet
 
 ❌ INCORRECT (using hyphens):
 jurisdictions-cities.parquet
@@ -384,7 +378,6 @@ erDiagram
         string jurisdiction_type
         string state_code
         string county_name
-        int population
         string website_url
         float latitude
         float longitude
@@ -397,87 +390,9 @@ erDiagram
     JURISDICTION ||--o| CENSUS_DATA : has
     CENSUS_DATA {
         string jurisdiction_id PK
-        int population_2020
-        int population_2024
         string county_fips
         string place_fips
-        float median_income
-        float poverty_rate
         datetime census_year
-    }
-    
-    %% ========================================
-    %% DEMOGRAPHICS (Peer to Jurisdiction)
-    %% ========================================
-    %% Comprehensive demographic data from U.S. Census Bureau
-    %% Uses OMOP-style concept_id references for standardization
-    %% References OHDSI Athena vocabularies for interoperability
-    
-    JURISDICTION ||--o| DEMOGRAPHICS : has_demographics
-    DEMOGRAPHICS {
-        string demographics_id PK
-        string jurisdiction_id FK
-        string census_tract
-        int total_population
-        int median_age
-        
-        %% Race (OMOP concept references)
-        int race_concept_id FK "OHDSI Race vocabulary"
-        string race_source_value "Original Census text"
-        int white_alone
-        int black_alone
-        int asian_alone
-        int native_american_alone
-        int pacific_islander_alone
-        int other_race_alone
-        int two_or_more_races
-        
-        %% Ethnicity (OMOP concept references)
-        int ethnicity_concept_id FK "OHDSI Ethnicity vocabulary"
-        string ethnicity_source_value "Original Census text"
-        int hispanic_latino
-        int not_hispanic_latino
-        
-        %% Gender (OMOP concept references)
-        int gender_concept_id FK "OHDSI Gender vocabulary"
-        string gender_source_value "Original Census text"
-        int male_population
-        int female_population
-        
-        %% Age Distribution
-        int under_18
-        int age_18_to_64
-        int age_65_plus
-        
-        %% Income & Economics
-        float median_household_income
-        float per_capita_income
-        float poverty_rate
-        int households_snap_benefits
-        
-        %% Education
-        int high_school_graduate_pct
-        int bachelors_degree_pct
-        int graduate_degree_pct
-        
-        %% Housing
-        int total_housing_units
-        int owner_occupied_pct
-        int renter_occupied_pct
-        float median_home_value
-        float median_rent
-        
-        %% Employment
-        float unemployment_rate
-        int labor_force_participation_pct
-        
-        %% Health Insurance
-        int uninsured_pct
-        int medicaid_pct
-        int medicare_pct
-        
-        datetime census_year
-        string acs_table_id "ACS Table reference"
     }
     
     JURISDICTION ||--o| GSA_DOMAIN : uses
@@ -1553,9 +1468,6 @@ erDiagram
     CONCEPT ||--o{ ORGANIZATION : organization_concept_id
     CONCEPT ||--o{ LEADER : position_concept_id
     CONCEPT ||--o{ POLICY_TOPIC : topic_concept_id
-    CONCEPT ||--o{ DEMOGRAPHICS : race_concept_id
-    CONCEPT ||--o{ DEMOGRAPHICS : ethnicity_concept_id
-    CONCEPT ||--o{ DEMOGRAPHICS : gender_concept_id
     
     VOCABULARY {
         string vocabulary_id PK "OCD_ID, IRS_NTEE, US_Census, OHDSI_Gender"
@@ -2585,9 +2497,73 @@ erDiagram
     CONCEPT ||--o{ ORGANIZATION : organization_concept_id
     CONCEPT ||--o{ LEADER : position_concept_id
     CONCEPT ||--o{ POLICY_TOPIC : topic_concept_id
-    CONCEPT ||--o{ DEMOGRAPHICS : race_concept_id
-    CONCEPT ||--o{ DEMOGRAPHICS : ethnicity_concept_id
-    CONCEPT ||--o{ DEMOGRAPHICS : gender_concept_id
+    
+    %% ========================================
+    %% DEMOGRAPHICS
+    %% ========================================
+    %% Comprehensive demographic data from U.S. Census Bureau
+    %% Separate entity for population characteristics
+    
+    JURISDICTION ||--o| DEMOGRAPHICS : has_demographics
+    DEMOGRAPHICS {
+        string demographics_id PK
+        string jurisdiction_id FK
+        string census_tract
+        int total_population
+        int population_2020
+        int population_2024
+        int median_age
+        
+        %% Race & Ethnicity
+        int white_alone
+        int black_alone
+        int asian_alone
+        int native_american_alone
+        int pacific_islander_alone
+        int other_race_alone
+        int two_or_more_races
+        int hispanic_latino
+        int not_hispanic_latino
+        
+        %% Gender
+        int male_population
+        int female_population
+        
+        %% Age Distribution
+        int under_18
+        int age_18_to_64
+        int age_65_plus
+        
+        %% Income & Economics
+        float median_household_income
+        float per_capita_income
+        float poverty_rate
+        int households_snap_benefits
+        
+        %% Education
+        int high_school_graduate_pct
+        int bachelors_degree_pct
+        int graduate_degree_pct
+        
+        %% Housing
+        int total_housing_units
+        int owner_occupied_pct
+        int renter_occupied_pct
+        float median_home_value
+        float median_rent
+        
+        %% Employment
+        float unemployment_rate
+        int labor_force_participation_pct
+        
+        %% Health Insurance
+        int uninsured_pct
+        int medicaid_pct
+        int medicare_pct
+        
+        datetime census_year
+        string acs_table_id "ACS Table reference"
+    }
 `}
 />
 
