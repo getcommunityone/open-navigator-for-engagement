@@ -84,55 +84,90 @@ class NonprofitDiscovery:
         
         self._rate_limit("propublica")
         
-        try:
-            logger.info(f"Searching ProPublica API: state={state}, ntee={ntee_code}, city={city}")
-            response = requests.get(base_url, params=params, timeout=30)
-            response.raise_for_status()
-            
-            data = response.json()
-            organizations = data.get("organizations", [])
-            
-            logger.success(f"Found {len(organizations)} organizations from ProPublica")
-            
-            # Parse results
-            nonprofits = []
-            for org in organizations:
-                nonprofit = {
-                    "source": "propublica",
-                    "ein": org.get("ein"),
-                    "name": org.get("name"),
-                    "city": org.get("city"),
-                    "state": org.get("state"),
-                    "ntee_code": org.get("ntee_code"),
-                    "subsection_code": org.get("subsection_code"),
-                    "classification_codes": org.get("classification_codes", ""),
-                    "ruling_date": org.get("ruling_date"),
-                    "deductibility_code": org.get("deductibility_code"),
-                    "foundation_code": org.get("foundation_code"),
-                    "organization_code": org.get("organization_code"),
-                    "exempt_organization_status_code": org.get("exempt_organization_status_code"),
-                    "tax_period": org.get("tax_period"),
-                    "asset_cd": org.get("asset_cd"),
-                    "income_cd": org.get("income_cd"),
-                    "filing_requirement_code": org.get("filing_requirement_code"),
-                    "pf_filing_requirement_code": org.get("pf_filing_requirement_code"),
-                    "accounting_period": org.get("accounting_period"),
-                    "asset_amount": org.get("asset_amount"),
-                    "income_amount": org.get("income_amount"),
-                    "revenue_amount": org.get("revenue_amount"),
-                    "ntee_description": self._get_ntee_description(org.get("ntee_code"))
-                }
-                nonprofits.append(nonprofit)
-            
-            # Cache results
-            with open(cache_file, 'w') as f:
-                json.dump(nonprofits, f, indent=2)
-            
-            return nonprofits
-            
-        except requests.exceptions.RequestException as e:
-            logger.error(f"ProPublica API request failed: {e}")
-            return []
+        # Retry logic for API failures
+        max_retries = 3
+        retry_delay = 2.0
+        
+        for attempt in range(max_retries):
+            try:
+                logger.info(f"Searching ProPublica API: state={state}, ntee={ntee_code}, city={city} (attempt {attempt + 1}/{max_retries})")
+                response = requests.get(base_url, params=params, timeout=30)
+                response.raise_for_status()
+                
+                data = response.json()
+                organizations = data.get("organizations", [])
+                
+                logger.success(f"Found {len(organizations)} organizations from ProPublica")
+                
+                # Parse results
+                nonprofits = []
+                for org in organizations:
+                    nonprofit = {
+                        "source": "propublica",
+                        "ein": org.get("ein"),
+                        "name": org.get("name"),
+                        "city": org.get("city"),
+                        "state": org.get("state"),
+                        "ntee_code": org.get("ntee_code"),
+                        "subsection_code": org.get("subsection_code"),
+                        "classification_codes": org.get("classification_codes", ""),
+                        "ruling_date": org.get("ruling_date"),
+                        "deductibility_code": org.get("deductibility_code"),
+                        "foundation_code": org.get("foundation_code"),
+                        "organization_code": org.get("organization_code"),
+                        "exempt_organization_status_code": org.get("exempt_organization_status_code"),
+                        "tax_period": org.get("tax_period"),
+                        "asset_cd": org.get("asset_cd"),
+                        "income_cd": org.get("income_cd"),
+                        "filing_requirement_code": org.get("filing_requirement_code"),
+                        "pf_filing_requirement_code": org.get("pf_filing_requirement_code"),
+                        "accounting_period": org.get("accounting_period"),
+                        "asset_amount": org.get("asset_amount"),
+                        "income_amount": org.get("income_amount"),
+                        "revenue_amount": org.get("revenue_amount"),
+                        "ntee_description": self._get_ntee_description(org.get("ntee_code"))
+                    }
+                    nonprofits.append(nonprofit)
+                
+                # Cache results
+                with open(cache_file, 'w') as f:
+                    json.dump(nonprofits, f, indent=2)
+                
+                return nonprofits
+                
+            except requests.exceptions.HTTPError as e:
+                if e.response.status_code == 500:
+                    # Server error - retry with backoff
+                    if attempt < max_retries - 1:
+                        logger.warning(f"ProPublica API returned 500 error, retrying in {retry_delay}s... (attempt {attempt + 1}/{max_retries})")
+                        time.sleep(retry_delay)
+                        retry_delay *= 2  # Exponential backoff
+                        continue
+                    else:
+                        logger.error(f"ProPublica API failed after {max_retries} attempts: {e}")
+                        logger.warning(f"Skipping state={state}, ntee={ntee_code} - API unavailable")
+                        return []
+                else:
+                    # Other HTTP errors
+                    logger.error(f"ProPublica API HTTP error: {e}")
+                    return []
+                    
+            except requests.exceptions.Timeout:
+                if attempt < max_retries - 1:
+                    logger.warning(f"Request timeout, retrying in {retry_delay}s...")
+                    time.sleep(retry_delay)
+                    retry_delay *= 2
+                    continue
+                else:
+                    logger.error(f"ProPublica API timeout after {max_retries} attempts")
+                    return []
+                    
+            except requests.exceptions.RequestException as e:
+                logger.error(f"ProPublica API request failed: {e}")
+                return []
+        
+        # Should not reach here, but just in case
+        return []
     
     def get_propublica_org_details(self, ein: str) -> Optional[Dict]:
         """

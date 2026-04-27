@@ -81,6 +81,9 @@ class NonprofitGoldTableCreator:
         logger.info(f"Discovering nonprofits in {len(states)} states...")
         
         all_nonprofits = []
+        successful_requests = 0
+        failed_requests = 0
+        skipped_requests = 0
         
         # Default NTEE codes if not specified (focus on community services)
         if ntee_codes is None:
@@ -93,11 +96,15 @@ class NonprofitGoldTableCreator:
                 "W",   # Public Affairs
             ]
         
+        total_requests = len(states) * len(ntee_codes)
+        current_request = 0
+        
         for state in states:
             logger.info(f"Processing state: {state}")
             
             for ntee_code in ntee_codes:
-                logger.info(f"  - Searching NTEE code: {ntee_code}")
+                current_request += 1
+                logger.info(f"  - Searching NTEE code: {ntee_code} ({current_request}/{total_requests})")
                 
                 # Search ProPublica API
                 nonprofits = self.discovery.search_propublica(
@@ -106,14 +113,45 @@ class NonprofitGoldTableCreator:
                 )
                 
                 if nonprofits:
-                    logger.info(f"    Found {len(nonprofits)} organizations")
+                    logger.success(f"    ✅ Found {len(nonprofits)} organizations")
                     all_nonprofits.extend(nonprofits)
+                    successful_requests += 1
+                elif nonprofits is not None and len(nonprofits) == 0:
+                    # API succeeded but returned no results
+                    logger.info(f"    ⚠️  No organizations found")
+                    skipped_requests += 1
+                else:
+                    # API failed
+                    logger.warning(f"    ❌ API request failed (continuing...)")
+                    failed_requests += 1
                 
                 # Rate limiting
                 time.sleep(1.0)
         
+        # Summary
+        logger.info("")
+        logger.info("=" * 60)
+        logger.info("DISCOVERY SUMMARY")
+        logger.info("=" * 60)
+        logger.info(f"Total requests: {total_requests}")
+        logger.info(f"Successful: {successful_requests} ({successful_requests/total_requests*100:.1f}%)")
+        logger.info(f"No results: {skipped_requests}")
+        logger.info(f"Failed: {failed_requests}")
+        logger.info(f"Total nonprofits discovered: {len(all_nonprofits)}")
+        logger.info("=" * 60)
+        logger.info("")
+        
         if not all_nonprofits:
-            logger.warning("No nonprofits discovered!")
+            logger.error("No nonprofits discovered! All API requests failed or returned no results.")
+            logger.info("This could be due to:")
+            logger.info("  1. ProPublica API server issues (500 errors)")
+            logger.info("  2. Network connectivity problems")
+            logger.info("  3. No nonprofits in specified states/NTEE codes")
+            logger.info("")
+            logger.info("Suggestions:")
+            logger.info("  - Try again later (API may be experiencing issues)")
+            logger.info("  - Try different states: --states AL CA TX NY")
+            logger.info("  - Check if cached data exists and use --skip-discovery")
             return pd.DataFrame()
         
         # Convert to DataFrame
