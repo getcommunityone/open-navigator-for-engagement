@@ -146,6 +146,17 @@ aside.theme-doc-sidebar-container {
   color: var(--ifm-color-primary) !important;
 }
 
+/* Table of contents - increase spacing between vertical line and text */
+.table-of-contents__link {
+  padding-left: 1rem !important; /* Increased from default 0.5rem */
+  line-height: 1.6 !important;
+  margin-bottom: 0.25rem !important;
+}
+
+.table-of-contents__link--active {
+  padding-left: calc(1rem - 2px) !important; /* Account for border width */
+}
+
 /* Professional navbar styling - clean without emojis */
 .navbar__item.navbar__link {
   font-weight: 600;

@@ -6,7 +6,7 @@ sidebar_label: Citations & Data Sources
 # Citations & Data Sources
 
 :::tip **Why This Page Matters**
-**All data used in Open Navigator for Engagement is properly cited and attributed.** This page provides complete citations, licenses, BibTeX references, and links to original sources for academic research, government data, civic tech standards, and more.
+**All data used in Open Navigator for Engagement is properly cited and attributed.** This page provides complete citations, licenses, BibTeX references, and links to original sources for academic research, government data, data sharing standards, and more.
 
 **Use this page to:**
 - ✅ Cite data sources in your research or publications
@@ -28,8 +28,8 @@ This page documents all data sources, standards, and research contributions used
     <strong>🏛️ Government Data</strong><br/>
     <span style={{fontSize: '0.9em', color: '#666'}}>U.S. Census, NCES, IRS</span>
   </a>
-  <a href="#civic-tech-standards" className="card" style={{textDecoration: 'none', padding: '15px', borderLeft: '4px solid #FF9800'}}>
-    <strong>🌐 Civic Tech Standards</strong><br/>
+  <a href="#data-sharing-standards" className="card" style={{textDecoration: 'none', padding: '15px', borderLeft: '4px solid #FF9800'}}>
+    <strong>🌐 Data Sharing Standards</strong><br/>
     <span style={{fontSize: '0.9em', color: '#666'}}>OCD-ID, Popolo, Schema.org, CEDS, OMOP CDM</span>
   </a>
   <a href="#election--advocacy" className="card" style={{textDecoration: 'none', padding: '15px', borderLeft: '4px solid #9C27B0'}}>
@@ -40,25 +40,17 @@ This page documents all data sources, standards, and research contributions used
     <strong>🏢 Nonprofit & Philanthropy</strong><br/>
     <span style={{fontSize: '0.9em', color: '#666'}}>ProPublica, IRS, Every.org, Findhelp, 211, Microsoft CDM, ARDA, HIFLD, NCS</span>
   </a>
-  <a href="#international-aid-transparency" className="card" style={{textDecoration: 'none', padding: '15px', borderLeft: '4px solid #00BCD4'}}>
-    <strong>🌍 International Aid</strong><br/>
-    <span style={{fontSize: '0.9em', color: '#666'}}>IATI Standard v2.03</span>
-  </a>
   <a href="#-fact-checking" className="card" style={{textDecoration: 'none', padding: '15px', borderLeft: '4px solid #8BC34A'}}>
     <strong>✅ Fact-Checking</strong><br/>
     <span style={{fontSize: '0.9em', color: '#666'}}>Google, PolitiFact, FactCheck.org</span>
   </a>
-  <a href="#-enterprise-tech-for-social-good" className="card" style={{textDecoration: 'none', padding: '15px', borderLeft: '4px solid #E91E63'}}>
-    <strong>💼 Enterprise Tech for Social Good</strong><br/>
-    <span style={{fontSize: '0.9em', color: '#666'}}>Microsoft, Google, AWS, Databricks, Snowflake, Salesforce</span>
-  </a>
   <a href="#-civic-tech--open-source" className="card" style={{textDecoration: 'none', padding: '15px', borderLeft: '4px solid #673AB7'}}>
     <strong>💻 Civic Tech & Open Source</strong><br/>
-    <span style={{fontSize: '0.9em', color: '#666'}}>GitHub, Code for America, Hackathons, Civic Tech Field Guide, USDR, DPGA</span>
+    <span style={{fontSize: '0.9em', color: '#666'}}>GitHub, Code for America, Hackathons, Microsoft, Google, AWS, Databricks, DPGA</span>
   </a>
   <a href="#-community-solutions--use-cases" className="card" style={{textDecoration: 'none', padding: '15px', borderLeft: '4px solid #FFEB3B'}}>
     <strong>🌟 Community Solutions & Use Cases</strong><br/>
-    <span style={{fontSize: '0.9em', color: '#666'}}>Spectrum of Engagement, Harvard, Brookings, Open Data Impact</span>
+    <span style={{fontSize: '0.9em', color: '#666'}}>Spectrum of Engagement, Harvard, Brookings, Open Data Impact, IATI</span>
   </a>
   <a href="#acknowledgments" className="card" style={{textDecoration: 'none', padding: '15px', borderLeft: '4px solid #607D8B'}}>
     <strong>🙏 Acknowledgments</strong><br/>
@@ -229,7 +221,7 @@ This page documents all data sources, standards, and research contributions used
 
 ---
 
-## 🌐 Civic Tech Standards
+## 🌐 Data Sharing Standards
 
 ### Open Civic Data (OCD) Standards
 
@@ -733,131 +725,6 @@ Identify churches with active health ministries in Tuscaloosa, AL that provide f
 
 ---
 
-## 🌍 International Aid Transparency
-
-### IATI Standard (International Aid Transparency Initiative)
-
-**Organization:** IATI Secretariat  
-**What we use:** International development funding transparency, grant tracking, humanitarian aid flows, outcome measurement.
-
-- **Source:** https://iatistandard.org/
-- **Current Version:** IATI Standard v2.03
-- **Specification:** https://iatistandard.org/en/iati-standard/203/
-- **License:** Open Data Commons Attribution License (ODC-By)
-- **Coverage:** 1,300+ publishers, $1+ trillion in development aid tracked
-- **Used for:** Grant funding transparency, international nonprofit activities, humanitarian response tracking
-
-**IATI Core Concepts:**
-
-| IATI Element | Description | Our Implementation |
-|--------------|-------------|-------------------|
-| **iati-activity** | A single development/humanitarian activity or project | PROGRAM_DELIVERY entity |
-| **iati-organisation** | Publisher of aid data (donor, recipient, implementer) | ORGANIZATION entity |
-| **transaction** | Financial movement (commitment, disbursement, expenditure) | DONATION, GOVERNMENT_BUDGET transactions |
-| **result** | Outputs, outcomes, and impacts of activities | PROGRAM_OUTCOME entity |
-| **participating-org** | Organizations involved (funders, implementers, partners) | ORGANIZATION relationships |
-| **sector** | Sector classification (health, education, water) | NTEE codes, policy topics |
-| **budget** | Planned spending over time | GOVERNMENT_BUDGET, CAMPAIGN budgets |
-| **location** | Geographic coordinates and administrative areas | JURISDICTION geographic data |
-
-**IATI Activity Mappings:**
-
-| IATI Field | Our Field | Description |
-|------------|-----------|-------------|
-| `iati-identifier` | `program_id` | Unique activity identifier |
-| `title` | `program_name` | Activity title |
-| `description` | `description` | Narrative description |
-| `activity-status` | `status` | Active, Completed, On Hold, Cancelled |
-| `activity-date[@type='start-planned']` | `start_date` | Planned start date |
-| `activity-date[@type='end-actual']` | `end_date` | Actual end date |
-| `budget[@type='original']` | `program_budget` | Original budget |
-| `transaction[@type='4' (expenditure)]` | `program_expenses` | Actual spending |
-| `recipient-country` | `jurisdiction_id` | Geographic targeting |
-| `sector[@vocabulary='DAC']` | `program_type` | OECD DAC sector codes |
-| `result/indicator` | PROGRAM_OUTCOME | Impact indicators |
-
-**IATI Transaction Types:**
-
-| Code | Type | Our Mapping |
-|------|------|-------------|
-| 1 | Incoming Funds | DONATION (received) |
-| 2 | Outgoing Commitment | DONATION (pledged) |
-| 3 | Disbursement | GOVERNMENT_BUDGET expenditures |
-| 4 | Expenditure | PROGRAM_DELIVERY expenses |
-| 11 | Incoming Commitment | CAMPAIGN pledges |
-| 12 | Outgoing Pledge | Grant commitments |
-| 13 | Reimbursement | Budget adjustments |
-
-**IATI Result/Indicator Mappings:**
-
-```xml
-<!-- IATI Result Structure -->
-<result type="1" aggregation-status="true">
-  <title>
-    <narrative>Improved access to clean water</narrative>
-  </title>
-  <indicator measure="1" ascending="true">
-    <title>
-      <narrative>Number of people with access to clean water</narrative>
-    </title>
-    <baseline year="2023" value="5000"/>
-    <period>
-      <period-start iso-date="2024-01-01"/>
-      <period-end iso-date="2024-12-31"/>
-      <target value="10000"/>
-      <actual value="8500"/>
-    </period>
-  </indicator>
-</result>
-```
-
-**Maps to our PROGRAM_OUTCOME:**
-- `outcome_name` = "Number of people with access to clean water"
-- `metric_type` = "Count"
-- `target_value` = 10000
-- `actual_value` = 8500
-- `measurement_period` = "Annual"
-- `measurement_date` = "2024-12-31"
-
-**IATI Organization Types:**
-
-| Code | Organization Type | Our `org_type` |
-|------|------------------|----------------|
-| 10 | Government | Government agency |
-| 21 | International NGO | Nonprofit (international) |
-| 22 | National NGO | Nonprofit (domestic) |
-| 23 | Regional NGO | Nonprofit (regional) |
-| 30 | Public-Private Partnership | Partnership |
-| 40 | Multilateral (UN, World Bank) | International org |
-| 60 | Foundation | Foundation (501c3) |
-| 70 | Private Sector | For-profit |
-| 80 | Academic/Research | Educational org |
-
-**Benefits of IATI Alignment:**
-- ✅ **Global Transparency:** Compatible with 1,300+ international aid publishers
-- ✅ **D-Portal Integration:** Data queryable via https://d-portal.org/
-- ✅ **OECD DAC Compatibility:** Aligned with Development Assistance Committee standards
-- ✅ **Humanitarian Response:** Track emergency aid, disaster relief, crisis response
-- ✅ **UN SDG Mapping:** Link activities to Sustainable Development Goals
-- ✅ **Country Systems:** Compatible with recipient country aid management platforms
-
-**Example IATI Use Cases:**
-1. **International Nonprofits:** Track dental health programs funded by USAID, Gates Foundation
-2. **Government Grants:** Monitor federal aid to state/local health departments
-3. **Foundation Giving:** Publish grant disbursements to oral health organizations
-4. **Cross-border Activities:** Track U.S. nonprofits working internationally
-5. **Impact Measurement:** Standardized indicators for water fluoridation outcomes
-
-**IATI Registry & d-Portal:**
-- **Registry:** https://iatiregistry.org/ - Central repository of IATI data files
-- **d-Portal:** https://d-portal.org/ - Query engine for IATI data
-- **Datastore:** https://iatidatastore.iatistandard.org/ - API for querying IATI data
-
-**Citation:**
-> "IATI Standard Version 2.03. International Aid Transparency Initiative. https://iatistandard.org/"
-
----
-
 ## ✅ Fact-Checking
 
 ### Google Fact Check Tools API
@@ -892,233 +759,9 @@ Identify churches with active health ministries in Tuscaloosa, AL that provide f
 
 ---
 
-## � Enterprise Tech for Social Good
-
-### Cloud & Data Platforms
-
-#### Microsoft: Tech for Social Impact
-
-**Organization:** Microsoft Corporation  
-**What we use:** Nonprofit Common Data Model (CDM) for donor management, campaign tracking, and program outcomes.
-
-- **Program:** https://microsoft.com/nonprofit
-- **Nonprofit CDM GitHub:** https://github.com/microsoft/Industry-Accelerator-Nonprofit
-- **License:** MIT License
-- **Coverage:** 8 core entities (CONSTITUENT, DONATION, CAMPAIGN, DESIGNATION, MEMBERSHIP, VOLUNTEER_ACTIVITY, PROGRAM_DELIVERY, PROGRAM_OUTCOME)
-
-**Implementation Status:** ✅ **Active** - See [Nonprofit & Philanthropy](#nonprofit--philanthropy) section for full CDM integration.
-
----
-
-#### Google: Data Commons
-
-**Organization:** Google LLC  
-**What we use:** Knowledge Graph API for jurisdiction demographics, economic indicators, and civic data variables.
-
-- **Source:** https://datacommons.org
-- **API Documentation:** https://docs.datacommons.org/api/
-- **REST API:** https://api.datacommons.org/
-- **Python Library:** `pip install datacommons datacommons-pandas`
-- **Coverage:** 100+ variables per jurisdiction (income, education, health, housing)
-- **License:** Free API (rate limits apply)
-
-**Data Commons Variables for Jurisdictions:**
-
-| Variable | Example Stat Variable | Description |
-|----------|----------------------|-------------|
-| Population | `Count_Person` | Total population |
-| Demographics | `Count_Person_Male`, `Count_Person_Female` | Gender breakdown |
-| Age | `Median_Age_Person` | Median age |
-| Income | `Median_Income_Household` | Median household income |
-| Education | `Count_Person_EducationalAttainmentBachelorsDegreeOrHigher` | College graduates |
-| Employment | `UnemploymentRate_Person` | Unemployment rate |
-| Housing | `Median_Price_SoldHome` | Median home price |
-| Health | `Count_Person_WithHealthInsurance` | Health insurance coverage |
-
-**Implementation Recommendation:**
-```python
-import datacommons_pandas as dcpd
-
-# Get demographics for a city
-df = dcpd.build_time_series(
-    place="geoId/0107000",  # Birmingham, AL
-    stat_vars=[
-        "Median_Income_Household",
-        "Count_Person",
-        "UnemploymentRate_Person"
-    ]
-)
-```
-
-**Status:** 🔄 **Recommended** - Replace manual Census API calls with Data Commons for simplified jurisdiction enrichment.
-
----
-
-#### AWS: Open Data for Good
-
-**Organization:** Amazon Web Services (AWS)  
-**What we use:** Best practices for hosting large-scale public datasets in Parquet format on S3.
-
-- **Program:** https://registry.opendata.aws
-- **Documentation:** https://aws.amazon.com/opendata/
-- **Examples:** Census data, satellite imagery, geospatial data
-- **Storage Format:** Parquet (columnar, optimized for analytics)
-- **License:** Varies by dataset (most public domain)
-
-**AWS Best Practices for `/exports` Folder:**
-- Use Parquet with Snappy compression
-- Partition by `state/county/year` for efficient queries
-- Enable S3 versioning for data lineage
-- Use AWS Glue Data Catalog for schema management
-- Implement Athena for SQL queries without ETL
-
-**Status:** 🔄 **Planned** - Apply AWS Registry patterns to our HuggingFace dataset exports.
-
----
-
-### Enterprise Data Engineering Solutions
-
-#### Databricks: Databricks for Good
-
-**Organization:** Databricks, Inc.  
-**What we use:** Unity Catalog for data governance, Delta Lake for lakehouse architecture, MLflow for agent deployment, Solution Accelerators for NLP pipelines.
-
-- **Program:** https://databricks.com/for-good
-- **Solution Accelerators:** https://www.databricks.com/solutions/accelerators
-- **Unity Catalog:** https://docs.databricks.com/en/data-governance/unity-catalog/index.html
-- **License:** Commercial (Free Community Edition available)
-
-**Our Databricks Implementation:**
-
-| Component | Purpose | File Location |
-|-----------|---------|---------------|
-| **Delta Lake Pipeline** | Bronze/Silver/Gold data layers | `pipeline/delta_lake.py` |
-| **MLflow Agents** | Policy classifier, sentiment analysis | `agents/mlflow_classifier.py`, `agents/mlflow_base.py` |
-| **Unity Catalog** | Model registry and governance | `databricks/deployment.py` |
-| **Agent Bricks** | Mosaic AI Agent Framework | `databricks/notebooks/01_agent_bricks_quickstart.py` |
-| **Model Serving** | Auto-scaling REST endpoints | `databricks/deployment.py` |
-
-**Implementation Status:** ✅ **Active** - Full Databricks integration for data engineering and ML workflows.
-
-**Delta Sharing for `/exports`:**
-```python
-# Share Gold layer tables externally
-from databricks import delta_sharing
-
-share = delta_sharing.SharingClient()
-share.create_share(
-    name="one_civic_data",
-    tables=["gold.jurisdictions", "gold.meetings", "gold.nonprofits"]
-)
-```
-
-**Citation:**
-```bibtex
-@misc{databricks_for_good,
-  author = {{Databricks, Inc.}},
-  title = {Databricks for Good},
-  year = {2024},
-  url = {https://databricks.com/for-good}
-}
-```
-
----
-
-#### Snowflake: Snowflake for Good
-
-**Organization:** Snowflake Inc.  
-**What we use:** Data Marketplace for Census, ESG, and demographic data; data sharing capabilities.
-
-- **Program:** https://snowflake.com/for-good
-- **Data Marketplace:** https://www.snowflake.com/data-marketplace/
-- **Free Datasets:** U.S. Census (Knoema), OpenStreetMap, COVID-19 data
-- **License:** Commercial (Free trial available)
-
-**Status:** 🔄 **Evaluation** - Consider for enterprise data sharing and collaboration.
-
----
-
-#### Oracle: NetSuite Social Impact
-
-**Organization:** Oracle Corporation  
-**What we use:** Fund accounting models and grant tracking patterns for nonprofit financial data.
-
-- **Program:** https://netsuite.com/social-impact
-- **Features:** Fund accounting, grant management, donor databases
-- **License:** Commercial
-
-**Status:** 📚 **Reference** - Inspiration for nonprofit financial data modeling.
-
----
-
-#### Salesforce: Salesforce.org
-
-**Organization:** Salesforce, Inc.  
-**What we use:** Nonprofit Success Pack (NPSP) data model patterns for constituent relationship management.
-
-- **Program:** https://salesforce.org/npsp
-- **GitHub:** https://github.com/SalesforceFoundation/NPSP
-- **Features:** Household accounts, recurring donations, program engagement
-- **License:** Open Source (BSD-3-Clause)
-
-**NPSP Object Mappings:**
-
-| NPSP Object | Our Entity | Use Case |
-|-------------|------------|----------|
-| Contact | CONSTITUENT | Donor, volunteer, beneficiary |
-| Opportunity | DONATION | Financial contributions |
-| Campaign | CAMPAIGN | Fundraising campaigns |
-| Engagement Plan | VOLUNTEER_ACTIVITY | Volunteer tracking |
-| Program Cohort | PROGRAM_DELIVERY | Program participants |
-
-**Status:** 📚 **Reference** - Inspiration for constituent engagement data model.
-
----
-
-### Infrastructure, AI & Blockchain
-
-#### Cisco: Crisis Response
-
-**Organization:** Cisco Systems, Inc.  
-**What we use:** Network resilience patterns for ensuring platform uptime during community emergencies.
-
-- **Program:** https://cisco.com/crisis-response
-- **Focus:** Connectivity, communications, resilient systems
-- **License:** Varies by initiative
-
-**Status:** 📚 **Reference** - Inspiration for platform reliability during crises.
-
----
-
-#### IBM: Science for Social Good
-
-**Organization:** IBM Corporation  
-**What we use:** AI/ML use case patterns for civic applications.
-
-- **Program:** https://ibm.com/social-good
-- **Technologies:** Watson AI, Blockchain, Quantum computing
-- **License:** Varies by project
-
-**Status:** 📚 **Reference** - Inspiration for AI-powered civic analysis.
-
----
-
-#### Meta: Data for Good
-
-**Organization:** Meta Platforms, Inc.  
-**What we use:** Population density and social connectivity mapping patterns.
-
-- **Program:** https://dataforgood.facebook.com
-- **Datasets:** High-Resolution Population Density Maps, Social Connectedness Index
-- **License:** Free (Terms of Use apply)
-
-**Status:** 🔄 **Evaluation** - Consider for population modeling and demographic analysis.
-
----
-
 ## 💻 Civic Tech & Open Source
 
-### GitHub API (Microsoft)
+### Cloud & Data Platforms
 
 **Organization:** Microsoft Corporation / GitHub, Inc.  
 **What we use:** GitHub REST and GraphQL APIs for tracking civic tech projects, hackathons, contributors, and open source development.
@@ -1746,6 +1389,8 @@ Their research proves: **Open data alone isn't enough. You need the ecosystem we
 
 ---
 
+
+---\n\n### IATI Standard (International Aid Transparency Initiative)\n\n**Organization:** IATI Secretariat  \n**What we use:** International development funding transparency framework - informs grant tracking, nonprofit program outcomes, and cross-sector collaboration metrics.\n\n- **Source:** https://iatistandard.org/\n- **Current Version:** IATI Standard v2.03\n- **Specification:** https://iatistandard.org/en/iati-standard/203/\n- **License:** Open Data Commons Attribution License (ODC-By)\n- **Coverage:** 1,300+ publishers, $1+ trillion in development aid tracked\n- **Used for:** Grant funding transparency, nonprofit program measurement, community solution tracking\n\n**Why IATI in Community Solutions:**\n\nIATI provides a proven framework for **tracking community impact across sectors** - government, nonprofits, foundations, and international partners.\n\n**Citation:**\n```bibtex\n@misc{iati_standard,\n  author = {{IATI Secretariat}},\n  title = {IATI Standard Version 2.03},\n  year = {2018},\n  url = {https://iatistandard.org/},\n  note = {Open Data Commons Attribution License (ODC-By)}\n}\n```\n\n**Resources:**\n- **Registry:** https://iatiregistry.org/\n- **d-Portal:** https://d-portal.org/\n- **Datastore:** https://iatidatastore.iatistandard.org/
 ## �🙏 Acknowledgments
 
 We are grateful to the following organizations and individuals:

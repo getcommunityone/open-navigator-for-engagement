@@ -48,6 +48,18 @@ const config: Config = {
           editUrl:
             'https://github.com/getcommunityone/open-navigator-for-engagement/tree/main/website/',
         },
+        theme: {
+          customCss: './src/css/custom.css',
+        },
+      } satisfies Preset.Options,
+    ],
+  ],
+
+  themeConfig: {
+    tableOfContents: {
+      minHeadingLevel: 2,
+      maxHeadingLevel: 2, // Only show h2 headings in right sidebar (reduces clutter)
+    },
         blog: {
           showReadingTime: true,
           feedOptions: {
