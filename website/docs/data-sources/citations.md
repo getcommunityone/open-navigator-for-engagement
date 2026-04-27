@@ -1,20 +1,58 @@
 ---
-sidebar_position: 3
+sidebar_position: 2
+sidebar_label: 📚 Citations & Data Sources
 ---
 
-# Citations & Data Sources
+# 📚 Citations & Data Sources
+
+:::tip **Why This Page Matters**
+**All data used in Open Navigator for Engagement is properly cited and attributed.** This page provides complete citations, licenses, BibTeX references, and links to original sources for academic research, government data, civic tech standards, and more.
+
+**Use this page to:**
+- ✅ Cite data sources in your research or publications
+- ✅ Understand licensing and usage terms
+- ✅ Find original dataset documentation
+- ✅ Access API documentation and technical specs
+:::
 
 This page documents all data sources, standards, and research contributions used in **Open Navigator for Engagement**. All datasets and specifications are properly attributed with citations, licenses, and usage notes.
 
 ## 📑 Quick Navigation
 
-- [Academic Research](#academic-research)
-- [Government Data](#government-data)
-- [Civic Tech Standards](#civic-tech-standards)
-- [Election & Advocacy](#election--advocacy)
-- [Nonprofit & Philanthropy](#nonprofit--philanthropy)
-- [International Aid Transparency](#international-aid-transparency)
-- [Acknowledgments](#acknowledgments)
+<div style={{display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '15px', margin: '20px 0'}}>
+  <a href="#academic-research" className="card" style={{textDecoration: 'none', padding: '15px', borderLeft: '4px solid #2196F3'}}>
+    <strong>🎓 Academic Research</strong><br/>
+    <span style={{fontSize: '0.9em', color: '#666'}}>MeetingBank, Roper Center</span>
+  </a>
+  <a href="#government-data" className="card" style={{textDecoration: 'none', padding: '15px', borderLeft: '4px solid #4CAF50'}}>
+    <strong>🏛️ Government Data</strong><br/>
+    <span style={{fontSize: '0.9em', color: '#666'}}>U.S. Census, NCES, IRS</span>
+  </a>
+  <a href="#civic-tech-standards" className="card" style={{textDecoration: 'none', padding: '15px', borderLeft: '4px solid #FF9800'}}>
+    <strong>🌐 Civic Tech Standards</strong><br/>
+    <span style={{fontSize: '0.9em', color: '#666'}}>OCD-ID, Popolo, Schema.org, CEDS</span>
+  </a>
+  <a href="#election--advocacy" className="card" style={{textDecoration: 'none', padding: '15px', borderLeft: '4px solid #9C27B0'}}>
+    <strong>🗳️ Election & Advocacy</strong><br/>
+    <span style={{fontSize: '0.9em', color: '#666'}}>Ballotpedia, MIT Election Lab, OpenElections</span>
+  </a>
+  <a href="#nonprofit--philanthropy" className="card" style={{textDecoration: 'none', padding: '15px', borderLeft: '4px solid #F44336'}}>
+    <strong>🏢 Nonprofit & Philanthropy</strong><br/>
+    <span style={{fontSize: '0.9em', color: '#666'}}>Microsoft CDM for Nonprofits</span>
+  </a>
+  <a href="#international-aid-transparency" className="card" style={{textDecoration: 'none', padding: '15px', borderLeft: '4px solid #00BCD4'}}>
+    <strong>🌍 International Aid</strong><br/>
+    <span style={{fontSize: '0.9em', color: '#666'}}>IATI Standard v2.03</span>
+  </a>
+  <a href="#-fact-checking" className="card" style={{textDecoration: 'none', padding: '15px', borderLeft: '4px solid #8BC34A'}}>
+    <strong>✅ Fact-Checking</strong><br/>
+    <span style={{fontSize: '0.9em', color: '#666'}}>Google, PolitiFact, FactCheck.org</span>
+  </a>
+  <a href="#acknowledgments" className="card" style={{textDecoration: 'none', padding: '15px', borderLeft: '4px solid #607D8B'}}>
+    <strong>🙏 Acknowledgments</strong><br/>
+    <span style={{fontSize: '0.9em', color: '#666'}}>Organizations & individuals</span>
+  </a>
+</div>
 
 ---
 
