@@ -92,9 +92,9 @@ function AudiencePathways() {
                 Start Here: Advocacy Docs →
               </Link>
               <div style={{ marginTop: '1rem', fontSize: '0.9rem', color: '#555' }}>
-                <Link to="/" style={{ fontWeight: 'bold' }}>
+                <a href="http://localhost:5173" style={{ fontWeight: 'bold' }}>
                   🚀 Or launch the app immediately
-                </Link>
+                </a>
               </div>
             </div>
           </div>
@@ -164,7 +164,7 @@ function AudiencePathways() {
         <div className="col text--center">
           <p style={{ fontSize: '1rem', color: '#666' }}>
             Not sure which path to take?{' '}
-            <Link to="/intro" style={{ fontWeight: 'bold' }}>
+            <Link to="/docs/intro" style={{ fontWeight: 'bold' }}>
               Start with the Introduction →
             </Link>
           </p>
@@ -341,7 +341,7 @@ function GetStartedCTA() {
           </Link>
           <Link
             className="button button--secondary button--lg"
-            to="/"
+            href="http://localhost:5173"
             style={{ minWidth: '200px' }}>
             🚀 Launch App
           </Link>

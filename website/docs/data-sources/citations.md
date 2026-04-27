@@ -52,9 +52,13 @@ This page documents all data sources, standards, and research contributions used
     <strong>💼 Enterprise Tech for Social Good</strong><br/>
     <span style={{fontSize: '0.9em', color: '#666'}}>Microsoft, Google, AWS, Databricks, Snowflake, Salesforce</span>
   </a>
+  <a href="#-civic-tech--open-source" className="card" style={{textDecoration: 'none', padding: '15px', borderLeft: '4px solid #673AB7'}}>
+    <strong>💻 Civic Tech & Open Source</strong><br/>
+    <span style={{fontSize: '0.9em', color: '#666'}}>GitHub, Code for America, Hackathons, Civic Tech Field Guide, USDR, DPGA</span>
+  </a>
   <a href="#-community-solutions--use-cases" className="card" style={{textDecoration: 'none', padding: '15px', borderLeft: '4px solid #FFEB3B'}}>
     <strong>🌟 Community Solutions & Use Cases</strong><br/>
-    <span style={{fontSize: '0.9em', color: '#666'}}>Spectrum of Engagement, Harvard Data-Smart, Brookings</span>
+    <span style={{fontSize: '0.9em', color: '#666'}}>Spectrum of Engagement, Harvard, Brookings, Open Data Impact</span>
   </a>
   <a href="#acknowledgments" className="card" style={{textDecoration: 'none', padding: '15px', borderLeft: '4px solid #607D8B'}}>
     <strong>🙏 Acknowledgments</strong><br/>
@@ -1112,6 +1116,261 @@ share.create_share(
 
 ---
 
+## 💻 Civic Tech & Open Source
+
+### GitHub API (Microsoft)
+
+**Organization:** Microsoft Corporation / GitHub, Inc.  
+**What we use:** GitHub REST and GraphQL APIs for tracking civic tech projects, hackathons, contributors, and open source development.
+
+- **Source:** https://docs.github.com/en/rest
+- **GraphQL API:** https://docs.github.com/en/graphql
+- **Rate Limits:** 5,000 requests/hour (authenticated)
+- **License:** Free (API usage subject to GitHub Terms of Service)
+
+**Data Extracted:**
+
+| Dataset | Description | Fields Tracked |
+|---------|-------------|----------------|
+| `github_repositories` | Civic tech projects and repos | name, stars, forks, topics, language, license |
+| `contributors` | Project maintainers and contributors | login, contributions, role, github_sponsor_enabled |
+| `project_issues` | Good first issues, help wanted | labels, state, title, created_at |
+| `project_funding` | GitHub Sponsors, OpenCollective | funding_type, sponsor_count, monthly_amount |
+| `hackathon_projects` | Projects built at civic hackathons | hackathon_id, project_name, repo_url, demo_url |
+
+**Civic Tech Topics Tracked:**
+- `civic-tech`, `open-government`, `government-transparency`
+- `public-data`, `open-data`, `civic-engagement`
+- `democracy`, `accountability`, `policy-analysis`
+
+**Why GitHub API:**
+- **Discovery:** Find civic tech projects and open source tools
+- **Collaboration:** Track contributors and maintainers
+- **Opportunities:** Surface "good first issue" labels for new contributors
+- **Funding:** Identify projects needing financial support
+- **Hackathons:** Document projects built at civic hackathon events
+
+**Implementation:**
+```python
+# Our platform uses:
+- /civic_tech/github_repositories  # Project metadata
+- /civic_tech/contributors         # Maintainer info
+- /civic_tech/project_issues       # Contribution opportunities
+- /civic_tech/project_funding      # Financial support
+- /civic_tech/hackathon_projects   # Hackathon outputs
+```
+
+**Citation:**
+```bibtex
+@misc{github_api,
+  author = {{GitHub, Inc.}},
+  title = {GitHub REST API and GraphQL API},
+  year = {2024},
+  url = {https://docs.github.com/en/rest},
+  note = {API for accessing repository data, issues, contributors, and project metadata}
+}
+```
+
+---
+
+### Civic Tech Field Guide
+
+**Organization:** Compiler LA  
+**What we use:** Curated directory of 1,000+ civic technology projects categorized by issue area and impact.
+
+- **Source:** https://civictech.guide/
+- **Dataset:** https://airtable.com/shr8yfQ5p3CJGMnCs/tblv0VlP8vVGIBYI6
+- **Format:** CSV, Airtable API
+- **License:** Open Database License (ODbL)
+
+**Categories:**
+- Democracy & Voting
+- Environment & Climate
+- Housing & Homelessness
+- Criminal Justice
+- Education
+- Health & Safety
+- Economic Justice
+- Infrastructure
+
+**Notable Projects Catalogued:**
+- OpenBudget Oakland (Budget transparency)
+- Food Oasis (Food access mapping)
+- Health Equity Tracker (CDC data visualization)
+- City Scrapers (Meeting minutes automation)
+- Documenters Network (Public meeting coverage)
+
+**Why Civic Tech Field Guide:**
+- **Taxonomy:** Standardized categorization of civic tech projects
+- **Discovery:** Find existing tools before building new ones
+- **Inspiration:** Learn from successful civic tech implementations
+- **Collaboration:** Connect with project maintainers
+
+**Citation:**
+```bibtex
+@misc{civic_tech_field_guide,
+  author = {{Compiler LA}},
+  title = {Civic Tech Field Guide},
+  year = {2024},
+  url = {https://civictech.guide/},
+  note = {Curated directory of 1,000+ civic technology projects}
+}
+```
+
+---
+
+### Code for America: Brigade Network
+
+**Organization:** Code for America  
+**What we use:** Brigade chapter locations, hackathon events, and civic tech projects built by local volunteer groups.
+
+- **Source:** https://brigade.codeforamerica.org/
+- **Brigades:** https://brigade.codeforamerica.org/brigades
+- **Projects:** https://brigade.codeforamerica.org/projects
+- **License:** Public information, project-specific licenses vary
+
+**Brigade Network:**
+- **80+ active brigades** across the United States
+- Monthly civic hack nights and community meetups
+- Annual **National Day of Civic Hacking**
+- **CodeAcross** weekend hackathons
+
+**Notable Brigade Projects:**
+
+| Project | Brigade | Impact |
+|---------|---------|--------|
+| **OpenBudget Oakland** | Code for Oakland | Budget transparency & visualization |
+| **Food Oasis** | Hack for LA | Map food resources (300+ locations) |
+| **Health Equity Tracker** | Code for America | CDC health disparities data |
+| **BallotNav** | National | Ballot drop-off location finder |
+| **Documenters** | City Bureau (Chicago) | Public meeting coverage network |
+
+**Hackathon Events Tracked:**
+
+| Event | Frequency | Focus |
+|-------|-----------|-------|
+| **National Day of Civic Hacking** | Annual (June) | Nationwide simultaneous hackathons |
+| **CodeAcross** | Annual (February) | Local government collaboration |
+| **Monthly Hack Nights** | Monthly | Ongoing project development |
+
+**Brigade Data in Our Platform:**
+```python
+# We track:
+- /civic_tech/brigade_chapters      # 80+ locations with contact info
+- /civic_tech/hackathons            # Events: CodeAcross, NDoCH
+- /civic_tech/hackathon_projects    # Projects built at events
+- /civic_tech/hackathon_participants # Contributors and attendees
+```
+
+**Citation:**
+```bibtex
+@misc{code_for_america_brigade,
+  author = {{Code for America}},
+  title = {Brigade Network: Volunteer Civic Technology},
+  year = {2024},
+  url = {https://brigade.codeforamerica.org/},
+  note = {80+ local volunteer groups building civic technology}
+}
+```
+
+---
+
+### U.S. Digital Response (USDR)
+
+**Organization:** U.S. Digital Response  
+**What we use:** Emergency civic tech projects and rapid-response open source tools for government needs.
+
+- **Source:** https://www.usdigitalresponse.org/
+- **Projects:** https://github.com/usdigitalresponse
+- **License:** Varies by project (mostly MIT, Apache 2.0)
+
+**Key Projects:**
+
+| Project | Purpose | Tech Stack |
+|---------|---------|------------|
+| **grants-ingest** | Federal grant opportunity aggregation | Python, PostgreSQL |
+| **usdr-gost** | Grant opportunity management system | TypeScript, React |
+| **cpf-reporter** | Compliance reporting automation | Node.js |
+
+**Focus Areas:**
+- **COVID-19 Response:** Vaccine distribution, testing sites
+- **Emergency Management:** Disaster response coordination
+- **Grants & Funding:** Grant opportunity discovery
+- **Government Modernization:** UI/UX improvements for gov services
+
+**Why USDR:**
+- **Rapid Response:** Builds tools during emergencies
+- **Open Source:** All code publicly available
+- **Government Partnership:** Works directly with agencies
+- **Reusable Tools:** Solutions applicable to multiple jurisdictions
+
+**Citation:**
+```bibtex
+@misc{us_digital_response,
+  author = {{U.S. Digital Response}},
+  title = {Open Source Civic Technology for Emergency Response},
+  year = {2024},
+  url = {https://www.usdigitalresponse.org/},
+  note = {Rapid-response civic tech projects for government needs}
+}
+```
+
+---
+
+### Digital Public Goods Alliance (DPGA)
+
+**Organization:** United Nations Development Programme (UNDP), Norway, Sierra Leone, Germany  
+**What we use:** Registry of 500+ Digital Public Goods (DPGs) certified as open source projects meeting UN Sustainable Development Goals.
+
+- **Source:** https://digitalpublicgoods.net/
+- **Registry:** https://digitalpublicgoods.net/registry/
+- **Standard:** https://digitalpublicgoods.net/standard/
+- **License:** CC0 1.0 Universal (registry data)
+
+**DPG Standard Requirements:**
+1. ✅ **Open License:** OSI-approved, Creative Commons
+2. ✅ **Open Source:** Public code repositories
+3. ✅ **Documentation:** Clear usage instructions
+4. ✅ **Privacy & Security:** Data protection mechanisms
+5. ✅ **Standards:** Adheres to relevant standards
+6. ✅ **SDG Alignment:** Supports UN Sustainable Development Goals
+
+**Notable Digital Public Goods:**
+
+| DPG | Category | Impact |
+|-----|----------|--------|
+| **OpenStreetMap** | Geographic data | Global collaborative mapping |
+| **DHIS2** | Health information | Used in 100+ countries |
+| **Open Food Network** | Food systems | Local food marketplace platform |
+| **Ushahidi** | Crisis response | Crowdsourced incident reporting |
+| **Khan Academy** | Education | Free online learning platform |
+
+**Why DPGA:**
+- **Certification:** Vetted open source projects
+- **SDG Alignment:** Projects tied to development goals
+- **Sustainability:** Focus on long-term viability
+- **Global Impact:** International collaboration
+
+**Our Use Case:**
+```python
+# We track DPG-certified civic tech projects:
+- /civic_tech/github_repositories (dpg_certified = true)
+- /civic_tech/project_metadata (sdg_goals = [...])
+```
+
+**Citation:**
+```bibtex
+@misc{digital_public_goods_alliance,
+  author = {{Digital Public Goods Alliance}},
+  title = {Digital Public Goods Registry},
+  year = {2024},
+  url = {https://digitalpublicgoods.net/},
+  note = {500+ open source projects certified as Digital Public Goods}
+}
+```
+
+---
+
 ## 🌟 Community Solutions & Use Cases
 
 ### Spectrum of Community Engagement to Ownership
@@ -1174,16 +1433,16 @@ share.create_share(
 
 ---
 
-### Harvard Data-Smart City Solutions: Civic Data Use Cases
+### Harvard Ash Center: Data-Smart City Solutions (Archived)
 
 **Organization:** Harvard Kennedy School Ash Center for Democratic Governance and Innovation  
-**What we use:** Catalog of how data engineering impacts community outcomes - templates for our `/analytics/metric_views`.
+**What we use:** Research on how data engineering impacts community outcomes - informs our `/analytics/metric_views` templates.
 
-- **Source:** https://datasmart.ash.harvard.edu/
-- **Use Case Catalog:** https://datasmart.ash.harvard.edu/civic-analytics-network/use-cases
+- **Source:** https://ash.harvard.edu/
+- **Note:** Data-Smart City Solutions initiative (archived) - use cases based on historical civic data research
 - **License:** Educational use
 
-**Example Use Cases:**
+**Example Use Cases from Data-Smart Research:**
 
 **Use Case 1: Youth Obesity Prevention (Austin, TX)**
 
@@ -1249,8 +1508,9 @@ For each community challenge, we provide:
 @misc{harvard_datasmart_use_cases,
   author = {{Harvard Kennedy School Ash Center}},
   title = {Data-Smart City Solutions: Civic Data Use Cases},
-  year = {2024},
-  url = {https://datasmart.ash.harvard.edu/}
+  year = {2016},
+  note = {Archived civic data research initiative},
+  url = {https://ash.harvard.edu/}
 }
 ```
 
@@ -1354,6 +1614,135 @@ City Creates Dashboard → Residents Attend Data Academy → Data Informs Policy
   url = {https://www.brookings.edu/}
 }
 ```
+
+---
+
+### Open Data Impact: Evidence-Based Research
+
+**Organization:** The GovLab at New York University (NYU Tandon School of Engineering)  
+**What we use:** Evidence-based research on open data impact - validates our platform's approach and demonstrates measurable outcomes from open data initiatives.
+
+- **Source:** https://odimpact.org/
+- **Key Findings Report:** https://odimpact.org/key-findings.html
+- **Full Report:** https://odimpact.org/files/open-data-impact-key-findings.pdf
+- **Funded by:** Omidyar Network
+- **License:** Creative Commons Attribution-ShareAlike 4.0 International License
+
+**Research Overview:**
+
+**19 Global Case Studies** analyzing what works in open data:
+- Sectoral and geographic representativeness
+- First-hand interviews with stakeholders
+- Measurable, tangible impact analysis
+- Best practices and enabling conditions
+
+**Economic Impact Estimates:**
+- **McKinsey (2013):** $3 trillion per year global value of open data
+- **Omidyar Network Study:** $13 trillion over 5 years in G20 nations
+
+**Four Main Impact Dimensions:**
+
+| Impact Type | Description | Our Platform Support |
+|-------------|-------------|---------------------|
+| **Improving Government** | Transparency, accountability, efficiency | `/jurisdictions/budgets` + `/meetings` + `/legislation` |
+| **Empowering Citizens** | Informed decision-making, participation | `/analytics/dashboards` + `/surveys` + `/factchecks` |
+| **Creating Opportunity** | Economic innovation, new businesses | `/civic_tech` + `/grants` + `/nonprofits` |
+| **Solving Public Problems** | Data-driven solutions to complex issues | `/community_solutions` + `/metric_views` |
+
+**Enabling Conditions for Success:**
+
+**1. Supply-Side (Data Providers):**
+- **Quality Data:** Accurate, timely, machine-readable
+- **Our Implementation:** `/standards/schema_org_jsonld`, `/standards/popolo_exports`
+
+**2. Demand-Side (Data Users):**
+- **Capacity Building:** Skills to analyze and use data
+- **Our Implementation:** `/meetings/trainings` (Data Academies), `/analytics/metric_views`
+
+**3. Intermediaries:**
+- **Data Translators:** Organizations bridging supply and demand
+- **Our Implementation:** `/civic_tech/brigade_chapters`, `/nonprofits/advocacy_orgs`
+
+**4. Ecosystem:**
+- **Multi-Stakeholder Collaboration:** Government + Civic Tech + Nonprofits
+- **Our Implementation:** `/community_solutions/stakeholder_mapping`
+
+**Key Challenges Identified:**
+
+| Challenge | ODI Findings | Our Mitigation Strategy |
+|-----------|--------------|------------------------|
+| **Data Quality** | Incomplete, outdated data | Automated ingestion + validation pipelines |
+| **Technical Capacity** | Users lack skills to analyze | Pre-built dashboards + metric views |
+| **Sustainability** | Projects depend on grants | Open-source + reusable infrastructure |
+| **Privacy Risks** | Potential for harm | Anonymization + ethical data standards |
+
+**10 Recommendations for Next-Generation Open Data:**
+
+1. **Focus on Demand, Not Just Supply** → We provide ready-to-use analytics
+2. **Build User Capacity** → Data Academies tracked in `/meetings/trainings`
+3. **Create Data Intermediaries** → Civic tech projects in `/civic_tech`
+4. **Ensure Data Quality** → Standards compliance (`/standards`)
+5. **Enable Interoperability** → OCD-ID, Popolo, Schema.org integration
+6. **Measure Impact** → `/analytics/metric_views` + `/community_solutions/metrics`
+7. **Sustain Engagement** → Open-source + HuggingFace hosting
+8. **Mitigate Risks** → Privacy-first design, anonymization
+9. **Foster Collaboration** → Multi-stakeholder `/community_solutions`
+10. **Scale What Works** → Reusable templates + case studies
+
+**How We Apply ODI Research:**
+
+**Our Platform as Evidence-Based Open Data Infrastructure:**
+- **Supply:** 90K+ jurisdictions, 3M+ nonprofits, 500K+ meetings → standardized datasets
+- **Demand:** Pre-built dashboards, metric views, analytics → accessible to non-technical users
+- **Intermediaries:** Civic tech projects, brigade chapters, nonprofits → data translators
+- **Ecosystem:** Community solutions framework → multi-stakeholder collaboration
+
+**Real-World Validation:**
+
+ODI case studies demonstrate that open data works when:
+1. ✅ **Data is standardized** → We use OCD-ID, Popolo, Schema.org
+2. ✅ **Users have capacity** → We provide training + dashboards
+3. ✅ **Intermediaries bridge gaps** → We integrate civic tech projects
+4. ✅ **Impact is measured** → We track metrics + outcomes
+
+**Example ODI Case Study Applied to Our Platform:**
+
+**Chile's Budget Transparency (ODI Case Study):**
+- **Problem:** Citizens couldn't understand government budgets
+- **Solution:** Open budget data + visualization tools
+- **Impact:** Increased public participation in budget process
+
+**Our Implementation:**
+```python
+# Replicating Chile's success:
+- /jurisdictions/budget_data       # Open budget data (supply)
+- /analytics/dashboard_metrics     # Budget visualizations (demand)
+- /meetings/trainings             # Data literacy programs (capacity)
+- /meetings/public_hearings       # Public participation (engagement)
+- /community_solutions/metrics    # Budget impact tracking (measurement)
+```
+
+**Citation:**
+```bibtex
+@techreport{verhulst_open_data_impact,
+  author = {Verhulst, Stefaan and Young, Andrew},
+  title = {Open Data Impact: When Demand and Supply Meet - Key Findings of the Open Data Impact Case Studies},
+  institution = {The GovLab, NYU Tandon School of Engineering},
+  year = {2016},
+  url = {https://odimpact.org/key-findings.html},
+  note = {Supported by Omidyar Network. 19 global case studies.}
+}
+```
+
+**Why This Matters for Our Platform:**
+
+Open Data Impact provides **evidence-based validation** that our approach works:
+- ✅ Combining **supply** (data) + **demand** (analytics) + **capacity** (training) = impact
+- ✅ Multi-stakeholder collaboration drives success
+- ✅ Standardization and quality are essential
+- ✅ Impact must be measured and documented
+
+Their research proves: **Open data alone isn't enough. You need the ecosystem we're building.**
 
 ---
 

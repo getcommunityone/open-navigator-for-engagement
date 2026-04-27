@@ -10,7 +10,7 @@ Welcome to **Open Navigator for Engagement** - an AI-powered platform that analy
 :::tip **All Data is Cited & Properly Attributed**
 Every dataset, standard, and research source used in this platform is properly cited with complete attribution, licenses, and BibTeX references.
 
-**[View Complete Citations & Data Sources](/data-sources/citations)** - Academic research (MeetingBank, LocalView, Council Data Project, City Scrapers), Government data (U.S. Census, NCES, IRS), Civic tech standards (OCD-ID, Popolo, Schema.org, CEDS, OMOP CDM), Nonprofit data (ProPublica, Every.org, Findhelp), Church & congregation data (ARDA, HIFLD, National Congregations Study), Enterprise tech partnerships (Microsoft, Google, AWS, Databricks, Snowflake, Salesforce), and more.
+**[View Complete Citations & Data Sources](/docs/data-sources/citations)** - Academic research (MeetingBank, LocalView, Council Data Project, City Scrapers), Government data (U.S. Census, NCES, IRS), Civic tech standards (OCD-ID, Popolo, Schema.org, CEDS, OMOP CDM), Nonprofit data (ProPublica, Every.org, Findhelp), Church & congregation data (ARDA, HIFLD, National Congregations Study), Enterprise tech partnerships (Microsoft, Google, AWS, Databricks, Snowflake, Salesforce), and more.
 :::
 
 ## 👋 Choose Your Path
@@ -200,7 +200,7 @@ These are the most powerful ways to use Open Navigator:
 :::info **Explore the Complete Data Model**
 These use cases are powered by a comprehensive data model with 40+ entities including jurisdictions, meetings, budgets, nonprofits, officials, videos, and more.
 
-**[View Complete Data Model ERD](/data-sources/data-model-erd)** - Interactive diagram with all entity relationships
+**[View Complete Data Model ERD](/docs/data-sources/data-model-erd)** - Interactive diagram with all entity relationships
 :::
 
 ---

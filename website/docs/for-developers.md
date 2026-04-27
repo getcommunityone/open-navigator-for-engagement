@@ -53,7 +53,7 @@ Open Navigator processes data at scale across the United States:
 :::info **Complete Technical Citations & Standards**
 For full citations, licenses, API documentation, and technical specifications:
 
-**[Citations & Data Sources](/data-sources/citations)**
+**[Citations & Data Sources](/docs/data-sources/citations)**
 
 Includes:
 - **Academic Research**: MeetingBank (ACL 2023), LocalView (Harvard), Council Data Project, City Scrapers

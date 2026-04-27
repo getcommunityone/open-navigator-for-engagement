@@ -41,7 +41,7 @@ const config: Config = {
       'classic',
       {
         docs: {
-          routeBasePath: '/', // Serve docs at root since nginx handles /docs/ prefix
+          routeBasePath: '/docs/', // Serve docs at /docs/ path since we have a custom homepage
           sidebarPath: './sidebars.ts',
           // Please change this to your repo.
           // Remove this to remove the "edit this page" links.
@@ -120,7 +120,7 @@ const config: Config = {
           label: 'Developers',
         },
         {
-          to: '/data-sources/citations',
+          to: '/docs/data-sources/citations',
           label: 'Citations',
           position: 'left',
         },
@@ -140,19 +140,19 @@ const config: Config = {
           items: [
             {
               label: 'Getting Started',
-              to: '/intro',
+              to: '/docs/intro',
             },
             {
               label: 'Citations & Data Sources',
-              to: '/data-sources/citations',
+              to: '/docs/data-sources/citations',
             },
             {
               label: 'Data Sources',
-              to: '/data-sources',
+              to: '/docs/data-sources',
             },
             {
               label: 'API Reference',
-              to: '/api',
+              to: '/docs/api',
             },
           ],
         },
@@ -161,7 +161,7 @@ const config: Config = {
           items: [
             {
               label: 'Launch Open Navigator',
-              to: '/dashboard',
+              to: '/docs/dashboard',
             },
             {
               label: 'GitHub',

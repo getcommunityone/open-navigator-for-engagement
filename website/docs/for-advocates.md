@@ -52,7 +52,7 @@ Open Navigator gives you access to comprehensive accountability data across the 
 :::tip **Complete Data Source Citations**
 All data sources are properly cited with licenses, BibTeX references, and attribution.
 
-**[Citations & Data Sources](/data-sources/citations)**
+**[Citations & Data Sources](/docs/data-sources/citations)**
 
 Includes:
 - **Academic Research**: MeetingBank, LocalView (Harvard), Council Data Project, City Scrapers
