@@ -11,7 +11,7 @@ interface ZoomableMermaidProps {
 export default function ZoomableMermaid({ value, title }: ZoomableMermaidProps): JSX.Element {
   return (
     <div className={styles.zoomableContainer}>
-      {title && <h3 className={styles.diagramTitle} style={{ color: '#ffffff' }}>{title}</h3>}
+      {title && <h3 className={styles.diagramTitle}>{title}</h3>}
       <div className={styles.controls}>
         <span className={styles.controlsLabel}>
           💡 <strong>Tip:</strong> Use mouse wheel to zoom, click and drag to pan, or use the controls below
