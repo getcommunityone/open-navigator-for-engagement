@@ -32,6 +32,17 @@ const sidebars: SidebarsConfig = {
       items: [
         'for-families',
         {
+          type: 'category',
+          label: 'Resources for Families',
+          items: [
+            'families/community-events',
+            'families/training-education',
+            'families/voter-registration',
+            'families/service-requests',
+            'families/community-resources',
+          ],
+        },
+        {
           type: 'doc',
           id: 'dashboard',
           label: 'Getting Started with Dashboard',
@@ -203,6 +214,17 @@ const sidebars: SidebarsConfig = {
         id: 'for-families',
       },
       items: [
+        {
+          type: 'category',
+          label: 'Resources for Families',
+          items: [
+            'families/community-events',
+            'families/training-education',
+            'families/voter-registration',
+            'families/service-requests',
+            'families/community-resources',
+          ],
+        },
         {
           type: 'doc',
           id: 'dashboard',
