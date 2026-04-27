@@ -572,11 +572,14 @@ open-navigator-data/
 │   ├── state_legislators  # From Open States API
 │   └── school_board       # School board members
 │
-├── organizations/          # 🏢 Nonprofits & charities
+├── nonprofits/             # 🏢 Nonprofit organizations
 │   ├── irs_nonprofits     # IRS 990 data (3M+ organizations)
 │   ├── propublica_data    # ProPublica API (financials, NTEE codes)
-│   ├── everyorg_data      # Every.org API (missions, causes, logos)
-│   └── nonprofit_causes   # NTEE taxonomy + Every.org causes
+│   └── everyorg_data      # Every.org API (missions, causes, logos)
+│
+├── nonprofit_causes/       # 🎯 Cause & category taxonomy
+│   ├── ntee_codes         # IRS NTEE classification system
+│   └── everyorg_causes    # Every.org cause tags
 │
 ├── civic_data/            # 🗳️ Google Civic & Wikidata
 │   ├── civic_divisions    # OCD divisions
