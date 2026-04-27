@@ -118,13 +118,22 @@ erDiagram
         string meeting_id PK
         string jurisdiction_id FK
         string meeting_type
+        string event_category
         datetime meeting_date
+        datetime end_date
         string meeting_title
         string body_name
         string status
         string platform
         string source_url
         boolean oral_health_related
+        string training_topic
+        string target_audience
+        string presenter
+        boolean requires_registration
+        float registration_fee
+        int max_capacity
+        string location_type
         datetime extracted_at
     }
     
@@ -618,7 +627,11 @@ open-navigator-data/
 │   ├── municipal_websites # City/county websites
 │   └── state_portals      # State government sites
 │
-├── meetings/               # 📋 Meeting data
+├── meetings/               # 📋 Meetings, events & trainings
+│   ├── government_meetings # City council, school board, etc.
+│   ├── public_hearings    # Public comment sessions
+│   ├── community_events   # Town halls, forums, engagement
+│   ├── trainings          # Professional development, workshops
 │   ├── agendas            # Meeting agendas (text extracted)
 │   ├── minutes            # Meeting minutes (text extracted)
 │   ├── videos             # YouTube/Vimeo video metadata
@@ -715,13 +728,95 @@ open-navigator-data/
 | YouTube Channels | 5,000+ | Discovery pipeline |
 | Meeting Platforms | 10,000+ | URL detection |
 | State Legislators | 7,300+ | Open States |
-| Meetings | 500,000+ | Scraped |
+| Meetings & Events | 500,000+ | Scraped (govt, hearings, events, trainings) |
+| Trainings | TBD | Professional development, workshops |
 | Documents | 2,000,000+ | PDF extraction |
 | Ballot Measures | TBD | State/local election sites |
 | State Bills | 100,000+ | Open States API |
 | Policy Topics | ~50 | Curated + extracted |
 
-## 💰 Nonprofit Funding Source Tracking
+## � Meeting & Event Types
+
+### Event Categories in the MEETING Entity
+
+The MEETING entity tracks **4 main event categories** to capture all civic engagement opportunities:
+
+#### 1. **Government Meetings** (`event_category: "government_meeting"`)
+- City council meetings, school board meetings, county commissions
+- Official business conducted by elected bodies
+- **Fields:** `body_name`, `meeting_type` (regular, special, emergency)
+- **Example:** "Tuscaloosa City Council Regular Meeting - 3rd Tuesday"
+
+#### 2. **Public Hearings** (`event_category: "public_hearing"`)
+- Public comment sessions on specific issues
+- Budget hearings, zoning hearings, policy feedback
+- **Fields:** `meeting_type` (budget, zoning, policy)
+- **Example:** "Public Hearing on FY2026 Water System Fluoridation Budget"
+
+#### 3. **Community Events** (`event_category: "community_event"`)
+- Town halls, community forums, listening sessions
+- Informal engagement between government and citizens
+- **Fields:** `location_type` (in-person, virtual, hybrid)
+- **Example:** "Town Hall on Community Health Priorities"
+
+#### 4. **Trainings** (`event_category: "training"`) ⭐ NEW
+- Professional development workshops
+- Continuing education for healthcare workers, teachers, officials
+- Certification courses, skill-building sessions
+- **Fields:**
+  - `training_topic` - Subject matter (e.g., "Pediatric Oral Health", "Water Fluoridation Safety")
+  - `target_audience` - Who should attend (e.g., "Dental Hygienists", "School Nurses", "Water Operators")
+  - `presenter` - Trainer/instructor name or organization
+  - `requires_registration` - Boolean flag
+  - `registration_fee` - Cost to attend (0 for free)
+  - `max_capacity` - Attendance limit
+  - `end_date` - Training end time (multi-day events)
+- **Example:** "Fluoride Varnish Application Training for School Nurses (3 CEU)"
+
+### Why Trainings Matter for Advocacy
+
+**Capacity Building:**
+- ✅ Identify training gaps ("No fluoride varnish training in past 2 years")
+- ✅ Track professional development opportunities
+- ✅ Monitor continuing education credits (CEUs) offered
+
+**Stakeholder Engagement:**
+- ✅ Find healthcare workers trained in specific skills
+- ✅ Identify champions (frequent training attendees)
+- ✅ Target outreach to trained professionals
+
+**Policy Implementation:**
+- ✅ "City wants dental screenings but no trained staff" → Show available trainings
+- ✅ Track certification status (who's qualified to implement policy)
+- ✅ Link training availability to policy feasibility
+
+**Example Questions Now Answerable:**
+1. "What oral health trainings are offered in Alabama?" → Filter by `training_topic` LIKE '%oral%'
+2. "Which jurisdictions offer free fluoride training?" → `registration_fee = 0` AND `training_topic` LIKE '%fluoride%'
+3. "How many school nurses attended varnish training last year?" → Count attendees by `target_audience`
+4. "Are there upcoming water fluoridation operator trainings?" → `training_topic` AND `meeting_date` > TODAY
+
+### Meeting Types Within Each Category
+
+**Government Meetings:**
+- Regular sessions, special sessions, emergency meetings
+- Work sessions, committee meetings, executive sessions
+
+**Public Hearings:**
+- Budget hearings, zoning hearings, policy feedback sessions
+- Environmental impact hearings, license applications
+
+**Community Events:**
+- Town halls, listening sessions, community forums
+- Neighborhood meetings, stakeholder roundtables
+
+**Trainings:**
+- Professional development workshops
+- Certification courses (CPR, fluoride application, etc.)
+- Continuing education (CEU/CME credits)
+- Skill-building sessions (motivational interviewing, cultural competency)
+
+## �💰 Nonprofit Funding Source Tracking
 
 ### Revenue Source Breakdown (Form 990 Data)
 
