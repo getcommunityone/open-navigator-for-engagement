@@ -1,0 +1,118 @@
+name: Deploy to Hugging Face Spaces
+
+on:
+  # Manual trigger from GitHub UI (Actions tab → Run workflow)
+  workflow_dispatch:
+    inputs:
+      hf_username:
+        description: 'Hugging Face username (leave blank to use HF_USERNAME secret)'
+        required: false
+        default: ''
+
+  # Automatically deploy when pushing to main (optional - comment out if not desired)
+  # push:
+  #   branches:
+  #     - main
+
+jobs:
+  deploy:
+    name: Push to Hugging Face Spaces
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # full history needed for git push to HF
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install huggingface-hub CLI
+        run: pip install huggingface-hub
+
+      - name: Determine HF username
+        id: hf_user
+        run: |
+          USERNAME="${{ github.event.inputs.hf_username }}"
+          if [ -z "$USERNAME" ]; then
+            USERNAME="${{ secrets.HF_USERNAME }}"
+          fi
+          if [ -z "$USERNAME" ]; then
+            echo "❌ No Hugging Face username provided."
+            echo "Set the HF_USERNAME repository secret or pass it as a workflow input."
+            exit 1
+          fi
+          echo "username=$USERNAME" >> "$GITHUB_OUTPUT"
+
+      - name: Authenticate with Hugging Face
+        env:
+          HF_TOKEN: ${{ secrets.HUGGINGFACE_TOKEN }}
+        run: |
+          if [ -z "$HF_TOKEN" ]; then
+            echo "❌ HUGGINGFACE_TOKEN secret is not set."
+            echo "Add it under Settings → Secrets and variables → Actions."
+            exit 1
+          fi
+          huggingface-cli login --token "$HF_TOKEN"
+
+      - name: Create Space (if it does not exist)
+        env:
+          HF_USERNAME: ${{ steps.hf_user.outputs.username }}
+        run: |
+          huggingface-cli repo create open-navigator-for-engagement \
+            --type space \
+            --space-sdk docker \
+            --exist-ok || true
+
+      - name: Configure git identity
+        run: |
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git config user.name "github-actions[bot]"
+
+      - name: Prepare deployment branch
+        env:
+          HF_USERNAME: ${{ steps.hf_user.outputs.username }}
+        run: |
+          # Create or switch to the deployment branch
+          git checkout -b huggingface-deploy 2>/dev/null || git checkout huggingface-deploy
+
+          # Use the HF-specific Dockerfile
+          cp Dockerfile.huggingface Dockerfile
+
+          # Copy Space README
+          cp .huggingface/README.md README_HF.md
+
+          # Remove large binary files rejected by HF Spaces (tracked images)
+          git rm --cached $(git ls-files '*.png' '*.jpg' '*.jpeg' '*.gif' '*.ico') \
+            2>/dev/null || true
+
+          git add Dockerfile README_HF.md .huggingface/
+          git add -u
+
+          if ! git diff --cached --quiet; then
+            git commit -m "ci: configure Hugging Face Space deployment [skip ci]"
+          fi
+
+      - name: Push to Hugging Face Spaces
+        env:
+          HF_USERNAME: ${{ steps.hf_user.outputs.username }}
+          HF_TOKEN: ${{ secrets.HUGGINGFACE_TOKEN }}
+        run: |
+          SPACE_NAME="open-navigator-for-engagement"
+          HF_REPO="https://user:${HF_TOKEN}@huggingface.co/spaces/${HF_USERNAME}/${SPACE_NAME}"
+
+          # Add remote if missing
+          git remote get-url hf 2>/dev/null || git remote add hf "$HF_REPO"
+          git remote set-url hf "$HF_REPO"
+
+          git push hf huggingface-deploy:main --force-with-lease
+
+          echo ""
+          echo "✅ Deployment initiated!"
+          echo "View your Space: https://huggingface.co/spaces/${HF_USERNAME}/${SPACE_NAME}"
+          echo "Build takes ~10-15 minutes. Watch progress in the Logs tab."
