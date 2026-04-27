@@ -18,7 +18,8 @@ const config: Config = {
   url: 'https://opennavigator.org',
   // Set the /<baseUrl>/ pathname under which your site is served
   // For GitHub pages deployment, it is often '/<projectName>/'
-  baseUrl: '/',
+  // For HuggingFace Spaces, docs are served from /docs/ subdirectory
+  baseUrl: process.env.DOCUSAURUS_BASE_URL || '/',,
 
   // GitHub pages deployment config.
   // If you aren't using GitHub pages, you don't need these.

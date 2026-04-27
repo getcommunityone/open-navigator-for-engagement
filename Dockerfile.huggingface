@@ -8,6 +8,8 @@ RUN npm config set fetch-retry-mintimeout 20000 && \
     npm config set fetch-retry-maxtimeout 120000 && \
     npm ci --prefer-offline --no-audit || npm install --prefer-offline --no-audit
 COPY website/ ./
+# Set baseUrl for HuggingFace deployment where docs are served from /docs/
+ENV DOCUSAURUS_BASE_URL=/docs/
 RUN npm run build
 
 FROM python:3.11-slim
