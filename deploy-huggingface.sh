@@ -89,13 +89,13 @@ if ! hf whoami &> /dev/null; then
     # Not logged in - try to login with token from .env
     if [ -n "$HUGGINGFACE_TOKEN" ]; then
         echo "🔑 Logging in with HUGGINGFACE_TOKEN from .env..."
-        hf auth login --token "$HUGGINGFACE_TOKEN"
-        if ! hf whoami &> /dev/null; then
+        if hf auth login --token "$HUGGINGFACE_TOKEN" --add-to-git-credential; then
+            echo "✅ Successfully authenticated with token from .env"
+        else
             echo "❌ Failed to authenticate with HUGGINGFACE_TOKEN"
             echo "Please check your token in .env file"
             exit 1
         fi
-        echo "✅ Successfully authenticated with token from .env"
     else
         echo "❌ Not logged in to Hugging Face"
         echo ""
