@@ -277,6 +277,31 @@ erDiagram
         datetime filing_date
     }
     
+    %% Grant Transactions (Individual Grants)
+    ORGANIZATION ||--o{ GRANT : receives
+    JURISDICTION ||--o{ GRANT : awards
+    GRANT {
+        string grant_id PK
+        string recipient_ein FK
+        string recipient_name
+        string recipient_type
+        string funder_name
+        string funder_ein
+        string funder_type
+        float grant_amount
+        string grant_purpose
+        string program_area
+        datetime award_date
+        datetime start_date
+        datetime end_date
+        int grant_duration_months
+        string grant_status
+        string funding_source
+        boolean multi_year
+        string restrictions
+        string reporting_requirements
+    }
+    
     %% ========================================
     %% MEDIA & COMMUNICATIONS
     %% ========================================
@@ -648,6 +673,12 @@ open-navigator-data/
 │   ├── everyorg_data      # Every.org API (missions, causes, logos)
 │   └── nonprofit_990s     # Detailed Form 990 financials (yearly filings)
 │
+├── grants/                 # 💵 Grant funding transactions
+│   ├── nonprofit_grants   # Grants to nonprofits (from 990 Schedule I)
+│   ├── government_grants  # Government grants to orgs/jurisdictions
+│   ├── foundation_grants  # Private foundation grants
+│   └── federal_grants     # Federal funding programs
+│
 ├── causes/                 # 🎯 Cause & category taxonomy
 │   ├── ntee_codes         # IRS NTEE classification system
 │   └── everyorg_causes    # Every.org cause tags
@@ -724,6 +755,8 @@ open-navigator-data/
 | Municipal Bonds | TBD | EMMA (MSRB) |
 | Nonprofits | 3,000,000+ | IRS TEOS |
 | Nonprofit 990 Filings | 10,000,000+ | ProPublica (10+ years) |
+| Grants (Individual Awards) | TBD | IRS 990-I, USASpending.gov, Foundation Center |
+| Federal Grants | 100,000+ | USASpending.gov API |
 | Nonprofit Causes | 600+ | NTEE + Every.org |
 | YouTube Channels | 5,000+ | Discovery pipeline |
 | Meeting Platforms | 10,000+ | URL detection |
@@ -880,6 +913,90 @@ The NONPROFIT_FINANCES entity tracks **10 different revenue sources** to underst
 2. "What's the average overhead for oral health organizations?" (efficiency benchmark)
 3. "Are dental nonprofits more grant-dependent or self-sufficient?" (sustainability)
 4. "Which funders support oral health work?" (foundation grants analysis)
+
+## 💵 Grant Tracking System
+
+### Individual Grant Transactions (GRANT Entity)
+
+The GRANT entity tracks **individual grant awards** beyond just aggregate 990 financials. This provides transaction-level detail for:
+
+#### Grant Fields
+- **Recipient Info:** `recipient_ein`, `recipient_name`, `recipient_type` (nonprofit, government, etc.)
+- **Funder Info:** `funder_name`, `funder_ein`, `funder_type` (foundation, government, corporate)
+- **Grant Details:** `grant_amount`, `grant_purpose`, `program_area`
+- **Timeline:** `award_date`, `start_date`, `end_date`, `grant_duration_months`
+- **Status:** `grant_status` (active, completed, terminated)
+- **Type:** `funding_source` (federal, state, foundation, corporate)
+- **Restrictions:** `multi_year`, `restrictions`, `reporting_requirements`
+
+#### Data Sources
+
+**IRS Form 990 Schedule I:**
+- Grants PAID by nonprofits to other organizations
+- Required for organizations granting >$5,000/year
+- Shows foundation giving patterns
+
+**USASpending.gov API (FREE):**
+- All federal grants to states, localities, nonprofits
+- Contract and grant transactions $25K+
+- Real-time data updated daily
+
+**Foundation Center/Candid:**
+- Private foundation grants (990-PF data)
+- Grant descriptions, amounts, recipients
+
+**State Grant Databases:**
+- State-level grant programs
+- Varies by state
+
+### Why Grant Tracking Matters
+
+**Follow the Money:**
+- ✅ "Who funds oral health work in Alabama?" → Track all grants by `program_area`
+- ✅ "Which foundations support fluoridation?" → Search grant purposes
+- ✅ "How much federal money goes to dental access?" → Sum `funding_source = federal`
+
+**Find Funding Opportunities:**
+- ✅ Identify active grant programs (similar grants to similar orgs)
+- ✅ Discover new funders entering a program area
+- ✅ Track grant sizes and typical durations
+
+**Partnership Intelligence:**
+- ✅ "Who else is this foundation funding?" → Find collaborators
+- ✅ "What's this nonprofit's grant portfolio?" → Assess stability
+- ✅ Multi-year grants = long-term commitment signal
+
+**Policy Implementation:**
+- ✅ "Is there grant funding for this program?" → Search active grants
+- ✅ "Which jurisdictions received similar grants?" → Learn from others
+- ✅ Track grant requirements and restrictions
+
+#### Example Questions Now Answerable:
+
+1. **"What federal grants support dental health in Alabama schools?"**
+   → `funding_source = 'federal'` AND `program_area` LIKE '%dental%' AND `recipient_type = 'school_district'`
+
+2. **"Which foundations give the largest oral health grants?"**
+   → GROUP BY `funder_name` WHERE `program_area` LIKE '%oral health%' ORDER BY SUM(`grant_amount`)
+
+3. **"How long do typical dental access grants last?"**
+   → AVG(`grant_duration_months`) WHERE `program_area` = 'dental access'
+
+4. **"Which nonprofits receive multi-year fluoridation funding?"**
+   → `multi_year = true` AND `grant_purpose` LIKE '%fluoride%'
+
+5. **"What grants end in the next 6 months?"**
+   → `end_date` BETWEEN NOW() AND NOW() + 6 MONTHS (renewal opportunities!)
+
+### Dataset Structure
+
+```
+grants/
+├── nonprofit_grants    # Grants TO nonprofits (Schedule I recipients)
+├── government_grants   # Federal/state grants to jurisdictions
+├── foundation_grants   # Private foundation giving (990-PF)
+└── federal_grants      # USASpending.gov federal grants
+```
 
 ## 🎯 Missing Datasets to Add
 
