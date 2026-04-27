@@ -1682,6 +1682,123 @@ erDiagram
 `}
 />
 
+## ⚖️ Political Economy Analysis Framework
+
+The ERD includes specialized entities for **political economy analysis** - understanding the "WHY" behind government decisions, not just the "WHAT". These entities support a 4-step advocacy framework to expose gaps between rhetoric and reality:
+
+### The 4-Step Framework for Effective Change
+
+#### Step 1: Rhetoric Gap - **Frame Analysis**
+**Goal:** Establish they ALREADY agree it's important (stop the "need" debate)
+
+**ERD Support:**
+- **DECISION_FRAME**: Tracks how decisions are framed ("public health" vs "fiscal responsibility" vs "equity")
+- **KEYWORD_DENSITY**: Measures rhetoric patterns ("priority", "essential", "critical" per 1000 words)
+- **POLICY_DECISION.primary_frame**: Primary framing language used
+
+**Analysis Output:**
+```
+Frame Distribution:
+  12x public health
+   8x fiscal responsibility  
+   5x equity/access
+   3x economic development
+
+→ They SAY oral health is a "priority" - hold them to it!
+```
+
+#### Step 2: Displacement Matrix - **Budget-to-Minutes Delta**
+**Goal:** Show they HAD the money (stop the "budget constraint" excuse)
+
+**ERD Support:**
+- **BUDGET_LINE_ITEM**: Detailed budget categories with year-over-year changes
+- **BUDGET_DELTA**: Compares meeting rhetoric to actual funding changes
+- **BUDGET_DELTA.delta_type**: Classifies as "Expansion", "Lip Service", or "Hidden Priority"
+- **BUDGET_DELTA.delta_score**: Quantifies rhetoric vs reality gap (-1 to +1)
+
+**Analysis Output:**
+```
+🎭 Lip Service Detected:
+   • School dental program: -$50,000 decrease
+     Mentioned 12x in meetings as "critical for children"
+     Logic: PERFORMATIVE POLITICS
+
+💰 Hidden Priority (Where the money REALLY went):
+   • IT Infrastructure: +$200,000 increase
+     Only mentioned 1x in meetings
+     Logic: Bureaucratic inertia - avoiding scrutiny
+```
+
+#### Step 3: Influence Radar - **Stakeholder Analysis**
+**Goal:** Name who's blocking it (force personal accountability)
+
+**ERD Support:**
+- **STAKEHOLDER_POSITION**: Who spoke for/against with their arguments
+- **STAKEHOLDER_POSITION.speaking_order**: Track who speaks when (early speakers often most influential)
+- **DECISION_VOTE**: Individual vote records with stated reasons
+- **DECISION_VOTE.switched_position**: Flag when officials change their stance
+
+**Analysis Output:**
+```
+👥 Blocking Coalition:
+   • Taxpayer Association (opponent) - spoke 1st
+     Argument: "Cost concerns in tight budget"
+     Counter: School nurses budget UP $300K same meeting
+   
+   • Council Member Smith (voted NO)
+     Stated reason: "Need more study"
+     Pattern: Has voted NO on 3 oral health items since 2022
+```
+
+#### Step 4: Deferral Pattern - **Temporal Voting Analysis**
+**Goal:** Show they're stalling, not studying (expose the tactic)
+
+**ERD Support:**
+- **POLICY_DECISION.outcome**: Tracks "tabled/deferred/postponed" decisions
+- **DECISION_OPTION.rejection_reason**: Captures stated excuses for delay
+- **ELECTION_CYCLE**: Links decisions to election timelines
+- **ELECTION_CYCLE.pre_election_spike_detected**: Flag incumbent protection patterns
+
+**Analysis Output:**
+```
+📅 Stalling Pattern:
+   • Fluoridation proposal: TABLED 4 times since 2020
+     Reasons: "More study needed" → "Budget constraints" → "Public input" → "Staff report"
+   
+   • Timeline:
+     - 2020-03: Tabled (12mo before election)
+     - 2020-09: Tabled (6mo before election)
+     - 2022-01: Tabled (new "study" requested)
+     - 2024-05: Still tabled (now 4 years later)
+   
+   → They're NOT "studying" - they're AVOIDING!
+```
+
+### Quantitative "Why" Indicators
+
+Additional metrics to infer governance logic:
+
+| Entity | Metric | Reveals |
+|--------|--------|---------|
+| **POLICY_DECISION.contention_score** | Ratio of dissent (0-100) | Political sensitivity of topic |
+| **KEYWORD_DENSITY** | "grant" vs "taxpayer" frequency | Decision driver: outside funding vs local demand |
+| **KEYWORD_DENSITY** | "emergency" occurrence | Reactive vs planned governance |
+| **ELECTION_CYCLE.avg_project_cost_before** | Spending spikes pre-election | Incumbency protection tactics |
+| **BUDGET_DELTA.underlying_logic** | Genuine vs Performative vs Bureaucratic | Real priorities revealed |
+
+### Implementation Files
+
+These analyses are **fully implemented** in the codebase:
+
+- `extraction/decision_analyzer.py` - Frame analysis, stakeholder extraction
+- `extraction/budget_analyzer.py` - Budget delta calculation, opportunity cost mapping
+- `extraction/temporal_analyzer.py` - Election cycle analysis, deferral patterns
+- `examples/tuscaloosa_political_economy.py` - Complete end-to-end analysis
+
+See **[Political Economy Analysis Guide](/docs/guides/political-economy)** for detailed implementation status and usage examples.
+
+---
+
 ## 🌐 Data Standards & Interoperability
 
 ### Popolo Project Alignment
