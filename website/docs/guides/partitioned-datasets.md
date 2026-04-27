@@ -68,24 +68,29 @@ data/gold/
 │   │   └── part-0.parquet (8 MB)
 │   └── ... (63 states)
 ├── nonprofits_locations/              # Partitioned dataset (99 MB)
-│   ├── state=AL/
-│   │   └── part-0.parquet
-│   └── ...
+├── nonprofits_financials/             # Partitioned dataset (78 MB)
+├── nonprofits_programs/               # Partitioned dataset (67 MB)
 ├── jurisdictions_cities/              # Partitioned dataset (2.9 MB)
-│   ├── state=AL/
-│   │   └── part-0.parquet
-│   └── ...
 ├── jurisdictions_counties/            # Partitioned dataset (1.1 MB)
 ├── jurisdictions_school_districts/    # Partitioned dataset (1.8 MB)
 ├── jurisdictions_townships/           # Partitioned dataset (3.3 MB)
 ├── domains_gsa_domains/               # Partitioned dataset (1.4 MB)
 ├── causes_everyorg_causes.parquet     # Lookup table (no partitioning)
-├── causes_ntee_codes.parquet          # Lookup table (no partitioning)
-├── nonprofits_financials.parquet      # Not state-based
-└── nonprofits_programs.parquet        # Not state-based
+└── causes_ntee_codes.parquet          # Lookup table (no partitioning)
 ```
 
-**Note**: Only datasets with state information are partitioned. Lookup tables and non-state data remain as single files.
+**Note**: All datasets with state information are now partitioned. Lookup tables and non-state data remain as single files.
+
+### State Column Handling
+
+Different datasets get their state information in different ways:
+
+- **Direct state column**: `nonprofits_organizations`, `nonprofits_locations`
+- **State via EIN join**: `nonprofits_financials`, `nonprofits_programs` (joined with organizations by EIN)
+- **USPS column**: `jurisdictions_cities`, `jurisdictions_counties`, etc. (renamed to `state`)
+- **State column**: `domains_gsa_domains` (capitalized, normalized to `state`)
+
+The partitioning script automatically handles these differences, ensuring all datasets use a consistent `state` partition column.
 
 ## Creating Partitioned Datasets
 

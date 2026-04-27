@@ -45,8 +45,12 @@ class PartitionedDatasetCreator:
     STATE_COLUMN_FILES = {
         'nonprofits_organizations.parquet': 'state',
         'nonprofits_locations.parquet': 'state',
-        'nonprofits_financials.parquet': 'state',
-        'nonprofits_programs.parquet': 'state',
+    }
+    
+    # Files that need state added via join with organizations (by EIN)
+    EIN_JOIN_FILES = {
+        'nonprofits_financials.parquet': 'ein',
+        'nonprofits_programs.parquet': 'ein',
     }
     
     # Files that have 'State' column (capitalized)
@@ -78,7 +82,11 @@ class PartitionedDatasetCreator:
             **self.STATE_COLUMN_FILES,
             **self.STATE_UPPER_FILES,
             **self.USPS_FILES,
+            **self.EIN_JOIN_FILES,
         }
+        
+        # Cache for organizations EIN→state mapping (loaded once if needed)
+        self._ein_state_map = None
     
     def get_state_column(self, filename: str) -> str:
         """Get the state column name for a file."""
@@ -88,8 +96,39 @@ class PartitionedDatasetCreator:
             return self.STATE_UPPER_FILES[filename]
         elif filename in self.USPS_FILES:
             return self.USPS_FILES[filename]
+        elif filename in self.EIN_JOIN_FILES:
+            return 'state'  # Will be added via join
         else:
             raise ValueError(f"Unknown file: {filename}")
+    
+    def _load_ein_state_mapping(self):
+        """Load EIN→state mapping from organizations (cached)."""
+        if self._ein_state_map is not None:
+            return self._ein_state_map
+        
+        import pyarrow.dataset as ds
+        
+        logger.info("  Loading EIN→state mapping from organizations...")
+        org_path = self.output_dir / 'nonprofits_organizations'
+        
+        # Try partitioned dataset first
+        if org_path.exists():
+            dataset = ds.dataset(org_path, format='parquet', partitioning='hive')
+            table = dataset.to_table(columns=['ein', 'state'])
+            self._ein_state_map = table.to_pandas()
+        else:
+            # Fall back to consolidated file
+            org_file = self.gold_dir / 'nonprofits_organizations.parquet'
+            if org_file.exists():
+                self._ein_state_map = pd.read_parquet(org_file, columns=['ein', 'state'])
+            else:
+                raise FileNotFoundError(
+                    "Cannot find nonprofits_organizations dataset or file. "
+                    "Create it first before processing EIN-based files."
+                )
+        
+        logger.info(f"  Loaded {len(self._ein_state_map):,} EIN→state mappings")
+        return self._ein_state_map
     
     def create_partitioned_dataset(self, filename: str, dry_run: bool = False) -> bool:
         """
@@ -117,7 +156,23 @@ class PartitionedDatasetCreator:
         # Get state column
         state_col = self.get_state_column(filename)
         
-        if state_col not in df.columns:
+        # Check if we need to add state via join
+        if filename in self.EIN_JOIN_FILES:
+            ein_col = self.EIN_JOIN_FILES[filename]
+            
+            if ein_col not in df.columns:
+                logger.error(f"  ❌ Column '{ein_col}' not found in {filename}")
+                return False
+            
+            # Load EIN→state mapping
+            ein_state_map = self._load_ein_state_mapping()
+            
+            # Join to add state
+            logger.info(f"  Joining with organizations to add state column...")
+            df = df.merge(ein_state_map[['ein', 'state']], on=ein_col, how='left')
+            logger.info(f"  Records with state: {df['state'].notna().sum():,} / {len(df):,}")
+            
+        elif state_col not in df.columns:
             logger.error(f"  ❌ Column '{state_col}' not found in {filename}")
             return False
         
