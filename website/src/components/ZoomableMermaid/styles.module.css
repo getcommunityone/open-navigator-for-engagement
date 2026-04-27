@@ -13,7 +13,7 @@
   margin: 0;
   padding: 1rem 1.5rem;
   background: var(--ifm-color-primary);
-  color: white;
+  color: #ffffff !important;
   font-size: 1.25rem;
   font-weight: 600;
   border-bottom: 1px solid var(--ifm-color-emphasis-300);
@@ -53,8 +53,8 @@ html[data-theme='dark'] .zoomControls {
   min-width: 100px;
   padding: 8px 16px;
   border: 1px solid var(--ifm-color-emphasis-300);
-  background: var(--ifm-button-background-color);
-  color: var(--ifm-font-color-base);
+  background: #ffffff;
+  color: #333333;
   border-radius: 6px;
   cursor: pointer;
   font-size: 14px;
@@ -66,9 +66,14 @@ html[data-theme='dark'] .zoomControls {
   gap: 4px;
 }
 
+html[data-theme='dark'] .zoomButton {
+  background: var(--ifm-background-color);
+  color: var(--ifm-font-color-base);
+}
+
 .zoomButton:hover {
   background: var(--ifm-color-primary);
-  color: white;
+  color: #ffffff !important;
   border-color: var(--ifm-color-primary);
   transform: translateY(-1px);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
@@ -81,7 +86,7 @@ html[data-theme='dark'] .zoomControls {
 
 .transformWrapper {
   width: 100%;
-  height: 800px;
+  height: 1200px;
   overflow: hidden;
   cursor: grab;
   background-image: 
@@ -108,6 +113,13 @@ html[data-theme='dark'] .zoomControls {
   background: var(--ifm-background-color);
   border-radius: 8px;
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+  min-width: 90%;
+  max-width: 100%;
+}
+
+.mermaidWrapper svg {
+  max-width: 100%;
+  height: auto;
 }
 
 /* Responsive adjustments */
