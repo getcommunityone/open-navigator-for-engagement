@@ -51,6 +51,9 @@ COPY . .
 COPY --from=docs-builder /build/build /app/static/docs
 
 # Build frontend inline (vite.config.ts outputs to ../api/static/)
+# Set production environment variables for Vite
+ENV VITE_CANONICAL_DOMAIN=www.communityone.com
+ENV VITE_API_URL=/api
 # Cache bust: 2026-04-26-v2
 RUN cd /app/frontend && npm ci && npm run build
 
