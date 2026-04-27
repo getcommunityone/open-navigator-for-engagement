@@ -123,7 +123,11 @@ echo ""
 
 # Create deployment branch
 echo "🔧 Preparing deployment branch..."
-git checkout -b huggingface-deploy 2>/dev/null || git checkout huggingface-deploy
+# Make sure we're on main and it's up to date
+git checkout main
+# Delete old deployment branch if it exists and create fresh from main
+git branch -D huggingface-deploy 2>/dev/null || true
+git checkout -b huggingface-deploy
 
 # Copy Dockerfile for HF (they look for "Dockerfile" not "Dockerfile.huggingface")
 echo "📝 Configuring Dockerfile..."
