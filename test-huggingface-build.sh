@@ -2,8 +2,18 @@
 
 # Comprehensive Docker build test for Hugging Face deployment
 # This script validates the build before pushing to HF Spaces
+#
+# Usage:
+#   ./test-huggingface-build.sh          # Run test and cleanup
+#   ./test-huggingface-build.sh --keep   # Run test and keep container running
 
 set -e
+
+# Parse arguments
+KEEP_RUNNING=false
+if [[ "$1" == "--keep" ]]; then
+    KEEP_RUNNING=true
+fi
 
 # Colors for output
 RED='\033[0;31m'
@@ -22,10 +32,26 @@ echo ""
 
 # Cleanup function
 cleanup() {
-    echo -e "${YELLOW}🧹 Cleaning up...${NC}"
-    docker stop $CONTAINER_NAME 2>/dev/null || true
-    docker rm $CONTAINER_NAME 2>/dev/null || true
-    docker rmi $IMAGE_NAME 2>/dev/null || true
+    if [ "$KEEP_RUNNING" = true ]; then
+        echo -e "${GREEN}🎉 Container is still running!${NC}"
+        echo ""
+        echo "Access the application at:"
+        echo "  - Main App:        http://localhost:$TEST_PORT/"
+        echo "  - Documentation:   http://localhost:$TEST_PORT/docs"
+        echo "  - API Docs:        http://localhost:$TEST_PORT/api/docs"
+        echo "  - API Health:      http://localhost:$TEST_PORT/api/health"
+        echo ""
+        echo "To view logs:"
+        echo "  docker logs -f $CONTAINER_NAME"
+        echo ""
+        echo "To stop and remove:"
+        echo "  docker stop $CONTAINER_NAME && docker rm $CONTAINER_NAME && docker rmi $IMAGE_NAME"
+    else
+        echo -e "${YELLOW}🧹 Cleaning up...${NC}"
+        docker stop $CONTAINER_NAME 2>/dev/null || true
+        docker rm $CONTAINER_NAME 2>/dev/null || true
+        docker rmi $IMAGE_NAME 2>/dev/null || true
+    fi
 }
 
 # Trap errors and cleanup
@@ -138,16 +164,22 @@ echo "==========================================="
 if [ $FAILURES -eq 0 ]; then
     echo -e "${GREEN}🎉 All tests passed!${NC}"
     echo ""
-    echo -e "${GREEN}✅ Docker build is ready for Hugging Face deployment${NC}"
-    echo ""
-    echo "To deploy to Hugging Face, run:"
-    echo "  ./deploy-huggingface.sh"
+    if [ "$KEEP_RUNNING" = false ]; then
+        echo -e "${GREEN}✅ Docker build is ready for Hugging Face deployment${NC}"
+        echo ""
+        echo "To deploy to Hugging Face, run:"
+        echo "  ./deploy-huggingface.sh"
+    fi
     echo ""
     EXIT_CODE=0
 else
     echo -e "${RED}❌ $FAILURES test(s) failed${NC}"
     echo ""
-    echo "Please fix the issues before deploying to Hugging Face"
+    if [ "$KEEP_RUNNING" = false ]; then
+        echo "Please fix the issues before deploying to Hugging Face"
+    else
+        echo "Container is still running for debugging"
+    fi
     echo ""
     EXIT_CODE=1
 fi
