@@ -528,47 +528,51 @@ erDiagram
 
 ```
 oral-health-policy-data/
-├── discovery/              # Jurisdiction discovery results
-│   ├── jurisdiction_info   # 22,000+ cities & counties
-│   ├── youtube_channels    # Government YouTube channels
-│   ├── meeting_platforms   # Legistar, SuiteOne, Granicus
-│   └── social_media       # Twitter, Facebook accounts
+├── jurisdictions/          # 🏛️ Core jurisdiction data
+│   ├── cities              # 19,000+ incorporated places
+│   ├── counties            # 3,144 U.S. counties
+│   ├── states              # 50 states + DC, territories
+│   ├── school_districts    # 13,000+ districts (NCES data)
+│   └── census_data         # Demographics, population, income
 │
-├── meetings/               # Meeting data
+├── discovery/              # 🔍 URL & platform discovery metadata
+│   ├── youtube_channels    # Government YouTube channels
+│   ├── meeting_platforms   # Legistar, SuiteOne, Granicus URLs
+│   ├── social_media        # Twitter, Facebook account handles
+│   └── gsa_domains         # .gov domain registry
+│
+├── meetings/               # 📋 Meeting data
 │   ├── agendas            # Meeting agendas (text extracted)
 │   ├── minutes            # Meeting minutes (text extracted)
 │   ├── videos             # YouTube/Vimeo video metadata
 │   └── documents          # Associated documents
 │
-├── officials/              # Elected officials & leaders
-│   ├── local_officials    # City/county officials
+├── officials/              # 👥 Elected officials & leaders
+│   ├── local_officials    # City/county officials (mayors, councils)
 │   ├── state_legislators  # From Open States API
 │   └── school_board       # School board members
 │
-├── organizations/          # Nonprofits & charities
+├── organizations/          # 🏢 Nonprofits & charities
 │   ├── irs_nonprofits     # IRS 990 data (3M+ organizations)
 │   └── organizational_data # Mission, programs, financials
 │
-├── civic_data/            # Google Civic & Wikidata
+├── civic_data/            # 🗳️ Google Civic & Wikidata
 │   ├── civic_divisions    # OCD divisions
 │   ├── representatives    # From Google Civic API
 │   ├── wikidata_entities  # Structured entities
 │   └── dbpedia_resources  # Wikipedia infobox data
 │
-├── schools/               # School districts (NCES)
-│   └── nces_districts     # 13,000+ districts, enrollment, budgets
-│
-├── ballot_measures/        # 🆕 Ballot initiatives & referendums
+├── ballot_measures/        # 🗳️ Ballot initiatives & referendums
 │   ├── state_measures      # State propositions (fluoridation votes!)
 │   ├── local_measures      # City/county ballot questions
 │   └── election_results    # Historical voting outcomes
 │
-├── legislation/            # 🆕 Bills, ordinances, resolutions
+├── legislation/            # 📜 Bills, ordinances, resolutions
 │   ├── state_bills         # From Open States API (52 states)
 │   ├── local_ordinances    # Municipal codes & resolutions
 │   └── policy_tracking     # Bill status & outcomes
 │
-└── policy_topics/          # 🆕 Advocacy causes & campaigns
+└── policy_topics/          # 🎯 Advocacy causes & campaigns
     ├── topic_definitions   # Oral health, fluoridation, dental access
     ├── jurisdiction_topics # What each city is discussing
     └── advocacy_alerts     # Opportunities for engagement
