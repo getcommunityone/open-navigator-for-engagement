@@ -62,6 +62,13 @@ This page documents all data sources, standards, and research contributions used
 
 ## 🎓 Academic Research
 
+**In this section:**
+- [MeetingBank Dataset](#meetingbank-dataset)
+- [LocalView Dataset (Harvard Dataverse)](#localview-dataset-harvard-dataverse)
+- [Council Data Project (CDP)](#council-data-project-cdp)
+- [City Scrapers / Documenters.org](#city-scrapers--documentersorg)
+- [Roper Center for Public Opinion Research](#roper-center-for-public-opinion-research)
+
 ### MeetingBank Dataset
 
 **What we use:** 1,366 city council meetings from 6 U.S. cities with transcripts and summaries for meeting discovery, transcript analysis, and summarization benchmarking.
@@ -202,6 +209,10 @@ This page documents all data sources, standards, and research contributions used
 
 ## 🏛️ Government Data
 
+**In this section:**
+- [U.S. Census Bureau](#us-census-bureau)
+- [Harvard Dataverse](#harvard-dataverse)
+
 ### U.S. Census Bureau
 
 **What we use:** Geographic boundaries, demographic data, population estimates, and economic indicators.
@@ -222,6 +233,13 @@ This page documents all data sources, standards, and research contributions used
 ---
 
 ## 🌐 Data Sharing Standards
+
+**In this section:**
+- [Open Civic Data (OCD) Standards](#open-civic-data-ocd-standards)
+- [Popolo Project](#popolo-project)
+- [Schema.org](#schemaorg)
+- [Common Education Data Standards (CEDS)](#common-education-data-standards-ceds)
+- [OMOP Common Data Model (OHDSI)](#omop-common-data-model-ohdsi)
 
 ### Open Civic Data (OCD) Standards
 
@@ -421,6 +439,12 @@ concept_id_1 | concept_id_2 | relationship_id
 
 ## 🗳️ Election & Advocacy
 
+**In this section:**
+- [Ballotpedia](#ballotpedia)
+- [MIT Election Data + Science Lab](#mit-election-data--science-lab)
+- [OpenElections](#openelections)
+- [Open States API](#open-states-api)
+
 ### Ballotpedia
 
 **Organization:** Lucy Burns Institute  
@@ -462,6 +486,17 @@ concept_id_1 | concept_id_2 | relationship_id
 ---
 
 ## 🏢 Nonprofit & Philanthropy
+
+**In this section:**
+- [ProPublica Nonprofit Explorer](#propublica-nonprofit-explorer)
+- [IRS Tax-Exempt Organization Search (TEOS)](#irs-tax-exempt-organization-search-teos)
+- [Every.org Charity API](#everyorg-charity-api)
+- [Findhelp.org (Aunt Bertha)](#findhelporg-aunt-bertha)
+- [211 Regional Directories](#211-regional-directories)
+- [Association of Religion Data Archives (ARDA)](#association-of-religion-data-archives-arda)
+- [Homeland Infrastructure Foundation-Level Data (HIFLD): Places of Worship](#homeland-infrastructure-foundation-level-data-hifld-places-of-worship)
+- [National Congregations Study (NCS)](#national-congregations-study-ncs)
+- [Microsoft Common Data Model for Nonprofits](#microsoft-common-data-model-for-nonprofits)
 
 ### ProPublica Nonprofit Explorer
 
@@ -727,6 +762,11 @@ Identify churches with active health ministries in Tuscaloosa, AL that provide f
 
 ## ✅ Fact-Checking
 
+**In this section:**
+- [Google Fact Check Tools API](#google-fact-check-tools-api)
+- [FactCheck.org](#factcheckorg)
+- [PolitiFact](#politifact)
+
 ### Google Fact Check Tools API
 
 **Organization:** Google LLC  
@@ -760,6 +800,13 @@ Identify churches with active health ministries in Tuscaloosa, AL that provide f
 ---
 
 ## 💻 Civic Tech & Open Source
+
+**In this section:**
+- [Cloud & Data Platforms](#cloud--data-platforms)
+- [Civic Tech Field Guide](#civic-tech-field-guide)
+- [Code for America: Brigade Network](#code-for-america-brigade-network)
+- [U.S. Digital Response (USDR)](#us-digital-response-usdr)
+- [Digital Public Goods Alliance (DPGA)](#digital-public-goods-alliance-dpga)
 
 ### Cloud & Data Platforms
 
@@ -1015,6 +1062,12 @@ Identify churches with active health ministries in Tuscaloosa, AL that provide f
 ---
 
 ## 🌟 Community Solutions & Use Cases
+
+**In this section:**
+- [Spectrum of Community Engagement to Ownership](#spectrum-of-community-engagement-to-ownership)
+- [Harvard Ash Center: Data-Smart City Solutions (Archived)](#harvard-ash-center-data-smart-city-solutions-archived)
+- [Brookings Institution: Data-Driven Policymaking](#brookings-institution-data-driven-policymaking)
+- [Open Data Impact: Evidence-Based Research](#open-data-impact-evidence-based-research)
 
 ### Spectrum of Community Engagement to Ownership
 
