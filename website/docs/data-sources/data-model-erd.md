@@ -531,7 +531,7 @@ erDiagram
 ### Current Datasets Being Uploaded
 
 ```
-oral-health-policy-data/
+open-navigator-data/
 ├── jurisdictions/          # 🏛️ Core jurisdiction data
 │   ├── cities              # 19,000+ incorporated places
 │   ├── counties            # 3,144 U.S. counties
