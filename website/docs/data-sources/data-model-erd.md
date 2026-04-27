@@ -61,6 +61,24 @@ erDiagram
         datetime created_date
     }
     
+    %% Government Finances
+    JURISDICTION ||--o{ GOVERNMENT_BUDGET : has
+    GOVERNMENT_BUDGET {
+        string budget_id PK
+        string jurisdiction_id FK
+        int fiscal_year
+        float total_revenue
+        float total_expenditures
+        float total_debt
+        float property_tax_revenue
+        float sales_tax_revenue
+        float federal_grants
+        float state_grants
+        float general_fund_balance
+        string budget_document_url
+        datetime published_date
+    }
+    
     %% ========================================
     %% SCHOOL DISTRICTS (NCES)
     %% ========================================
@@ -76,6 +94,12 @@ erDiagram
         string district_type
         int total_students
         int total_schools
+        float total_revenue
+        float total_expenditures
+        float per_pupil_spending
+        float federal_revenue
+        float state_revenue
+        float local_revenue
         string phone
         string website
         string superintendent
@@ -189,6 +213,7 @@ erDiagram
     
     ORGANIZATION ||--o{ SOCIAL_MEDIA : maintains
     ORGANIZATION ||--o{ LEADER : employs
+    ORGANIZATION ||--o{ NONPROFIT_FINANCES : files
     ORGANIZATION {
         string org_id PK
         string ein
@@ -200,15 +225,36 @@ erDiagram
         string state_code
         string city
         string address
-        float revenue_amount
-        float assets_amount
         int employee_count
         string mission_statement
         string description
         string logo_url
         string website
         boolean is_verified
-        datetime irs_filing_date
+    }
+    
+    %% Nonprofit 990 Financial Data
+    NONPROFIT_FINANCES {
+        string filing_id PK
+        string ein FK
+        int tax_year
+        float total_revenue
+        float total_expenses
+        float total_assets
+        float total_liabilities
+        float net_assets
+        float program_expenses
+        float admin_expenses
+        float fundraising_expenses
+        float grants_paid
+        float contributions_received
+        float program_service_revenue
+        float investment_income
+        float employee_compensation
+        int employee_count
+        float overhead_ratio
+        string form_990_url
+        datetime filing_date
     }
     
     %% ========================================
@@ -575,11 +621,19 @@ open-navigator-data/
 ├── nonprofits/             # 🏢 Nonprofit organizations
 │   ├── irs_nonprofits     # IRS 990 data (3M+ organizations)
 │   ├── propublica_data    # ProPublica API (financials, NTEE codes)
-│   └── everyorg_data      # Every.org API (missions, causes, logos)
+│   ├── everyorg_data      # Every.org API (missions, causes, logos)
+│   └── nonprofit_990s     # Detailed Form 990 financials (yearly filings)
 │
 ├── nonprofit_causes/       # 🎯 Cause & category taxonomy
 │   ├── ntee_codes         # IRS NTEE classification system
 │   └── everyorg_causes    # Every.org cause tags
+│
+├── government_finances/    # 💰 Municipal & state budgets
+│   ├── city_budgets       # City/municipal budgets & spending
+│   ├── county_budgets     # County budgets & expenditures
+│   ├── state_budgets      # State government finances
+│   ├── school_budgets     # School district finances (NCES F-33)
+│   └── bond_debt          # Municipal bonds & debt obligations
 │
 ├── civic_data/            # 🗳️ Google Civic & Wikidata
 │   ├── civic_divisions    # OCD divisions
@@ -608,19 +662,23 @@ open-navigator-data/
 ### Phase 1: Discovery (Bronze Layer)
 1. **Census Data** → Jurisdictions list
 2. **GSA Domains** → Government websites
-3. **NCES** → School districts
+3. **NCES** → School districts with financial data (F-33 forms)
 4. **IRS TEOS** → Nonprofit EINs (3M+ organizations)
-5. **URL Discovery** → Meeting platforms, YouTube
-6. **Social Media** → Twitter, Facebook accounts
+5. **Census of Governments** → Municipal budgets & finances
+6. **URL Discovery** → Meeting platforms, YouTube, budget PDFs
+7. **Social Media** → Twitter, Facebook accounts
 
 ### Phase 2: Enrichment (Silver Layer)
 1. **ProPublica Nonprofit Explorer** → Financial data, NTEE codes, 990 filings
 2. **Every.org API** → Nonprofit causes, missions, logos
-3. **YouTube API** → Channel statistics
-4. **Open States** → Legislative data
-5. **Wikidata SPARQL** → Entity relationships
-6. **DBpedia** → Wikipedia structured data
-7. **Google Civic** → Representatives
+3. **NCES F-33 Finance Survey** → School district budgets, per-pupil spending
+4. **Census Annual Survey** → State/local government finances
+5. **Municipal Securities Rulemaking Board (EMMA)** → Bond debt data
+6. **YouTube API** → Channel statistics
+7. **Open States** → Legislative data
+8. **Wikidata SPARQL** → Entity relationships
+9. **DBpedia** → Wikipedia structured data
+10. **Google Civic** → Representatives
 
 ### Phase 3: Processing (Gold Layer)
 1. **Meeting Extraction** → Agenda/minutes text
@@ -637,7 +695,11 @@ open-navigator-data/
 | Counties | 3,144 | FIPS codes |
 | Cities | 19,000+ | Incorporated places |
 | School Districts | 13,000+ | NCES CCD |
+| School District Budgets | 13,000+ | NCES F-33 Finance Survey |
+| Government Budgets | 22,000+ | Census of Governments |
+| Municipal Bonds | TBD | EMMA (MSRB) |
 | Nonprofits | 3,000,000+ | IRS TEOS |
+| Nonprofit 990 Filings | 10,000,000+ | ProPublica (10+ years) |
 | Nonprofit Causes | 600+ | NTEE + Every.org |
 | YouTube Channels | 5,000+ | Discovery pipeline |
 | Meeting Platforms | 10,000+ | URL detection |
@@ -654,8 +716,10 @@ open-navigator-data/
 - [x] **Ballot Measures** - ✅ Added to data model! Fluoridation votes, bond measures
 - [x] **State Legislation** - ✅ Added to data model! Open States API (FREE)
 - [x] **Policy Topics** - ✅ Added to data model! Oral health advocacy tracking
-- [ ] **Census Demographics** - Full census data per jurisdiction
-- [ ] **Budget Documents** - Municipal budgets & spending
+- [x] **Government Finances** - ✅ Added to data model! City/county/state budgets, Census of Governments
+- [x] **School Finances** - ✅ Added to data model! NCES F-33 per-pupil spending, revenues
+- [x] **Nonprofit Financials** - ✅ Added to data model! Form 990 detailed financials (10M+ filings)
+- [ ] **Census Demographics** - Full census data per jurisdiction (beyond population)
 - [ ] **Procurement Records** - Government contracts
 - [ ] **Election Results** - Historical voting data
 - [ ] **Health Outcomes** - CDC PLACES data (oral health metrics!)
