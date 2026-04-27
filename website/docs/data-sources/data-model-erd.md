@@ -108,6 +108,8 @@ open-navigator-data/
 │   ├── decision_tradeoffs # Tradeoffs discussed (cost vs benefit, etc.)
 │   ├── stakeholder_positions # 👥 Who spoke for/against (Influence Radar)
 │   ├── decision_votes     # Detailed vote records per decision
+│   ├── deferral_patterns  # 📅 Stalling detection (same topic, multiple deferrals)
+│   ├── deferral_instances # Individual tabling events linked to patterns
 │   ├── keyword_density    # Quantitative indicators (grant/taxpayer/emergency)
 │   └── deferral_patterns  # Tabled/delayed decisions (temporal analysis)
 │
@@ -639,6 +641,36 @@ erDiagram
         string stated_reason
         boolean switched_position
         int days_since_election "Temporal context"
+    }
+    
+    %% Deferral Pattern Tracking - Links same topic across multiple meetings
+    POLICY_DECISION ||--o{ DEFERRAL_INSTANCE : part_of
+    DEFERRAL_PATTERN ||--o{ DEFERRAL_INSTANCE : tracks
+    DEFERRAL_PATTERN {
+        string pattern_id PK
+        string topic "Community Dental Clinic Funding"
+        string conclusion "Strategic delay or genuine study"
+        datetime first_mentioned "When first introduced"
+        datetime last_discussed "Most recent tabling"
+        int total_deferrals "How many times tabled"
+        int months_in_limbo "Time since first mention"
+        string pattern_type "Rationale of Attrition/Sincere Analysis/Political Timing"
+        string strategic_inference "Waiting for momentum to fade"
+        int discomfort_score "1-10: Political sensitivity"
+        string next_review_date "When scheduled to revisit"
+        boolean still_pending
+    }
+    
+    DEFERRAL_INSTANCE {
+        string instance_id PK
+        string pattern_id FK
+        string decision_id FK
+        datetime deferral_date
+        string stated_reason "More study needed/Budget constraints/Public input"
+        string speaker "Who gave the justification"
+        int months_since_first "Time elapsed"
+        string previous_reason "What they said last time"
+        boolean reason_changed "Shifting justifications"
     }
     
     %% STEP 2: DISPLACEMENT MATRIX - Budget-to-Minutes Delta
@@ -1754,24 +1786,57 @@ Frame Distribution:
 **Goal:** Show they're stalling, not studying (expose the tactic)
 
 **ERD Support:**
-- **POLICY_DECISION.outcome**: Tracks "tabled/deferred/postponed" decisions
-- **DECISION_OPTION.rejection_reason**: Captures stated excuses for delay
+- **DEFERRAL_PATTERN**: Tracks same topic across multiple meetings
+  - `first_mentioned`: When decision was first introduced
+  - `last_discussed`: Most recent tabling date
+  - `total_deferrals`: How many times tabled/postponed
+  - `months_in_limbo`: Time elapsed since first mention
+  - `pattern_type`: "Rationale of Attrition" / "Sincere Analysis" / "Political Timing"
+  - `strategic_inference`: Inferred reason for delay
+  - `next_review_date`: When scheduled to revisit (if stated)
+- **DEFERRAL_INSTANCE**: Individual tabling events with dates
+  - `deferral_date`: When it was tabled
+  - `stated_reason`: Official justification given
+  - `speaker`: Who gave the reason
+  - `months_since_first`: Time elapsed
+  - `reason_changed`: Flag for shifting justifications
+- **POLICY_DECISION.outcome**: Captures "tabled/deferred/postponed"
+- **DECISION_OPTION.rejection_reason**: Stated excuses for delay
 - **ELECTION_CYCLE**: Links decisions to election timelines
 - **ELECTION_CYCLE.pre_election_spike_detected**: Flag incumbent protection patterns
 
+**Complete Date Tracking:**
+```sql
+-- All dates needed to track stalling:
+MEETING.meeting_date              -- When meeting occurred
+POLICY_DECISION.meeting_date      -- When decision was discussed
+DEFERRAL_PATTERN.first_mentioned  -- First introduction date
+DEFERRAL_PATTERN.last_discussed   -- Most recent tabling
+DEFERRAL_INSTANCE.deferral_date   -- Each individual deferral
+ELECTION_CYCLE.election_date      -- Election timing context
+DECISION_VOTE.days_since_election -- Temporal political context
+```
+
 **Analysis Output:**
 ```
-📅 Stalling Pattern:
-   • Fluoridation proposal: TABLED 4 times since 2020
-     Reasons: "More study needed" → "Budget constraints" → "Public input" → "Staff report"
+📅 Stalling Pattern DETECTED:
+   • Topic: "Fluoridation proposal"
+   • First mentioned: 2020-03-15 (4 years, 1 month ago)
+   • Total deferrals: 4 times
+   • Pattern type: Rationale of Attrition
    
-   • Timeline:
-     - 2020-03: Tabled (12mo before election)
-     - 2020-09: Tabled (6mo before election)
-     - 2022-01: Tabled (new "study" requested)
-     - 2024-05: Still tabled (now 4 years later)
+   📊 Timeline of Shifting Justifications:
+     - 2020-03: "Need more study" (12mo before election)
+     - 2020-09: "Budget constraints" (6mo before election)  
+     - 2022-01: "Need public input" (new council members)
+     - 2024-05: "Awaiting staff report" (still pending)
    
-   → They're NOT "studying" - they're AVOIDING!
+   🔍 Strategic Inference:
+   "They're NOT studying - they're AVOIDING! The board isn't 
+   debating the merit; they're waiting for the advocate's 
+   momentum to fade before the next election cycle."
+   
+   🚨 Discomfort Score: 10/10 (Extremely politically sensitive)
 ```
 
 ### Quantitative "Why" Indicators
