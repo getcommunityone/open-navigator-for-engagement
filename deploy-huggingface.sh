@@ -62,13 +62,18 @@ fi
 if [ -n "$HF_USERNAME_ARG" ]; then
     HF_USERNAME="$HF_USERNAME_ARG"
 fi
-SPACE_NAME="open-navigator-for-engagement"
+
+# Deploy to the Space with custom domain configured
+SPACE_NAME="www.communityone.com"
 HF_REPO="https://huggingface.co/spaces/${HF_USERNAME}/${SPACE_NAME}"
+HF_REMOTE="hf-www"  # Use hf-www remote for custom domain Space
 
 echo "📋 Deployment Configuration"
 echo "  Username: $HF_USERNAME"
 echo "  Space: $SPACE_NAME"
+echo "  Remote: $HF_REMOTE"
 echo "  URL: $HF_REPO"
+echo "  Custom Domain: https://www.communityone.com"
 echo ""
 
 # Activate virtual environment if it exists
@@ -187,11 +192,11 @@ else
 fi
 
 # Add HF remote if it doesn't exist
-if git remote get-url hf &> /dev/null; then
-    echo "✅ Hugging Face remote already configured"
+if git remote get-url $HF_REMOTE &> /dev/null; then
+    echo "✅ Hugging Face remote already configured ($HF_REMOTE)"
 else
-    echo "🔗 Adding Hugging Face remote..."
-    git remote add hf "$HF_REPO"
+    echo "🔗 Adding Hugging Face remote ($HF_REMOTE)..."
+    git remote add $HF_REMOTE "$HF_REPO"
 fi
 
 # Push to Hugging Face
@@ -199,7 +204,7 @@ echo ""
 echo "📤 Pushing to Hugging Face Spaces..."
 echo "This will trigger a build (takes ~10-15 minutes)"
 echo ""
-git push hf huggingface-deploy:main --force
+git push $HF_REMOTE huggingface-deploy:main --force
 
 echo ""
 echo "✅ Deployment initiated!"
@@ -227,9 +232,11 @@ echo "   - Click 'Logs' tab in your Space"
 echo "   - Build takes ~10-15 minutes"
 echo ""
 echo "5. Access your apps:"
-echo "   - Main App: https://${HF_USERNAME}-${SPACE_NAME}.hf.space/"
-echo "   - Documentation: https://${HF_USERNAME}-${SPACE_NAME}.hf.space/docs"
-echo "   - API: https://${HF_USERNAME}-${SPACE_NAME}.hf.space/api/docs"
+echo "   - Main App: https://www.communityone.com/"
+echo "   - Documentation: https://www.communityone.com/docs/"
+echo "   - API: https://www.communityone.com/api/docs"
+echo ""
+echo "   (Also available at: https://${HF_USERNAME}-${SPACE_NAME//./-}.hf.space/)"
 echo ""
 echo "==========================================================="
 echo ""
