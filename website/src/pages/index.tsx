@@ -3,6 +3,7 @@ import React from 'react';
 import clsx from 'clsx';
 import Link from '@docusaurus/Link';
 import useDocusaurusContext from '@docusaurus/useDocusaurusContext';
+import useBaseUrl from '@docusaurus/useBaseUrl';
 import Layout from '@theme/Layout';
 import Heading from '@theme/Heading';
 
@@ -10,12 +11,13 @@ import styles from './index.module.css';
 
 function HomepageHeader() {
   const {siteConfig} = useDocusaurusContext();
+  const logoUrl = useBaseUrl('/img/communityone_logo.svg');
   return (
     <header className={clsx('hero hero--primary', styles.heroBanner)}>
       <div className="container">
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '1rem' }}>
           <img 
-            src="/img/communityone_logo.svg" 
+            src={logoUrl} 
             alt="CommunityOne Logo" 
             style={{ height: '80px', marginRight: '1rem' }}
           />
