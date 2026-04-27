@@ -248,11 +248,22 @@ erDiagram
         float fundraising_expenses
         float grants_paid
         float contributions_received
+        float government_grants
+        float foundation_grants
+        float corporate_donations
+        float individual_donations
+        float membership_dues
+        float special_events_revenue
         float program_service_revenue
         float investment_income
+        float rental_income
+        float sale_of_assets
+        float other_revenue
         float employee_compensation
         int employee_count
+        int volunteer_count
         float overhead_ratio
+        float fundraising_efficiency
         string form_990_url
         datetime filing_date
     }
@@ -709,6 +720,71 @@ open-navigator-data/
 | Ballot Measures | TBD | State/local election sites |
 | State Bills | 100,000+ | Open States API |
 | Policy Topics | ~50 | Curated + extracted |
+
+## 💰 Nonprofit Funding Source Tracking
+
+### Revenue Source Breakdown (Form 990 Data)
+
+The NONPROFIT_FINANCES entity tracks **10 different revenue sources** to understand how nonprofits are funded:
+
+#### 1. **Grant Revenue** (Institutional Funding)
+- `government_grants` - Federal, state, local government grants
+- `foundation_grants` - Private foundation grants (Gates, Ford, etc.)
+- **Why it matters:** Grant-dependent orgs may be less sustainable, more restrictive
+
+#### 2. **Donation Revenue** (Community Funding)
+- `individual_donations` - Direct donations from people
+- `corporate_donations` - Corporate giving programs
+- `membership_dues` - Member subscriptions/fees
+- **Why it matters:** Grassroots funding = community support, more flexible use
+
+#### 3. **Earned Revenue** (Self-Sufficiency)
+- `program_service_revenue` - Fees for services (clinic visits, classes, etc.)
+- `special_events_revenue` - Galas, fundraisers, events
+- `rental_income` - Property rentals
+- `sale_of_assets` - Asset sales
+- **Why it matters:** Self-generated revenue = sustainability, independence
+
+#### 4. **Investment Revenue**
+- `investment_income` - Interest, dividends, capital gains
+- **Why it matters:** Endowment size, financial health
+
+#### 5. **Other Revenue**
+- `other_revenue` - Miscellaneous sources
+- **Why it matters:** Unusual funding patterns
+
+### Calculated Metrics
+
+- **`overhead_ratio`** = (admin_expenses + fundraising_expenses) / total_expenses
+  - Lower = more efficient (more goes to programs)
+  - Industry benchmark: <25% overhead is "good"
+
+- **`fundraising_efficiency`** = contributions_received / fundraising_expenses
+  - Higher = better (more money raised per dollar spent)
+  - Industry benchmark: $4+ raised per $1 spent
+
+### Why This Matters for Advocacy
+
+**Find sustainable partners:**
+- ✅ High individual donations = community trust
+- ✅ Diversified revenue = financial stability
+- ⚠️ Single-grant dependent = risky partnership
+
+**Evaluate efficiency:**
+- ✅ Low overhead ratio = more program dollars
+- ✅ High fundraising efficiency = good stewardship
+- ⚠️ High admin costs = potential waste
+
+**Identify funding gaps:**
+- Compare similar nonprofits' revenue mix
+- Find underutilized funding sources (e.g., membership programs)
+- Target corporate donation opportunities
+
+**Example Questions Now Answerable:**
+1. "Which dental nonprofits have the most individual donors?" (community support)
+2. "What's the average overhead for oral health organizations?" (efficiency benchmark)
+3. "Are dental nonprofits more grant-dependent or self-sufficient?" (sustainability)
+4. "Which funders support oral health work?" (foundation grants analysis)
 
 ## 🎯 Missing Datasets to Add
 
