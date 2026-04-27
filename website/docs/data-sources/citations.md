@@ -26,7 +26,7 @@ This page documents all data sources, standards, and research contributions used
   </a>
   <a href="#government-data" className="card" style={{textDecoration: 'none', padding: '15px', borderLeft: '4px solid #4CAF50'}}>
     <strong>🏛️ Government Data</strong><br/>
-    <span style={{fontSize: '0.9em', color: '#666'}}>U.S. Census, NCES, IRS</span>
+    <span style={{fontSize: '0.9em', color: '#666'}}>U.S. Census, IRS, Open States</span>
   </a>
   <a href="#data-sharing-standards" className="card" style={{textDecoration: 'none', padding: '15px', borderLeft: '4px solid #FF9800'}}>
     <strong>🌐 Data Sharing Standards</strong><br/>
@@ -38,7 +38,7 @@ This page documents all data sources, standards, and research contributions used
   </a>
   <a href="#nonprofit--philanthropy" className="card" style={{textDecoration: 'none', padding: '15px', borderLeft: '4px solid #F44336'}}>
     <strong>🏢 Nonprofit & Philanthropy</strong><br/>
-    <span style={{fontSize: '0.9em', color: '#666'}}>ProPublica, IRS, Every.org, Findhelp, 211, Microsoft CDM, ARDA, HIFLD, NCS</span>
+    <span style={{fontSize: '0.9em', color: '#666'}}>ProPublica, Every.org, Findhelp, 211, Microsoft CDM, ARDA, HIFLD, NCS</span>
   </a>
   <a href="#-fact-checking" className="card" style={{textDecoration: 'none', padding: '15px', borderLeft: '4px solid #8BC34A'}}>
     <strong>✅ Fact-Checking</strong><br/>
@@ -68,6 +68,7 @@ This page documents all data sources, standards, and research contributions used
 - [Council Data Project (CDP)](#council-data-project-cdp)
 - [City Scrapers / Documenters.org](#city-scrapers--documentersorg)
 - [Roper Center for Public Opinion Research](#roper-center-for-public-opinion-research)
+- [Harvard Dataverse](#harvard-dataverse)
 
 ### MeetingBank Dataset
 
@@ -207,11 +208,22 @@ This page documents all data sources, standards, and research contributions used
 
 ---
 
+### Harvard Dataverse
+
+**What we use:** Meeting datasets and civic engagement research.
+
+- **Source:** https://dataverse.harvard.edu/
+- **License:** Varies by dataset
+- **Coverage:** Academic research datasets on local government, public meetings, civic participation
+
+---
+
 ## 🏛️ Government Data
 
 **In this section:**
 - [U.S. Census Bureau](#us-census-bureau)
-- [Harvard Dataverse](#harvard-dataverse)
+- [IRS Tax-Exempt Organization Search (TEOS)](#irs-tax-exempt-organization-search-teos)
+- [Open States API](#open-states-api)
 
 ### U.S. Census Bureau
 
@@ -222,13 +234,47 @@ This page documents all data sources, standards, and research contributions used
 - **Datasets:** Census Gazetteer, American Community Survey (ACS), Decennial Census
 - **Coverage:** All 50 states, 3,144 counties, 19,000+ incorporated places
 
-### Harvard Dataverse
+---
 
-**What we use:** Meeting datasets and civic engagement research.
+### IRS Tax-Exempt Organization Search (TEOS)
 
-- **Source:** https://dataverse.harvard.edu/
-- **License:** Varies by dataset
-- **Coverage:** Academic research datasets on local government, public meetings, civic participation
+**Organization:** Internal Revenue Service (IRS), U.S. Department of Treasury  
+**What we use:** Official tax-exempt status verification, Pub 78 deductibility data, bulk downloads of all U.S. nonprofits including 300,000+ churches and religious organizations.
+
+- **Source:** https://www.irs.gov/charities-non-profits/tax-exempt-organization-search
+- **Bulk Data Downloads:** https://www.irs.gov/charities-non-profits/tax-exempt-organization-search-bulk-data-downloads
+- **Coverage:** All registered 501(c)(3) and other tax-exempt organizations (3M+)
+  - **Churches & Religious Organizations:** 300,000+ (NTEE codes X, X20, X21, X22, X30, X40)
+  - **Health Organizations:** 50,000+ (NTEE codes E)
+  - **Human Services:** 150,000+ (NTEE codes P)
+- **Update Frequency:** Monthly
+- **License:** Public domain (U.S. government data)
+
+**NTEE Codes for Churches:**
+- **X** - Religion Related, Spiritual Development
+- **X20** - Christian (churches, ministries)
+- **X21** - Protestant
+- **X22** - Roman Catholic
+- **X30** - Jewish
+- **X40** - Islamic
+
+**Note:** ProPublica API already includes this data in a more accessible format. Direct IRS access primarily used for bulk downloads and verification.
+
+**Complements:**
+- **ARDA** for congregation characteristics and health ministry programs
+- **HIFLD** for geospatial location data
+- **National Congregations Study** for social service provision patterns
+
+---
+
+### Open States API
+
+**What we use:** State and local legislative information, bill tracking.
+
+- **Source:** https://openstates.org/
+- **Coverage:** 100,000+ state bills, 7,300+ state legislators
+- **License:** Varies by state
+- **API Key:** Required for access
 
 ---
 
@@ -443,7 +489,6 @@ concept_id_1 | concept_id_2 | relationship_id
 - [Ballotpedia](#ballotpedia)
 - [MIT Election Data + Science Lab](#mit-election-data--science-lab)
 - [OpenElections](#openelections)
-- [Open States API](#open-states-api)
 
 ### Ballotpedia
 
@@ -474,22 +519,12 @@ concept_id_1 | concept_id_2 | relationship_id
 - **Coverage:** All 50 states (various completion levels), precinct-level data
 - **License:** Open source (varies by state)
 
-### Open States API
-
-**What we use:** State and local legislative information, bill tracking.
-
-- **Source:** https://openstates.org/
-- **Coverage:** 100,000+ state bills, 7,300+ state legislators
-- **License:** Varies by state
-- **API Key:** Required for access
-
 ---
 
 ## 🏢 Nonprofit & Philanthropy
 
 **In this section:**
 - [ProPublica Nonprofit Explorer](#propublica-nonprofit-explorer)
-- [IRS Tax-Exempt Organization Search (TEOS)](#irs-tax-exempt-organization-search-teos)
 - [Every.org Charity API](#everyorg-charity-api)
 - [Findhelp.org (Aunt Bertha)](#findhelporg-aunt-bertha)
 - [211 Regional Directories](#211-regional-directories)
@@ -525,37 +560,6 @@ concept_id_1 | concept_id_2 | relationship_id
   note = {Accessed: 2024}
 }
 ```
-
----
-
-### IRS Tax-Exempt Organization Search (TEOS)
-
-**Organization:** Internal Revenue Service (IRS), U.S. Department of Treasury  
-**What we use:** Official tax-exempt status verification, Pub 78 deductibility data, bulk downloads of all U.S. nonprofits including 300,000+ churches and religious organizations.
-
-- **Source:** https://www.irs.gov/charities-non-profits/tax-exempt-organization-search
-- **Bulk Data Downloads:** https://www.irs.gov/charities-non-profits/tax-exempt-organization-search-bulk-data-downloads
-- **Coverage:** All registered 501(c)(3) and other tax-exempt organizations (3M+)
-  - **Churches & Religious Organizations:** 300,000+ (NTEE codes X, X20, X21, X22, X30, X40)
-  - **Health Organizations:** 50,000+ (NTEE codes E)
-  - **Human Services:** 150,000+ (NTEE codes P)
-- **Update Frequency:** Monthly
-- **License:** Public domain (U.S. government data)
-
-**NTEE Codes for Churches:**
-- **X** - Religion Related, Spiritual Development
-- **X20** - Christian (churches, ministries)
-- **X21** - Protestant
-- **X22** - Roman Catholic
-- **X30** - Jewish
-- **X40** - Islamic
-
-**Note:** ProPublica API already includes this data in a more accessible format. Direct IRS access primarily used for bulk downloads and verification.
-
-**Complements:**
-- **ARDA** for congregation characteristics and health ministry programs
-- **HIFLD** for geospatial location data
-- **National Congregations Study** for social service provision patterns
 
 ---
 
