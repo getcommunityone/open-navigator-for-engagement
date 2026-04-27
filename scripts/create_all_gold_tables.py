@@ -71,6 +71,16 @@ def main():
         action="store_true",
         help="Skip nonprofit API discovery, use existing bronze data"
     )
+    parser.add_argument(
+        "--use-irs",
+        action="store_true",
+        help="Use IRS EO-BMF bulk data instead of ProPublica API (RECOMMENDED - gets ALL nonprofits!)"
+    )
+    parser.add_argument(
+        "--download-all-irs",
+        action="store_true",
+        help="Download ALL 1.9M+ nonprofits from IRS (4 regional files). Requires --use-irs."
+    )
     
     args = parser.parse_args()
     
@@ -110,9 +120,18 @@ def main():
         logger.info("-" * 70)
         try:
             nonprofit_creator = NonprofitGoldTableCreator()
+            
+            # Handle NTEE codes argument
+            ntee_codes = args.ntee_codes
+            if ntee_codes and len(ntee_codes) == 1 and ntee_codes[0].upper() == 'ALL':
+                ntee_codes = []  # Empty list means get all nonprofits
+            
             nonprofit_creator.create_all_gold_tables(
                 states=args.states,
-                skip_discovery=args.skip_discovery
+                ntee_codes=ntee_codes,
+                skip_discovery=args.skip_discovery,
+                use_irs_data=args.use_irs,
+                download_all_irs=args.download_all_irs
             )
             logger.success("✅ Nonprofits pipeline completed successfully!")
         except Exception as e:

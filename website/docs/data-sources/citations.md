@@ -38,7 +38,7 @@ This page documents all data sources, standards, and research contributions used
   </a>
   <a href="#nonprofit--philanthropy" className="card" style={{textDecoration: 'none', padding: '15px', borderLeft: '4px solid #F44336'}}>
     <strong>🏢 Nonprofit & Philanthropy</strong><br/>
-    <span style={{fontSize: '0.9em', color: '#666'}}>ProPublica (Nonprofits, Congress, Campaign Finance, Vital Signs), Every.org, Findhelp, 211, Microsoft CDM, ARDA, HIFLD, NCS</span>
+    <span style={{fontSize: '0.9em', color: '#666'}}>IRS EO-BMF (1.9M+ orgs), ProPublica (Nonprofits, Congress, Campaign Finance, Vital Signs), Every.org, Findhelp, 211, Microsoft CDM, ARDA, HIFLD, NCS</span>
   </a>
   <a href="#-fact-checking" className="card" style={{textDecoration: 'none', padding: '15px', borderLeft: '4px solid #8BC34A'}}>
     <strong>✅ Fact-Checking</strong><br/>
@@ -236,19 +236,32 @@ This page documents all data sources, standards, and research contributions used
 
 ---
 
-### IRS Tax-Exempt Organization Search (TEOS)
+### IRS Exempt Organizations Business Master File (EO-BMF)
 
 **Organization:** Internal Revenue Service (IRS), U.S. Department of Treasury  
-**What we use:** Official tax-exempt status verification, Pub 78 deductibility data, bulk downloads of all U.S. nonprofits including 300,000+ churches and religious organizations.
+**What we use:** **PRIMARY BULK DATA SOURCE** for comprehensive nonprofit data - ALL 1.9M+ U.S. tax-exempt organizations with EIN, NTEE codes, financial data, subsection classification, and geographic location.
 
-- **Source:** https://www.irs.gov/charities-non-profits/tax-exempt-organization-search
-- **Bulk Data Downloads:** https://www.irs.gov/charities-non-profits/tax-exempt-organization-search-bulk-data-downloads
-- **Coverage:** All registered 501(c)(3) and other tax-exempt organizations (3M+)
+- **Source:** https://www.irs.gov/charities-non-profits/exempt-organizations-business-master-file-extract-eo-bmf
+- **Search Tool:** https://www.irs.gov/charities-non-profits/tax-exempt-organization-search
+- **Bulk Downloads:** https://www.irs.gov/charities-non-profits/tax-exempt-organization-search-bulk-data-downloads
+- **API Documentation:** See [IRS Bulk Data Integration](./irs-bulk-data.md)
+- **Coverage:** 1,952,238 organizations (as of April 2026)
   - **Churches & Religious Organizations:** 300,000+ (NTEE codes X, X20, X21, X22, X30, X40)
-  - **Health Organizations:** 50,000+ (NTEE codes E)
-  - **Human Services:** 150,000+ (NTEE codes P)
+  - **Health Organizations:** 80,000+ (NTEE codes E, E20-E99)
+  - **Human Services:** 200,000+ (NTEE codes P, P20-P99)
+  - **All Other Categories:** 1.3M+ (Education, Arts, Environment, etc.)
 - **Update Frequency:** Monthly
 - **License:** Public domain (U.S. government data)
+- **Format:** CSV (regional files), convertible to Parquet
+- **Record Count:** 1.9M+ total nonprofits across 4 regional files
+
+**Data Fields (28 columns):**
+- **Identification:** EIN, organization name, sort name
+- **Location:** Street address, city, state, ZIP code
+- **Classification:** NTEE code, subsection (501(c)(3), etc.), foundation code
+- **Financial:** Asset amount, income amount, revenue amount
+- **Status:** Tax-exempt status, deductibility status, ruling date
+- **Organization:** Organization code, activity codes, group affiliation
 
 **NTEE Codes for Churches:**
 - **X** - Religion Related, Spiritual Development
@@ -258,12 +271,35 @@ This page documents all data sources, standards, and research contributions used
 - **X30** - Jewish
 - **X40** - Islamic
 
-**Note:** ProPublica API already includes this data in a more accessible format. Direct IRS access primarily used for bulk downloads and verification.
+**Use Cases:**
+- **Bulk Download:** Get ALL nonprofits in a state (e.g., 26,148 in Alabama vs 25 from ProPublica API)
+- **Comprehensive Coverage:** 1,000x more data per request than API methods
+- **Offline Analysis:** Download once, query locally forever (cached as Parquet)
+- **NTEE Filtering:** Filter by category code (health, education, religion, etc.)
+- **Geographic Analysis:** Complete state/city/ZIP coverage for spatial mapping
+
+**BibTeX Citation:**
+```bibtex
+@misc{irs_eobmf_2026,
+  title = {Exempt Organizations Business Master File Extract (EO-BMF)},
+  author = {{Internal Revenue Service}},
+  year = {2026},
+  month = {April},
+  url = {https://www.irs.gov/charities-non-profits/exempt-organizations-business-master-file-extract-eo-bmf},
+  note = {Record count: 1,952,238 organizations. Updated monthly.}
+}
+```
+
+**Integration:**
+- **ProPublica API** complements with detailed Form 990 financials and mission statements
+- **Every.org** adds human-readable descriptions and cause tags
+- **IRS EO-BMF** provides the complete foundation layer with all organizations
 
 **Complements:**
 - **ARDA** for congregation characteristics and health ministry programs
 - **HIFLD** for geospatial location data
 - **National Congregations Study** for social service provision patterns
+- **ProPublica API** for detailed financial breakdowns and executive compensation
 
 ---
 
@@ -524,6 +560,7 @@ concept_id_1 | concept_id_2 | relationship_id
 ## 🏢 Nonprofit & Philanthropy
 
 **In this section:**
+- [IRS Exempt Organizations Business Master File (EO-BMF)](#irs-exempt-organizations-business-master-file-eo-bmf) - **PRIMARY BULK DATA SOURCE (1.9M+ orgs)**
 - [ProPublica Nonprofit Explorer](#propublica-nonprofit-explorer)
 - [ProPublica Congress API](#propublica-congress-api)
 - [ProPublica Campaign Finance API](#propublica-campaign-finance-api)
@@ -536,10 +573,77 @@ concept_id_1 | concept_id_2 | relationship_id
 - [National Congregations Study (NCS)](#national-congregations-study-ncs)
 - [Microsoft Common Data Model for Nonprofits](#microsoft-common-data-model-for-nonprofits)
 
+### IRS Exempt Organizations Business Master File (EO-BMF)
+
+**Organization:** Internal Revenue Service (IRS), U.S. Department of Treasury  
+**What we use:** **PRIMARY BULK DATA SOURCE** for comprehensive nonprofit data - ALL 1.9M+ U.S. tax-exempt organizations with EIN, NTEE codes, financial data, subsection classification, and geographic location.
+
+- **Source:** https://www.irs.gov/charities-non-profits/exempt-organizations-business-master-file-extract-eo-bmf
+- **Search Tool:** https://www.irs.gov/charities-non-profits/tax-exempt-organization-search
+- **Bulk Downloads:** https://www.irs.gov/charities-non-profits/tax-exempt-organization-search-bulk-data-downloads
+- **API Documentation:** See [IRS Bulk Data Integration](./irs-bulk-data.md)
+- **Coverage:** 1,952,238 organizations (as of April 2026)
+  - **Churches & Religious Organizations:** 300,000+ (NTEE codes X, X20, X21, X22, X30, X40)
+  - **Health Organizations:** 80,000+ (NTEE codes E, E20-E99)
+  - **Human Services:** 200,000+ (NTEE codes P, P20-P99)
+  - **All Other Categories:** 1.3M+ (Education, Arts, Environment, etc.)
+- **Update Frequency:** Monthly
+- **License:** Public domain (U.S. government data)
+- **Format:** CSV (regional files), convertible to Parquet
+- **Record Count:** 1.9M+ total nonprofits across 4 regional files
+
+**Data Fields (28 columns):**
+- **Identification:** EIN, organization name, sort name
+- **Location:** Street address, city, state, ZIP code
+- **Classification:** NTEE code, subsection (501(c)(3), etc.), foundation code
+- **Financial:** Asset amount, income amount, revenue amount
+- **Status:** Tax-exempt status, deductibility status, ruling date
+- **Organization:** Organization code, activity codes, group affiliation
+
+**NTEE Codes for Churches:**
+- **X** - Religion Related, Spiritual Development
+- **X20** - Christian (churches, ministries)
+- **X21** - Protestant
+- **X22** - Roman Catholic
+- **X30** - Jewish
+- **X40** - Islamic
+
+**Use Cases:**
+- **Bulk Download:** Get ALL nonprofits in a state (e.g., 26,148 in Alabama vs 25 from ProPublica API)
+- **Comprehensive Coverage:** 1,000x more data per request than API methods
+- **Offline Analysis:** Download once, query locally forever (cached as Parquet)
+- **NTEE Filtering:** Filter by category code (health, education, religion, etc.)
+- **Geographic Analysis:** Complete state/city/ZIP coverage for spatial mapping
+
+**BibTeX Citation:**
+```bibtex
+@misc{irs_eobmf_2026,
+  title = {Exempt Organizations Business Master File Extract (EO-BMF)},
+  author = {{Internal Revenue Service}},
+  year = {2026},
+  month = {April},
+  url = {https://www.irs.gov/charities-non-profits/exempt-organizations-business-master-file-extract-eo-bmf},
+  note = {Record count: 1,952,238 organizations. Updated monthly.}
+}
+```
+
+**Integration:**
+- **ProPublica API** complements with detailed Form 990 financials and mission statements
+- **Every.org** adds human-readable descriptions and cause tags
+- **IRS EO-BMF** provides the complete foundation layer with all organizations
+
+**Complements:**
+- **ARDA** for congregation characteristics and health ministry programs
+- **HIFLD** for geospatial location data
+- **National Congregations Study** for social service provision patterns
+- **ProPublica API** for detailed financial breakdowns and executive compensation
+
+---
+
 ### ProPublica Nonprofit Explorer
 
 **Organization:** ProPublica, Inc.  
-**What we use:** **PRIMARY SOURCE** for nonprofit financial data - IRS Form 990 filings, revenue, expenses, executive compensation, NTEE codes.
+**What we use:** Enhanced financial data and detailed Form 990 filings to complement IRS EO-BMF bulk data.
 
 - **Source:** https://projects.propublica.org/nonprofits/
 - **API Documentation:** https://projects.propublica.org/nonprofits/api
@@ -551,6 +655,7 @@ concept_id_1 | concept_id_2 | relationship_id
   - NTEE classification codes (National Taxonomy of Exempt Entities)
   - EIN (Employer Identification Number) for verification
 - **Rate Limits:** Free, unlimited access (respectful use recommended: ~1 req/sec)
+- **API Limitation:** Returns max 25 results per request, no pagination (use IRS EO-BMF for bulk downloads)
 - **License:** Free for research and commercial use
 
 **BibTeX:**

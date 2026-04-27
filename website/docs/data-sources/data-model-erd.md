@@ -69,7 +69,8 @@ open-navigator-data/
 │   └── school_board       # School board members
 │
 ├── nonprofits/             # 🏢 Nonprofit organizations & churches
-│   ├── irs_nonprofits     # IRS 990 data (3M+ organizations including 300K+ churches)
+│   ├── irs_eobmf          # IRS EO-BMF bulk data (1.9M+ organizations) - PRIMARY SOURCE
+│   ├── irs_nonprofits     # Legacy IRS 990 data (deprecated - use irs_eobmf)
 │   ├── propublica_data    # ProPublica API (financials, NTEE codes)
 │   ├── everyorg_data      # Every.org API (missions, causes, logos)
 │   ├── nonprofit_990s     # Detailed Form 990 financials (yearly filings)
@@ -217,7 +218,11 @@ social_twitter.parquet
 social_facebook.parquet
 videos_youtube_channels.parquet
 meetings_government_meetings.parquet
-nonprofits_irs_nonprofits.parquet
+nonprofits_organizations.parquet
+nonprofits_financials.parquet
+nonprofits_programs.parquet
+nonprofits_locations.parquet
+nonprofits_irs_eobmf.parquet
 nonprofits_constituents.parquet
 nonprofits_donations.parquet
 nonprofits_campaigns.parquet
@@ -275,14 +280,16 @@ standards-schema-org.parquet
 1. **Census Data** → Jurisdictions list
 2. **GSA Domains** → Government websites
 3. **NCES** → School districts with financial data (F-33 forms)
-4. **IRS TEOS** → Nonprofit EINs (3M+ organizations)
-5. **Census of Governments** → Municipal budgets & finances
-6. **URL Discovery** → Meeting platforms, YouTube, budget PDFs
-7. **Social Media** → Twitter, Facebook accounts
+4. **IRS EO-BMF** → ALL 1.9M+ U.S. tax-exempt organizations (PRIMARY SOURCE)
+5. **IRS TEOS** → Legacy nonprofit EINs (deprecated - use IRS EO-BMF)
+6. **Census of Governments** → Municipal budgets & finances
+7. **URL Discovery** → Meeting platforms, YouTube, budget PDFs
+8. **Social Media** → Twitter, Facebook accounts
 
 ### Phase 2: Enrichment (Silver Layer)
-1. **ProPublica Nonprofit Explorer** → Financial data, NTEE codes, 990 filings
-2. **Every.org API** → Nonprofit causes, missions, logos
+1. **IRS EO-BMF** → Complete nonprofit registry with 28 data fields per organization
+2. **ProPublica Nonprofit Explorer** → Enhanced financial data, detailed 990 filings
+3. **Every.org API** → Nonprofit causes, missions, logos
 3. **ARDA (Association of Religion Data Archives)** → Congregation characteristics, health ministries
 4. **HIFLD Places of Worship** → Geospatial church locations (350K+ congregations)
 5. **National Congregations Study** → Social service provision patterns
@@ -776,6 +783,7 @@ erDiagram
     %% Based on Popolo Project schema for organizations
     %% See: https://github.com/popolo-project/popolo-spec
     %% Schema.org types: Organization, NGO, Church, WorshipPlace
+    %% PRIMARY DATA SOURCE: IRS EO-BMF (1.9M+ organizations, 28 fields)
     
     ORGANIZATION ||--o{ SOCIAL_MEDIA : maintains
     ORGANIZATION ||--o{ LEADER : employs
@@ -785,21 +793,38 @@ erDiagram
     ORGANIZATION ||--o{ CONGREGATION : has
     ORGANIZATION {
         string org_id PK
-        string ein
-        string name
-        string ntee_code
+        string ein "Employer ID Number (IRS EO-BMF)"
+        string name "Organization legal name (IRS EO-BMF)"
+        string sort_name "Alphabetic sort name (IRS EO-BMF)"
+        string ntee_code "NTEE classification (IRS EO-BMF)"
         string ntee_description
-        string causes
+        string subsection_code "501(c)(3) = 03, etc (IRS EO-BMF)"
+        string foundation_code "15=Public Charity, etc (IRS EO-BMF)"
+        string organization_code "1=Corporation, 2=Trust (IRS EO-BMF)"
+        string deductibility_status "1=Deductible (IRS EO-BMF)"
+        string exempt_status_code "1=Unconditional (IRS EO-BMF)"
+        string causes "Every.org tags"
         string org_type
-        string state_code
-        string city
-        string address
-        int employee_count
-        string mission_statement
-        string description
-        string logo_url
-        string website
-        boolean is_verified
+        string state_code "2-letter state (IRS EO-BMF)"
+        string city "City name (IRS EO-BMF)"
+        string street_address "Street address (IRS EO-BMF)"
+        string zip_code "ZIP code (IRS EO-BMF)"
+        float asset_amount "Total assets (IRS EO-BMF)"
+        float income_amount "Annual income (IRS EO-BMF)"
+        float revenue_amount "Total revenue (IRS EO-BMF)"
+        string ruling_date "Tax-exempt ruling date YYYYMM (IRS EO-BMF)"
+        string tax_period "Tax period YYYYMM (IRS EO-BMF)"
+        string activity_codes "Activity classification (IRS EO-BMF)"
+        string group_exemption "Group ruling number (IRS EO-BMF)"
+        string affiliation_code "Subordinate code (IRS EO-BMF)"
+        int employee_count "From Form 990"
+        string mission_statement "ProPublica/Every.org"
+        string description "ProPublica/Every.org"
+        string logo_url "Every.org"
+        string website "Discovered URL"
+        boolean is_verified "Data quality flag"
+        string data_source "IRS_EO_BMF/ProPublica/EveryOrg"
+        datetime last_updated
     }
     
     %% Churches & Congregations (org_type='church', ntee_code='X20')

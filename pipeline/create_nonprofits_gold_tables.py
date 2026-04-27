@@ -36,6 +36,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from config.settings import settings
 from discovery.nonprofit_discovery import NonprofitDiscovery
+from discovery.irs_bmf_ingestion import IRSBMFIngestion
 
 
 class NonprofitGoldTableCreator:
@@ -56,12 +57,57 @@ class NonprofitGoldTableCreator:
         self.bronze_dir.mkdir(parents=True, exist_ok=True)
         self.gold_dir.mkdir(parents=True, exist_ok=True)
         
-        # Initialize discovery module
+        # Initialize discovery modules
         self.discovery = NonprofitDiscovery(cache_dir=str(self.cache_dir))
+        self.irs = IRSBMFIngestion(cache_dir=str(self.cache_dir.parent / "irs_bmf"))
         
         logger.info(f"Cache directory: {self.cache_dir}")
         logger.info(f"Bronze directory: {self.bronze_dir}")
         logger.info(f"Gold directory: {self.gold_dir}")
+    
+    def discover_nonprofits_from_irs(
+        self,
+        states: Optional[List[str]] = None,
+        ntee_codes: Optional[List[str]] = None,
+        download_all: bool = False
+    ) -> pd.DataFrame:
+        """
+        Discover ALL nonprofits from IRS EO-BMF bulk data (1.9M+ organizations)
+        
+        This is MUCH faster and more complete than API-based discovery!
+        
+        Args:
+            states: List of state codes to download (None = all states via regional files)
+            ntee_codes: Optional NTEE codes to filter (None = all nonprofits)
+            download_all: If True, download all 4 regional files (~1.9M orgs)
+        
+        Returns:
+            DataFrame with nonprofit data
+        """
+        logger.info("=" * 60)
+        logger.info("IRS EO-BMF BULK DATA DOWNLOAD")
+        logger.info("=" * 60)
+        
+        if download_all:
+            # Download all 4 regional files (~1.9M+ organizations)
+            logger.info("Downloading ALL U.S. nonprofits from IRS (4 regional files)...")
+            df = self.irs.download_all_regions()
+        elif states:
+            # Download specific states
+            logger.info(f"Downloading {len(states)} states from IRS...")
+            df = self.irs.download_states(states)
+        else:
+            raise ValueError("Must specify either states or download_all=True")
+        
+        # Filter by NTEE codes if specified
+        if ntee_codes and len(ntee_codes) > 0:
+            df = self.irs.filter_by_ntee(df, ntee_codes)
+        
+        # Convert to ProPublica-compatible format
+        standardized = self.irs.standardize_to_propublica_format(df)
+        
+        logger.success(f"IRS data ready: {len(standardized):,} organizations")
+        return standardized
     
     def discover_nonprofits_by_state(
         self,
@@ -74,6 +120,8 @@ class NonprofitGoldTableCreator:
         Args:
             states: List of 2-letter state codes (e.g., ["AL", "MI", "NY"])
             ntee_codes: Optional list of NTEE codes to filter (e.g., ["E", "P", "K"])
+                       Use empty list [] to get ALL nonprofits without filtering
+                       Use None for default community service codes (E, P, K, L, S, W)
         
         Returns:
             DataFrame with discovered nonprofit data
@@ -85,8 +133,9 @@ class NonprofitGoldTableCreator:
         failed_requests = 0
         skipped_requests = 0
         
-        # Default NTEE codes if not specified (focus on community services)
+        # Handle NTEE code filtering options
         if ntee_codes is None:
+            # Default NTEE codes (focus on community services)
             ntee_codes = [
                 "E",   # Health
                 "P",   # Human Services
@@ -95,6 +144,11 @@ class NonprofitGoldTableCreator:
                 "S",   # Community Improvement
                 "W",   # Public Affairs
             ]
+            logger.info(f"Using default NTEE codes: {', '.join(ntee_codes)}")
+        elif len(ntee_codes) == 0:
+            # Empty list means get ALL nonprofits (no NTEE filtering)
+            ntee_codes = [None]  # Will search once per state without NTEE filter
+            logger.info("Searching for ALL nonprofits (no NTEE filtering)")
         
         total_requests = len(states) * len(ntee_codes)
         current_request = 0
@@ -104,7 +158,11 @@ class NonprofitGoldTableCreator:
             
             for ntee_code in ntee_codes:
                 current_request += 1
-                logger.info(f"  - Searching NTEE code: {ntee_code} ({current_request}/{total_requests})")
+                
+                if ntee_code is None:
+                    logger.info(f"  - Searching ALL nonprofits (no NTEE filter) ({current_request}/{total_requests})")
+                else:
+                    logger.info(f"  - Searching NTEE code: {ntee_code} ({current_request}/{total_requests})")
                 
                 # Search ProPublica API
                 nonprofits = self.discovery.search_propublica(
@@ -321,14 +379,20 @@ class NonprofitGoldTableCreator:
     def create_all_gold_tables(
         self,
         states: Optional[List[str]] = None,
-        skip_discovery: bool = False
+        ntee_codes: Optional[List[str]] = None,
+        skip_discovery: bool = False,
+        use_irs_data: bool = False,
+        download_all_irs: bool = False
     ):
         """
         Main pipeline: Discover nonprofits and create all gold tables
         
         Args:
             states: List of state codes to search (default: ["AL", "MI"])
+            ntee_codes: NTEE codes to filter (None=default, []=all nonprofits)
             skip_discovery: If True, load from existing bronze data instead of API
+            use_irs_data: If True, download from IRS EO-BMF instead of ProPublica API
+            download_all_irs: If True with use_irs_data, download ALL 1.9M+ nonprofits
         """
         logger.info("=" * 60)
         logger.info("NONPROFIT DISCOVERY AND GOLD TABLE CREATION")
@@ -348,8 +412,18 @@ class NonprofitGoldTableCreator:
             else:
                 logger.error("No bronze data found! Run with skip_discovery=False first.")
                 return
+        elif use_irs_data:
+            # Use IRS EO-BMF bulk data (RECOMMENDED - gets ALL nonprofits!)
+            logger.info("Using IRS EO-BMF bulk data source...")
+            df = self.discover_nonprofits_from_irs(
+                states=states if not download_all_irs else None,
+                ntee_codes=ntee_codes,
+                download_all=download_all_irs
+            )
         else:
-            df = self.discover_nonprofits_by_state(states)
+            # Use ProPublica API (limited to 25 results per request)
+            logger.info("Using ProPublica API...")
+            df = self.discover_nonprofits_by_state(states, ntee_codes)
         
         if df.empty:
             logger.error("No nonprofit data available. Exiting.")
