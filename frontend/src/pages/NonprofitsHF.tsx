@@ -2,27 +2,6 @@ import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { searchNonprofits } from '../utils/huggingface'
 
-interface Nonprofit {
-  ein: string
-  name: string
-  sort_name?: string
-  city?: string
-  state?: string
-  zip_code?: string
-  street_address?: string
-  ntee_code?: string
-  subsection_code?: string
-  foundation_code?: string
-  asset_amount?: number
-  income_amount?: number
-  revenue_amount?: number
-  ruling_date?: string
-  tax_exempt_status?: string
-  deductibility_status?: string
-  organization_code?: string
-  activity_codes?: string
-}
-
 const DATASET_NAME = "CommunityOne/one-nonprofits-organizations"
 
 // NTEE Code categories
