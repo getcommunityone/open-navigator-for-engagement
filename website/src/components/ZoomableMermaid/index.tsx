@@ -11,20 +11,21 @@ interface ZoomableMermaidProps {
 export default function ZoomableMermaid({ value, title }: ZoomableMermaidProps): JSX.Element {
   return (
     <div className={styles.zoomableContainer}>
-      {title && <h3 className={styles.diagramTitle}>{title}</h3>}
+      {title && <h3 className={styles.diagramTitle} style={{ color: '#ffffff' }}>{title}</h3>}
       <div className={styles.controls}>
         <span className={styles.controlsLabel}>
           💡 <strong>Tip:</strong> Use mouse wheel to zoom, click and drag to pan, or use the controls below
         </span>
       </div>
       <TransformWrapper
-        initialScale={1.5}
-        minScale={0.3}
-        maxScale={6}
+        initialScale={3}
+        minScale={0.2}
+        maxScale={8}
         centerOnInit={true}
-        wheel={{ step: 0.15 }}
+        wheel={{ step: 0.2 }}
         doubleClick={{ disabled: false }}
         panning={{ velocityDisabled: true }}
+        limitToBounds={false}
       >
         {({ zoomIn, zoomOut, resetTransform }) => (
           <>
