@@ -59,27 +59,33 @@ df = pd.read_parquet('data/gold/nonprofits_organizations',
 
 ```
 data/gold/
-├── nonprofits_organizations/          # Partitioned dataset
+├── nonprofits_organizations/          # Partitioned dataset (207 MB)
 │   ├── state=AL/
 │   │   └── part-0.parquet (1 MB)
 │   ├── state=AK/
 │   │   └── part-0.parquet (0.5 MB)
 │   ├── state=CA/
 │   │   └── part-0.parquet (8 MB)
-│   └── ... (62 states)
-├── nonprofits_organizations.parquet   # Original consolidated file
-├── nonprofits_locations/              # Partitioned dataset
+│   └── ... (63 states)
+├── nonprofits_locations/              # Partitioned dataset (99 MB)
 │   ├── state=AL/
 │   │   └── part-0.parquet
 │   └── ...
-├── nonprofits_locations.parquet       # Original consolidated file
-└── jurisdictions_cities/              # Partitioned dataset
-    ├── state=AL/
-    │   └── part-0.parquet
-    └── ...
+├── jurisdictions_cities/              # Partitioned dataset (2.9 MB)
+│   ├── state=AL/
+│   │   └── part-0.parquet
+│   └── ...
+├── jurisdictions_counties/            # Partitioned dataset (1.1 MB)
+├── jurisdictions_school_districts/    # Partitioned dataset (1.8 MB)
+├── jurisdictions_townships/           # Partitioned dataset (3.3 MB)
+├── domains_gsa_domains/               # Partitioned dataset (1.4 MB)
+├── causes_everyorg_causes.parquet     # Lookup table (no partitioning)
+├── causes_ntee_codes.parquet          # Lookup table (no partitioning)
+├── nonprofits_financials.parquet      # Not state-based
+└── nonprofits_programs.parquet        # Not state-based
 ```
 
-**Note**: Partitioned datasets (directories) coexist with original consolidated files (.parquet) in the same `data/gold/` directory.
+**Note**: Only datasets with state information are partitioned. Lookup tables and non-state data remain as single files.
 
 ## Creating Partitioned Datasets
 
@@ -102,21 +108,21 @@ python scripts/create_partitioned_datasets.py --all --dry-run
 import pandas as pd
 
 # Read single state (only reads 1 MB, not 72 MB!)
-df = pd.read_parquet('data/gold/partitioned/nonprofits_organizations',
+df = pd.read_parquet('data/gold/nonprofits_organizations',
                      filters=[('state', '=', 'AL')])
 print(f"Alabama nonprofits: {len(df):,}")
 
 # Read multiple states
-df = pd.read_parquet('data/gold/partitioned/nonprofits_organizations',
+df = pd.read_parquet('data/gold/nonprofits_organizations',
                      filters=[('state', 'in', ['AL', 'GA', 'FL', 'MS', 'TN'])])
 print(f"Southeast nonprofits: {len(df):,}")
 
 # Read all states (reads all partitions)
-df = pd.read_parquet('data/gold/partitioned/nonprofits_organizations')
+df = pd.read_parquet('data/gold/nonprofits_organizations')
 print(f"All nonprofits: {len(df):,}")
 
 # Complex filters (still efficient!)
-df = pd.read_parquet('data/gold/partitioned/nonprofits_organizations',
+df = pd.read_parquet('data/gold/nonprofits_organizations',
                      filters=[
                          ('state', '=', 'AL'),
                          ('ntee_code', '=', 'E')  # Health orgs only
@@ -134,7 +140,7 @@ con = duckdb.connect()
 # Query with partition pruning
 result = con.execute("""
     SELECT state, COUNT(*) as org_count
-    FROM 'data/gold/partitioned/nonprofits_organizations/**/*.parquet'
+    FROM 'data/gold/nonprofits_organizations/**/*.parquet'
     WHERE state IN ('AL', 'GA', 'FL')
     GROUP BY state
 """).fetchdf()
@@ -150,15 +156,15 @@ from pyspark.sql import SparkSession
 spark = SparkSession.builder.getOrCreate()
 
 # Spark automatically uses partition pruning
-df = spark.read.parquet('data/gold/partitioned/nonprofits_organizations')
+df = spark.read.parquet('data/gold/nonprofits_organizations')
 
 # Only reads AL partition
 al_orgs = df.filter(df.state == 'AL')
 print(f"Alabama nonprofits: {al_orgs.count():,}")
 
 # Join partitioned datasets efficiently
-cities = spark.read.parquet('data/gold/partitioned/jurisdictions_cities')
-nonprofits = spark.read.parquet('data/gold/partitioned/nonprofits_organizations')
+cities = spark.read.parquet('data/gold/jurisdictions_cities')
+nonprofits = spark.read.parquet('data/gold/nonprofits_organizations')
 
 # Both filter to AL before join - very efficient!
 result = nonprofits.filter(nonprofits.state == 'AL') \
@@ -217,7 +223,7 @@ from datasets import Dataset
 import pandas as pd
 
 # Read partitioned data
-df = pd.read_parquet('data/gold/partitioned/nonprofits_organizations',
+df = pd.read_parquet('data/gold/nonprofits_organizations',
                      filters=[('state', '=', 'AL')])
 
 # Upload state-specific subset
@@ -231,7 +237,7 @@ Or upload the entire partitioned structure:
 # Upload partitioned directory to HuggingFace
 # Each state becomes a separate shard
 huggingface-cli upload CommunityOne/one-nonprofits \
-  data/gold/partitioned/nonprofits_organizations \
+  data/gold/nonprofits_organizations \
   --repo-type dataset
 ```
 
@@ -271,7 +277,7 @@ If you have code using separate files:
 df = pd.read_parquet('data/gold/by_state/nonprofits_organizations_AL.parquet')
 
 # New approach (equivalent)
-df = pd.read_parquet('data/gold/partitioned/nonprofits_organizations',
+df = pd.read_parquet('data/gold/nonprofits_organizations',
                      filters=[('state', '=', 'AL')])
 ```
 

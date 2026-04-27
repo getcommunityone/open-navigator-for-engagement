@@ -2,9 +2,19 @@
 sidebar_position: 5
 ---
 
-# State-Split Data Files
+# State-Split Data Files (Deprecated)
 
-All gold parquet files with state information have been split into state-specific files for easier access and distribution.
+:::warning Deprecated
+This approach of splitting files into separate state files is **deprecated**. 
+
+Use **[Partitioned Datasets](./partitioned-datasets.md)** instead for:
+- Same efficiency as separate files
+- Ability to query across states
+- Better analytics tool support
+- Simpler data management
+:::
+
+All gold parquet files with state information were previously split into state-specific files. This has been replaced by partitioned datasets which offer the same benefits with better queryability.
 
 ## What Changed
 
