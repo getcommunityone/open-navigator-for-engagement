@@ -186,6 +186,8 @@ erDiagram
     %% ========================================
     %% LEADERS & OFFICIALS
     %% ========================================
+    %% Based on Popolo Project schema for representing people and positions
+    %% See: https://github.com/popolo-project/popolo-spec
     
     LEADER ||--o{ VOTE : casts
     LEADER ||--o{ SOCIAL_MEDIA : maintains
@@ -219,6 +221,8 @@ erDiagram
     %% ========================================
     %% ORGANIZATIONS (NONPROFITS)
     %% ========================================
+    %% Based on Popolo Project schema for organizations
+    %% See: https://github.com/popolo-project/popolo-spec
     
     ORGANIZATION ||--o{ SOCIAL_MEDIA : maintains
     ORGANIZATION ||--o{ LEADER : employs
@@ -626,6 +630,108 @@ erDiagram
     }
 `}
 />
+
+## 🌐 Data Standards & Interoperability
+
+### Popolo Project Alignment
+
+Our data model follows the [Popolo Project](https://www.popoloproject.com/) specification for representing people, organizations, and elected positions. Popolo is an international open government data standard adopted by 30+ civic tech organizations worldwide including mySociety, Sunlight Foundation, OpenNorth, and Civic Commons.
+
+#### Popolo Class Mappings
+
+| Popolo Class | Our Entity | Description | Key Fields |
+|--------------|------------|-------------|------------|
+| **Person** | LEADER | Elected officials, government employees | `full_name`, `email`, `phone`, `photo_url` |
+| **Organization** | ORGANIZATION | Nonprofits, government agencies, companies | `name`, `org_type`, `address`, `website` |
+| **Membership** | LEADER ↔ ORGANIZATION | Relationship between people and organizations | `leader_id`, `jurisdiction_id`, `term_start`, `term_end` |
+| **Post** | LEADER.position_type | Positions within organizations | `title`, `office`, `position_type` |
+| **Contact Detail** | Embedded fields | Communication methods | `email`, `phone`, `website` in multiple entities |
+| **Motion** | AGENDA, LEGISLATION | Formal proposals for decision | `title`, `description`, `status` |
+| **Vote Event** | VOTE | Voting on motions/bills | `vote_date`, `item_description` |
+| **Count** | VOTE, LEGISLATION | Vote tallies | `vote_yes`, `vote_no`, `vote_value` |
+| **Area** | JURISDICTION | Geographic/political boundaries | `jurisdiction_type`, `state_code`, `county_name` |
+| **Event** | MEETING | Gatherings with agendas | `meeting_date`, `meeting_type`, `body_name` |
+| **Speech** | MINUTES, VIDEO | Spoken statements | `transcript_text`, `summary_text` |
+
+#### Underlying Standards
+
+Popolo builds upon W3C, IETF, and DCMI specifications for maximum interoperability:
+
+| Standard | Use Case | Example in Our Model |
+|----------|----------|---------------------|
+| **FOAF** (Friend of a Friend) | Social network, people relationships | LEADER connections, ORGANIZATION networks |
+| **vCard** (IETF RFC 6350) | Contact information | email, phone, address fields across entities |
+| **Schema.org** | Structured web data | Meeting metadata, organization profiles for SEO |
+| **DCMI Terms** | Metadata, provenance | `created_at`, `updated_at`, `source_url` timestamps |
+| **W3C Organization Ontology** | Hierarchical organizations | Government hierarchy, nonprofit structures |
+| **ISA Location Core Vocabulary** | Address standardization | `address`, `city`, `state_code`, `latitude`, `longitude` |
+| **GeoNames Ontology** | Geographic identifiers | Place names, jurisdiction boundaries |
+| **SKOS** | Taxonomies and classification | NTEE codes, policy topic categories |
+
+#### Benefits of Standards Compliance
+
+1. **Interoperability**: Data can be easily shared with other civic tech platforms
+2. **API Compatibility**: Standard field names work with existing tools (e.g., EveryPolitician, Open Civic Data)
+3. **Semantic Web**: RDF/JSON-LD export capabilities for linked open data
+4. **Tooling**: Existing libraries and validators (e.g., `pupa`, `everypolitician-popolo`)
+5. **Documentation**: Well-documented schemas reduce onboarding time
+
+#### Example: Popolo-Compatible JSON-LD Export
+
+```json
+{
+  "@context": "http://www.popoloproject.com/contexts/person.jsonld",
+  "@type": "Person",
+  "id": "ocd-person/12345678-90ab-cdef-1234-567890abcdef",
+  "name": "Jane Doe",
+  "email": "jane.doe@example.gov",
+  "links": [{
+    "note": "official website",
+    "url": "https://example.gov/mayor"
+  }],
+  "memberships": [{
+    "@type": "Membership",
+    "organization_id": "ocd-organization/jurisdiction/us/city/springfield",
+    "post_id": "mayor",
+    "role": "Mayor",
+    "start_date": "2022-01-01",
+    "end_date": "2026-12-31"
+  }],
+  "contact_details": [{
+    "type": "email",
+    "value": "jane.doe@example.gov",
+    "note": "official"
+  }, {
+    "type": "voice",
+    "value": "+1-555-123-4567"
+  }],
+  "sources": [{
+    "url": "https://example.gov/government/officials",
+    "note": "Official city website"
+  }]
+}
+```
+
+### Open Civic Data (OCD-ID) Identifiers
+
+We use OCD-IDs for jurisdiction identifiers following [OCDEP 2](https://open-civic-data.readthedocs.io/en/latest/proposals/0002.html):
+
+```
+Format: ocd-division/country:<country_code>/<type>:<type_id>
+
+Examples:
+- State: ocd-division/country:us/state:al
+- County: ocd-division/country:us/state:al/county:jefferson
+- City: ocd-division/country:us/state:al/place:birmingham
+- School District: ocd-division/country:us/state:al/school_district:birmingham_city
+```
+
+**Normalization Rules:**
+- Lowercase ASCII characters (a-z)
+- Numbers (0-9)
+- Valid punctuation: `._~-`
+- Spaces → underscores
+- Remove special characters
 
 ## 📦 HuggingFace Dataset Structure
 
@@ -1466,13 +1572,18 @@ ON metric_advocacy_activity_mat(jurisdiction_id);
 
 ## 📚 Related Documentation
 
+### Data Standards & Specifications
+
+- **[Popolo Project](https://github.com/popolo-project/popolo-spec)** - Open government data specification for people, organizations, and elected positions. Our LEADER, ORGANIZATION, and JURISDICTION entities follow Popolo schema conventions for maximum interoperability with civic tech platforms.
+
+### Internal Documentation
+
 - [HuggingFace Publishing Guide](../guides/huggingface-publishing.md)
 - [Data Sources Overview](./overview.md)
 - [Discovery Pipeline](./jurisdiction-discovery.md)
-- [API Integration Status](../../docs/API_INTEGRATION_STATUS.md)
 
 ---
 
 **Last Updated:** {new Date().toISOString().split('T')[0]}
 
-**Data Model Version:** 2.0
+**Data Model Version:** 2.1 (Popolo-compatible)

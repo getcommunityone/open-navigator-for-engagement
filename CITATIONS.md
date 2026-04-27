@@ -92,6 +92,58 @@ July 2023, Toronto, Canada.
 - License: Open source
 - Used for: Standardized jurisdiction identifiers, cross-platform compatibility
 
+### **Popolo Project**
+- International open government data specification for people, organizations, and elected positions
+- Specification: https://www.popoloproject.com/
+- GitHub: https://github.com/popolo-project/popolo-spec
+- Documentation: http://www.popoloproject.com/specs/
+- License: Creative Commons Attribution 4.0 International
+- Coverage: Standardized schemas for Person, Organization, Membership, Post, Area, Motion, VoteEvent, Count
+- Used for: Leader/official data modeling, organization structure, membership tracking, voting records
+- Adoption: Used by Civic Commons, OpenNorth, mySociety, Sunlight Foundation, and 30+ civic tech organizations worldwide
+- Citation: "Popolo Project. Open government data specifications. https://www.popoloproject.com/"
+- **Key Features:**
+  - **Person**: Names, contact details, identifiers, links to images/sources
+  - **Organization**: Names, classification, founding/dissolution dates, contact information
+  - **Membership**: Relationship between persons and organizations (with roles and time periods)
+  - **Post**: Positions within organizations (e.g., "Mayor", "City Council Member District 3")
+  - **VoteEvent**: Votes on motions/bills with individual voter positions
+- **Our Implementation**: LEADER and ORGANIZATION entities follow Popolo schema for maximum interoperability with civic tech platforms
+
+**Popolo Dependencies & Standards:**
+The Popolo specification builds upon and references the following W3C, IETF, and open data standards:
+
+| Publisher | Specification | Prefix | Use in Popolo | URL |
+|-----------|---------------|--------|---------------|-----|
+| Bibliographic Framework Initiative | BIBFRAME Vocabulary | `bf` | Bibliographic references | https://www.loc.gov/bibframe/ |
+| Ian Davis | BIO: Biographical Information | `bio` | Life events, relationships | http://purl.org/vocab/bio/0.1/ |
+| W3C | Contact: Utility concepts | `con` | Contact information | http://www.w3.org/2000/10/swap/pim/contact# |
+| DCMI | DCMI Metadata Terms | `dcterms` | Metadata, provenance | https://www.dublincore.org/specifications/dublin-core/dcmi-terms/ |
+| FOAF Project | FOAF Vocabulary | `foaf` | People, social networks | http://xmlns.com/foaf/0.1/ |
+| GeoNames | GeoNames Ontology | `gn` | Geographic names | http://www.geonames.org/ontology/ |
+| ISA Programme | Location Core Vocabulary | `locn` | Addresses, locations | https://www.w3.org/ns/locn |
+| OSCA Foundation | NEPOMUK Calendar Ontology | `ncal` | Events, meetings | http://www.semanticdesktop.org/ontologies/ncal/ |
+| Open Data Institute | Open Data Rights Statement | `odrs` | Data licensing | http://schema.theodi.org/odrs |
+| W3C | The Organization Ontology | `org` | Organizational structures | https://www.w3.org/TR/vocab-org/ |
+| ISA Programme | Person Core Vocabulary | `person` | Person attributes | http://www.w3.org/ns/person |
+| W3C | RDF Schema | `rdfs` | Semantic web foundation | https://www.w3.org/TR/rdf-schema/ |
+| W3C | Schema.org | `schema` | Structured data | https://schema.org/ |
+| W3C | SKOS | `skos` | Taxonomies, classification | https://www.w3.org/2004/02/skos/ |
+| IETF | vCard Format | `vcard` | Contact information | https://www.rfc-editor.org/rfc/rfc6350.html |
+
+**Popolo Classes Implemented:**
+- ✅ **Person** → LEADER entity (elected officials, appointees)
+- ✅ **Organization** → ORGANIZATION entity (nonprofits, government agencies)
+- ✅ **Membership** → Implicit through leader_id/organization relationships
+- ✅ **Post** → position_type, office fields in LEADER
+- ✅ **Contact Detail** → email, phone, website fields
+- ✅ **Motion** → AGENDA items, LEGISLATION entities
+- ✅ **Vote Event** → VOTE entity
+- ✅ **Count** → vote_yes, vote_no in VOTE and LEGISLATION
+- ✅ **Area** → JURISDICTION entity (geographic/political boundaries)
+- ✅ **Event** → MEETING entity
+- ✅ **Speech** → Extracted from MINUTES, VIDEO transcripts
+
 ### **Roper Center for Public Opinion Research**
 - Scientifically validated survey questions and public opinion data
 - Organization: Cornell University
