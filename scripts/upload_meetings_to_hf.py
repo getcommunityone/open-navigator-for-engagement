@@ -2,17 +2,23 @@
 """
 Upload meeting gold tables to Hugging Face Datasets.
 
-This uploads the 5 meeting gold tables (153K+ meetings from LocalView 2006-2023):
-- meetings_calendar.parquet (meeting metadata)
-- meetings_transcripts.parquet (full text transcripts - 2.8 GB!)
-- meetings_demographics.parquet (census data)
-- meetings_topics.parquet (extracted topics)
-- meetings_decisions.parquet (policy decisions and votes)
+⚠️ NOTE: The consolidated national-level meeting and contact files have been
+removed because they are too large for HuggingFace uploads (meetings_transcripts
+was 2.8 GB). 
 
-Plus 3 contacts tables:
-- contacts_local_officials.parquet (extracted from transcripts)
-- contacts_state_legislators.parquet (Open States API)
-- contacts_school_board.parquet (school board members)
+These files are NO LONGER AVAILABLE:
+- meetings_calendar.parquet (REMOVED - too large)
+- meetings_transcripts.parquet (REMOVED - 2.8 GB)
+- meetings_demographics.parquet (REMOVED - too large)
+- meetings_topics.parquet (REMOVED - too large)
+- meetings_decisions.parquet (REMOVED - too large)
+- contacts_local_officials.parquet (REMOVED - too large)
+- contacts_meeting_attendance.parquet (REMOVED - too large)
+
+For meeting and contact data, use state-split files instead or query directly
+from the database.
+
+This script is kept for reference but will not work without the source files.
 
 Usage:
     # Install requirements
