@@ -64,7 +64,14 @@ open-navigator-data/
 │   ├── irs_nonprofits     # IRS 990 data (3M+ organizations)
 │   ├── propublica_data    # ProPublica API (financials, NTEE codes)
 │   ├── everyorg_data      # Every.org API (missions, causes, logos)
-│   └── nonprofit_990s     # Detailed Form 990 financials (yearly filings)
+│   ├── nonprofit_990s     # Detailed Form 990 financials (yearly filings)
+│   ├── constituents       # 🤝 Donors, volunteers, members, beneficiaries (Microsoft CDM)
+│   ├── donations          # 💝 Financial contributions and in-kind gifts (Microsoft CDM)
+│   ├── campaigns          # 📣 Fundraising campaigns and appeals (Microsoft CDM)
+│   ├── memberships        # 🎫 Member enrollment and renewals (Microsoft CDM)
+│   ├── volunteer_activities # 🙋 Volunteer hours and activities (Microsoft CDM)
+│   ├── program_delivery   # 🎯 Programs and services delivered (Microsoft CDM)
+│   └── program_outcomes   # 📊 Impact metrics and outcome measurements (Microsoft CDM)
 │
 ├── grants/                 # 💵 Grant funding transactions
 │   ├── nonprofit_grants   # Grants to nonprofits (from 990 Schedule I)
@@ -160,6 +167,13 @@ social_facebook.parquet
 videos_youtube_channels.parquet
 meetings_government_meetings.parquet
 nonprofits_irs_nonprofits.parquet
+nonprofits_constituents.parquet
+nonprofits_donations.parquet
+nonprofits_campaigns.parquet
+nonprofits_memberships.parquet
+nonprofits_volunteer_activities.parquet
+nonprofits_program_delivery.parquet
+nonprofits_program_outcomes.parquet
 grants_federal_grants.parquet
 budgets_city_budgets.parquet
 surveys_national_polls.parquet
@@ -609,6 +623,8 @@ erDiagram
     ORGANIZATION ||--o{ SOCIAL_MEDIA : maintains
     ORGANIZATION ||--o{ LEADER : employs
     ORGANIZATION ||--o{ NONPROFIT_FINANCES : files
+    ORGANIZATION ||--o{ CAMPAIGN : runs
+    ORGANIZATION ||--o{ PROGRAM_DELIVERY : delivers
     ORGANIZATION {
         string org_id PK
         string ein
@@ -940,6 +956,139 @@ erDiagram
     }
     
     %% ========================================
+    %% MICROSOFT CDM: NONPROFIT CONSTITUENT MANAGEMENT
+    %% Based on Microsoft Common Data Model for Nonprofits
+    %% See: https://github.com/microsoft/Nonprofits/
+    %% ========================================
+    
+    CONSTITUENT ||--o{ DONATION : makes
+    CONSTITUENT ||--o{ MEMBERSHIP : enrolls_in
+    CONSTITUENT ||--o{ VOLUNTEER_ACTIVITY : participates_in
+    CONSTITUENT {
+        string constituent_id PK
+        string constituent_type "Donor, Volunteer, Member, Beneficiary"
+        string first_name
+        string last_name
+        string email
+        string phone
+        string address
+        string city
+        string state_code
+        string zip_code
+        datetime first_engagement_date
+        datetime last_engagement_date
+        float lifetime_giving_total
+        int volunteer_hours_total
+        string preferred_communication
+        boolean is_active
+        datetime created_at
+    }
+    
+    CAMPAIGN ||--o{ DONATION : receives
+    ORGANIZATION ||--o{ CAMPAIGN : runs
+    CAMPAIGN {
+        string campaign_id PK
+        string org_id FK
+        string campaign_name
+        string campaign_type "Annual Fund, Capital, Major Gifts, Peer-to-Peer"
+        datetime start_date
+        datetime end_date
+        float goal_amount
+        float raised_amount
+        int donor_count
+        string status "Planning, Active, Completed, Cancelled"
+        string description
+        datetime created_at
+    }
+    
+    DONATION ||--o| DESIGNATION : allocated_to
+    DONATION {
+        string donation_id PK
+        string constituent_id FK
+        string campaign_id FK
+        string designation_id FK "Program, Fund, or Campaign"
+        float amount
+        string donation_type "Cash, Stock, In-Kind, Pledge"
+        datetime donation_date
+        string payment_method "Check, Credit Card, ACH, Wire"
+        string acknowledgment_status "Pending, Sent, Thanked"
+        boolean is_recurring
+        string recurring_frequency "Monthly, Quarterly, Annual"
+        string receipt_number
+        datetime created_at
+    }
+    
+    DESIGNATION {
+        string designation_id PK
+        string designation_name "General Fund, Building Fund, Program X"
+        string designation_type "Unrestricted, Restricted, Endowment"
+        string fund_code
+        float current_balance
+        string description
+    }
+    
+    MEMBERSHIP {
+        string membership_id PK
+        string constituent_id FK
+        string org_id FK
+        string membership_type "Individual, Family, Corporate, Lifetime"
+        datetime start_date
+        datetime end_date
+        float membership_fee
+        string status "Active, Expired, Cancelled, Grace Period"
+        boolean auto_renew
+        datetime renewal_date
+        string benefits "Newsletter, Events, Discounts"
+        datetime created_at
+    }
+    
+    VOLUNTEER_ACTIVITY {
+        string activity_id PK
+        string constituent_id FK
+        string org_id FK
+        string activity_type "Event, Ongoing, Skilled, Board Service"
+        datetime activity_date
+        float hours_logged
+        string role "Coordinator, Assistant, Specialist"
+        string skills_used "IT, Legal, Marketing, Manual Labor"
+        string supervisor
+        string notes
+        datetime created_at
+    }
+    
+    PROGRAM_DELIVERY ||--o{ PROGRAM_OUTCOME : achieves
+    ORGANIZATION ||--o{ PROGRAM_DELIVERY : delivers
+    PROGRAM_DELIVERY {
+        string program_id PK
+        string org_id FK
+        string program_name
+        string program_type "Direct Service, Advocacy, Education, Research"
+        string target_population "Youth, Seniors, Low-Income, Veterans"
+        int beneficiaries_served
+        datetime start_date
+        datetime end_date
+        float program_budget
+        float program_expenses
+        string status "Active, Completed, On Hold"
+        string description
+        datetime created_at
+    }
+    
+    PROGRAM_OUTCOME {
+        string outcome_id PK
+        string program_id FK
+        string outcome_name "Literacy Rate, Job Placement, Health Improvement"
+        string metric_type "Percentage, Count, Score, Binary"
+        float target_value
+        float actual_value
+        string measurement_period "Monthly, Quarterly, Annual"
+        datetime measurement_date
+        string data_source "Survey, Administrative, Third-Party"
+        string notes
+        datetime created_at
+    }
+    
+    %% ========================================
     %% BALLOT MEASURES & ADVOCACY
     %% Data Sources: Ballotpedia (comprehensive measures), 
     %%               MIT Election Lab (federal results),
@@ -1119,6 +1268,14 @@ Our entities map to [Schema.org](https://schema.org/) types for SEO-optimized st
 | SCHOOL_DISTRICT | [EducationalOrganization](https://schema.org/EducationalOrganization) | name, numberOfStudents, address | ✅ School district info |
 | VIDEO | [VideoObject](https://schema.org/VideoObject) | name, description, uploadDate, duration | ✅ YouTube integration |
 | DOCUMENT | [DigitalDocument](https://schema.org/DigitalDocument) | name, fileFormat, datePublished | ✅ Document library |
+| **Microsoft CDM Nonprofit Entities** | | | |
+| CONSTITUENT | [Person](https://schema.org/Person) | name, email, telephone, address | ✅ Donor/volunteer profiles |
+| DONATION | [DonateAction](https://schema.org/DonateAction) | agent (Person), recipient (Organization), price | ✅ Donation receipts |
+| CAMPAIGN | [FundingScheme](https://schema.org/FundingScheme) | name, startDate, endDate, url | ✅ Fundraising campaigns |
+| MEMBERSHIP | [ProgramMembership](https://schema.org/ProgramMembership) | member (Person), hostingOrganization, membershipNumber | ✅ Member cards |
+| VOLUNTEER_ACTIVITY | [VolunteerAction](https://schema.org/VolunteerAction) | agent (Person), startTime, endTime, location | ✅ Volunteer tracking |
+| PROGRAM_DELIVERY | [Service](https://schema.org/Service) | name, provider, serviceType, areaServed | ✅ Program catalog |
+| PROGRAM_OUTCOME | [Observation](https://schema.org/Observation) | measurementTechnique, measuredValue, observationDate | ✅ Impact reporting |
 
 **Example: Meeting as Schema.org Event**
 
@@ -1196,6 +1353,67 @@ Our SCHOOL_DISTRICT entity follows [CEDS](https://ceds.ed.gov/) specifications f
 - ✅ Compatible with NCES Common Core of Data (CCD) and F-33 Finance Survey
 - ✅ Aligns with Ed-Fi Alliance, IMS Global, and SIF Association standards
 - ✅ Supports federal reporting for ESSA, Title I, IDEA compliance
+
+#### Microsoft Common Data Model for Nonprofits
+
+Our nonprofit constituent management entities follow [Microsoft's Common Data Model for Nonprofits](https://github.com/microsoft/Nonprofits/), enabling seamless integration with Dynamics 365 and Power Platform:
+
+| Our Entity | Microsoft CDM Entity | Description | Key Relationships |
+|------------|---------------------|-------------|------------------|
+| CONSTITUENT | Constituent | Donors, volunteers, members, beneficiaries | → DONATION, MEMBERSHIP, VOLUNTEER_ACTIVITY |
+| DONATION | Donation | Financial contributions and in-kind gifts | ← CONSTITUENT, → CAMPAIGN, → DESIGNATION |
+| CAMPAIGN | Campaign | Fundraising campaigns and appeals | → DONATION |
+| DESIGNATION | Designation | Fund allocation (programs, unrestricted, endowment) | ← DONATION |
+| MEMBERSHIP | Membership | Member enrollment and renewals | ← CONSTITUENT, ← ORGANIZATION |
+| VOLUNTEER_ACTIVITY | Volunteer Preference | Volunteer activities and hours | ← CONSTITUENT |
+| PROGRAM_DELIVERY | Delivery Framework | Programs and services delivered | ← ORGANIZATION, → PROGRAM_OUTCOME |
+| PROGRAM_OUTCOME | Objective | Measurable impact and KPIs | ← PROGRAM_DELIVERY |
+
+**Microsoft CDM Core Patterns:**
+
+1. **Constituent-Centric Design**: All engagement activities (donations, volunteering, membership) link to CONSTITUENT
+2. **Designation-Based Accounting**: Donations are allocated to specific designations (funds, programs, campaigns)
+3. **Campaign Tracking**: Multi-channel fundraising campaigns track goals, raised amounts, donor counts
+4. **Outcome Measurement**: Programs track objectives with target vs. actual metrics
+5. **Temporal Tracking**: Start/end dates on memberships, campaigns, and programs for lifecycle management
+
+**Integration Points:**
+
+| Microsoft Product | Integration Type | Use Case |
+|------------------|------------------|----------|
+| **Dynamics 365 Nonprofit** | Native CDM compatibility | CRM for constituent relationship management |
+| **Power BI** | Direct data connection | Fundraising dashboards, donor analytics |
+| **Power Apps** | Low-code app builder | Volunteer management apps, event registration |
+| **Power Automate** | Workflow automation | Donation receipts, membership renewals |
+| **Azure Synapse** | Cloud analytics | Large-scale constituent analytics |
+
+**Example: Constituent-Donation Relationship**
+
+```sql
+-- Find top 10 donors by lifetime giving
+SELECT 
+    c.constituent_id,
+    c.first_name,
+    c.last_name,
+    c.email,
+    c.lifetime_giving_total,
+    COUNT(d.donation_id) as donation_count,
+    AVG(d.amount) as avg_donation,
+    MAX(d.donation_date) as last_donation_date
+FROM CONSTITUENT c
+JOIN DONATION d ON c.constituent_id = d.constituent_id
+WHERE c.constituent_type = 'Donor'
+GROUP BY c.constituent_id, c.first_name, c.last_name, c.email, c.lifetime_giving_total
+ORDER BY c.lifetime_giving_total DESC
+LIMIT 10;
+```
+
+**Benefits:**
+- ✅ **Microsoft Ecosystem**: Native compatibility with Dynamics 365, Power Platform, Azure
+- ✅ **Industry Standard**: Used by large nonprofits (United Way, Boys & Girls Clubs, etc.)
+- ✅ **Grant Reporting**: Built-in support for outcome tracking and funder reporting
+- ✅ **LYBNT Analysis**: "Last Year But Not This Year" donor reactivation queries
+- ✅ **Constituent 360**: Unified view of all engagement touchpoints
 
 #### Underlying Standards
 
@@ -1290,6 +1508,14 @@ Examples:
 | Municipal Bonds | TBD | EMMA (MSRB) |
 | Nonprofits | 3,000,000+ | IRS TEOS |
 | Nonprofit 990 Filings | 10,000,000+ | ProPublica (10+ years) |
+| **Microsoft CDM: Nonprofit Engagement** | | |
+| Constituents | TBD | Donors, volunteers, members, beneficiaries (Microsoft CDM) |
+| Donations | TBD | Financial contributions and in-kind gifts (Microsoft CDM) |
+| Campaigns | TBD | Fundraising campaigns and appeals (Microsoft CDM) |
+| Memberships | TBD | Member enrollments and renewals (Microsoft CDM) |
+| Volunteer Activities | TBD | Volunteer hours and service events (Microsoft CDM) |
+| Program Delivery Records | TBD | Programs and services delivered (Microsoft CDM) |
+| Program Outcomes | TBD | Impact metrics and KPIs (Microsoft CDM) |
 | Grants (Individual Awards) | TBD | IRS 990-I, USASpending.gov, Foundation Center |
 | Federal Grants | 100,000+ | USASpending.gov API |
 | Nonprofit Causes | 600+ | NTEE + Every.org |

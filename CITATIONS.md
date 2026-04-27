@@ -260,6 +260,50 @@ The Popolo specification builds upon and references the following W3C, IETF, and
 - ✅ **Longitudinal Tracking**: Consistent identifiers for multi-year analysis
 - ✅ **Interoperability**: Works with Ed-Fi Alliance, IMS Global, SIF Association standards
 
+### **Microsoft Common Data Model for Nonprofits**
+- Industry-standard data model for nonprofit organizations built on Microsoft Dataverse
+- Organization: Microsoft Corporation
+- Repository: https://github.com/microsoft/Nonprofits/tree/master/CommonDataModelforNonprofits
+- ERD Documentation: https://github.com/microsoft/Nonprofits/blob/master/CommonDataModelforNonprofits/Documents/common-data-model-for-nonprofits-erds.pdf
+- License: MIT License
+- Coverage: Donor management, fundraising, program delivery, volunteer management, impact measurement, award/grant tracking
+- Used for: Nonprofit data standardization, Dynamics 365 integration, constituent relationship management, outcome tracking
+- Citation: "Microsoft Common Data Model for Nonprofits. Microsoft Corporation. https://github.com/microsoft/Nonprofits/"
+
+**Microsoft CDM Nonprofit Core Entities:**
+
+| Entity | Description | Our Implementation |
+|--------|-------------|--------------------|
+| **Constituent** | Individuals who interact with nonprofit (donors, volunteers, members, beneficiaries) | CONSTITUENT entity |
+| **Donation** | Financial contributions and in-kind gifts | DONATION entity |
+| **Designation** | How donations are allocated (programs, funds, campaigns) | designation_id in DONATION |
+| **Campaign** | Fundraising campaigns and appeals | CAMPAIGN entity |
+| **Membership** | Member enrollment and renewal tracking | MEMBERSHIP entity |
+| **Volunteer** | Volunteer activities, hours, and preferences | VOLUNTEER_ACTIVITY entity |
+| **Award** | Grants received by the nonprofit | Awards captured in NONPROFIT_FINANCES |
+| **Disbursement** | Spending of grant/award funds | Expenditures in GOVERNMENT_BUDGET |
+| **Objective** | Measurable program outcomes and impact | PROGRAM_OUTCOME entity |
+| **DeliveryFramework** | Programs and services delivered | PROGRAM_DELIVERY entity |
+| **Budget** | Organizational budgets and allocations | GOVERNMENT_BUDGET, SCHOOL_DISTRICT budgets |
+| **Indicator** | Key performance indicators for impact | Metrics in PROGRAM_OUTCOME |
+
+**Key Entity Relationships (Microsoft CDM Pattern):**
+- Constituent → Donation (one-to-many): A constituent makes many donations
+- Donation → Designation (many-to-one): Multiple donations to one fund/program
+- Campaign → Donation (one-to-many): A campaign receives many donations
+- Constituent → Membership (one-to-many): A constituent can have multiple memberships over time
+- Constituent → Volunteer (one-to-many): A constituent volunteers for multiple activities
+- Organization → DeliveryFramework (one-to-many): An organization delivers multiple programs
+- DeliveryFramework → Objective (one-to-many): A program has multiple outcome objectives
+
+**Benefits of Microsoft CDM Alignment:**
+- ✅ **Dynamics 365 Integration**: Native compatibility with Microsoft Cloud for Nonprofits
+- ✅ **Power Platform**: Direct use in Power BI, Power Apps, Power Automate
+- ✅ **Azure Synapse**: Seamless analytics with Azure data services
+- ✅ **Industry Standard**: Adopted by large nonprofits using Microsoft ecosystem
+- ✅ **Grant Compliance**: Built-in support for grant reporting and outcome measurement
+- ✅ **Constituent 360**: Unified view of donor, volunteer, member activities
+
 ---
 
 ## 🙏 **Acknowledgments**
