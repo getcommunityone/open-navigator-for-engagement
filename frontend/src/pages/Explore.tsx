@@ -14,6 +14,8 @@ import {
   PhoneIcon,
   ChatBubbleLeftRightIcon,
   HeartIcon,
+  CodeBracketIcon,
+  RocketLaunchIcon,
 } from '@heroicons/react/24/outline';
 
 interface ExploreCard {
@@ -94,6 +96,26 @@ const advocateOptions: ExploreCard[] = [
     path: '/debate-grader',
     color: '#CAD2C5',
     stats: 'Verified claims',
+  },
+];
+
+// Developers-focused sections
+const developerOptions: ExploreCard[] = [
+  {
+    title: 'Open Source Projects',
+    description: 'Contribute to civic tech, data pipelines, AI models, and open government tools on GitHub.',
+    icon: CodeBracketIcon,
+    path: 'https://github.com/getcommunityone/open-navigator-for-engagement',
+    color: '#354F52',
+    stats: 'Join the community',
+  },
+  {
+    title: 'Hackathons for Good',
+    description: 'Build solutions for civic engagement, transparency, and community empowerment at our quarterly hackathons.',
+    icon: RocketLaunchIcon,
+    path: '/opportunities?type=hackathon',
+    color: '#52796F',
+    stats: 'Make an impact',
   },
 ];
 
@@ -295,7 +317,7 @@ export default function Explore() {
           <p className="text-gray-600">Events, training, services, voter registration, and ways to engage with your community.</p>
         </div>
         
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
           {familyOptions.map((option) => {
             const Icon = option.icon;
             return (
@@ -345,6 +367,80 @@ export default function Explore() {
                   className="h-1 w-full transform scale-x-0 group-hover:scale-x-100 transition-transform duration-300 origin-left"
                   style={{ backgroundColor: option.color }}
                 />
+              </Link>
+            );
+          })}
+        </div>
+
+        {/* Developers Section */}
+        <div className="mb-8 mt-16">
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">For Developers & Civic Tech</h2>
+          <p className="text-gray-600">Build with open data, contribute to open source, and join hackathons for social good.</p>
+        </div>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {developerOptions.map((option) => {
+            const Icon = option.icon;
+            const isExternal = option.path.startsWith('http');
+            
+            const card = (
+              <div className="group bg-white rounded-xl shadow-md hover:shadow-xl transition-all duration-300 overflow-hidden border border-gray-100 hover:border-gray-200">
+                <div className="p-6">
+                  {/* Icon */}
+                  <div
+                    className="w-14 h-14 rounded-lg flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300"
+                    style={{ backgroundColor: `${option.color}15` }}
+                  >
+                    <div style={{ color: option.color }}>
+                      <Icon className="h-7 w-7" />
+                    </div>
+                  </div>
+
+                  {/* Title and Stats */}
+                  <div className="mb-3">
+                    <h3 className="text-xl font-bold text-gray-900 mb-1 group-hover:text-[#354F52] transition-colors">
+                      {option.title}
+                    </h3>
+                    {option.stats && (
+                      <p className="text-sm font-medium" style={{ color: option.color }}>
+                        {option.stats}
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Description */}
+                  <p className="text-gray-600 text-sm leading-relaxed">
+                    {option.description}
+                  </p>
+
+                  {/* Arrow indicator */}
+                  <div className="mt-4 flex items-center text-sm font-medium" style={{ color: option.color }}>
+                    <span className="group-hover:translate-x-1 transition-transform duration-300">
+                      {isExternal ? 'View on GitHub →' : 'Explore →'}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Hover effect bar */}
+                <div
+                  className="h-1 w-full transform scale-x-0 group-hover:scale-x-100 transition-transform duration-300 origin-left"
+                  style={{ backgroundColor: option.color }}
+                />
+              </div>
+            );
+            
+            return isExternal ? (
+              <a
+                key={option.path}
+                href={option.path}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                {card}
+              </a>
+            ) : (
+              <Link key={option.path} to={option.path}>
+                {card}
               </Link>
             );
           })}

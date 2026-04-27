@@ -19,6 +19,8 @@ import {
   ArrowRightOnRectangleIcon,
   ChevronDownIcon,
   MapPinIcon,
+  HeartIcon,
+  CodeBracketIcon,
 } from '@heroicons/react/24/outline'
 import { useAuth } from '../contexts/AuthContext'
 import { useLocation as useLocationContext } from '../contexts/LocationContext'
@@ -41,6 +43,20 @@ const navigation = [
       { name: 'Nonprofits', href: '/nonprofits', icon: BuildingLibraryIcon },
       { name: 'Advocacy Topics', href: '/opportunities', icon: BellAlertIcon },
       { name: 'Fact-Checking', href: '/debate-grader', icon: AcademicCapIcon },
+    ]
+  },
+  { 
+    section: 'Families & Individuals',
+    items: [
+      { name: 'Community Events', href: '/documents?filter=upcoming', icon: BookOpenIcon },
+      { name: 'Services & Resources', href: '/nonprofits?category=family-services', icon: HeartIcon },
+    ]
+  },
+  { 
+    section: 'Developers',
+    items: [
+      { name: 'Open Source', href: 'https://github.com/getcommunityone/open-navigator-for-engagement', icon: CodeBracketIcon, external: true },
+      { name: 'Hackathons', href: '/opportunities?type=hackathon', icon: AcademicCapIcon },
     ]
   },
   { name: 'Settings', href: '/settings', icon: Cog6ToothIcon },
@@ -370,19 +386,38 @@ export default function Layout() {
                   </div>
                   {item.items.map((subItem) => {
                     const isActive = location.pathname === subItem.href
+                    const isExternal = 'external' in subItem && subItem.external
+                    
+                    const linkClasses = `
+                      flex items-center gap-3 px-4 py-3 mb-1 rounded-lg transition-colors
+                      ${
+                        isActive
+                          ? 'bg-primary-50 text-primary-700 font-medium'
+                          : 'text-gray-700 hover:bg-gray-100'
+                      }
+                    `
+                    
+                    if (isExternal) {
+                      return (
+                        <a
+                          key={subItem.name}
+                          href={subItem.href}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className={linkClasses}
+                        >
+                          <subItem.icon className="h-5 w-5" />
+                          <span className="text-sm">{subItem.name}</span>
+                        </a>
+                      )
+                    }
+                    
                     return (
                       <Link
                         key={subItem.name}
                         to={subItem.href}
                         onClick={() => setMobileMenuOpen(false)}
-                        className={`
-                          flex items-center gap-3 px-4 py-3 mb-1 rounded-lg transition-colors
-                          ${
-                            isActive
-                              ? 'bg-primary-50 text-primary-700 font-medium'
-                              : 'text-gray-700 hover:bg-gray-100'
-                          }
-                        `}
+                        className={linkClasses}
                       >
                         <subItem.icon className="h-5 w-5" />
                         <span className="text-sm">{subItem.name}</span>
