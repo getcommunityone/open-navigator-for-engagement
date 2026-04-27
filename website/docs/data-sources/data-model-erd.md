@@ -194,6 +194,8 @@ erDiagram
         string ein
         string name
         string ntee_code
+        string ntee_description
+        string causes
         string org_type
         string state_code
         string city
@@ -202,6 +204,8 @@ erDiagram
         float assets_amount
         int employee_count
         string mission_statement
+        string description
+        string logo_url
         string website
         boolean is_verified
         datetime irs_filing_date
@@ -570,7 +574,9 @@ oral-health-policy-data/
 │
 ├── organizations/          # 🏢 Nonprofits & charities
 │   ├── irs_nonprofits     # IRS 990 data (3M+ organizations)
-│   └── organizational_data # Mission, programs, financials
+│   ├── propublica_data    # ProPublica API (financials, NTEE codes)
+│   ├── everyorg_data      # Every.org API (missions, causes, logos)
+│   └── nonprofit_causes   # NTEE taxonomy + Every.org causes
 │
 ├── civic_data/            # 🗳️ Google Civic & Wikidata
 │   ├── civic_divisions    # OCD divisions
@@ -600,15 +606,18 @@ oral-health-policy-data/
 1. **Census Data** → Jurisdictions list
 2. **GSA Domains** → Government websites
 3. **NCES** → School districts
-4. **URL Discovery** → Meeting platforms, YouTube
-5. **Social Media** → Twitter, Facebook accounts
+4. **IRS TEOS** → Nonprofit EINs (3M+ organizations)
+5. **URL Discovery** → Meeting platforms, YouTube
+6. **Social Media** → Twitter, Facebook accounts
 
 ### Phase 2: Enrichment (Silver Layer)
-1. **YouTube API** → Channel statistics
-2. **Open States** → Legislative data
-3. **Wikidata SPARQL** → Entity relationships
-4. **DBpedia** → Wikipedia structured data
-5. **Google Civic** → Representatives
+1. **ProPublica Nonprofit Explorer** → Financial data, NTEE codes, 990 filings
+2. **Every.org API** → Nonprofit causes, missions, logos
+3. **YouTube API** → Channel statistics
+4. **Open States** → Legislative data
+5. **Wikidata SPARQL** → Entity relationships
+6. **DBpedia** → Wikipedia structured data
+7. **Google Civic** → Representatives
 
 ### Phase 3: Processing (Gold Layer)
 1. **Meeting Extraction** → Agenda/minutes text
@@ -626,6 +635,7 @@ oral-health-policy-data/
 | Cities | 19,000+ | Incorporated places |
 | School Districts | 13,000+ | NCES CCD |
 | Nonprofits | 3,000,000+ | IRS TEOS |
+| Nonprofit Causes | 600+ | NTEE + Every.org |
 | YouTube Channels | 5,000+ | Discovery pipeline |
 | Meeting Platforms | 10,000+ | URL detection |
 | State Legislators | 7,300+ | Open States |
