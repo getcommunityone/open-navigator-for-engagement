@@ -1,4 +1,4 @@
-import { HeartIcon, HomeIcon, AcademicCapIcon, PhoneIcon, MapPinIcon } from '@heroicons/react/24/outline';
+import { HeartIcon, HomeIcon, AcademicCapIcon, PhoneIcon } from '@heroicons/react/24/outline';
 
 export default function Services() {
   return (
