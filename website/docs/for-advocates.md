@@ -49,7 +49,7 @@ Open Navigator gives you access to comprehensive accountability data across the 
 
 **All data is free and public** - sourced from official government registries and IRS filings.
 
-:::tip **Complete Data Source Citations**
+:::tip[Complete Data Source Citations]
 All data sources are properly cited with licenses, BibTeX references, and attribution.
 
 **[Citations & Data Sources](/docs/data-sources/citations)**

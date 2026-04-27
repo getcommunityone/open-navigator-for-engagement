@@ -1844,7 +1844,7 @@ Examples:
 
 ## � See Also
 
-:::tip **Complete Citations & Attributions**
+:::tip[Complete Citations & Attributions]
 For full citations, licenses, BibTeX references, and detailed attribution for all data sources, standards, and research:
 
 👉 **[View Citations & Data Sources](./citations.md)**
