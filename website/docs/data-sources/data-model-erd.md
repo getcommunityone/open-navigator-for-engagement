@@ -535,11 +535,27 @@ oral-health-policy-data/
 │   ├── school_districts    # 13,000+ districts (NCES data)
 │   └── census_data         # Demographics, population, income
 │
-├── discovery/              # 🔍 URL & platform discovery metadata
+├── social_media/           # 📱 Social media presence
+│   ├── twitter             # Twitter/X accounts
+│   ├── facebook            # Facebook pages
+│   ├── instagram           # Instagram accounts
+│   └── linkedin            # LinkedIn pages
+│
+├── video_platforms/        # 📹 Video & streaming
 │   ├── youtube_channels    # Government YouTube channels
-│   ├── meeting_platforms   # Legistar, SuiteOne, Granicus URLs
-│   ├── social_media        # Twitter, Facebook account handles
-│   └── gsa_domains         # .gov domain registry
+│   ├── vimeo              # Vimeo accounts
+│   └── livestreams        # Live meeting streams
+│
+├── meeting_platforms/      # 🖥️ Meeting management systems
+│   ├── legistar           # Legistar URLs
+│   ├── granicus           # Granicus links
+│   ├── suiteone           # SuiteOne systems
+│   └── civicplus          # CivicPlus platforms
+│
+├── government_domains/     # 🌐 Official websites
+│   ├── gsa_domains        # .gov domain registry
+│   ├── municipal_websites # City/county websites
+│   └── state_portals      # State government sites
 │
 ├── meetings/               # 📋 Meeting data
 │   ├── agendas            # Meeting agendas (text extracted)
