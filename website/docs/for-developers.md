@@ -50,6 +50,20 @@ Open Navigator processes data at scale across the United States:
 - OpenAI API: Pay per token (required for LLM features)
 - Harvard Dataverse: API key recommended (free registration)
 
+:::info 📚 **Complete Technical Citations & Standards**
+For full citations, licenses, API documentation, and technical specifications:
+
+👉 **[Citations & Data Sources](/docs/data-sources/citations)**
+
+Includes:
+- **Academic Research**: MeetingBank (ACL 2023), Roper Center iPoll
+- **Government APIs**: U.S. Census, NCES, IRS, Open States
+- **Standards**: OCD-ID (OCDEP 2), Popolo Project, Schema.org, CEDS, IATI v2.03
+- **Data Models**: Microsoft CDM for Nonprofits, OMOP CDM vocabulary
+- **Fact-Checking**: Google Fact Check API, PolitiFact, FactCheck.org
+- **BibTeX citations** for academic papers and research use
+:::
+
 ---
 
 ## What You'll Find Here

@@ -2,18 +2,36 @@ import React from 'react';
 import Layout from '@theme/Layout';
 import Link from '@docusaurus/Link';
 import Heading from '@theme/Heading';
+import ExecutionEnvironment from '@docusaurus/ExecutionEnvironment';
 
-// Dashboard URL - update this for production deployment
-const DASHBOARD_URL = process.env.REACT_APP_DASHBOARD_URL || 'http://localhost:5173';
+// Dashboard URL - automatically detects localhost vs production
+// Note: process.env is not available in browser code in Docusaurus
+function getDashboardUrl(): string {
+  if (!ExecutionEnvironment.canUseDOM) {
+    // During SSR (server-side rendering), return production URL
+    return 'https://www.communityone.com';
+  }
+  // In browser, check hostname
+  return window.location.hostname === 'localhost' 
+    ? 'http://localhost:5173' 
+    : 'https://www.communityone.com';
+}
 
 export default function DashboardRedirect(): JSX.Element {
+  const [dashboardUrl, setDashboardUrl] = React.useState<string>('https://www.communityone.com');
+  
+  // Set dashboard URL after component mounts (client-side only)
+  React.useEffect(() => {
+    setDashboardUrl(getDashboardUrl());
+  }, []);
+
   // Auto-redirect after 3 seconds
   React.useEffect(() => {
     const timer = setTimeout(() => {
-      window.location.href = DASHBOARD_URL;
+      window.location.href = dashboardUrl;
     }, 3000);
     return () => clearTimeout(timer);
-  }, []);
+  }, [dashboardUrl]);
 
   return (
     <Layout title="Dashboard" description="Access the Open Navigator Dashboard">

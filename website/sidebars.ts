@@ -14,6 +14,11 @@ const sidebars: SidebarsConfig = {
         'dashboard',
       ],
     },
+    {
+      type: 'doc',
+      id: 'data-sources/citations',
+      label: '📚 Citations & Data Sources',
+    },
   ],
 
   // ========================================
@@ -31,7 +36,11 @@ const sidebars: SidebarsConfig = {
           label: 'Understanding the Data',
           items: [
             'data-sources/overview',
-            // 'data-sources/confirmed-datasets', // Temporarily disabled - MDX parsing issue
+            {
+              type: 'doc',
+              id: 'data-sources/citations',
+              label: '📚 Citations & Data Sources',
+            },
             'data-sources/nonprofit-sources',
             'data-sources/video-sources',
           ],
@@ -82,6 +91,11 @@ const sidebars: SidebarsConfig = {
           type: 'category',
           label: 'Data Sources (Technical)',
           items: [
+            {
+              type: 'doc',
+              id: 'data-sources/citations',
+              label: '📚 Citations & Data Sources',
+            },
             'data-sources/data-model-erd',
             'data-sources/jurisdiction-discovery',
             'data-sources/census-data',
@@ -170,6 +184,11 @@ const sidebars: SidebarsConfig = {
           label: 'Understanding the Data',
           items: [
             'data-sources/overview',
+            {
+              type: 'doc',
+              id: 'data-sources/citations',
+              label: '📚 Citations & Data Sources',
+            },
             'data-sources/nonprofit-sources',
             'data-sources/video-sources',
           ],
@@ -217,6 +236,11 @@ const sidebars: SidebarsConfig = {
           type: 'category',
           label: 'Data Sources (Technical)',
           items: [
+            {
+              type: 'doc',
+              id: 'data-sources/citations',
+              label: '📚 Citations & Data Sources',
+            },
             'data-sources/data-model-erd',
             'data-sources/jurisdiction-discovery',
             'data-sources/census-data',

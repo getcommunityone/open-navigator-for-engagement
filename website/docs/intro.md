@@ -88,6 +88,14 @@ Open Navigator provides access to comprehensive data across the United States:
 
 All data is **100% free and public** - no subscriptions or API fees required.
 
+:::info 📚 **Data Sources & Citations**
+All data comes from official, free, public sources. For complete citations, licenses, and attribution:
+
+👉 **[View Full Citations & Data Sources](/docs/data-sources/citations)**
+
+Includes: Academic research (MeetingBank), Government data (U.S. Census, NCES), Civic tech standards (OCD, Popolo, Schema.org, CEDS), Microsoft CDM for Nonprofits, IATI Standard, and more.
+:::
+
 ---
 
 ## What It Does

@@ -49,6 +49,19 @@ Open Navigator gives you access to comprehensive accountability data across the 
 
 **All data is free and public** - sourced from official government registries and IRS filings.
 
+:::tip 📚 **Complete Data Source Citations**
+Want to know where all this data comes from? View our comprehensive citations:
+
+👉 **[Citations & Data Sources](/docs/data-sources/citations)**
+
+Includes full citations, BibTeX references, licenses, and links to:
+- Academic research datasets (MeetingBank, Roper Center)
+- Government data sources (U.S. Census, NCES, IRS)
+- Civic tech standards (OCD-ID, Popolo, Schema.org, CEDS)
+- Fact-checking APIs (Google, PolitiFact, FactCheck.org)
+- International standards (IATI, Microsoft CDM for Nonprofits)
+:::
+
 ---
 
 ## What You'll Find Here

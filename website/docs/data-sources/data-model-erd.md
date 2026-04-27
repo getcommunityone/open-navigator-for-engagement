@@ -112,6 +112,14 @@ open-navigator-data/
 │   ├── jurisdiction_topics # What each city is discussing
 │   └── advocacy_alerts     # Opportunities for engagement
 │
+├── surveys/                # 📊 Public opinion research & polling data
+│   ├── survey_providers    # Polling organizations (Gallup, Pew, Roper, etc.)
+│   ├── survey_studies      # Individual survey studies/waves
+│   ├── survey_variables    # Questions/items asked in surveys
+│   ├── survey_responses    # Aggregate and individual response data
+│   ├── ipoll_metadata      # Roper iPoll catalog metadata
+│   └── survey_crosstabs    # Breakdowns by demographics, geography
+│
 ├── factchecks/             # ✅ Fact-checking & claim verification
 │   ├── claim_reviews       # Google Fact Check API (ClaimReview schema)
 │   ├── politifact          # PolitiFact Truth-O-Meter ratings
@@ -125,11 +133,12 @@ open-navigator-data/
 │   ├── aggregated_stats    # Monthly/quarterly/yearly rollups
 │   └── dashboard_metrics   # Real-time dashboard data feeds
 │
-├── standards/              # 🌐 Schema.org, Popolo, CEDS exports
+├── standards/              # 🌐 Schema.org, Popolo, CEDS, IATI exports
 │   ├── schema_org_jsonld   # JSON-LD exports (Event, Person, Organization, Legislation, ClaimReview)
 │   ├── popolo_exports      # Popolo-compliant JSON (Person, Organization, Membership, VoteEvent)
 │   ├── ceds_aligned        # CEDS-compliant education data (Element IDs, Option Sets)
 │   ├── ocd_divisions       # Open Civic Data division IDs
+│   ├── iati_activities     # IATI Standard v2.03 XML (programs, grants, humanitarian aid)
 │   └── rdf_triples         # RDF/Turtle semantic web exports
 │
 ├── vocabulary/             # 🔧 OMOP-inspired concept & terminology (SYSTEM-INTERNAL)
@@ -178,6 +187,11 @@ grants_federal_grants.parquet
 budgets_city_budgets.parquet
 surveys_national_polls.parquet
 surveys_roper_questions.parquet
+surveys_survey_providers.parquet
+surveys_survey_studies.parquet
+surveys_survey_variables.parquet
+surveys_survey_responses.parquet
+surveys_ipoll_metadata.parquet
 factchecks_claim_reviews.parquet
 factchecks_politifact.parquet
 analytics_date_dimension.parquet
@@ -186,6 +200,7 @@ analytics_temporal_relationships.parquet
 standards_schema_org_jsonld.parquet
 standards_popolo_exports.parquet
 standards_ceds_aligned.parquet
+standards_iati_activities.parquet
 vocabulary_concept.parquet
 vocabulary_vocabulary.parquet
 vocabulary_concept_class.parquet
@@ -1058,19 +1073,26 @@ erDiagram
     
     PROGRAM_DELIVERY ||--o{ PROGRAM_OUTCOME : achieves
     ORGANIZATION ||--o{ PROGRAM_DELIVERY : delivers
+    JURISDICTION ||--o{ PROGRAM_DELIVERY : serves
     PROGRAM_DELIVERY {
-        string program_id PK
+        string program_id PK "Also iati-identifier"
         string org_id FK
         string program_name
         string program_type "Direct Service, Advocacy, Education, Research"
         string target_population "Youth, Seniors, Low-Income, Veterans"
         int beneficiaries_served
-        datetime start_date
-        datetime end_date
-        float program_budget
-        float program_expenses
+        datetime start_date "IATI: activity-date[@type='start-planned']"
+        datetime end_date "IATI: activity-date[@type='end-actual']"
+        float program_budget "IATI: budget[@type='original']"
+        float program_expenses "IATI: transaction[@type='4']"
         string status "Active, Completed, On Hold"
         string description
+        string iati_identifier "Unique IATI activity ID"
+        string iati_activity_status "1=Pipeline, 2=Active, 3=Completed, 4=Suspended, 5=Cancelled"
+        string iati_sector_code "OECD DAC 5-digit sector code"
+        string iati_sector_vocabulary "DAC, NTEE, Custom"
+        string recipient_country_code "ISO 3166-1 alpha-2"
+        string recipient_region "Sub-national region"
         datetime created_at
     }
     
@@ -1079,11 +1101,17 @@ erDiagram
         string program_id FK
         string outcome_name "Literacy Rate, Job Placement, Health Improvement"
         string metric_type "Percentage, Count, Score, Binary"
-        float target_value
-        float actual_value
+        float baseline_value "IATI: baseline[@year, @value]"
+        float target_value "IATI: target[@value]"
+        float actual_value "IATI: actual[@value]"
         string measurement_period "Monthly, Quarterly, Annual"
         datetime measurement_date
+        datetime period_start "IATI: period-start[@iso-date]"
+        datetime period_end "IATI: period-end[@iso-date]"
         string data_source "Survey, Administrative, Third-Party"
+        string iati_result_type "1=Output, 2=Outcome, 3=Impact, 9=Other"
+        string iati_indicator_measure "1=Unit, 2=Percentage, 3=Nominal, 4=Ordinal, 5=Qualitative"
+        boolean iati_ascending "True if higher is better"
         string notes
         datetime created_at
     }
@@ -1123,6 +1151,7 @@ erDiagram
     
     POLICY_TOPIC ||--o{ MEETING : discussed_in
     POLICY_TOPIC ||--o{ LEGISLATION : addresses
+    POLICY_TOPIC ||--o{ SURVEY_VARIABLE : measured_by
     POLICY_TOPIC {
         string topic_id PK
         string topic_name "Water Fluoridation Support"
@@ -1132,10 +1161,93 @@ erDiagram
         int priority_level "1-10 importance ranking"
         string icon "🦷"
         int jurisdiction_count "How many jurisdictions discuss"
-        string validated_question_text "Scientifically tested question from Roper"
-        string question_source "Gallup Poll, March 2015"
-        float national_support_pct "67.0 (percentage)"
-        string roper_ipoll_id "USGALLUP.031915.R12A reference"
+        datetime created_at
+    }
+    
+    %% ========================================
+    %% PUBLIC OPINION SURVEYS & POLLING
+    %% Data Sources: Roper Center iPoll, Pew Research, Gallup, ANES
+    %% Standardized survey metadata and response data
+    %% ========================================
+    
+    SURVEY_PROVIDER ||--o{ SURVEY : conducts
+    SURVEY_PROVIDER {
+        string provider_id PK
+        string provider_name "Gallup, Pew Research Center, Roper Center"
+        string organization_type "Academic, Commercial, Government, Nonprofit"
+        string country "US, UK, International"
+        string website_url
+        string methodology_url
+        boolean is_member_aapor "American Association for Public Opinion Research"
+        boolean is_member_ncpp "National Council on Public Polls"
+        string data_access_policy "Open, Restricted, Membership, Purchase"
+        datetime founded_date
+        datetime created_at
+    }
+    
+    SURVEY ||--o{ SURVEY_VARIABLE : contains
+    JURISDICTION ||--o{ SURVEY : targets
+    SURVEY {
+        string survey_id PK
+        string provider_id FK
+        string study_name "Gallup Poll Social Series: Environment"
+        string study_number "USGALLUP.031915 (Roper format)"
+        string roper_ipoll_id "Unique iPoll identifier"
+        datetime field_start_date "First day of data collection"
+        datetime field_end_date "Last day of data collection"
+        int sample_size "Total respondents"
+        string population "U.S. adults 18+, Registered voters"
+        string sampling_method "Random digit dial, Address-based, Online panel"
+        string mode "Telephone, Web, In-person, Mail, Mixed"
+        float response_rate "AAPOR RR1 response rate percentage"
+        float margin_of_error "95% confidence interval MOE"
+        string weighting_variables "Age, gender, race, education, region"
+        string geographic_coverage "National, State, County, City"
+        string jurisdiction_id FK "If targeted to specific jurisdiction"
+        string funding_source "NSF, Private foundation, Media sponsor"
+        string data_collection_firm "Contract research organization"
+        boolean is_cross_sectional "True if one-time, False if panel/longitudinal"
+        string language "English, Spanish, Bilingual"
+        string questionnaire_url "Link to full questionnaire PDF"
+        string topline_results_url "Frequency tables"
+        string microdata_url "Individual-level data file"
+        datetime created_at
+    }
+    
+    SURVEY_VARIABLE ||--o{ SURVEY_RESPONSE : has_responses
+    POLICY_TOPIC ||--o{ SURVEY_VARIABLE : measures
+    SURVEY_VARIABLE {
+        string variable_id PK
+        string survey_id FK
+        string topic_id FK "Links to POLICY_TOPIC"
+        string variable_name "Q12, V0023, FLUORIDE_SUPPORT"
+        string question_text "Do you favor or oppose adding fluoride to your community's water supply?"
+        string question_wording_exact "Full verbatim question including intro"
+        int question_number "Order in questionnaire"
+        string variable_label "Fluoride support"
+        string response_type "Single choice, Multiple choice, Numeric, Text"
+        string scale_type "Binary, Likert 5-point, 0-10, Thermometer"
+        string response_options_json "JSON array of coded responses"
+        boolean is_required "Skip logic"
+        string filter_condition "If Q11=Yes, ask Q12"
+        string universe "All respondents, Homeowners only, etc"
+        string notes "Interviewer instructions, context"
+        datetime created_at
+    }
+    
+    SURVEY_RESPONSE {
+        string response_id PK
+        string variable_id FK
+        string jurisdiction_id FK "For geographic crosstabs"
+        string response_value "Favor, Oppose, Don't know"
+        int response_code "1, 2, 98"
+        int unweighted_count "Raw number of respondents"
+        int weighted_count "Weighted frequency"
+        float percentage "Weighted percentage"
+        float standard_error "SE for percentage estimate"
+        string demographic_filter "Age 18-29, College grad, Republican"
+        string geographic_filter "Northeast region, Urban, Alabama"
+        string crosstab_type "Total, By age, By education, By party ID"
         datetime created_at
     }
     
@@ -1536,6 +1648,7 @@ Examples:
 | Popolo Exports | ~100K+ | Person, Organization, Membership, VoteEvent |
 | CEDS-Aligned Records | 13,000+ | School districts with NCES Element IDs |
 | OCD Division IDs | 22,000+ | All jurisdictions with standardized identifiers |
+| IATI Activity Files | TBD | Programs, grants, humanitarian aid (v2.03 XML) |
 | **Fact-Checking** | | |
 | Verified Claims | ~50K+ | Google Fact Check API |
 | PolitiFact Ratings | ~20K+ | Truth-O-Meter rulings |
@@ -1549,7 +1662,17 @@ Examples:
 | OHDSI Race Concepts | 20+ | Census OMB categories (Athena standard) |
 | OHDSI Ethnicity Concepts | 2 | Hispanic or Latino, Not Hispanic or Latino (Athena standard) |
 
-## 📝 Meeting & Event Types
+## � See Also
+
+:::tip **Complete Citations & Attributions**
+For full citations, licenses, BibTeX references, and detailed attribution for all data sources, standards, and research:
+
+👉 **[View Citations & Data Sources](./citations.md)**
+
+Includes academic research, government data APIs, civic tech standards (OCD-ID, Popolo, Schema.org, CEDS, IATI), Microsoft CDM, OMOP CDM, fact-checking sources, and more.
+:::
+
+## �📝 Meeting & Event Types
 
 ### Event Categories in the MEETING Entity
 

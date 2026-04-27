@@ -6,6 +6,12 @@ displayed_sidebar: policyMakersSidebar
 
 This document covers the **official, free, public datasets** used by Open Navigator for Engagement.
 
+:::tip 📚 **Full Citations & Academic References**
+For complete citations, licenses, and attribution for all data sources, see:
+
+👉 **[Citations & Data Sources](./citations.md)** — Includes BibTeX citations, license information, coverage details, and links to original sources.
+:::
+
 ## 📊 Data Scale & Coverage
 
 Open Navigator provides comprehensive coverage across the United States:
