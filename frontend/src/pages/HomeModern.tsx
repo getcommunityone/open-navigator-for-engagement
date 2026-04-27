@@ -630,7 +630,7 @@ export default function HomeModern() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             {/* Getting Started - Everyone */}
             <a
-              href={`${docsBaseUrl}/docs/intro`}
+              href={`${docsBaseUrl}/intro`}
               target="_blank"
               rel="noopener noreferrer"
               className="bg-white rounded-2xl p-8 shadow-xl hover:shadow-2xl transform hover:-translate-y-1 transition-all group"
@@ -649,7 +649,7 @@ export default function HomeModern() {
 
             {/* Policy Makers & Advocates - Non-Technical */}
             <a
-              href={`${docsBaseUrl}/docs/for-advocates`}
+              href={`${docsBaseUrl}/for-advocates`}
               target="_blank"
               rel="noopener noreferrer"
               className="bg-white rounded-2xl p-8 shadow-xl hover:shadow-2xl transform hover:-translate-y-1 transition-all group"
@@ -668,7 +668,7 @@ export default function HomeModern() {
 
             {/* Developers & Technical Users */}
             <a
-              href={`${docsBaseUrl}/docs/for-developers`}
+              href={`${docsBaseUrl}/for-developers`}
               target="_blank"
               rel="noopener noreferrer"
               className="bg-white rounded-2xl p-8 shadow-xl hover:shadow-2xl transform hover:-translate-y-1 transition-all group"
@@ -687,7 +687,7 @@ export default function HomeModern() {
 
             {/* Full Documentation */}
             <a
-              href={`${docsBaseUrl}/docs/intro`}
+              href={`${docsBaseUrl}/intro`}
               target="_blank"
               rel="noopener noreferrer"
               className="bg-white rounded-2xl p-8 shadow-xl hover:shadow-2xl transform hover:-translate-y-1 transition-all group"
@@ -739,7 +739,7 @@ export default function HomeModern() {
             Making community impact accessible to everyone
           </p>
           <div className="flex justify-center gap-8 text-sm text-gray-400">
-            <a href={`${docsBaseUrl}/docs/intro`} target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">Documentation</a>
+            <a href={`${docsBaseUrl}/intro`} target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">Documentation</a>
             <a href={`${apiBaseUrl}/api/docs`} target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">API</a>
             <Link to="/explore" className="hover:text-white transition-colors">Explore</Link>
             <a href="https://github.com/getcommunityone/open-navigator-for-engagement" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">GitHub</a>

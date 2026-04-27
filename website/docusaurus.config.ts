@@ -140,7 +140,7 @@ const config: Config = {
           items: [
             {
               label: 'Getting Started',
-              to: '/docs/intro',
+              to: '/intro',
             },
             {
               label: 'Citations & Data Sources',
@@ -148,11 +148,11 @@ const config: Config = {
             },
             {
               label: 'Data Sources',
-              to: '/docs/data-sources',
+              to: '/data-sources',
             },
             {
               label: 'API Reference',
-              to: '/docs/api',
+              to: '/api',
             },
           ],
         },

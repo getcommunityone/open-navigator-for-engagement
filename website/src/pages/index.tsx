@@ -164,7 +164,7 @@ function AudiencePathways() {
         <div className="col text--center">
           <p style={{ fontSize: '1rem', color: '#666' }}>
             Not sure which path to take?{' '}
-            <Link to="/docs/intro" style={{ fontWeight: 'bold' }}>
+            <Link to="/intro" style={{ fontWeight: 'bold' }}>
               Start with the Introduction →
             </Link>
           </p>

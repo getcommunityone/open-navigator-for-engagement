@@ -115,13 +115,13 @@ Open Navigator communicates with the FastAPI backend:
 - `GET /api/nonprofits` - Search nonprofit organizations
 - `GET /api/data/status` - Check data ingestion status
 
-See the [API Reference](/docs/api) for complete documentation.
+See the [API Reference](/api) for complete documentation.
 
 ## Need Help?
 
-- 📚 Browse the [Documentation](/docs/intro)
-- 🐛 [Report an Issue](https://github.com/getcommunityone/open-navigator-for-engagement/issues)
-- 💡 [Request a Feature](https://github.com/getcommunityone/open-navigator-for-engagement/issues/new)
+- Browse the [Documentation](/intro)
+- [Report an Issue](https://github.com/getcommunityone/open-navigator-for-engagement/issues)
+- [Request a Feature](https://github.com/getcommunityone/open-navigator-for-engagement/issues/new)
 
 ---
 
@@ -130,6 +130,6 @@ See the [API Reference](/docs/api) for complete documentation.
   <ul>
     <li><a href="http://localhost:3000" target="_blank">Open Navigator (Dev)</a></li>
     <li><a href="http://localhost:8000/docs" target="_blank">API Docs (Dev)</a></li>
-    <li><a href="/docs/intro">Project Documentation</a></li>
+    <li><a href="/intro">Project Documentation</a></li>
   </ul>
 </div>

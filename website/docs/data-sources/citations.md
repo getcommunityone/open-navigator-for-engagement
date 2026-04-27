@@ -38,7 +38,7 @@ This page documents all data sources, standards, and research contributions used
   </a>
   <a href="#nonprofit--philanthropy" className="card" style={{textDecoration: 'none', padding: '15px', borderLeft: '4px solid #F44336'}}>
     <strong>🏢 Nonprofit & Philanthropy</strong><br/>
-    <span style={{fontSize: '0.9em', color: '#666'}}>Microsoft CDM for Nonprofits</span>
+    <span style={{fontSize: '0.9em', color: '#666'}}>ProPublica, IRS, Every.org, Findhelp, 211, Microsoft CDM</span>
   </a>
   <a href="#international-aid-transparency" className="card" style={{textDecoration: 'none', padding: '15px', borderLeft: '4px solid #00BCD4'}}>
     <strong>🌍 International Aid</strong><br/>
@@ -289,6 +289,106 @@ ocd-division/country:us/state:al/school_district:birmingham_city  # School Distr
 
 ## 🏢 Nonprofit & Philanthropy
 
+### ProPublica Nonprofit Explorer
+
+**Organization:** ProPublica, Inc.  
+**What we use:** **PRIMARY SOURCE** for nonprofit financial data - IRS Form 990 filings, revenue, expenses, executive compensation, NTEE codes.
+
+- **Source:** https://projects.propublica.org/nonprofits/
+- **API Documentation:** https://projects.propublica.org/nonprofits/api
+- **Coverage:** 3,000,000+ organizations, 10+ years of historical data
+- **Data Included:**
+  - Total revenue, expenses, assets, liabilities
+  - Executive compensation (top 5 highest paid)
+  - Program service expenses vs. administrative overhead
+  - NTEE classification codes (National Taxonomy of Exempt Entities)
+  - EIN (Employer Identification Number) for verification
+- **Rate Limits:** Free, unlimited access (respectful use recommended: ~1 req/sec)
+- **License:** Free for research and commercial use
+
+**BibTeX:**
+```bibtex
+@misc{propublica_nonprofits,
+  author = {{ProPublica}},
+  title = {Nonprofit Explorer},
+  year = {2024},
+  url = {https://projects.propublica.org/nonprofits/},
+  note = {Accessed: 2024}
+}
+```
+
+---
+
+### IRS Tax-Exempt Organization Search (TEOS)
+
+**Organization:** Internal Revenue Service (IRS), U.S. Department of Treasury  
+**What we use:** Official tax-exempt status verification, Pub 78 deductibility data, bulk downloads of all U.S. nonprofits.
+
+- **Source:** https://www.irs.gov/charities-non-profits/tax-exempt-organization-search
+- **Bulk Data Downloads:** https://www.irs.gov/charities-non-profits/tax-exempt-organization-search-bulk-data-downloads
+- **Coverage:** All registered 501(c)(3) and other tax-exempt organizations
+- **Update Frequency:** Monthly
+- **License:** Public domain (U.S. government data)
+
+**Note:** ProPublica API already includes this data in a more accessible format. Direct IRS access primarily used for bulk downloads and verification.
+
+---
+
+### Every.org Charity API
+
+**Organization:** Every.org (Public Benefit Corporation)  
+**What we use:** Human-readable mission statements, organization logos, cause categories, cleaner metadata than raw IRS filings.
+
+- **API Documentation:** https://www.every.org/nonprofit-api
+- **Coverage:** 1,000,000+ verified nonprofits
+- **Data Included:**
+  - Mission statements and descriptions
+  - Organization logos and images
+  - Cause tags (health, education, environment, etc.)
+  - Social media links
+- **Access:** API key required (free tier available)
+- **License:** API Terms of Service
+
+---
+
+### Findhelp.org (Aunt Bertha)
+
+**Organization:** Findhelp (formerly Aunt Bertha)  
+**What we use:** Comprehensive directory of local social services - specific programs, hours, eligibility requirements, contact information.
+
+- **Source:** https://www.findhelp.org/
+- **Coverage:** 400,000+ community programs across the United States
+- **Data Included:**
+  - Program descriptions and services offered
+  - Days/hours of operation
+  - Eligibility requirements
+  - Languages spoken
+  - Insurance accepted
+  - Contact information (phone, email, address)
+- **Access:** Public search available, API access by request
+- **Use Case:** Manual enrichment of ProPublica financial data with service delivery details
+
+**Example:** https://www.findhelp.org/search?query=dental&location=Tuscaloosa,%20AL
+
+---
+
+### 211 Regional Directories
+
+**What we use:** Regional social services directories with detailed program information, crisis hotlines, local resources.
+
+- **Source:** https://www.211.org/ (national network)
+- **Example:** https://www.211connects.org (Alabama)
+- **Coverage:** Local services in most U.S. cities and counties
+- **Data Included:**
+  - Specific services and programs
+  - Hours of operation
+  - Eligibility criteria
+  - Languages and accessibility
+- **Access:** Public search, some regions offer data partnerships
+- **License:** Varies by region
+
+---
+
 ### Microsoft Common Data Model for Nonprofits
 
 **Organization:** Microsoft Corporation  
@@ -498,9 +598,12 @@ We are grateful to the following organizations and individuals:
 
 **Data Platforms:**
 - HuggingFace for dataset hosting
+- ProPublica for nonprofit financial data (3M+ organizations)
 - Open States for legislative data
 - Microsoft for nonprofit Common Data Model
 - Google for Fact Check Tools API
+- Every.org for charity metadata and mission statements
+- Findhelp.org for local social services directory (400K+ programs)
 
 **Government:**
 - U.S. Census Bureau for demographic data
