@@ -555,6 +555,10 @@ erDiagram
     
     %% ========================================
     %% BALLOT MEASURES & ADVOCACY
+    %% Data Sources: Ballotpedia (comprehensive measures), 
+    %%               MIT Election Lab (federal results),
+    %%               OpenElections (certified state results)
+    %% See: ballot-election-sources.md
     %% ========================================
     
     JURISDICTION ||--o{ BALLOT_MEASURE : hosts
@@ -562,21 +566,22 @@ erDiagram
     POLICY_TOPIC ||--o{ BALLOT_MEASURE : addresses
     BALLOT_MEASURE {
         string measure_id PK
-        string jurisdiction_id FK
-        string state_code
+        string jurisdiction_id FK "OCD-ID format"
+        string state_code "Two-letter code"
         datetime election_date
-        string measure_number
-        string title
-        string description
-        string measure_type
-        string topic_category
-        string status
-        string result
-        int yes_votes
-        int no_votes
-        float yes_percentage
-        string full_text_url
-        string ballotpedia_url
+        string measure_number "Proposition 15, Question 2"
+        string title "Measure title"
+        string description "Full description"
+        string measure_type "Initiative, Referendum, Bond"
+        string topic_category "fluoridation, education, tax"
+        string status "qualified, certified, passed, failed"
+        string result "passed, failed, pending"
+        int yes_votes "Total yes votes"
+        int no_votes "Total no votes"
+        float yes_percentage "Yes vote percentage"
+        string full_text_url "Official measure text"
+        string ballotpedia_url "Ballotpedia reference"
+        string openelections_source "OpenElections CSV file"
         datetime created_at
     }
     

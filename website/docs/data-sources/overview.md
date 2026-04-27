@@ -28,11 +28,12 @@ Open Navigator provides comprehensive coverage across the United States:
 
 ## 📂 Data Source Categories
 
-Open Navigator integrates data from three main categories:
+Open Navigator integrates data from four main categories:
 
 1. **[Government Jurisdictions](#government-jurisdiction-data)** - Cities, counties, school districts (this page)
 2. **[Nonprofit Organizations](./nonprofit-sources.md)** - IRS Form 990s, charity ratings, transparency data
-3. **[Open Source Projects](./open-source-repositories.md)** - Civic tech repositories, community tools, digital public goods
+3. **[Ballot Measures & Elections](./ballot-election-sources.md)** - Propositions, referendums, election results
+4. **[Open Source Projects](./open-source-repositories.md)** - Civic tech repositories, community tools, digital public goods
 
 ---
 

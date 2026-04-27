@@ -59,6 +59,39 @@ July 2023, Toronto, Canada.
 - Source: https://dataverse.harvard.edu/
 - License: Varies by dataset
 
+### **Ballotpedia** ⭐
+- Ballot measures, referendums, and propositions
+- Organization: Lucy Burns Institute
+- Source: https://ballotpedia.org/
+- API: https://ballotpedia.org/API-documentation
+- License: API access is limited at scale (paid tier available)
+- Coverage: All 50 states, historical measures back to 1990s
+- Used for: Tracking fluoridation votes, school bond measures, health policy propositions
+
+### **MIT Election Data + Science Lab**
+- Presidential, Congressional, and gubernatorial election results
+- Organization: Massachusetts Institute of Technology
+- Source: https://electionlab.mit.edu/data
+- Repository: https://github.com/MEDSL/official-returns
+- License: Free for research and commercial use
+- Coverage: 1976-present, county-level results
+- Used for: Political composition analysis, jurisdiction context
+
+### **OpenElections**
+- State-by-state certified election results in standardized CSV format
+- Source: https://openelections.net/
+- GitHub: https://github.com/openelections
+- License: Open source (various by state)
+- Coverage: All 50 states (various completion levels), precinct-level data
+- Used for: Detailed election results, local race outcomes, advocacy targeting
+
+### **Open Civic Data (OCD) Standards**
+- Division identifiers and civic data standards
+- Specification: https://open-civic-data.readthedocs.io/en/latest/proposals/0002.html
+- Repository: https://github.com/opencivicdata/ocd-division-ids
+- License: Open source
+- Used for: Standardized jurisdiction identifiers, cross-platform compatibility
+
 ---
 
 ## 🙏 **Acknowledgments**
