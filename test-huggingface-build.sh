@@ -67,15 +67,21 @@ fi
 echo ""
 
 # Step 4: Wait for services to be ready
-echo -e "${BLUE}⏳ Step 4/5: Waiting for services to start (max 60s)...${NC}"
+echo -e "${BLUE}⏳ Step 4/5: Waiting for services to start (max 90s)...${NC}"
 SECONDS=0
-MAX_WAIT=60
+MAX_WAIT=90
 READY=false
 
 while [ $SECONDS -lt $MAX_WAIT ]; do
+    # Check if main app is responding
     if curl -s -f http://localhost:$TEST_PORT/ > /dev/null 2>&1; then
-        READY=true
-        break
+        # Give API a few more seconds to initialize
+        sleep 3
+        # Check if API health endpoint is responding
+        if curl -s http://localhost:$TEST_PORT/api/health > /dev/null 2>&1; then
+            READY=true
+            break
+        fi
     fi
     echo -n "."
     sleep 2
@@ -101,21 +107,24 @@ test_endpoint() {
     local url=$1
     local name=$2
     
-    if curl -s -f -o /dev/null -w "%{http_code}" "$url" | grep -q "200\|301\|302"; then
-        echo -e "${GREEN}✅ $name${NC} - $url"
+    local status_code=$(curl -s -o /dev/null -w "%{http_code}" "$url")
+    
+    if echo "$status_code" | grep -q "200\|301\|302"; then
+        echo -e "${GREEN}✅ $name${NC} - $url (HTTP $status_code)"
         return 0
     else
-        echo -e "${RED}❌ $name${NC} - $url"
+        echo -e "${RED}❌ $name${NC} - $url (HTTP $status_code)"
         return 1
     fi
 }
 
 FAILURES=0
 
+# Test in order of dependency
 test_endpoint "http://localhost:$TEST_PORT/" "Main App" || ((FAILURES++))
+test_endpoint "http://localhost:$TEST_PORT/api/health" "API Health" || ((FAILURES++))
 test_endpoint "http://localhost:$TEST_PORT/docs" "Documentation" || ((FAILURES++))
 test_endpoint "http://localhost:$TEST_PORT/api/docs" "API Docs" || ((FAILURES++))
-test_endpoint "http://localhost:$TEST_PORT/api/health" "API Health" || ((FAILURES++))
 
 echo ""
 
