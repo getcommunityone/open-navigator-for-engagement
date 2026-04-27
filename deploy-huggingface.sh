@@ -5,6 +5,15 @@
 
 set -e
 
+# Load environment variables from .env file if it exists
+if [ -f ".env" ]; then
+    echo "📝 Loading environment variables from .env..."
+    set -a  # automatically export all variables
+    source .env
+    set +a
+    echo ""
+fi
+
 # Parse command line arguments
 SKIP_TEST=false
 while [[ $# -gt 0 ]]; do
@@ -28,18 +37,22 @@ echo ""
 if [ -z "$HF_USERNAME" ] && [ -z "$HF_USERNAME_ARG" ]; then
     echo "❌ Error: Hugging Face username required"
     echo ""
-    echo "Usage Option 1 (Environment Variable):"
+    echo "Usage Option 1 (.env file - RECOMMENDED):"
+    echo "  Add to .env file: HF_USERNAME=your_username"
+    echo "  ./deploy-huggingface.sh"
+    echo ""
+    echo "Usage Option 2 (Environment Variable):"
     echo "  export HF_USERNAME=your_username"
     echo "  ./deploy-huggingface.sh"
     echo ""
-    echo "Usage Option 2 (Command Argument):"
+    echo "Usage Option 3 (Command Argument):"
     echo "  ./deploy-huggingface.sh YOUR_HF_USERNAME"
     echo ""
-    echo "Usage Option 3 (Skip Docker test - not recommended):"
+    echo "Usage Option 4 (Skip Docker test - not recommended):"
     echo "  ./deploy-huggingface.sh YOUR_HF_USERNAME --skip-test"
     echo ""
     echo "Example:"
-    echo "  export HF_USERNAME=getcommunityone"
+    echo "  echo 'HF_USERNAME=CommunityOne' >> .env"
     echo "  ./deploy-huggingface.sh"
     echo ""
     exit 1
