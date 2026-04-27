@@ -74,7 +74,7 @@ Question: "Do you favor or oppose adding fluoride to your community's water supp
 Organization: Gallup Poll
 Date: March 2015
 Sample Size: 1,024 adults
-Margin of Error: ±4%
+Margin of Error: +/- 4%
 Results:
   - Favor: 67%
   - Oppose: 28%
@@ -446,7 +446,7 @@ Have experience with other public opinion data sources? Please contribute!
 
 3. **Check methodology**
    - Sample size >800 for national surveys
-   - Margin of error <±5%
+   - Margin of error <+/- 5%
    - Random sampling preferred
 
 4. **Track polling organization**
