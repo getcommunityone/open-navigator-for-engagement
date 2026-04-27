@@ -31,7 +31,7 @@ export default function Home() {
   const [filteredSuggestions, setFilteredSuggestions] = useState<string[]>([])
   const { location, setLocation } = useLocationContext()
 
-  const DOCS_URL = import.meta.env.PROD ? '/docs' : 'http://localhost:3000'
+  const DOCS_URL = import.meta.env.PROD ? '/docs' : 'http://localhost:3000/docs'
 
   // Common search suggestions
   const searchSuggestions = [

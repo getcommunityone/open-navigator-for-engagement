@@ -37,10 +37,10 @@ export default function HomeModern() {
   const { location, setLocation } = useLocationContext()
 
   // Environment-aware URLs for docs and API
-  // In development: Docusaurus on localhost:3000, API on localhost:8000
+  // In development: Docusaurus on localhost:3000/docs, API on localhost:8000
   // In production (HF Spaces): Served via nginx at /docs/ and /api/
   const docsBaseUrl = import.meta.env.VITE_DOCS_URL || 
-    (import.meta.env.DEV ? 'http://localhost:3000' : '')
+    (import.meta.env.DEV ? 'http://localhost:3000/docs' : '/docs')
   const apiBaseUrl = import.meta.env.VITE_API_URL || 
     (import.meta.env.DEV ? 'http://localhost:8000' : '')
 
