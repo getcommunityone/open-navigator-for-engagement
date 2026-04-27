@@ -98,6 +98,36 @@ aside.theme-doc-sidebar-container {
   border-radius: 8px;
 }
 
+/* Active navigation link underline (matches main React app) */
+.navbar__link--active {
+  border-bottom: 2px solid var(--ifm-color-primary) !important;
+  padding-bottom: 4px !important;
+}
+
+.navbar__link:hover {
+  border-bottom: 2px solid transparent;
+  padding-bottom: 4px;
+  transition: border-bottom 0.2s ease;
+}
+
+.navbar__link:hover:not(.navbar__link--active) {
+  border-bottom: 2px solid rgba(53, 79, 82, 0.3);
+}
+
+/* Active sidebar link underline */
+.menu__link--active {
+  border-left: 3px solid var(--ifm-color-primary) !important;
+  background-color: rgba(53, 79, 82, 0.05) !important;
+  font-weight: 600 !important;
+}
+
+/* Table of contents active link underline */
+.table-of-contents__link--active {
+  border-left: 2px solid var(--ifm-color-primary) !important;
+  font-weight: 600 !important;
+  color: var(--ifm-color-primary) !important;
+}
+
 /* Professional navbar styling - clean without emojis */
 .navbar__item.navbar__link {
   font-weight: 600;
