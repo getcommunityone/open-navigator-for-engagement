@@ -589,13 +589,18 @@ erDiagram
     POLICY_TOPIC ||--o{ LEGISLATION : addresses
     POLICY_TOPIC {
         string topic_id PK
-        string topic_name
-        string category
-        string description
-        string keywords
-        int priority_level
-        string icon
-        int jurisdiction_count
+        string topic_name "Water Fluoridation Support"
+        string category "health_policy"
+        string description "Public opinion on fluoridation"
+        string keywords "fluoride, water treatment"
+        int priority_level "1-10 importance ranking"
+        string icon "🦷"
+        int jurisdiction_count "How many jurisdictions discuss"
+        string validated_question_text "Scientifically tested question from Roper"
+        string question_source "Gallup Poll, March 2015"
+        float national_support_pct "67.0 (percentage)"
+        string roper_ipoll_id "USGALLUP.031915.R12A reference"
+        datetime created_at
     }
     
     JURISDICTION ||--o{ LEGISLATION : enacts
@@ -712,7 +717,8 @@ open-navigator-data/
 │   └── policy_tracking     # Bill status & outcomes
 │
 └── topics/                 # 🎯 Advocacy causes & campaigns
-    ├── topic_definitions   # Oral health, fluoridation, dental access
+    ├── topic_definitions   # Validated survey questions from Roper Center
+    ├── survey_questions    # Public opinion question wording library
     ├── jurisdiction_topics # What each city is discussing
     └── advocacy_alerts     # Opportunities for engagement
 ```

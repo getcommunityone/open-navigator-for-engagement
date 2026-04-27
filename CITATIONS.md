@@ -92,6 +92,16 @@ July 2023, Toronto, Canada.
 - License: Open source
 - Used for: Standardized jurisdiction identifiers, cross-platform compatibility
 
+### **Roper Center for Public Opinion Research**
+- Scientifically validated survey questions and public opinion data
+- Organization: Cornell University
+- Source: https://ropercenter.cornell.edu/
+- iPoll Database: https://ropercenter.cornell.edu/ipoll/
+- License: Free public search (metadata and question wording), full data requires institutional membership
+- Coverage: 500,000+ survey questions from 1930s-present, all major polling organizations
+- Used for: Topic definitions, validated question wording, national opinion baselines, messaging optimization
+- Citation: "Roper Center for Public Opinion Research, Cornell University. iPoll Databank. https://ropercenter.cornell.edu/ipoll/"
+
 ---
 
 ## 🙏 **Acknowledgments**
