@@ -213,3 +213,31 @@ article h6 {
 [data-theme='dark'] .table-of-contents {
   background-color: #1E293B !important;
 }
+
+/* Mermaid diagrams - ensure they render large and readable */
+.mermaid {
+  font-size: 18px !important;
+  line-height: 1.4 !important;
+}
+
+.mermaid svg {
+  max-width: 100% !important;
+  height: auto !important;
+}
+
+/* ERD entity boxes should be larger */
+.er.entityBox {
+  min-width: 200px !important;
+  min-height: 140px !important;
+}
+
+.er .entityLabel {
+  font-size: 20px !important;
+  font-weight: 700 !important;
+}
+
+.er .attributeBoxEven,
+.er .attributeBoxOdd {
+  font-size: 16px !important;
+  padding: 8px 12px !important;
+}

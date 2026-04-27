@@ -75,6 +75,16 @@ const config: Config = {
   },
 
   themeConfig: {
+    mermaid: {
+      theme: { light: 'default', dark: 'dark' },
+      options: {
+        fontSize: 18,
+        fontFamily: 'ui-sans-serif, system-ui, sans-serif',
+        entityPadding: 20,
+        minEntityHeight: 120,
+        minEntityWidth: 180,
+      },
+    },
     // Replace with your project's social card
     image: 'img/open-navigator-social.jpg',
     colorMode: {

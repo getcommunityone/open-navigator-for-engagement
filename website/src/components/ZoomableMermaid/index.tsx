@@ -18,11 +18,11 @@ export default function ZoomableMermaid({ value, title }: ZoomableMermaidProps):
         </span>
       </div>
       <TransformWrapper
-        initialScale={2.5}
-        minScale={0.2}
-        maxScale={8}
+        initialScale={6}
+        minScale={0.5}
+        maxScale={12}
         centerOnInit={true}
-        wheel={{ step: 0.2 }}
+        wheel={{ step: 0.3 }}
         doubleClick={{ disabled: false }}
         panning={{ velocityDisabled: true }}
         limitToBounds={false}
