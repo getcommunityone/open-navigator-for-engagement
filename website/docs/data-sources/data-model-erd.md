@@ -9,13 +9,315 @@ import ZoomableMermaid from '@site/src/components/ZoomableMermaid';
 
 Comprehensive overview of all data entities extracted, processed, and uploaded to HuggingFace datasets.
 
-## 📊 Complete Data Model (ERD)
+## � HuggingFace Dataset Structure
+
+### Current Datasets Being Uploaded
+
+```
+open-navigator-data/
+├── jurisdictions/          # 🏛️ Core jurisdiction data
+│   ├── cities              # 19,000+ incorporated places
+│   ├── counties            # 3,144 U.S. counties
+│   ├── states              # 50 states + DC, territories
+│   ├── school_districts    # 13,000+ districts (NCES data)
+│   ├── census_data         # Basic population & geographic data
+│   └── demographics        # 👥 Comprehensive demographics (race, age, income, education, etc.)
+│
+├── social/                 # 📱 Social media presence
+│   ├── twitter             # Twitter/X accounts
+│   ├── facebook            # Facebook pages
+│   ├── instagram           # Instagram accounts
+│   └── linkedin            # LinkedIn pages
+│
+├── videos/                 # 📹 Video & streaming platforms
+│   ├── youtube_channels    # Government YouTube channels
+│   ├── vimeo              # Vimeo accounts
+│   └── livestreams        # Live meeting streams
+│
+├── platforms/              # 🖥️ Meeting management systems
+│   ├── legistar           # Legistar URLs
+│   ├── granicus           # Granicus links
+│   ├── suiteone           # SuiteOne systems
+│   └── civicplus          # CivicPlus platforms
+│
+├── domains/                # 🌐 Official government websites
+│   ├── gsa_domains        # .gov domain registry
+│   ├── municipal_websites # City/county websites
+│   └── state_portals      # State government sites
+│
+├── meetings/               # 📋 Meetings, events & trainings
+│   ├── government_meetings # City council, school board, etc.
+│   ├── public_hearings    # Public comment sessions
+│   ├── community_events   # Town halls, forums, engagement
+│   ├── trainings          # Professional development, workshops
+│   ├── agendas            # Meeting agendas (text extracted)
+│   ├── minutes            # Meeting minutes (text extracted)
+│   ├── videos             # YouTube/Vimeo video metadata
+│   └── documents          # Associated documents
+│
+├── officials/              # 👥 Elected officials & leaders
+│   ├── local_officials    # City/county officials (mayors, councils)
+│   ├── state_legislators  # From Open States API
+│   └── school_board       # School board members
+│
+├── nonprofits/             # 🏢 Nonprofit organizations
+│   ├── irs_nonprofits     # IRS 990 data (3M+ organizations)
+│   ├── propublica_data    # ProPublica API (financials, NTEE codes)
+│   ├── everyorg_data      # Every.org API (missions, causes, logos)
+│   └── nonprofit_990s     # Detailed Form 990 financials (yearly filings)
+│
+├── grants/                 # 💵 Grant funding transactions
+│   ├── nonprofit_grants   # Grants to nonprofits (from 990 Schedule I)
+│   ├── government_grants  # Government grants to orgs/jurisdictions
+│   ├── foundation_grants  # Private foundation grants
+│   └── federal_grants     # Federal funding programs
+│
+├── causes/                 # 🎯 Cause & category taxonomy
+│   ├── ntee_codes         # IRS NTEE classification system
+│   └── everyorg_causes    # Every.org cause tags
+│
+├── budgets/                # 💰 Government budgets & finances
+│   ├── city_budgets       # City/municipal budgets & spending
+│   ├── county_budgets     # County budgets & expenditures
+│   ├── state_budgets      # State government finances
+│   ├── school_budgets     # School district finances (NCES F-33)
+│   └── bond_debt          # Municipal bonds & debt obligations
+│
+├── civic/                  # 🗳️ Google Civic & Wikidata
+│   ├── civic_divisions    # OCD divisions
+│   ├── representatives    # From Google Civic API
+│   ├── wikidata_entities  # Structured entities
+│   └── dbpedia_resources  # Wikipedia infobox data
+│
+├── ballots/                # 🗳️ Ballot initiatives & referendums
+│   ├── state_measures      # State propositions (fluoridation votes!)
+│   ├── local_measures      # City/county ballot questions
+│   └── election_results    # Historical voting outcomes
+│
+├── legislation/            # 📜 Bills, ordinances, resolutions
+│   ├── state_bills         # From Open States API (52 states)
+│   ├── local_ordinances    # Municipal codes & resolutions
+│   └── policy_tracking     # Bill status & outcomes
+│
+├── topics/                 # 🎯 Advocacy causes & campaigns
+│   ├── topic_definitions   # Validated survey questions from Roper Center
+│   ├── survey_questions    # Public opinion question wording library
+│   ├── jurisdiction_topics # What each city is discussing
+│   └── advocacy_alerts     # Opportunities for engagement
+│
+├── factchecks/             # ✅ Fact-checking & claim verification
+│   ├── claim_reviews       # Google Fact Check API (ClaimReview schema)
+│   ├── politifact          # PolitiFact Truth-O-Meter ratings
+│   ├── factcheck_org       # FactCheck.org verified claims
+│   └── verified_claims     # Aggregated fact-check database
+│
+├── analytics/              # 📊 Time dimensions & metric views
+│   ├── date_dimension      # Date/time reference table (YYYY-MM-DD, day_of_week, fiscal_year)
+│   ├── temporal_relationships  # Time-series joins for all entities
+│   ├── metric_views        # Pre-computed analytics (advocacy, spending, nonprofit impact)
+│   ├── aggregated_stats    # Monthly/quarterly/yearly rollups
+│   └── dashboard_metrics   # Real-time dashboard data feeds
+│
+├── standards/              # 🌐 Schema.org, Popolo, CEDS exports
+│   ├── schema_org_jsonld   # JSON-LD exports (Event, Person, Organization, Legislation, ClaimReview)
+│   ├── popolo_exports      # Popolo-compliant JSON (Person, Organization, Membership, VoteEvent)
+│   ├── ceds_aligned        # CEDS-compliant education data (Element IDs, Option Sets)
+│   ├── ocd_divisions       # Open Civic Data division IDs
+│   └── rdf_triples         # RDF/Turtle semantic web exports
+│
+├── vocabulary/             # 🔧 OMOP-inspired concept & terminology (SYSTEM-INTERNAL)
+│   ├── concept             # Master concept table (cities, causes, officials)
+│   ├── vocabulary          # Vocabulary sources (OCD_ID, IRS_NTEE, US_Census, OHDSI)
+│   ├── concept_class       # Concept classifications (City, County, 501c3, Mayor)
+│   ├── concept_relationship # Relationships (City → County, Topic → Legislation)
+│   ├── domain              # Domain groupings (Jurisdiction, Nonprofit, Policy)
+│   ├── athena_gender       # OHDSI Gender vocabulary from Athena
+│   ├── athena_race         # OHDSI Race vocabulary from Athena
+│   └── athena_ethnicity    # OHDSI Ethnicity vocabulary from Athena
+│
+└── exports/                # 📤 API-ready formatted exports
+    ├── csv_bulk            # CSV downloads for all datasets
+    ├── json_api            # REST API JSON responses
+    ├── graphql_schema      # GraphQL schema definitions
+    └── parquet_optimized   # Compressed Parquet (default format)
+```
+
+### Parquet File Naming Convention
+
+**Rule:** Use underscores (`_`) consistently, NOT hyphens (`-`)
+
+**Format:** `{category}_{subcategory}.parquet`
+
+**Examples:**
+```
+✅ CORRECT (using underscores):
+jurisdictions_cities.parquet
+jurisdictions_counties.parquet
+jurisdictions_states.parquet
+jurisdictions_school_districts.parquet
+social_twitter.parquet
+social_facebook.parquet
+videos_youtube_channels.parquet
+meetings_government_meetings.parquet
+nonprofits_irs_nonprofits.parquet
+grants_federal_grants.parquet
+budgets_city_budgets.parquet
+surveys_national_polls.parquet
+surveys_roper_questions.parquet
+factchecks_claim_reviews.parquet
+factchecks_politifact.parquet
+analytics_date_dimension.parquet
+analytics_metric_views.parquet
+analytics_temporal_relationships.parquet
+standards_schema_org_jsonld.parquet
+standards_popolo_exports.parquet
+standards_ceds_aligned.parquet
+vocabulary_concept.parquet
+vocabulary_vocabulary.parquet
+vocabulary_concept_class.parquet
+vocabulary_concept_relationship.parquet
+vocabulary_athena_gender.parquet
+vocabulary_athena_race.parquet
+vocabulary_athena_ethnicity.parquet
+
+❌ INCORRECT (using hyphens):
+jurisdictions-cities.parquet
+social-twitter.parquet
+meetings-government-meetings.parquet
+surveys-national-polls.parquet
+factchecks-claim-reviews.parquet
+analytics-date-dimension.parquet
+standards-schema-org.parquet
+```
+
+**Why Underscores?**
+- ✅ Python-friendly variable names (can use `data.jurisdictions_cities`)
+- ✅ SQL-compatible column names
+- ✅ Consistent with folder structure (`school_districts`, not `school-districts`)
+- ✅ Better for programmatic access
+- ✅ Avoids shell escaping issues
+
+**Repository Name Exception:**
+- HuggingFace repo: `CommunityOne/open-navigator-data` (hyphen is fine for URLs)
+- File names inside repo: Use underscores (`jurisdictions_cities.parquet`)
+
+## 🔄 Data Extraction Pipeline
+
+### Phase 1: Discovery (Bronze Layer)
+1. **Census Data** → Jurisdictions list
+2. **GSA Domains** → Government websites
+3. **NCES** → School districts with financial data (F-33 forms)
+4. **IRS TEOS** → Nonprofit EINs (3M+ organizations)
+5. **Census of Governments** → Municipal budgets & finances
+6. **URL Discovery** → Meeting platforms, YouTube, budget PDFs
+7. **Social Media** → Twitter, Facebook accounts
+
+### Phase 2: Enrichment (Silver Layer)
+1. **ProPublica Nonprofit Explorer** → Financial data, NTEE codes, 990 filings
+2. **Every.org API** → Nonprofit causes, missions, logos
+3. **NCES F-33 Finance Survey** → School district budgets, per-pupil spending
+4. **Census Annual Survey** → State/local government finances
+5. **Municipal Securities Rulemaking Board (EMMA)** → Bond debt data
+6. **YouTube API** → Channel statistics
+7. **Open States** → Legislative data
+8. **Wikidata SPARQL** → Entity relationships
+9. **DBpedia** → Wikipedia structured data
+10. **Google Civic** → Representatives
+
+### Phase 3: Processing (Gold Layer)
+1. **Meeting Extraction** → Agenda/minutes text
+2. **Video Transcripts** → YouTube captions
+3. **Document Analysis** → Keyword detection
+4. **Relationship Mapping** → Entity connections
+5. **Oral Health Filtering** → Topic classification
+6. **Temporal Indexing** → Date dimension table, time-series relationships
+7. **Metric View Creation** → Pre-computed analytics (advocacy activity, government spending, nonprofit impact)
+8. **Schema.org JSON-LD** → Structured data exports (Event, Person, Organization, Legislation, ClaimReview)
+9. **Popolo Compliance** → Open government standard exports (Person, Organization, Membership, VoteEvent)
+10. **CEDS Alignment** → Education data mapping to NCES Element IDs and Option Sets
+
+### New Dataset Categories Explained
+
+#### 📊 Analytics Datasets
+
+**Purpose:** Enable time-series analysis, trend detection, and dashboard metrics without complex SQL queries.
+
+| Dataset | Description | Refresh Frequency |
+|---------|-------------|-------------------|
+| `analytics_date_dimension` | Calendar reference table with fiscal years, quarters, day-of-week, holidays | Static (updated annually) |
+| `analytics_temporal_relationships` | Pre-joined date keys for all time-based entities (meetings, votes, budgets, filings) | Daily |
+| `analytics_metric_views` | Pre-computed analytics like advocacy_activity, government_spending, nonprofit_impact | Hourly |
+| `analytics_aggregated_stats` | Monthly/quarterly/yearly rollups (meeting counts, budget totals, grant sums) | Daily |
+| `analytics_dashboard_metrics` | Real-time feeds for dashboards (active meetings today, trending topics, hot ballot measures) | Every 5 minutes |
+
+**Example Use Case:**
+```sql
+-- Instead of complex joins, use metric view:
+SELECT * FROM analytics_metric_views 
+WHERE metric_name = 'advocacy_activity' 
+  AND jurisdiction_id = 'ocd-division/country:us/state:al/place:birmingham'
+  AND date_period = '2024-Q1';
+```
+
+#### 🌐 Standards-Compliant Exports
+
+**Purpose:** Maximum interoperability with civic tech platforms, search engines, and semantic web tools.
+
+| Dataset | Standard | Use Case | Consumers |
+|---------|----------|----------|-----------|  
+| `standards_schema_org_jsonld` | Schema.org JSON-LD | Google Search rich results, voice assistants | Google, Bing, Alexa, Siri |
+| `standards_popolo_exports` | Popolo Project | Civic tech platform integration | mySociety, OpenNorth, Sunlight Foundation |
+| `standards_ceds_aligned` | Common Education Data Standards | Education data exchange, NCES reporting | State education depts, Ed-Fi, IMS Global |
+| `standards_ocd_divisions` | Open Civic Data IDs | Cross-platform jurisdiction referencing | Google Civic, Ballotpedia, Vote Smart |
+| `standards_rdf_triples` | RDF/Turtle | Linked open data, knowledge graphs | DBpedia, Wikidata, SPARQL endpoints |
+
+**Example Schema.org Export:**
+```json
+{
+  "@context": "https://schema.org",
+  "@type": "GovernmentOrganization",
+  "name": "Birmingham City Council",
+  "address": {
+    "@type": "PostalAddress",
+    "addressLocality": "Birmingham",
+    "addressRegion": "AL"
+  },
+  "event": [{
+    "@type": "Event",
+    "name": "Regular City Council Meeting",
+    "startDate": "2024-01-15T18:00:00-06:00"
+  }]
+}
+```
+
+#### ✅ Fact-Checking Datasets
+
+**Purpose:** Verify claims made in meetings, legislation, and political speech.
+
+| Dataset | Source | Fields | Update Frequency |
+|---------|--------|--------|------------------|
+| `factchecks_claim_reviews` | Google Fact Check API | claimReviewed, reviewRating, author, datePublished | Daily |
+| `factchecks_politifact` | PolitiFact web scraping | claim, ruling, truth_o_meter, context | Daily |
+| `factchecks_factcheck_org` | FactCheck.org API/scraping | claim, verdict, analysis, sources | Daily |
+| `factchecks_verified_claims` | Aggregated + deduplicated | claim_text, consensus_rating, verification_sources | Daily |
+
+**Integration with Meetings:**
+- Cross-reference meeting transcripts with verified claims
+- Flag unverified statements in legislative debates
+- Track politician accuracy scores over time
+
+## �📊 Complete Data Model (ERD)
 
 <ZoomableMermaid 
   title="Interactive Entity Relationship Diagram"
   value={`
 erDiagram
-    %% Core Jurisdiction Entities
+    %% ========================================
+    %% CORE JURISDICTION ENTITIES
+    %% ========================================
+    %% Schema.org type: AdministrativeArea
+    %% OCD-ID format: ocd-division/country:us/state:al/place:birmingham
+    
     JURISDICTION ||--o{ MEETING : hosts
     JURISDICTION ||--o{ LEADER : employs
     JURISDICTION ||--o{ YOUTUBE_CHANNEL : operates
@@ -47,6 +349,80 @@ erDiagram
         float median_income
         float poverty_rate
         datetime census_year
+    }
+    
+    %% ========================================
+    %% DEMOGRAPHICS (Peer to Jurisdiction)
+    %% ========================================
+    %% Comprehensive demographic data from U.S. Census Bureau
+    %% Uses OMOP-style concept_id references for standardization
+    %% References OHDSI Athena vocabularies for interoperability
+    
+    JURISDICTION ||--o| DEMOGRAPHICS : has_demographics
+    DEMOGRAPHICS {
+        string demographics_id PK
+        string jurisdiction_id FK
+        string census_tract
+        int total_population
+        int median_age
+        
+        %% Race (OMOP concept references)
+        int race_concept_id FK "OHDSI Race vocabulary"
+        string race_source_value "Original Census text"
+        int white_alone
+        int black_alone
+        int asian_alone
+        int native_american_alone
+        int pacific_islander_alone
+        int other_race_alone
+        int two_or_more_races
+        
+        %% Ethnicity (OMOP concept references)
+        int ethnicity_concept_id FK "OHDSI Ethnicity vocabulary"
+        string ethnicity_source_value "Original Census text"
+        int hispanic_latino
+        int not_hispanic_latino
+        
+        %% Gender (OMOP concept references)
+        int gender_concept_id FK "OHDSI Gender vocabulary"
+        string gender_source_value "Original Census text"
+        int male_population
+        int female_population
+        
+        %% Age Distribution
+        int under_18
+        int age_18_to_64
+        int age_65_plus
+        
+        %% Income & Economics
+        float median_household_income
+        float per_capita_income
+        float poverty_rate
+        int households_snap_benefits
+        
+        %% Education
+        int high_school_graduate_pct
+        int bachelors_degree_pct
+        int graduate_degree_pct
+        
+        %% Housing
+        int total_housing_units
+        int owner_occupied_pct
+        int renter_occupied_pct
+        float median_home_value
+        float median_rent
+        
+        %% Employment
+        float unemployment_rate
+        int labor_force_participation_pct
+        
+        %% Health Insurance
+        int uninsured_pct
+        int medicaid_pct
+        int medicare_pct
+        
+        datetime census_year
+        string acs_table_id "ACS Table reference"
     }
     
     JURISDICTION ||--o| GSA_DOMAIN : uses
@@ -82,6 +458,9 @@ erDiagram
     %% ========================================
     %% SCHOOL DISTRICTS (NCES)
     %% ========================================
+    %% Based on CEDS (Common Education Data Standards) and NCES data elements
+    %% See: https://ceds.ed.gov/ and https://github.com/CEDStandards
+    %% Schema.org type: EducationalOrganization
     
     JURISDICTION ||--o{ SCHOOL_DISTRICT : contains
     SCHOOL_DISTRICT ||--o{ LEADER : governed_by
@@ -109,6 +488,7 @@ erDiagram
     %% ========================================
     %% MEETINGS & DOCUMENTS
     %% ========================================
+    %% Schema.org types: Event, VideoObject, DigitalDocument
     
     MEETING ||--o{ AGENDA : contains
     MEETING ||--o{ MINUTES : produces
@@ -188,6 +568,7 @@ erDiagram
     %% ========================================
     %% Based on Popolo Project schema for representing people and positions
     %% See: https://github.com/popolo-project/popolo-spec
+    %% Schema.org types: Person, GovernmentOfficial
     
     LEADER ||--o{ VOTE : casts
     LEADER ||--o{ SOCIAL_MEDIA : maintains
@@ -223,6 +604,7 @@ erDiagram
     %% ========================================
     %% Based on Popolo Project schema for organizations
     %% See: https://github.com/popolo-project/popolo-spec
+    %% Schema.org types: Organization, NGO
     
     ORGANIZATION ||--o{ SOCIAL_MEDIA : maintains
     ORGANIZATION ||--o{ LEADER : employs
@@ -563,6 +945,7 @@ erDiagram
     %%               MIT Election Lab (federal results),
     %%               OpenElections (certified state results)
     %% See: ballot-election-sources.md
+    %% Schema.org type: Legislation (with referendumProposal property)
     %% ========================================
     
     JURISDICTION ||--o{ BALLOT_MEASURE : hosts
@@ -609,6 +992,7 @@ erDiagram
     
     JURISDICTION ||--o{ LEGISLATION : enacts
     STATE_LEGISLATURE ||--o{ LEGISLATION : proposes
+    %% Schema.org type: Legislation
     LEGISLATION {
         string bill_id PK
         string jurisdiction_id FK
@@ -627,6 +1011,71 @@ erDiagram
         string chamber
         int vote_yes
         int vote_no
+    }
+    
+    %% ========================================
+    %% SYSTEM-INTERNAL VOCABULARY TABLES
+    %% (OMOP-Inspired Concept System)
+    %% ========================================
+    %% Based on OHDSI Athena vocabulary structure
+    %% ID range: 2,000,000,000+ for custom civic concepts
+    %% These tables appear at bottom to avoid confusing non-technical users
+    
+    VOCABULARY ||--o{ CONCEPT : contains
+    CONCEPT_CLASS ||--o{ CONCEPT : categorizes
+    DOMAIN ||--o{ CONCEPT : groups
+    CONCEPT ||--o{ CONCEPT_RELATIONSHIP : source
+    CONCEPT ||--o{ CONCEPT_RELATIONSHIP : target
+    
+    %% Concept references from other entities
+    CONCEPT ||--o{ JURISDICTION : city_concept_id
+    CONCEPT ||--o{ ORGANIZATION : organization_concept_id
+    CONCEPT ||--o{ LEADER : position_concept_id
+    CONCEPT ||--o{ POLICY_TOPIC : topic_concept_id
+    CONCEPT ||--o{ DEMOGRAPHICS : race_concept_id
+    CONCEPT ||--o{ DEMOGRAPHICS : ethnicity_concept_id
+    CONCEPT ||--o{ DEMOGRAPHICS : gender_concept_id
+    
+    VOCABULARY {
+        string vocabulary_id PK "OCD_ID, IRS_NTEE, US_Census, OHDSI_Gender"
+        string vocabulary_name
+        string vocabulary_reference "URL or citation"
+        string vocabulary_version
+        string vocabulary_concept_id FK
+    }
+    
+    DOMAIN {
+        string domain_id PK "Jurisdiction, Nonprofit, Policy, Gender"
+        string domain_name
+        string domain_concept_id FK
+    }
+    
+    CONCEPT_CLASS {
+        string concept_class_id PK "City, County, 501c3, Mayor"
+        string concept_class_name
+        string concept_class_concept_id FK
+    }
+    
+    CONCEPT {
+        int concept_id PK "2B+ for custom civic concepts"
+        string concept_name "Display name"
+        string domain_id FK "Jurisdiction, Nonprofit, Policy"
+        string vocabulary_id FK "OCD_ID, IRS_NTEE, US_Census"
+        string concept_class_id FK "City, County, 501c3, Mayor"
+        string standard_concept "S=Standard, C=Classification"
+        string concept_code "External identifier"
+        datetime valid_start_date
+        datetime valid_end_date
+        string invalid_reason
+    }
+    
+    CONCEPT_RELATIONSHIP {
+        int concept_id_1 FK "Source concept"
+        int concept_id_2 FK "Target concept"
+        string relationship_id "Is part of, Regulates, Addresses"
+        datetime valid_start_date
+        datetime valid_end_date
+        string invalid_reason
     }
 `}
 />
@@ -652,6 +1101,101 @@ Our data model follows the [Popolo Project](https://www.popoloproject.com/) spec
 | **Area** | JURISDICTION | Geographic/political boundaries | `jurisdiction_type`, `state_code`, `county_name` |
 | **Event** | MEETING | Gatherings with agendas | `meeting_date`, `meeting_type`, `body_name` |
 | **Speech** | MINUTES, VIDEO | Spoken statements | `transcript_text`, `summary_text` |
+
+#### Schema.org Type Mappings
+
+Our entities map to [Schema.org](https://schema.org/) types for SEO-optimized structured data and semantic web compatibility:
+
+| Our Entity | Schema.org Type | Properties | JSON-LD Export |
+|------------|----------------|------------|----------------|
+| JURISDICTION | [AdministrativeArea](https://schema.org/AdministrativeArea) | name, address, geo, telephone, url | ✅ City/county pages |
+| MEETING | [Event](https://schema.org/Event) | name, startDate, endDate, location, organizer | ✅ Google Calendar rich results |
+| LEADER | [Person](https://schema.org/Person) + [GovernmentOfficial](https://schema.org/GovernmentOfficial) | name, email, telephone, jobTitle | ✅ Official profiles |
+| ORGANIZATION | [Organization](https://schema.org/Organization) + [NGO](https://schema.org/NGO) | name, address, telephone, foundingDate | ✅ Nonprofit listings |
+| LEGISLATION | [Legislation](https://schema.org/Legislation) | name, legislationDate, legislationPassedBy | ✅ Bill tracking |
+| BALLOT_MEASURE | [Legislation](https://schema.org/Legislation) | name, datePosted, legislationChanges | ✅ Ballot guides |
+| VOTE | [VoteAction](https://schema.org/VoteAction) | agent, candidate, actionOption | ✅ Voting records |
+| FACT_CHECK | [ClaimReview](https://schema.org/ClaimReview) | claimReviewed, reviewRating, author | ✅ Google Fact Check Explorer |
+| SCHOOL_DISTRICT | [EducationalOrganization](https://schema.org/EducationalOrganization) | name, numberOfStudents, address | ✅ School district info |
+| VIDEO | [VideoObject](https://schema.org/VideoObject) | name, description, uploadDate, duration | ✅ YouTube integration |
+| DOCUMENT | [DigitalDocument](https://schema.org/DigitalDocument) | name, fileFormat, datePublished | ✅ Document library |
+
+**Example: Meeting as Schema.org Event**
+
+```json
+{
+  "@context": "https://schema.org",
+  "@type": "Event",
+  "@id": "https://www.communityone.com/meetings/city-council-2024-01-15",
+  "name": "Birmingham City Council Regular Meeting",
+  "description": "Monthly city council meeting covering budget, zoning, and public health initiatives",
+  "startDate": "2024-01-15T18:00:00-06:00",
+  "endDate": "2024-01-15T20:30:00-06:00",
+  "eventStatus": "https://schema.org/EventScheduled",
+  "eventAttendanceMode": "https://schema.org/MixedEventAttendanceMode",
+  "location": {
+    "@type": "Place",
+    "name": "Birmingham City Hall",
+    "address": {
+      "@type": "PostalAddress",
+      "streetAddress": "710 N 20th St",
+      "addressLocality": "Birmingham",
+      "addressRegion": "AL",
+      "postalCode": "35203"
+    }
+  },
+  "organizer": {
+    "@type": "GovernmentOrganization",
+    "name": "Birmingham City Council",
+    "url": "https://www.birminghamal.gov/council/"
+  },
+  "recordedIn": {
+    "@type": "VideoObject",
+    "name": "City Council Meeting Recording",
+    "uploadDate": "2024-01-16",
+    "duration": "PT2H30M",
+    "thumbnailUrl": "https://example.com/thumbnail.jpg",
+    "contentUrl": "https://youtube.com/watch?v=example"
+  },
+  "subEvent": [
+    {
+      "@type": "Event",
+      "name": "Public Comment Period",
+      "startDate": "2024-01-15T18:15:00-06:00"
+    }
+  ]
+}
+```
+
+#### Common Education Data Standards (CEDS) Alignment
+
+Our SCHOOL_DISTRICT entity follows [CEDS](https://ceds.ed.gov/) specifications for education data interoperability:
+
+| Our Field | CEDS Element | Element ID | NCES Alignment |
+|-----------|--------------|------------|----------------|
+| `nces_id` | LEA Identifier (NCES) | 000827 | CCD LEA ID |
+| `district_name` | Name of Institution | 000168 | Official district name |
+| `district_type` | LEA Type | 000108 | Regular/Specialized/Service Agency |
+| `total_students` | Student Count | 001475 | Fall enrollment |
+| `total_schools` | Number of Schools | 000856 | Operational schools count |
+| `total_revenue` | Total Revenue | 000612 | F-33 Survey Line A09 |
+| `total_expenditures` | Total Expenditures | 000611 | F-33 Survey Line B13 |
+| `per_pupil_spending` | Expenditure per Student | 000613 | Total exp / enrollment |
+| `federal_revenue` | Federal Revenue | 000614 | ESEA Title I, IDEA |
+| `state_revenue` | State Revenue | 000615 | State aid formulas |
+| `local_revenue` | Local Revenue | 000616 | Property tax, bonds |
+| `superintendent` | Chief Administrator | 000240 | District superintendent |
+| `school_year` | School Year | 000243 | YYYY-YYYY format |
+
+**CEDS Option Sets:**
+- **LEA Type** (000108): Regular local school district, Specialized (charter/magnet), Supervisory Union, Service Agency, State/Federal Agency
+- **Operational Status** (000533): Open, Closed, New, Changed Agency, Temporarily Closed
+- **Locale Type** (001315): City (Large/Midsize/Small), Suburb, Town, Rural (NCES Urban-centric codes)
+
+**Benefits:**
+- ✅ Compatible with NCES Common Core of Data (CCD) and F-33 Finance Survey
+- ✅ Aligns with Ed-Fi Alliance, IMS Global, and SIF Association standards
+- ✅ Supports federal reporting for ESSA, Title I, IDEA compliance
 
 #### Underlying Standards
 
@@ -733,177 +1277,6 @@ Examples:
 - Spaces → underscores
 - Remove special characters
 
-## 📦 HuggingFace Dataset Structure
-
-### Current Datasets Being Uploaded
-
-```
-open-navigator-data/
-├── jurisdictions/          # 🏛️ Core jurisdiction data
-│   ├── cities              # 19,000+ incorporated places
-│   ├── counties            # 3,144 U.S. counties
-│   ├── states              # 50 states + DC, territories
-│   ├── school_districts    # 13,000+ districts (NCES data)
-│   ├── census_data         # Basic population & geographic data
-│   └── demographics        # 👥 Comprehensive demographics (race, age, income, education, etc.)
-│
-├── social/                 # 📱 Social media presence
-│   ├── twitter             # Twitter/X accounts
-│   ├── facebook            # Facebook pages
-│   ├── instagram           # Instagram accounts
-│   └── linkedin            # LinkedIn pages
-│
-├── videos/                 # 📹 Video & streaming platforms
-│   ├── youtube_channels    # Government YouTube channels
-│   ├── vimeo              # Vimeo accounts
-│   └── livestreams        # Live meeting streams
-│
-├── platforms/              # 🖥️ Meeting management systems
-│   ├── legistar           # Legistar URLs
-│   ├── granicus           # Granicus links
-│   ├── suiteone           # SuiteOne systems
-│   └── civicplus          # CivicPlus platforms
-│
-├── domains/                # 🌐 Official government websites
-│   ├── gsa_domains        # .gov domain registry
-│   ├── municipal_websites # City/county websites
-│   └── state_portals      # State government sites
-│
-├── meetings/               # 📋 Meetings, events & trainings
-│   ├── government_meetings # City council, school board, etc.
-│   ├── public_hearings    # Public comment sessions
-│   ├── community_events   # Town halls, forums, engagement
-│   ├── trainings          # Professional development, workshops
-│   ├── agendas            # Meeting agendas (text extracted)
-│   ├── minutes            # Meeting minutes (text extracted)
-│   ├── videos             # YouTube/Vimeo video metadata
-│   └── documents          # Associated documents
-│
-├── officials/              # 👥 Elected officials & leaders
-│   ├── local_officials    # City/county officials (mayors, councils)
-│   ├── state_legislators  # From Open States API
-│   └── school_board       # School board members
-│
-├── nonprofits/             # 🏢 Nonprofit organizations
-│   ├── irs_nonprofits     # IRS 990 data (3M+ organizations)
-│   ├── propublica_data    # ProPublica API (financials, NTEE codes)
-│   ├── everyorg_data      # Every.org API (missions, causes, logos)
-│   └── nonprofit_990s     # Detailed Form 990 financials (yearly filings)
-│
-├── grants/                 # 💵 Grant funding transactions
-│   ├── nonprofit_grants   # Grants to nonprofits (from 990 Schedule I)
-│   ├── government_grants  # Government grants to orgs/jurisdictions
-│   ├── foundation_grants  # Private foundation grants
-│   └── federal_grants     # Federal funding programs
-│
-├── causes/                 # 🎯 Cause & category taxonomy
-│   ├── ntee_codes         # IRS NTEE classification system
-│   └── everyorg_causes    # Every.org cause tags
-│
-├── budgets/                # 💰 Government budgets & finances
-│   ├── city_budgets       # City/municipal budgets & spending
-│   ├── county_budgets     # County budgets & expenditures
-│   ├── state_budgets      # State government finances
-│   ├── school_budgets     # School district finances (NCES F-33)
-│   └── bond_debt          # Municipal bonds & debt obligations
-│
-├── civic/                  # 🗳️ Google Civic & Wikidata
-│   ├── civic_divisions    # OCD divisions
-│   ├── representatives    # From Google Civic API
-│   ├── wikidata_entities  # Structured entities
-│   └── dbpedia_resources  # Wikipedia infobox data
-│
-├── ballots/                # 🗳️ Ballot initiatives & referendums
-│   ├── state_measures      # State propositions (fluoridation votes!)
-│   ├── local_measures      # City/county ballot questions
-│   └── election_results    # Historical voting outcomes
-│
-├── legislation/            # 📜 Bills, ordinances, resolutions
-│   ├── state_bills         # From Open States API (52 states)
-│   ├── local_ordinances    # Municipal codes & resolutions
-│   └── policy_tracking     # Bill status & outcomes
-│
-└── topics/                 # 🎯 Advocacy causes & campaigns
-    ├── topic_definitions   # Validated survey questions from Roper Center
-    ├── survey_questions    # Public opinion question wording library
-    ├── jurisdiction_topics # What each city is discussing
-    └── advocacy_alerts     # Opportunities for engagement
-```
-
-### Parquet File Naming Convention
-
-**Rule:** Use underscores (`_`) consistently, NOT hyphens (`-`)
-
-**Format:** `{category}_{subcategory}.parquet`
-
-**Examples:**
-```
-✅ CORRECT (using underscores):
-jurisdictions_cities.parquet
-jurisdictions_counties.parquet
-jurisdictions_states.parquet
-jurisdictions_school_districts.parquet
-social_twitter.parquet
-social_facebook.parquet
-videos_youtube_channels.parquet
-meetings_government_meetings.parquet
-nonprofits_irs_nonprofits.parquet
-grants_federal_grants.parquet
-budgets_city_budgets.parquet
-surveys_national_polls.parquet
-surveys_roper_questions.parquet
-factchecks_claim_reviews.parquet
-factchecks_politifact.parquet
-
-❌ INCORRECT (using hyphens):
-jurisdictions-cities.parquet
-social-twitter.parquet
-meetings-government-meetings.parquet
-surveys-national-polls.parquet
-factchecks-claim-reviews.parquet
-```
-
-**Why Underscores?**
-- ✅ Python-friendly variable names (can use `data.jurisdictions_cities`)
-- ✅ SQL-compatible column names
-- ✅ Consistent with folder structure (`school_districts`, not `school-districts`)
-- ✅ Better for programmatic access
-- ✅ Avoids shell escaping issues
-
-**Repository Name Exception:**
-- HuggingFace repo: `CommunityOne/open-navigator-data` (hyphen is fine for URLs)
-- File names inside repo: Use underscores (`jurisdictions_cities.parquet`)
-
-## 🔄 Data Extraction Pipeline
-
-### Phase 1: Discovery (Bronze Layer)
-1. **Census Data** → Jurisdictions list
-2. **GSA Domains** → Government websites
-3. **NCES** → School districts with financial data (F-33 forms)
-4. **IRS TEOS** → Nonprofit EINs (3M+ organizations)
-5. **Census of Governments** → Municipal budgets & finances
-6. **URL Discovery** → Meeting platforms, YouTube, budget PDFs
-7. **Social Media** → Twitter, Facebook accounts
-
-### Phase 2: Enrichment (Silver Layer)
-1. **ProPublica Nonprofit Explorer** → Financial data, NTEE codes, 990 filings
-2. **Every.org API** → Nonprofit causes, missions, logos
-3. **NCES F-33 Finance Survey** → School district budgets, per-pupil spending
-4. **Census Annual Survey** → State/local government finances
-5. **Municipal Securities Rulemaking Board (EMMA)** → Bond debt data
-6. **YouTube API** → Channel statistics
-7. **Open States** → Legislative data
-8. **Wikidata SPARQL** → Entity relationships
-9. **DBpedia** → Wikipedia structured data
-10. **Google Civic** → Representatives
-
-### Phase 3: Processing (Gold Layer)
-1. **Meeting Extraction** → Agenda/minutes text
-2. **Video Transcripts** → YouTube captions
-3. **Document Analysis** → Keyword detection
-4. **Relationship Mapping** → Entity connections
-5. **Oral Health Filtering** → Topic classification
-
 ## 📊 Data Statistics
 
 | Entity Type | Estimated Count | Source |
@@ -929,8 +1302,28 @@ factchecks-claim-reviews.parquet
 | Ballot Measures | TBD | State/local election sites |
 | State Bills | 100,000+ | Open States API |
 | Policy Topics | ~50 | Curated + extracted |
+| **Analytics & Standards** | | |
+| Date Dimension Records | ~7,300 | 20 years (2010-2030) |
+| Metric Views | ~100 | Pre-computed analytics definitions |
+| Temporal Relationships | ~1M+ | Date keys for all time-based entities |
+| Schema.org JSON-LD Exports | ~500K+ | Event, Person, Organization, Legislation, ClaimReview |
+| Popolo Exports | ~100K+ | Person, Organization, Membership, VoteEvent |
+| CEDS-Aligned Records | 13,000+ | School districts with NCES Element IDs |
+| OCD Division IDs | 22,000+ | All jurisdictions with standardized identifiers |
+| **Fact-Checking** | | |
+| Verified Claims | ~50K+ | Google Fact Check API |
+| PolitiFact Ratings | ~20K+ | Truth-O-Meter rulings |
+| FactCheck.org Articles | ~10K+ | Verified fact-checks |
+| **Vocabulary & Concepts (OMOP-Inspired)** | | |
+| Concept Entries | ~2M+ | Cities, nonprofits, officials, topics, demographics |
+| Vocabularies | 10+ | OCD_ID, IRS_NTEE, US_Census, NCES, OHDSI (Gender/Race/Ethnicity) |
+| Concept Classes | 20+ | City, County, 501c3, Mayor, Health Policy, etc. |
+| Concept Relationships | ~5M+ | Hierarchies (City→County→State), Associations (Topic→Legislation) |
+| OHDSI Gender Concepts | 3 | MALE, FEMALE, OTHER (Athena standard) |
+| OHDSI Race Concepts | 20+ | Census OMB categories (Athena standard) |
+| OHDSI Ethnicity Concepts | 2 | Hispanic or Latino, Not Hispanic or Latino (Athena standard) |
 
-## � Meeting & Event Types
+## 📝 Meeting & Event Types
 
 ### Event Categories in the MEETING Entity
 
@@ -1510,6 +1903,296 @@ CREATE INDEX idx_advocacy_jurisdiction
 ON metric_advocacy_activity_mat(jurisdiction_id);
 ```
 
+## 🔧 System-Internal Tables (OMOP-Inspired Vocabulary)
+
+**Purpose:** Standardized terminology and concept management following OHDSI OMOP Common Data Model principles. These tables provide semantic interoperability and enable precise data linkage across all entities.
+
+**⚠️ Technical Note:** These are internal reference tables used by data engineers and ETL pipelines. Non-technical users can ignore this section.
+
+<ZoomableMermaid 
+  title="Vocabulary & Concept System (OMOP-Inspired)"
+  initialScale={8}
+  value={`
+erDiagram
+    %% ========================================
+    %% VOCABULARY SYSTEM (OMOP-Inspired)
+    %% Based on OHDSI Athena vocabulary structure
+    %% ID range: 2,000,000,000+ for custom civic concepts
+    %% ========================================
+    
+    VOCABULARY ||--o{ CONCEPT : contains
+    CONCEPT_CLASS ||--o{ CONCEPT : categorizes
+    DOMAIN ||--o{ CONCEPT : groups
+    CONCEPT ||--o{ CONCEPT_RELATIONSHIP : source
+    CONCEPT ||--o{ CONCEPT_RELATIONSHIP : target
+    
+    VOCABULARY {
+        string vocabulary_id PK
+        string vocabulary_name
+        string vocabulary_reference
+        string vocabulary_version
+        string vocabulary_concept_id FK
+    }
+    
+    DOMAIN {
+        string domain_id PK
+        string domain_name
+        string domain_concept_id FK
+    }
+    
+    CONCEPT_CLASS {
+        string concept_class_id PK
+        string concept_class_name
+        string concept_class_concept_id FK
+    }
+    
+    CONCEPT {
+        int concept_id PK "Unique ID (2B+ for custom)"
+        string concept_name "Display name"
+        string domain_id FK "Jurisdiction, Nonprofit, Policy"
+        string vocabulary_id FK "OCD_ID, IRS_NTEE, US_Census"
+        string concept_class_id FK "City, County, 501c3, Mayor"
+        string standard_concept "S=Standard, C=Classification"
+        string concept_code "External identifier"
+        datetime valid_start_date
+        datetime valid_end_date
+        string invalid_reason
+    }
+    
+    CONCEPT_RELATIONSHIP {
+        int concept_id_1 FK
+        int concept_id_2 FK
+        string relationship_id "Is part of, Regulates, etc"
+        datetime valid_start_date
+        datetime valid_end_date
+        string invalid_reason
+    }
+    
+    %% ========================================
+    %% CONCEPT MAPPING TO EXISTING TABLES
+    %% ========================================
+    
+    CONCEPT ||--o{ JURISDICTION : city_concept_id
+    CONCEPT ||--o{ ORGANIZATION : organization_concept_id
+    CONCEPT ||--o{ LEADER : position_concept_id
+    CONCEPT ||--o{ POLICY_TOPIC : topic_concept_id
+    CONCEPT ||--o{ DEMOGRAPHICS : race_concept_id
+    CONCEPT ||--o{ DEMOGRAPHICS : ethnicity_concept_id
+    CONCEPT ||--o{ DEMOGRAPHICS : gender_concept_id
+`}
+/>
+
+### Vocabulary Sources
+
+| Vocabulary ID | Vocabulary Name | Source | Use Case |
+|---------------|-----------------|--------|----------|
+| **OCD_ID** | Open Civic Data Division IDs | https://github.com/opencivicdata/ocd-division-ids | Standard jurisdiction identifiers |
+| **IRS_NTEE** | IRS National Taxonomy of Exempt Entities | IRS TEOS | Nonprofit classification |
+| **US_Census** | U.S. Census Bureau | Census Gazetteer, ACS | Demographics, geography |
+| **NCES** | National Center for Education Statistics | NCES CCD, F-33 | School districts, education data |
+| **OHDSI_Gender** | OHDSI Gender | Athena | Standard gender concepts (interoperable with medical research) |
+| **OHDSI_Race** | OHDSI Race | Athena | Standard race concepts (OMB Classification) |
+| **OHDSI_Ethnicity** | OHDSI Ethnicity | Athena | Standard ethnicity concepts (Hispanic/Latino) |
+| **OpenNavigator** | Custom Civic Concepts | Internal | Cities, officials, topics (ID > 2,000,000,000) |
+
+### Concept Classes for Civic Data
+
+| Concept Class | Domain | Examples |
+|---------------|--------|----------|
+| **City** | Jurisdiction | Incorporated places, consolidated city-counties |
+| **County** | Jurisdiction | U.S. counties, county equivalents |
+| **State** | Jurisdiction | U.S. states, territories, DC |
+| **School District** | Jurisdiction | LEAs (Local Educational Agencies) |
+| **501c3** | Nonprofit | Tax-exempt charitable organizations |
+| **501c4** | Nonprofit | Social welfare organizations |
+| **Mayor** | Position | Chief executive of city government |
+| **Council Member** | Position | Legislative member |
+| **Superintendent** | Position | School district chief administrator |
+| **Health Policy** | Topic | Fluoridation, nutrition, dental care |
+| **Education Policy** | Topic | School funding, curriculum, facilities |
+
+### Example Concept Entries
+
+```sql
+-- Standard concept for a city
+INSERT INTO CONCEPT VALUES (
+    2000000001,                    -- concept_id (custom range)
+    'Birmingham, Alabama',         -- concept_name
+    'Jurisdiction',                -- domain_id
+    'OCD_ID',                      -- vocabulary_id
+    'City',                        -- concept_class_id
+    'S',                           -- standard_concept (Standard)
+    'ocd-division/country:us/state:al/place:birmingham',  -- concept_code
+    '2020-01-01',                  -- valid_start_date
+    '2099-12-31',                  -- valid_end_date
+    NULL                           -- invalid_reason
+);
+
+-- Concept for a nonprofit cause
+INSERT INTO CONCEPT VALUES (
+    2000000101,                    -- concept_id
+    'Animal Welfare',              -- concept_name
+    'Nonprofit',                   -- domain_id
+    'IRS_NTEE',                    -- vocabulary_id
+    '501c3',                       -- concept_class_id
+    'C',                           -- standard_concept (Classification)
+    'D20',                         -- concept_code (NTEE code)
+    '2020-01-01',
+    '2099-12-31',
+    NULL
+);
+
+-- Gender concept from OHDSI Athena (interoperable with medical research)
+INSERT INTO CONCEPT VALUES (
+    8507,                          -- concept_id (OHDSI standard)
+    'MALE',                        -- concept_name
+    'Gender',                      -- domain_id
+    'OHDSI_Gender',                -- vocabulary_id
+    'Gender',                      -- concept_class_id
+    'S',
+    'M',
+    '1970-01-01',
+    '2099-12-31',
+    NULL
+);
+```
+
+### Concept Relationships
+
+```sql
+-- City is part of County
+INSERT INTO CONCEPT_RELATIONSHIP VALUES (
+    2000000001,                    -- Birmingham, AL (concept_id_1)
+    2000000050,                    -- Jefferson County, AL (concept_id_2)
+    'Is part of',                  -- relationship_id
+    '2020-01-01',
+    '2099-12-31',
+    NULL
+);
+
+-- Topic regulates Legislation
+INSERT INTO CONCEPT_RELATIONSHIP VALUES (
+    2000000201,                    -- Water Fluoridation topic
+    2000000305,                    -- Ordinance 101
+    'Regulates',
+    '2024-01-15',
+    '2099-12-31',
+    NULL
+);
+
+-- Organization addresses Topic
+INSERT INTO CONCEPT_RELATIONSHIP VALUES (
+    2000000401,                    -- Dental Health Foundation
+    2000000201,                    -- Water Fluoridation
+    'Addresses',
+    '2023-06-01',
+    '2099-12-31',
+    NULL
+);
+```
+
+### Implementation in Existing Tables
+
+#### Updated JURISDICTION Schema
+```sql
+CREATE TABLE JURISDICTION (
+    jurisdiction_id VARCHAR(255) PRIMARY KEY,
+    name VARCHAR(255),
+    jurisdiction_type VARCHAR(50),
+    
+    -- OMOP-style concept references
+    city_concept_id INTEGER REFERENCES CONCEPT(concept_id),
+    city_type_concept_id INTEGER REFERENCES CONCEPT(concept_id),  -- e.g., "Consolidated City-County"
+    source_value VARCHAR(255),  -- Original text from data source (e.g., "SF, Calif")
+    
+    state_code VARCHAR(2),
+    county_name VARCHAR(100),
+    population INTEGER,
+    -- ... other fields
+);
+```
+
+#### Updated ORGANIZATION Schema
+```sql
+CREATE TABLE ORGANIZATION (
+    org_id VARCHAR(255) PRIMARY KEY,
+    ein VARCHAR(20),
+    name VARCHAR(255),
+    
+    -- OMOP-style concept references
+    organization_concept_id INTEGER REFERENCES CONCEPT(concept_id),
+    cause_concept_id INTEGER REFERENCES CONCEPT(concept_id),  -- Links to NTEE concept
+    org_type_concept_id INTEGER REFERENCES CONCEPT(concept_id),  -- 501c3, 501c4, etc.
+    source_value VARCHAR(255),  -- Original organization name from IRS
+    
+    ntee_code VARCHAR(10),
+    -- ... other fields
+);
+```
+
+#### Updated DEMOGRAPHICS Schema
+```sql
+CREATE TABLE DEMOGRAPHICS (
+    demographics_id VARCHAR(255) PRIMARY KEY,
+    jurisdiction_id VARCHAR(255) REFERENCES JURISDICTION(jurisdiction_id),
+    
+    -- OMOP-style concept references (OHDSI Athena vocabularies)
+    race_concept_id INTEGER REFERENCES CONCEPT(concept_id),       -- Standard OHDSI race codes
+    ethnicity_concept_id INTEGER REFERENCES CONCEPT(concept_id),  -- Hispanic/Latino classification
+    gender_concept_id INTEGER REFERENCES CONCEPT(concept_id),     -- MALE/FEMALE/OTHER
+    
+    race_source_value VARCHAR(100),      -- Census text (e.g., "White alone")
+    ethnicity_source_value VARCHAR(100), -- Census text
+    gender_source_value VARCHAR(50),     -- Census text
+    
+    -- ... other demographic fields
+);
+```
+
+### Benefits of OMOP-Style Vocabulary
+
+1. **Semantic Interoperability**: Civic data can be joined with healthcare research data using standard OHDSI demographic concepts
+2. **Reproducible IDs**: Deterministic hashing (uuid5) on strings like "JURISDICTION:CITY:NEW_YORK" generates consistent concept_id values
+3. **Version Control**: `valid_start_date` and `valid_end_date` track concept changes over time
+4. **Relationship Tracking**: `CONCEPT_RELATIONSHIP` table captures hierarchies (City → County → State) and associations (Topic → Legislation)
+5. **Source Traceability**: `source_value` preserves original text while `concept_id` provides standardized reference
+
+### ETL Mapping Strategy
+
+```python
+import uuid
+
+def generate_concept_id(domain: str, type: str, identifier: str) -> int:
+    """
+    Generate deterministic concept_id using UUID5.
+    Returns integer > 2,000,000,000 for custom civic concepts.
+    """
+    namespace = uuid.UUID('6ba7b810-9dad-11d1-80b4-00c04fd430c8')  # OMOP namespace
+    concept_string = f"{domain}:{type}:{identifier}".upper()
+    concept_uuid = uuid.uuid5(namespace, concept_string)
+    # Convert to integer in custom range
+    return 2_000_000_000 + (int(concept_uuid.hex[:8], 16) % 1_000_000_000)
+
+# Example usage
+city_concept_id = generate_concept_id("JURISDICTION", "CITY", "NEW_YORK")
+print(city_concept_id)  # e.g., 2045879021 (repeatable)
+```
+
+### Downloading OHDSI Athena Vocabularies
+
+1. Visit https://athena.ohdsi.org/
+2. Select vocabularies:
+   - ✅ Gender
+   - ✅ Race
+   - ✅ Ethnicity  
+   - ✅ Geography (US Counties, States)
+3. Download CSV files
+4. Import into `vocabulary/` folder:
+   - `vocabulary_gender.parquet`
+   - `vocabulary_race.parquet`
+   - `vocabulary_ethnicity.parquet`
+   - `vocabulary_geography.parquet`
+
 ## 🎯 Missing Datasets to Add
 
 ### High Priority
@@ -1575,6 +2258,12 @@ ON metric_advocacy_activity_mat(jurisdiction_id);
 ### Data Standards & Specifications
 
 - **[Popolo Project](https://github.com/popolo-project/popolo-spec)** - Open government data specification for people, organizations, and elected positions. Our LEADER, ORGANIZATION, and JURISDICTION entities follow Popolo schema conventions for maximum interoperability with civic tech platforms.
+
+- **[Schema.org](https://schema.org/)** - W3C structured data vocabulary for semantic web. Our entities map to Schema.org types (Event, Person, Organization, Legislation, ClaimReview, etc.) enabling SEO-optimized JSON-LD exports, Google Search rich results, and voice assistant compatibility.
+
+- **[Common Education Data Standards (CEDS)](https://ceds.ed.gov/)** - U.S. Department of Education data standards for K-12, postsecondary, and workforce data. Our SCHOOL_DISTRICT entity aligns with CEDS Element IDs and NCES survey specifications (CCD, F-33 Finance).
+
+- **[Open Civic Data (OCD-IDs)](https://open-civic-data.readthedocs.io/en/latest/proposals/0002.html)** - Standardized division identifiers for jurisdictions. Format: `ocd-division/country:us/state:al/place:birmingham`
 
 ### Internal Documentation
 

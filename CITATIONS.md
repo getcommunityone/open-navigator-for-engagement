@@ -184,6 +184,82 @@ The Popolo specification builds upon and references the following W3C, IETF, and
 - Used for: State-level fact-checking, tracking politician claims, ballot measure verification
 - Citation: "PolitiFact. Poynter Institute. https://www.politifact.com/"
 
+### **Schema.org**
+- Structured data vocabulary for semantic web markup
+- Organization: W3C Community Group (sponsors: Google, Microsoft, Yahoo, Yandex)
+- Source: https://schema.org/
+- Documentation: https://schema.org/docs/schemas.html
+- License: Creative Commons Attribution-ShareAlike License (CC BY-SA 3.0)
+- Coverage: 800+ types, 1,400+ properties for describing web content
+- Used for: SEO-optimized structured data, JSON-LD exports, API documentation, search engine compatibility
+- Citation: "Schema.org. W3C Community Group. https://schema.org/"
+
+**Our Schema.org Type Mappings:**
+
+| Our Entity | Schema.org Type | Properties Used | Use Case |
+|------------|----------------|-----------------|----------|
+| JURISDICTION | [AdministrativeArea](https://schema.org/AdministrativeArea) | name, address, geo, telephone, url | City/county geographic data |
+| MEETING | [Event](https://schema.org/Event) + [GovernmentService](https://schema.org/GovernmentService) | name, startDate, location, organizer, description | Public meetings, hearings |
+| LEADER | [Person](https://schema.org/Person) + [GovernmentOfficial](https://schema.org/GovernmentOfficial) | name, email, telephone, jobTitle, worksFor | Elected officials |
+| ORGANIZATION | [Organization](https://schema.org/Organization) + [NGO](https://schema.org/NGO) | name, address, telephone, url, foundingDate | Nonprofits, agencies |
+| LEGISLATION | [Legislation](https://schema.org/Legislation) | name, legislationDate, legislationPassedBy, legislationType | Bills, ordinances |
+| BALLOT_MEASURE | [Legislation](https://schema.org/Legislation) + referendumProposal | name, datePosted, legislationChanges | Referendums, propositions |
+| VOTE | [VoteAction](https://schema.org/VoteAction) | agent (Person), candidate (Legislation), actionOption | Roll call votes |
+| FACT_CHECK | [ClaimReview](https://schema.org/ClaimReview) | claimReviewed, reviewRating, author, datePublished | Verified fact-checks |
+| SCHOOL_DISTRICT | [EducationalOrganization](https://schema.org/EducationalOrganization) | name, address, telephone, numberOfStudents | K-12 school districts |
+| NONPROFIT_FINANCES | [MonetaryGrant](https://schema.org/MonetaryGrant) | funder, amount, fundedItem | IRS Form 990 data |
+| VIDEO | [VideoObject](https://schema.org/VideoObject) | name, description, uploadDate, duration, thumbnailUrl | Meeting recordings |
+| DOCUMENT | [DigitalDocument](https://schema.org/DigitalDocument) | name, fileFormat, datePublished, url | PDFs, agendas, minutes |
+
+**Benefits:**
+- ✅ **SEO Enhancement**: Google Search rich results for meetings, officials, organizations
+- ✅ **Voice Assistant Ready**: Alexa, Google Assistant can parse our structured data
+- ✅ **Knowledge Graph**: Data appears in Google Knowledge Panels
+- ✅ **API Discoverability**: Standards-compliant REST/GraphQL responses
+- ✅ **Cross-platform**: Compatible with Apple Podcasts, Microsoft Bing, Yandex
+
+### **Common Education Data Standards (CEDS)**
+- Comprehensive education data standards for K-12, postsecondary, and workforce
+- Organization: U.S. Department of Education, National Center for Education Statistics (NCES)
+- Source: https://ceds.ed.gov/
+- GitHub: https://github.com/CEDStandards
+- Specification Repository: https://github.com/CEDStandards/CEDS-Elements
+- License: Public Domain (U.S. Government)
+- Coverage: 2,300+ data elements, 500+ option sets, alignment with NCES surveys
+- Used for: School district data modeling, NCES interoperability, education finance tracking
+- Citation: "Common Education Data Standards (CEDS). National Center for Education Statistics. https://ceds.ed.gov/"
+
+**CEDS Alignment for School Districts:**
+
+| Our Field | CEDS Element ID | CEDS Element Name | Description |
+|-----------|----------------|-------------------|-------------|
+| `nces_id` | 000827 | LEA Identifier (NCES) | National Center for Education Statistics LEA ID |
+| `district_name` | 000168 | Name of Institution | Legal name of the school district |
+| `district_type` | 000108 | LEA Type | Local, State, Federal, or Other |
+| `total_students` | 001475 | Student Count | Total number of students enrolled |
+| `total_schools` | 000856 | Number of Schools | Count of schools in district |
+| `total_revenue` | 000612 | Total Revenue | Sum of all revenue sources |
+| `total_expenditures` | 000611 | Total Expenditures | Sum of all spending categories |
+| `per_pupil_spending` | 000613 | Expenditure per Student | Total expenditures / student count |
+| `federal_revenue` | 000614 | Federal Revenue | Revenue from federal government |
+| `state_revenue` | 000615 | State Revenue | Revenue from state sources |
+| `local_revenue` | 000616 | Local Revenue | Revenue from property taxes, bonds |
+| `superintendent` | 000240 | Chief Administrator Name | District superintendent name |
+| `school_year` | 000243 | School Year | Academic year (e.g., 2023-2024) |
+
+**CEDS Option Sets Used:**
+- **LEA Type** (CEDS 000108): Regular, Specialized, Supervisory Union, Service Agency, State Agency, Federal Agency
+- **Grade Level** (CEDS 000100): PK, KG, 01-12, UG (ungraded)
+- **Operational Status** (CEDS 000533): Open, Closed, New, Added, Changed Agency, Temporarily Closed
+- **Locale Type** (CEDS 001315): City, Suburb, Town, Rural (NCES Urban-centric locale codes)
+
+**Benefits of CEDS Compliance:**
+- ✅ **NCES Compatibility**: Direct mapping to Common Core of Data (CCD) and F-33 Finance Survey
+- ✅ **State Reporting**: Aligns with state education department data systems
+- ✅ **Federal Grants**: Standardized reporting for ESSA, Title I, IDEA compliance
+- ✅ **Longitudinal Tracking**: Consistent identifiers for multi-year analysis
+- ✅ **Interoperability**: Works with Ed-Fi Alliance, IMS Global, SIF Association standards
+
 ---
 
 ## 🙏 **Acknowledgments**
