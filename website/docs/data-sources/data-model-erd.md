@@ -596,24 +596,24 @@ open-navigator-data/
 │   ├── school_districts    # 13,000+ districts (NCES data)
 │   └── census_data         # Demographics, population, income
 │
-├── social_media/           # 📱 Social media presence
+├── social/                 # 📱 Social media presence
 │   ├── twitter             # Twitter/X accounts
 │   ├── facebook            # Facebook pages
 │   ├── instagram           # Instagram accounts
 │   └── linkedin            # LinkedIn pages
 │
-├── video_platforms/        # 📹 Video & streaming
+├── videos/                 # 📹 Video & streaming platforms
 │   ├── youtube_channels    # Government YouTube channels
 │   ├── vimeo              # Vimeo accounts
 │   └── livestreams        # Live meeting streams
 │
-├── meeting_platforms/      # 🖥️ Meeting management systems
+├── platforms/              # 🖥️ Meeting management systems
 │   ├── legistar           # Legistar URLs
 │   ├── granicus           # Granicus links
 │   ├── suiteone           # SuiteOne systems
 │   └── civicplus          # CivicPlus platforms
 │
-├── government_domains/     # 🌐 Official websites
+├── domains/                # 🌐 Official government websites
 │   ├── gsa_domains        # .gov domain registry
 │   ├── municipal_websites # City/county websites
 │   └── state_portals      # State government sites
@@ -635,24 +635,24 @@ open-navigator-data/
 │   ├── everyorg_data      # Every.org API (missions, causes, logos)
 │   └── nonprofit_990s     # Detailed Form 990 financials (yearly filings)
 │
-├── nonprofit_causes/       # 🎯 Cause & category taxonomy
+├── causes/                 # 🎯 Cause & category taxonomy
 │   ├── ntee_codes         # IRS NTEE classification system
 │   └── everyorg_causes    # Every.org cause tags
 │
-├── government_finances/    # 💰 Municipal & state budgets
+├── budgets/                # 💰 Government budgets & finances
 │   ├── city_budgets       # City/municipal budgets & spending
 │   ├── county_budgets     # County budgets & expenditures
 │   ├── state_budgets      # State government finances
 │   ├── school_budgets     # School district finances (NCES F-33)
 │   └── bond_debt          # Municipal bonds & debt obligations
 │
-├── civic_data/            # 🗳️ Google Civic & Wikidata
+├── civic/                  # 🗳️ Google Civic & Wikidata
 │   ├── civic_divisions    # OCD divisions
 │   ├── representatives    # From Google Civic API
 │   ├── wikidata_entities  # Structured entities
 │   └── dbpedia_resources  # Wikipedia infobox data
 │
-├── ballot_measures/        # 🗳️ Ballot initiatives & referendums
+├── ballots/                # 🗳️ Ballot initiatives & referendums
 │   ├── state_measures      # State propositions (fluoridation votes!)
 │   ├── local_measures      # City/county ballot questions
 │   └── election_results    # Historical voting outcomes
@@ -662,7 +662,7 @@ open-navigator-data/
 │   ├── local_ordinances    # Municipal codes & resolutions
 │   └── policy_tracking     # Bill status & outcomes
 │
-└── policy_topics/          # 🎯 Advocacy causes & campaigns
+└── topics/                 # 🎯 Advocacy causes & campaigns
     ├── topic_definitions   # Oral health, fluoridation, dental access
     ├── jurisdiction_topics # What each city is discussing
     └── advocacy_alerts     # Opportunities for engagement
@@ -757,7 +757,7 @@ The NONPROFIT_FINANCES entity tracks **10 different revenue sources** to underst
 
 - **`overhead_ratio`** = (admin_expenses + fundraising_expenses) / total_expenses
   - Lower = more efficient (more goes to programs)
-  - Industry benchmark: <25% overhead is "good"
+  - Industry benchmark: &lt;25% overhead is "good"
 
 - **`fundraising_efficiency`** = contributions_received / fundraising_expenses
   - Higher = better (more money raised per dollar spent)
