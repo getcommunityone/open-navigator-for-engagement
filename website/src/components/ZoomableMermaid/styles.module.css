@@ -131,12 +131,6 @@ html[data-theme='dark'] .zoomButton {
   .zoomControls {
     top: 60px;
     right: 10px;
-  }
-}
-  
-  .zoomControls {
-    top: 60px;
-    right: 10px;
     flex-direction: row;
     padding: 6px;
   }
