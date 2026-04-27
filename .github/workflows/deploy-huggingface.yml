@@ -6,7 +6,7 @@ on:
       - deploy
   workflow_dispatch:
     inputs:
-      hf_username:
+      HF_USERNAME:
         description: "Hugging Face username (overrides HF_USERNAME secret)"
         required: false
         type: string
@@ -40,14 +40,14 @@ jobs:
 
       - name: Configure Git credentials for Hugging Face
         env:
-          HF_USERNAME: ${{ inputs.hf_username || secrets.HF_USERNAME }}
+          HF_USERNAME: ${{ inputs.HF_USERNAME || secrets.HF_USERNAME }}
           HUGGINGFACE_TOKEN: ${{ secrets.HUGGINGFACE_TOKEN }}
         run: |
           git config --global url."https://${HF_USERNAME}:${HUGGINGFACE_TOKEN}@huggingface.co/".insteadOf "https://huggingface.co/"
 
       - name: Deploy to Hugging Face Spaces
         env:
-          HF_USERNAME: ${{ inputs.hf_username || secrets.HF_USERNAME }}
+          HF_USERNAME: ${{ inputs.HF_USERNAME || secrets.HF_USERNAME }}
           HUGGINGFACE_TOKEN: ${{ secrets.HUGGINGFACE_TOKEN }}
         run: |
           chmod +x ./deploy-huggingface.sh
