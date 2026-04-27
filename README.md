@@ -1,16 +1,19 @@
 ---
 title: Open Navigator for Engagement
-emoji: 🦷
+emoji: 🏛️
 colorFrom: blue
 colorTo: green
 sdk: docker
 app_port: 7860
 pinned: false
+license: mit
 ---
 
-# Open Navigator for Engagement
+# 🏛️ Open Navigator for Engagement
 
-> *AI-powered community impact and engagement finder with React + FastAPI web interface*
+> *Find opportunities in local meetings, budgets, and public records*
+>
+> AI-powered civic engagement platform with React + FastAPI web interface
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)

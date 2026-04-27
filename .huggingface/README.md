@@ -7,6 +7,7 @@ sdk: docker
 pinned: false
 license: mit
 app_port: 7860
+short_description: Find opportunities in local meetings, budgets, and public records
 ---
 
 # 🏛️ Open Navigator for Engagement
