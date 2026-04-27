@@ -54,13 +54,16 @@ class NonprofitDiscovery:
         
         API Docs: https://projects.propublica.org/nonprofits/api
         
+        NOTE: NTEE filtering is done CLIENT-SIDE due to ProPublica API bug
+              that causes 500 errors when using ntee[id] parameter.
+        
         Args:
             state: 2-letter state code (e.g., "AL")
-            ntee_code: NTEE major group (e.g., "E" for health)
+            ntee_code: NTEE major group (e.g., "E" for health) - filtered client-side
             city: City name (e.g., "Tuscaloosa")
         
         Returns:
-            List of nonprofit records
+            List of nonprofit records (filtered by NTEE if specified)
         """
         cache_file = self.cache_dir / f"propublica_{state}_{ntee_code or 'all'}_{city or 'all'}.json"
         
@@ -72,12 +75,10 @@ class NonprofitDiscovery:
         
         base_url = "https://projects.propublica.org/nonprofits/api/v2/search.json"
         
+        # Build params - NOTE: Excluding ntee[id] due to API 500 error bug
         params = {
             "state[id]": state,
         }
-        
-        if ntee_code:
-            params["ntee[id]"] = ntee_code
         
         if city:
             params["q"] = city
@@ -90,25 +91,36 @@ class NonprofitDiscovery:
         
         for attempt in range(max_retries):
             try:
-                logger.info(f"Searching ProPublica API: state={state}, ntee={ntee_code}, city={city} (attempt {attempt + 1}/{max_retries})")
+                logger.info(f"Searching ProPublica API: state={state}, city={city} (attempt {attempt + 1}/{max_retries})")
+                if ntee_code:
+                    logger.info(f"  → Will filter for NTEE code '{ntee_code}' client-side after retrieval")
+                    
                 response = requests.get(base_url, params=params, timeout=30)
                 response.raise_for_status()
                 
                 data = response.json()
                 organizations = data.get("organizations", [])
                 
-                logger.success(f"Found {len(organizations)} organizations from ProPublica")
+                logger.success(f"Retrieved {len(organizations)} organizations from ProPublica")
                 
                 # Parse results
                 nonprofits = []
                 for org in organizations:
+                    org_ntee = org.get("ntee_code", "")
+                    
+                    # CLIENT-SIDE NTEE FILTERING (workaround for API bug)
+                    if ntee_code and org_ntee:
+                        # Check if org's NTEE code starts with requested code
+                        if not org_ntee.startswith(ntee_code):
+                            continue  # Skip this org, doesn't match filter
+                    
                     nonprofit = {
                         "source": "propublica",
                         "ein": org.get("ein"),
                         "name": org.get("name"),
                         "city": org.get("city"),
                         "state": org.get("state"),
-                        "ntee_code": org.get("ntee_code"),
+                        "ntee_code": org_ntee,
                         "subsection_code": org.get("subsection_code"),
                         "classification_codes": org.get("classification_codes", ""),
                         "ruling_date": org.get("ruling_date"),
@@ -125,9 +137,14 @@ class NonprofitDiscovery:
                         "asset_amount": org.get("asset_amount"),
                         "income_amount": org.get("income_amount"),
                         "revenue_amount": org.get("revenue_amount"),
-                        "ntee_description": self._get_ntee_description(org.get("ntee_code"))
+                        "ntee_description": self._get_ntee_description(org_ntee)
                     }
                     nonprofits.append(nonprofit)
+                
+                if ntee_code:
+                    logger.success(f"Filtered to {len(nonprofits)} organizations matching NTEE code '{ntee_code}'")
+                else:
+                    logger.success(f"Returning all {len(nonprofits)} organizations")
                 
                 # Cache results
                 with open(cache_file, 'w') as f:
@@ -145,7 +162,7 @@ class NonprofitDiscovery:
                         continue
                     else:
                         logger.error(f"ProPublica API failed after {max_retries} attempts: {e}")
-                        logger.warning(f"Skipping state={state}, ntee={ntee_code} - API unavailable")
+                        logger.warning(f"Skipping state={state}, city={city} - API unavailable")
                         return []
                 else:
                     # Other HTTP errors

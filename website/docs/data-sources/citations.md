@@ -38,7 +38,7 @@ This page documents all data sources, standards, and research contributions used
   </a>
   <a href="#nonprofit--philanthropy" className="card" style={{textDecoration: 'none', padding: '15px', borderLeft: '4px solid #F44336'}}>
     <strong>🏢 Nonprofit & Philanthropy</strong><br/>
-    <span style={{fontSize: '0.9em', color: '#666'}}>ProPublica, Every.org, Findhelp, 211, Microsoft CDM, ARDA, HIFLD, NCS</span>
+    <span style={{fontSize: '0.9em', color: '#666'}}>ProPublica (Nonprofits, Congress, Campaign Finance, Vital Signs), Every.org, Findhelp, 211, Microsoft CDM, ARDA, HIFLD, NCS</span>
   </a>
   <a href="#-fact-checking" className="card" style={{textDecoration: 'none', padding: '15px', borderLeft: '4px solid #8BC34A'}}>
     <strong>✅ Fact-Checking</strong><br/>
@@ -525,6 +525,9 @@ concept_id_1 | concept_id_2 | relationship_id
 
 **In this section:**
 - [ProPublica Nonprofit Explorer](#propublica-nonprofit-explorer)
+- [ProPublica Congress API](#propublica-congress-api)
+- [ProPublica Campaign Finance API](#propublica-campaign-finance-api)
+- [ProPublica Vital Signs API](#propublica-vital-signs-api)
 - [Every.org Charity API](#everyorg-charity-api)
 - [Findhelp.org (Aunt Bertha)](#findhelporg-aunt-bertha)
 - [211 Regional Directories](#211-regional-directories)
@@ -557,6 +560,121 @@ concept_id_1 | concept_id_2 | relationship_id
   title = {Nonprofit Explorer},
   year = {2024},
   url = {https://projects.propublica.org/nonprofits/},
+  note = {Accessed: 2024}
+}
+```
+
+---
+
+### ProPublica Congress API
+
+**Organization:** ProPublica, Inc.  
+**What we use:** Legislative data including roll-call votes, member information, bills, and congressional activity to link policy decisions to government meetings.
+
+- **Source:** https://projects.propublica.org/api-docs/congress-api/
+- **API Documentation:** https://projects.propublica.org/api-docs/congress-api/
+- **Coverage:** U.S. Congress data from 102nd Congress (1991) to present
+- **Data Included:**
+  - Roll-call votes by member and bill
+  - Bill information, status, and amendments
+  - Member biographical data and voting records
+  - Committee assignments and leadership
+  - Congressional statements and floor appearances
+- **Access:** **API Key Required** (Free - sign up at https://www.propublica.org/datastore/api/propublica-congress-api)
+- **Authentication:** Include as HTTP header: `X-API-Key: YOUR_API_KEY`
+- **Rate Limits:** 5,000 requests per day
+- **License:** Free for non-commercial and commercial use with attribution
+
+**Use Cases:**
+- Link local government meetings to federal legislation
+- Track how elected officials vote on issues discussed locally
+- Correlate campaign contributions with voting patterns
+
+**BibTeX:**
+```bibtex
+@misc{propublica_congress,
+  author = {{ProPublica}},
+  title = {Congress API},
+  year = {2024},
+  url = {https://projects.propublica.org/api-docs/congress-api/},
+  note = {Accessed: 2024}
+}
+```
+
+---
+
+### ProPublica Campaign Finance API
+
+**Organization:** ProPublica, Inc.  
+**What we use:** Federal Election Commission (FEC) filings, campaign contributions, committee data, and expenditures to analyze the influence of money in politics.
+
+- **Source:** https://projects.propublica.org/api-docs/campaign-finance/
+- **API Documentation:** https://projects.propublica.org/api-docs/campaign-finance/
+- **Coverage:** FEC data from 2000 election cycle to present
+- **Data Included:**
+  - Candidate financial summaries and filings
+  - Committee information and contributions
+  - Individual and organizational donor data
+  - Independent expenditures and disbursements
+  - Top donors by industry and geography
+- **Access:** **API Key Required** (Free - sign up at https://www.propublica.org/datastore/api/campaign-finance-api)
+- **Authentication:** Include as HTTP header: `X-API-Key: YOUR_API_KEY`
+- **Rate Limits:** 5,000 requests per day
+- **License:** Free for non-commercial and commercial use with attribution
+
+**Use Cases:**
+- "Follow the money" - link campaign contributions to policy decisions
+- Analyze donor influence on local and federal officials
+- Track funding sources for ballot initiatives and referendums
+- Political economy analysis: correlate budget decisions with donor interests
+
+**BibTeX:**
+```bibtex
+@misc{propublica_campaign_finance,
+  author = {{ProPublica}},
+  title = {Campaign Finance API},
+  year = {2024},
+  url = {https://projects.propublica.org/api-docs/campaign-finance/},
+  note = {Accessed: 2024}
+}
+```
+
+---
+
+### ProPublica Vital Signs API
+
+**Organization:** ProPublica, Inc.  
+**What we use:** Healthcare provider data including doctors, facilities, disciplinary actions, and Medicare participation to support oral health policy analysis.
+
+- **Source:** https://projects.propublica.org/vital-signs/
+- **API Documentation:** https://projects.propublica.org/api-docs/vital-signs/
+- **Coverage:** 1,000,000+ healthcare providers across the United States
+- **Data Included:**
+  - Doctor biographical information and specialties
+  - Medical school and residency training
+  - Hospital affiliations and group practices
+  - State medical board disciplinary actions
+  - Medicare participation and payments
+  - Malpractice claims and settlements
+- **Access:** **API Key Required** (Free - sign up at https://www.propublica.org/datastore/api/vital-signs-api)
+- **Authentication:** Include as HTTP header: `X-API-Key: YOUR_API_KEY`
+- **Rate Limits:** 5,000 requests per day
+- **License:** Free for non-commercial and commercial use with attribution
+
+**Use Cases:**
+- Map dental care access and provider availability
+- Link health policy discussions to provider networks
+- Identify healthcare deserts and underserved areas
+- Track quality metrics for oral health providers
+- Correlate public health outcomes with provider density
+
+**BibTeX:**
+```bibtex
+@misc{propublica_vital_signs,
+  author = {{ProPublica}},
+  title = {Vital Signs: Health Care Provider Data},
+  year = {2024},
+  url = {https://projects.propublica.org/vital-signs/},
   note = {Accessed: 2024}
 }
 ```
@@ -1488,7 +1606,7 @@ We are grateful to the following organizations and individuals:
 
 **Data Platforms & Organizations:**
 - HuggingFace for dataset hosting
-- ProPublica for nonprofit financial data (3M+ organizations)
+- ProPublica for nonprofit financial data (3M+ organizations), congressional voting records, campaign finance data, and healthcare provider information
 - Open States for legislative data
 - OHDSI for OMOP Common Data Model (vocabulary system)
 - Every.org for charity metadata and mission statements
