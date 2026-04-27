@@ -457,6 +457,68 @@ erDiagram
         string split
         datetime ingested_at
     }
+    
+    %% ========================================
+    %% BALLOT MEASURES & ADVOCACY
+    %% ========================================
+    
+    JURISDICTION ||--o{ BALLOT_MEASURE : hosts
+    STATE_LEGISLATURE ||--o{ BALLOT_MEASURE : proposes
+    POLICY_TOPIC ||--o{ BALLOT_MEASURE : addresses
+    BALLOT_MEASURE {
+        string measure_id PK
+        string jurisdiction_id FK
+        string state_code
+        datetime election_date
+        string measure_number
+        string title
+        string description
+        string measure_type
+        string topic_category
+        string status
+        string result
+        int yes_votes
+        int no_votes
+        float yes_percentage
+        string full_text_url
+        string ballotpedia_url
+        datetime created_at
+    }
+    
+    POLICY_TOPIC ||--o{ MEETING : discussed_in
+    POLICY_TOPIC ||--o{ LEGISLATION : addresses
+    POLICY_TOPIC {
+        string topic_id PK
+        string topic_name
+        string category
+        string description
+        string keywords
+        int priority_level
+        string icon
+        int jurisdiction_count
+    }
+    
+    JURISDICTION ||--o{ LEGISLATION : enacts
+    STATE_LEGISLATURE ||--o{ LEGISLATION : proposes
+    LEGISLATION {
+        string bill_id PK
+        string jurisdiction_id FK
+        string state_code
+        string bill_number
+        string title
+        string description
+        string status
+        string sponsor
+        datetime introduced_date
+        datetime passed_date
+        datetime effective_date
+        string full_text_url
+        string openstates_url
+        string topic_category
+        string chamber
+        int vote_yes
+        int vote_no
+    }
 `}
 />
 
@@ -473,19 +535,19 @@ oral-health-policy-data/
 │   └── social_media       # Twitter, Facebook accounts
 │
 ├── meetings/               # Meeting data
-│   ├── agendas            # Meeting agendas (string extracted)
-│   ├── minutes            # Meeting minutes (string extracted)
+│   ├── agendas            # Meeting agendas (text extracted)
+│   ├── minutes            # Meeting minutes (text extracted)
 │   ├── videos             # YouTube/Vimeo video metadata
 │   └── documents          # Associated documents
 │
 ├── officials/              # Elected officials & leaders
 │   ├── local_officials    # City/county officials
-│   ├── state_legislators  # From Open States
+│   ├── state_legislators  # From Open States API
 │   └── school_board       # School board members
 │
 ├── organizations/          # Nonprofits & charities
-│   ├── irs_nonprofits     # IRS 990 data
-│   └── organizational_data
+│   ├── irs_nonprofits     # IRS 990 data (3M+ organizations)
+│   └── organizational_data # Mission, programs, financials
 │
 ├── civic_data/            # Google Civic & Wikidata
 │   ├── civic_divisions    # OCD divisions
@@ -493,8 +555,23 @@ oral-health-policy-data/
 │   ├── wikidata_entities  # Structured entities
 │   └── dbpedia_resources  # Wikipedia infobox data
 │
-└── schools/               # School districts
-    └── nces_districts     # NCES Common Core Data
+├── schools/               # School districts (NCES)
+│   └── nces_districts     # 13,000+ districts, enrollment, budgets
+│
+├── ballot_measures/        # 🆕 Ballot initiatives & referendums
+│   ├── state_measures      # State propositions (fluoridation votes!)
+│   ├── local_measures      # City/county ballot questions
+│   └── election_results    # Historical voting outcomes
+│
+├── legislation/            # 🆕 Bills, ordinances, resolutions
+│   ├── state_bills         # From Open States API (52 states)
+│   ├── local_ordinances    # Municipal codes & resolutions
+│   └── policy_tracking     # Bill status & outcomes
+│
+└── policy_topics/          # 🆕 Advocacy causes & campaigns
+    ├── topic_definitions   # Oral health, fluoridation, dental access
+    ├── jurisdiction_topics # What each city is discussing
+    └── advocacy_alerts     # Opportunities for engagement
 ```
 
 ## 🔄 Data Extraction Pipeline
@@ -534,21 +611,27 @@ oral-health-policy-data/
 | State Legislators | 7,300+ | Open States |
 | Meetings | 500,000+ | Scraped |
 | Documents | 2,000,000+ | PDF extraction |
+| Ballot Measures | TBD | State/local election sites |
+| State Bills | 100,000+ | Open States API |
+| Policy Topics | ~50 | Curated + extracted |
 
 ## 🎯 Missing Datasets to Add
 
 ### High Priority
+- [x] **Ballot Measures** - ✅ Added to data model! Fluoridation votes, bond measures
+- [x] **State Legislation** - ✅ Added to data model! Open States API (FREE)
+- [x] **Policy Topics** - ✅ Added to data model! Oral health advocacy tracking
 - [ ] **Census Demographics** - Full census data per jurisdiction
 - [ ] **Budget Documents** - Municipal budgets & spending
 - [ ] **Procurement Records** - Government contracts
 - [ ] **Election Results** - Historical voting data
-- [ ] **Property Records** - Public assessment data
-- [ ] **Crime Statistics** - UCR/NIBRS data
-- [ ] **Health Outcomes** - CDC PLACES data
-- [ ] **Environmental Data** - EPA monitoring
+- [ ] **Health Outcomes** - CDC PLACES data (oral health metrics!)
+- [ ] **Environmental Data** - EPA water quality (fluoridation levels)
 
 ### Medium Priority
-- [ ] **Business Licenses** - Local business registrations
+- [ ] **Property Records** - Public assessment data
+- [ ] **Crime Statistics** - UCR/NIBRS data
+- [ ] **Business Licenses** - Local business registrations (dental clinics!)
 - [ ] **Building Permits** - Construction activity
 - [ ] **Code Violations** - Inspection records
 - [ ] **Police Reports** - Public safety incidents
@@ -559,7 +642,7 @@ oral-health-policy-data/
 ### Integration Improvements
 - [ ] **Full Wikidata Sync** - All civic entities
 - [ ] **DBpedia Expansion** - Complete local government coverage
-- [ ] **Ballotpedia Data** - (if budget allows) Electoral info
+- [ ] **Ballotpedia Data** - (if budget allows) Electoral info & analysis
 - [ ] **Court Records** - Public dockets
 - [ ] **Tax Records** - Property tax data
 
