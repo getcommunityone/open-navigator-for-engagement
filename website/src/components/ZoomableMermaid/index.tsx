@@ -18,7 +18,7 @@ export default function ZoomableMermaid({ value, title }: ZoomableMermaidProps):
         </span>
       </div>
       <TransformWrapper
-        initialScale={3}
+        initialScale={2.5}
         minScale={0.2}
         maxScale={8}
         centerOnInit={true}
@@ -26,6 +26,7 @@ export default function ZoomableMermaid({ value, title }: ZoomableMermaidProps):
         doubleClick={{ disabled: false }}
         panning={{ velocityDisabled: true }}
         limitToBounds={false}
+        centerZoomedOut={true}
       >
         {({ zoomIn, zoomOut, resetTransform }) => (
           <>
