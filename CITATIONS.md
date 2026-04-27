@@ -98,6 +98,111 @@ July 2023, Toronto, Canada.
 - GitHub: https://github.com/popolo-project/popolo-spec
 - Documentation: http://www.popoloproject.com/specs/
 - License: Creative Commons Attribution 4.0 International
+
+---
+
+## 💰 **Nonprofit Financial Data**
+
+### **GivingTuesday 990 Data Infrastructure** ⭐
+
+We use the GivingTuesday 990 Data Lake for detailed nonprofit financial data from IRS Form 990 XML filings.
+
+**Organization:** GivingTuesday  
+**Website:** https://990data.givingtuesday.org/  
+**Data Lake:** `s3://gt990datalake-rawdata` (AWS S3, us-east-1 Virginia)  
+**Console:** https://us-east-1.console.aws.amazon.com/s3/buckets/gt990datalake-rawdata  
+**License:** Public domain (IRS data) + Open source tools  
+**Access:** Free, no AWS credentials required (`--no-sign-request`)
+
+**What we use:**
+- **Raw 990 XMLs**: Individual e-filed Form 990 returns in XML format
+- **Indices**: CSV files listing all available 990s with metadata
+- **Coverage**: All e-filed 990s (2011-present, ~300K filings/year)
+- **Data extracted**: Revenue, expenses, assets, grants, programs, officer compensation, mission statements
+
+**Data Lake Structure:**
+```
+gt990datalake-rawdata/
+├── EfileData/
+│   └── XmlFiles/              # Individual 990 XMLs
+│       └── [OBJECT_ID]_public.xml
+└── Indices/
+    └── 990xmls/               # CSV indices
+        └── index_all_years_efiledata_xmls_created_on_2023-10-29.csv
+```
+
+**BibTeX:**
+```bibtex
+@misc{givingtuesday990data,
+    title = {GivingTuesday 990 Data Infrastructure},
+    author = {{GivingTuesday}},
+    year = {2023},
+    url = {https://990data.givingtuesday.org/},
+    note = {Collaborative data lake of standardized IRS Form 990 XML filings}
+}
+```
+
+**Attribution:** When publishing analyses using this data, please cite both:
+1. GivingTuesday 990 Data Infrastructure: https://990data.givingtuesday.org/
+2. Our enrichment tools: https://github.com/getcommunityone/open-navigator-for-engagement
+
+---
+
+### **IRS Exempt Organizations Business Master File (EO-BMF)**
+
+Basic nonprofit registration data (name, EIN, address, NTEE code).
+
+### **IRS Exempt Organizations Business Master File (EO-BMF)**
+- Complete database of 1.9M+ U.S. tax-exempt organizations
+- Organization: Internal Revenue Service (IRS)
+- Source: https://www.irs.gov/charities-non-profits/exempt-organizations-business-master-file-extract-eo-bmf
+- Download: https://www.irs.gov/pub/irs-soi/ (4 regional CSV files)
+- Format: CSV (basic organizational data: name, EIN, address, NTEE code, etc.)
+- Update frequency: Monthly
+- License: Public Domain (U.S. Government data)
+- Coverage: All registered tax-exempt organizations under sections 501(c)(3), 501(c)(4), etc.
+- Used for: Nonprofit discovery, organization matching, NTEE categorization
+
+**Note:** This is the **Business Master File** (basic info). For detailed financial data, see IRS Form 990 XML below.
+
+### **IRS Form 990 XML Filings** ⭐
+- Detailed financial filings from nonprofit tax returns
+- Organization: Internal Revenue Service (IRS)
+- Source: https://www.irs.gov/charities-non-profits/form-990-series-downloads
+- Format: XML (highly detailed financial and operational data)
+- Parser Tools: **Giving Tuesday** open source libraries
+  - XML Parser: https://github.com/Giving-Tuesday/form-990-xml-parser
+  - XML Mapper: https://github.com/Giving-Tuesday/form-990-xml-mapper
+- AWS S3 Index: https://registry.opendata.aws/irs990/
+- License: Public Domain (U.S. Government data)
+- Coverage: Annual filings from organizations with >$50K revenue
+- Data includes: Detailed revenue, expenses, program services, officer compensation, grants, donors
+- Used for: Financial analysis, transparency, grant research, program evaluation
+
+**Giving Tuesday Attribution:**
+The Giving Tuesday Data Commons provides essential tools for parsing IRS Form 990 XML data:
+```bibtex
+@software{giving_tuesday_form990_parser,
+  title = {Form 990 XML Parser},
+  author = {{Giving Tuesday}},
+  year = {2024},
+  url = {https://github.com/Giving-Tuesday/form-990-xml-parser},
+  note = {Open source Python library for parsing IRS Form 990 XML filings}
+}
+
+@software{giving_tuesday_form990_mapper,
+  title = {Form 990 XML Mapper},
+  author = {{Giving Tuesday}},
+  year = {2024},
+  url = {https://github.com/Giving-Tuesday/form-990-xml-mapper},
+  note = {Maps Form 990 XML to standardized data structures}
+}
+```
+
+**More Giving Tuesday Resources:**
+- GitHub Organization: https://github.com/Giving-Tuesday
+- Data Commons: https://www.givingtuesday.org/data-commons
+- Research & Insights: https://www.givingtuesday.org/research
 - Coverage: Standardized schemas for Person, Organization, Membership, Post, Area, Motion, VoteEvent, Count
 - Used for: Leader/official data modeling, organization structure, membership tracking, voting records
 - Adoption: Used by Civic Commons, OpenNorth, mySociety, Sunlight Foundation, and 30+ civic tech organizations worldwide
