@@ -39,7 +39,7 @@ This page documents all data sources, standards, and research contributions used
   </a>
   <a href="#nonprofit--philanthropy" className="card" style={{textDecoration: 'none', padding: '15px', borderLeft: '4px solid #F44336'}}>
     <strong>🏢 Nonprofit & Philanthropy</strong><br/>
-    <span style={{fontSize: '0.9em', color: '#666'}}>IRS EO-BMF (1.9M+ orgs), ProPublica (Nonprofits, Congress, Campaign Finance, Vital Signs), Every.org, Findhelp, 211, Microsoft CDM, ARDA, HIFLD, NCS</span>
+    <span style={{fontSize: '0.9em', color: '#666'}}>IRS EO-BMF (1.9M+ orgs), Google BigQuery (5M+ Form 990s), ProPublica (Nonprofits, Congress, Campaign Finance, Vital Signs), Every.org, Findhelp, 211, Microsoft CDM, ARDA, HIFLD, NCS</span>
   </a>
   <a href="#-fact-checking" className="card" style={{textDecoration: 'none', padding: '15px', borderLeft: '4px solid #8BC34A'}}>
     <strong>✅ Fact-Checking</strong><br/>
@@ -562,6 +562,7 @@ concept_id_1 | concept_id_2 | relationship_id
 
 **In this section:**
 - [IRS Exempt Organizations Business Master File (EO-BMF)](#irs-exempt-organizations-business-master-file-eo-bmf) - **PRIMARY BULK DATA SOURCE (1.9M+ orgs)**
+- [Google BigQuery IRS 990 Data](#google-bigquery-irs-990-data) - **RECOMMENDED FOR BULK FORM 990 ENRICHMENT (5M+ filings)**
 - [ProPublica Nonprofit Explorer](#propublica-nonprofit-explorer)
 - [ProPublica Congress API](#propublica-congress-api)
 - [ProPublica Campaign Finance API](#propublica-campaign-finance-api)
@@ -638,6 +639,123 @@ concept_id_1 | concept_id_2 | relationship_id
 - **HIFLD** for geospatial location data
 - **National Congregations Study** for social service provision patterns
 - **ProPublica API** for detailed financial breakdowns and executive compensation
+
+---
+
+### Google BigQuery IRS 990 Data
+
+**Organization:** Google Cloud Platform (IRS data mirrored by Google)  
+**What we use:** **RECOMMENDED FOR BULK FORM 990 ENRICHMENT** - SQL-queryable IRS Form 990 electronic filings with detailed financial data, mission statements, and program descriptions.
+
+- **Source:** https://console.cloud.google.com/marketplace/product/internal-revenue-service/irs-990
+- **Documentation:** https://cloud.google.com/bigquery/docs/irs-990-dataset
+- **BigQuery Dataset:** `bigquery-public-data.irs_990`
+- **Coverage:** 5,000,000+ Form 990 electronic filings (2011-present)
+- **Update Frequency:** Annually (updated when IRS publishes new data)
+- **License:** Public domain (U.S. government data, hosted by Google)
+- **Format:** SQL-queryable tables in BigQuery
+- **Cost:** Free tier includes 1 TB of queries per month
+
+**Available Tables:**
+- **`irs_990.irs_990_2013` - `irs_990.irs_990_2024`** - Individual years (2013-2024)
+- **`irs_990.irs_990_ein`** - All filings aggregated by EIN
+- **`irs_990.irs_990_pf_2013` - `irs_990.irs_990_pf_2024`** - Private foundation filings (Form 990-PF)
+
+**Data Fields (100+ columns):**
+- **Identification:** EIN, organization name, tax year
+- **Financials:**
+  - Total revenue, contributions, program service revenue, investment income
+  - Total expenses, program expenses, management expenses, fundraising expenses
+  - Total assets, total liabilities, net assets
+  - Grants paid, grants received
+- **Mission & Programs:**
+  - Mission description (text field)
+  - Program service accomplishments (up to 10 programs with descriptions)
+  - Program service expenses per program
+- **Governance:**
+  - Number of voting members, independent members
+  - Officer and director compensation
+  - Key employee information
+- **Activities:**
+  - Legislative activities, political expenditures, lobbying
+  - Foreign operations, foreign grants
+  - Website URL
+- **Compliance:**
+  - Public inspection policies
+  - Conflict of interest policies
+  - Whistleblower policies
+
+**Key Advantages:**
+- **Serverless SQL:** Query 5M+ records without downloading files
+- **Mission Extraction:** Get mission statements and program descriptions in bulk
+- **Website URLs:** Extract organization websites (not in EO-BMF)
+- **Historical Data:** 10+ years of financial trends per organization
+- **Scalable:** Process thousands of nonprofits in a single query
+- **No API Rate Limits:** Unlike ProPublica's 25-record limit
+
+**Example Use Cases:**
+- **Bulk Mission Enrichment:** Extract mission statements for all health nonprofits in Alabama
+- **Website Discovery:** Get organization websites for outreach campaigns
+- **Financial Trend Analysis:** Track revenue/expense trends over 10 years
+- **Program Service Analysis:** Identify nonprofits by specific program keywords
+- **Grant Analysis:** Find organizations that award grants vs. receive grants
+
+**Setup Requirements:**
+1. Create a Google Cloud project
+2. Enable BigQuery API
+3. Authenticate:
+   ```bash
+   # Option A: Application default credentials
+   gcloud auth application-default login
+   
+   # Option B: Service account key
+   export GOOGLE_APPLICATION_CREDENTIALS="path/to/credentials.json"
+   ```
+
+**Example Query (Extract Alabama Health Nonprofits with Missions):**
+```sql
+SELECT 
+  ein,
+  organization_name,
+  tax_year,
+  mission_description,
+  website,
+  total_revenue,
+  total_expenses,
+  program_service_expenses
+FROM `bigquery-public-data.irs_990.irs_990_2023`
+WHERE state = 'AL'
+  AND mission_description LIKE '%health%'
+  AND total_revenue > 100000
+ORDER BY total_revenue DESC
+LIMIT 1000
+```
+
+**BibTeX Citation:**
+```bibtex
+@misc{google_bigquery_irs990,
+  title = {IRS 990 Dataset},
+  author = {{Google Cloud Platform} and {Internal Revenue Service}},
+  year = {2024},
+  url = {https://console.cloud.google.com/marketplace/product/internal-revenue-service/irs-990},
+  note = {BigQuery public dataset: bigquery-public-data.irs\_990. Coverage: 5M+ Form 990 electronic filings (2011-present)}
+}
+```
+
+**Integration:**
+- **IRS EO-BMF** provides the complete organization registry (1.9M+ orgs)
+- **Google BigQuery** enriches with mission statements, websites, and detailed financials
+- **ProPublica API** adds executive compensation and recent filing details
+- **GivingTuesday Data Lake** provides raw XML for custom field extraction
+
+**Complements:**
+- See [Form 990 XML Data (GivingTuesday Data Lake)](./form-990-xml.md) for alternative bulk download approach
+- See [IRS Bulk Data Integration](./irs-bulk-data.md) for EO-BMF foundation layer
+
+**Cost Estimates:**
+- **Free tier:** 1 TB queries/month = ~2-4 million nonprofit records
+- **Beyond free tier:** $5 per TB after first 1 TB
+- **Example:** Enriching 100,000 nonprofits with missions = ~20 GB = **Free**
 
 ---
 

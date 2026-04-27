@@ -532,12 +532,39 @@ Data Lake: https://990data.givingtuesday.org/
         df = df.sample(n=min(args.sample, len(df)), random_state=42)
         logger.info(f"   Sampled {len(df):,} nonprofits")
     
-    # Enrich
-    enriched_df = await enricher.enrich_dataframe(df)
+    # Enrich the subset
+    logger.info(f"\n🔄 Enriching {len(df_to_enrich):,} nonprofits...")
+    enriched_subset = await enricher.enrich_dataframe(df_to_enrich)
+    
+    # If filters were applied and updating in place, merge back into full dataset
+    if filter_applied and args.output == args.input:
+        logger.info(f"\n🔀 Merging enriched data back into full dataset...")
+        
+        # Drop Form 990 columns from full dataset for rows being updated
+        form_990_cols = [col for col in df_full.columns if col.startswith('form_990_')]
+        eins_updated = enriched_subset['ein'].values
+        
+        # Remove old enrichment data for these EINs
+        df_full = df_full[~df_full['ein'].isin(eins_updated)]
+        
+        # Append newly enriched data
+        final_df = pd.concat([df_full, enriched_subset], ignore_index=True)
+        
+        # Sort by EIN for consistency
+        final_df = final_df.sort_values('ein').reset_index(drop=True)
+        
+        logger.info(f"   Final dataset: {len(final_df):,} nonprofits")
+        logger.info(f"   Updated: {len(enriched_subset):,} nonprofits")
+    else:
+        # No filters or different output file, just save enriched subset
+        final_df = enriched_subset
     
     # Save
-    enriched_df.to_parquet(args.output, index=False)
+    final_df.to_parquet(args.output, index=False)
     logger.success(f"💾 Saved to: {args.output}")
+    
+    if filter_applied and args.output == args.input:
+        logger.success(f"   ✅ Updated {len(enriched_subset):,} organizations in {args.output}")
     
     # Show sample
     logger.info("\n📊 Sample enriched records:")

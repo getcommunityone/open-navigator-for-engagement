@@ -205,6 +205,80 @@ LIMIT 1000;
 
 ---
 
+### **Charity Navigator** ⭐
+
+**Powered by Charity Navigator**
+
+We use the Charity Navigator GraphQL API to enrich nonprofit profiles with star ratings, mission statements, and organizational metrics.
+
+**Organization:** Charity Navigator, Inc.  
+**Website:** https://www.charitynavigator.org  
+**API Documentation:** https://www.charitynavigator.org/partner/api  
+**Principal Office:** 299 Market Street, Suite 250, Saddle Brook, NJ 07663  
+**License:** API Terms of Use (Last updated March 2025)  
+**Rate Limit:** 1,000 API calls per day  
+
+**What we use:**
+- **Charity Ratings**: Encompass Star Rating (0-4 stars)
+- **Mission Statements**: Organization mission and purpose
+- **Website URLs**: Official organization websites
+- **Organizational Data**: EIN, name, address, category, cause
+- **Active Advisories**: Alerts about organization status
+- **Encompass Score**: Overall rating score
+- **Rating Publication Date**: When the rating was last updated
+
+**Data Fields Accessed:**
+```
+- Employer Identification Number (EIN)
+- Charity Name
+- Mission
+- Organization Website URL
+- Charity Navigator URL
+- Category & Cause
+- Street Address, City, State, Zip, Country
+- Active Advisories
+- Encompass Score & Star Rating
+- Encompass Rating Publication Date & ID
+```
+
+**Attribution Requirements:**
+- **Text Credit:** "Powered by Charity Navigator" (displayed on pages using their data)
+- **Source Citation:** Charity Navigator cited as source on all pages displaying their data
+- **Linkbacks:** All charity data links back to corresponding Charity Navigator profile pages
+- **Trademark Notice:** CHARITY NAVIGATOR and the CHARITY NAVIGATOR logo are registered trademarks of Charity Navigator. All rights reserved. Used with permission.
+
+**BibTeX:**
+```bibtex
+@misc{charitynavigator_api,
+    title = {Charity Navigator API},
+    author = {{Charity Navigator, Inc.}},
+    year = {2025},
+    url = {https://www.charitynavigator.org},
+    note = {GraphQL API providing nonprofit ratings, mission statements, and organizational data}
+}
+```
+
+**Compliance:**
+This project complies with Charity Navigator's API Terms of Use, including:
+- Rate limit compliance (max 1,000 calls/day)
+- Proper attribution and branding
+- Linkbacks to Charity Navigator profile pages
+- Trademark acknowledgment
+- Data caching for performance only (not for redistribution)
+
+**Example Profile Link Format:**
+```html
+<a href="https://www.charitynavigator.org/ein/134141945">
+  Michael J. Fox Foundation for Parkinson's Research
+</a>
+```
+
+**Related Tools:**
+- [Nonprofit enrichment script](scripts/enrich_nonprofits_charitynavigator.py) (if created)
+- [API integration documentation](website/docs/data-sources/charity-navigator.md) (if created)
+
+---
+
 ### **IRS Exempt Organizations Business Master File (EO-BMF)**
 
 Basic nonprofit registration data (name, EIN, address, NTEE code).

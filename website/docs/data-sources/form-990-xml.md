@@ -63,7 +63,7 @@ Google Cloud hosts the complete IRS 990 dataset in BigQuery - a serverless SQL d
 
 **Key advantages:**
 - ✅ **No downloads**: Query directly in the cloud
-- ✅ **Blazing fast**: Bulk queries complete in <30 seconds
+- ✅ **Blazing fast**: Bulk queries complete in &lt;30 seconds
 - ✅ **Free tier**: First 1 TB/month is free (enough for most research)
 - ✅ **SQL interface**: Easy to extract specific fields
 - ✅ **No infrastructure**: Serverless, nothing to manage
