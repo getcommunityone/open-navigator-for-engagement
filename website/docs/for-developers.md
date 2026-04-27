@@ -56,11 +56,13 @@ For full citations, licenses, API documentation, and technical specifications:
 **[Citations & Data Sources](/data-sources/citations)**
 
 Includes:
-- **Academic Research**: MeetingBank (ACL 2023), Roper Center iPoll
+- **Academic Research**: MeetingBank (ACL 2023), LocalView (Harvard), Council Data Project, City Scrapers
 - **Government APIs**: U.S. Census, NCES, IRS, Open States
-- **Standards**: OCD-ID (OCDEP 2), Popolo Project, Schema.org, CEDS, IATI v2.03
-- **Data Models**: Microsoft CDM for Nonprofits, OMOP CDM vocabulary
+- **Standards**: OCD-ID (OCDEP 2), Popolo Project, Schema.org, CEDS, OMOP CDM (OHDSI), IATI v2.03
+- **Data Models**: Microsoft CDM for Nonprofits, OMOP vocabulary system
 - **Fact-Checking**: Google Fact Check API, PolitiFact, FactCheck.org
+- **Nonprofit Data**: ProPublica API (3M+ orgs), Every.org, Findhelp (400K+ programs)
+- **Enterprise Tech**: Microsoft (Nonprofit CDM), Google (Data Commons), AWS (Open Data), Databricks (Unity Catalog, MLflow), Snowflake, Salesforce (NPSP)
 - **BibTeX citations** for academic papers and research use
 :::
 

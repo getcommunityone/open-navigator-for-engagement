@@ -89,3 +89,10 @@ black>=23.0.0
 ruff>=0.1.0
 mypy>=1.8.0
 pre-commit>=3.6.0
+
+# Optional: Google Data Commons Integration
+# Recommended for jurisdiction enrichment (replaces manual Census API calls)
+# Install with: pip install datacommons datacommons-pandas
+# Documentation: https://docs.datacommons.org/api/
+# datacommons>=1.4.0
+# datacommons-pandas>=0.1.0

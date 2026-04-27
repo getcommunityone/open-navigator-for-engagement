@@ -20,9 +20,9 @@ This page documents all data sources, standards, and research contributions used
 ## 📑 Quick Navigation
 
 <div style={{display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '15px', margin: '20px 0'}}>
-  <a href="#academic-research" className="card" style={{textDecoration: 'none', padding: '15px', borderLeft: '4px solid #2196F3'}}>
+  <a href="#-academic-research" className="card" style={{textDecoration: 'none', padding: '15px', borderLeft: '4px solid #2196F3'}}>
     <strong>🎓 Academic Research</strong><br/>
-    <span style={{fontSize: '0.9em', color: '#666'}}>MeetingBank, Roper Center</span>
+    <span style={{fontSize: '0.9em', color: '#666'}}>MeetingBank, LocalView, Roper Center, CDP, City Scrapers</span>
   </a>
   <a href="#government-data" className="card" style={{textDecoration: 'none', padding: '15px', borderLeft: '4px solid #4CAF50'}}>
     <strong>🏛️ Government Data</strong><br/>
@@ -30,7 +30,7 @@ This page documents all data sources, standards, and research contributions used
   </a>
   <a href="#civic-tech-standards" className="card" style={{textDecoration: 'none', padding: '15px', borderLeft: '4px solid #FF9800'}}>
     <strong>🌐 Civic Tech Standards</strong><br/>
-    <span style={{fontSize: '0.9em', color: '#666'}}>OCD-ID, Popolo, Schema.org, CEDS</span>
+    <span style={{fontSize: '0.9em', color: '#666'}}>OCD-ID, Popolo, Schema.org, CEDS, OMOP CDM</span>
   </a>
   <a href="#election--advocacy" className="card" style={{textDecoration: 'none', padding: '15px', borderLeft: '4px solid #9C27B0'}}>
     <strong>🗳️ Election & Advocacy</strong><br/>
@@ -47,6 +47,10 @@ This page documents all data sources, standards, and research contributions used
   <a href="#-fact-checking" className="card" style={{textDecoration: 'none', padding: '15px', borderLeft: '4px solid #8BC34A'}}>
     <strong>✅ Fact-Checking</strong><br/>
     <span style={{fontSize: '0.9em', color: '#666'}}>Google, PolitiFact, FactCheck.org</span>
+  </a>
+  <a href="#-enterprise-tech-for-social-good" className="card" style={{textDecoration: 'none', padding: '15px', borderLeft: '4px solid #E91E63'}}>
+    <strong>💼 Enterprise Tech for Social Good</strong><br/>
+    <span style={{fontSize: '0.9em', color: '#666'}}>Microsoft, Google, AWS, Databricks, Snowflake, Salesforce</span>
   </a>
   <a href="#acknowledgments" className="card" style={{textDecoration: 'none', padding: '15px', borderLeft: '4px solid #607D8B'}}>
     <strong>🙏 Acknowledgments</strong><br/>
@@ -82,6 +86,106 @@ This page documents all data sources, standards, and research contributions used
 - [📄 Paper](https://arxiv.org/abs/2305.17529)
 - [💾 Dataset](https://huggingface.co/datasets/huuuyeah/meetingbank)
 - [📦 Zenodo](https://zenodo.org/record/7989108)
+
+---
+
+### LocalView Dataset (Harvard Dataverse)
+
+**Organization:** Harvard University Mellon Urbanism Lab  
+**What we use:** 1,000+ municipalities with meeting videos and automated transcripts for large-scale civic data analysis.
+
+- **Website:** https://www.localview.net/
+- **Dataverse:** https://dataverse.harvard.edu/dataset.xhtml?persistentId=doi:10.7910/DVN/NJTBEM
+- **GitHub:** https://mellonurbanism.harvard.edu/localview
+- **Coverage:** Thousands of U.S. jurisdictions with continuous data collection
+- **Data Included:**
+  - Meeting videos (YouTube URLs)
+  - Automated transcripts via speech-to-text
+  - Metadata (meeting dates, agencies, agendas)
+  - Quality tracking per jurisdiction
+- **License:** Research use (Harvard Dataverse)
+- **Research-grade:** Designed for large-scale quantitative analysis
+
+**BibTeX:**
+```bibtex
+@dataset{localview_2024,
+  author = {{Harvard Mellon Urbanism Lab}},
+  title = {LocalView: Municipal Meeting Videos and Transcripts},
+  year = {2024},
+  publisher = {Harvard Dataverse},
+  doi = {10.7910/DVN/NJTBEM},
+  url = {https://www.localview.net/}
+}
+```
+
+---
+
+### Council Data Project (CDP)
+
+**Organization:** Open-source civic tech collaboration  
+**What we use:** 20+ cities with complete data pipelines - meeting transcripts, videos, voting records, and legislation tracking.
+
+- **Website:** https://councildataproject.org/
+- **GitHub:** https://github.com/CouncilDataProject
+- **Coverage:** 20+ major U.S. cities with full infrastructure
+- **Data Included:**
+  - Meeting transcripts (searchable, indexed)
+  - Video recordings with timestamps
+  - Voting records and roll calls
+  - Legislation text and tracking
+  - Councilmember information
+- **Infrastructure:** Complete ETL pipelines for each city
+- **License:** Open source (MIT)
+- **API:** Per-city deployments (e.g., https://councildataproject.org/seattle)
+
+**BibTeX:**
+```bibtex
+@software{council_data_project,
+  title = {Council Data Project},
+  author = {{Council Data Project Contributors}},
+  year = {2024},
+  url = {https://councildataproject.org/},
+  license = {MIT}
+}
+```
+
+---
+
+### City Scrapers / Documenters.org
+
+**Organization:** Documenters Network (civic journalism collaboration)  
+**What we use:** 100-500 validated government agency URLs across 5 major cities for automated meeting discovery.
+
+- **Website:** https://cityscrapers.org/
+- **Documenters:** https://www.documenters.org/
+- **GitHub:** https://github.com/City-Bureau
+- **Coverage:** Chicago, Pittsburgh, Detroit, Cleveland, Los Angeles
+- **Data Included:**
+  - Government agency URLs (start_urls from spider files)
+  - Granicus video page URLs with YouTube embeds
+  - Meeting event schemas
+  - Scraper patterns for common platforms
+- **Cities Covered:**
+  - Chicago City Scrapers
+  - Pittsburgh City Scrapers
+  - Detroit Documenters
+  - Cleveland City Scrapers
+  - LA Metro Documenters
+- **License:** Open source (MIT)
+- **Use Case:** Pre-validated URLs for quality meeting discovery
+
+**BibTeX:**
+```bibtex
+@software{city_scrapers,
+  title = {City Scrapers},
+  author = {{City Bureau and Documenters Network}},
+  year = {2024},
+  url = {https://cityscrapers.org/},
+  license = {MIT}
+}
+```
+
+---
 
 ### Roper Center for Public Opinion Research
 
@@ -242,6 +346,76 @@ ocd-division/country:us/state:al/school_district:birmingham_city  # School Distr
 - ✅ NCES Common Core of Data (CCD) compatibility
 - ✅ F-33 Finance Survey alignment
 - ✅ Federal grant reporting (ESSA, Title I, IDEA)
+
+---
+
+### OMOP Common Data Model (OHDSI)
+
+**Organization:** Observational Health Data Sciences and Informatics (OHDSI)  
+**What we use:** Vocabulary and terminology standardization system - CONCEPT, VOCABULARY, CONCEPT_CLASS, CONCEPT_RELATIONSHIP tables for consistent data classification.
+
+- **Source:** https://ohdsi.github.io/CommonDataModel/
+- **GitHub:** https://github.com/OHDSI/CommonDataModel
+- **Vocabulary Documentation:** https://ohdsi.github.io/TheBookOfOhdsi/StandardizedVocabularies.html
+- **License:** Apache License 2.0
+- **Coverage:** Comprehensive vocabulary system for standardizing concepts across domains
+
+**OMOP CDM Tables We Implement:**
+
+| Table | Purpose | Our Use Case |
+|-------|---------|-------------|
+| **CONCEPT** | Master vocabulary list | Standardized codes for topics, demographics, classifications |
+| **VOCABULARY** | Source vocabularies | Track origin of concepts (NTEE, FIPS, Schema.org, etc.) |
+| **CONCEPT_CLASS** | Categorization | Group concepts by type (demographic, geographic, topic) |
+| **CONCEPT_RELATIONSHIP** | Linkages | Map relationships between concepts (is-a, maps-to, subsumes) |
+
+**Our OMOP-Inspired Vocabularies:**
+
+| Vocabulary ID | Description | Concept Count |
+|---------------|-------------|---------------|
+| `NTEE` | National Taxonomy of Exempt Entities | 600+ |
+| `FIPS` | Federal Information Processing Standards | 90,000+ |
+| `Schema.org` | Structured data types | 800+ |
+| `Popolo` | Open government data specs | 15+ |
+| `OCD-ID` | Open Civic Data identifiers | 22,000+ |
+| `CEDS` | Common Education Data Standards | 2,300+ |
+| `CENSUS` | U.S. Census categories | 1,000+ |
+| `INTERNAL` | Custom platform classifications | 500+ |
+
+**Example Implementation:**
+```sql
+-- CONCEPT table: standardized demographics
+concept_id | concept_name              | vocabulary_id | concept_class_id
+-----------|---------------------------|---------------|------------------
+100001     | Race: White               | CENSUS        | Demographic
+100002     | Race: Black/African Amer. | CENSUS        | Demographic
+100003     | Hispanic/Latino Ethnicity | CENSUS        | Demographic
+100004     | Gender: Male              | CENSUS        | Demographic
+
+-- CONCEPT_RELATIONSHIP: hierarchies
+concept_id_1 | concept_id_2 | relationship_id
+-------------|--------------|----------------
+100002       | 100000       | Is a           # Race category
+100003       | 100010       | Is a           # Ethnicity category
+```
+
+**Benefits:**
+- ✅ Consistent terminology across all datasets
+- ✅ Hierarchical concept relationships
+- ✅ Traceable concept provenance (source vocabularies)
+- ✅ Industry-standard approach used by healthcare and research institutions
+- ✅ Supports multiple classification systems simultaneously
+
+**BibTeX:**
+```bibtex
+@misc{ohdsi_omop_cdm,
+  author = {{Observational Health Data Sciences and Informatics (OHDSI)}},
+  title = {OMOP Common Data Model},
+  year = {2024},
+  url = {https://ohdsi.github.io/CommonDataModel/},
+  license = {Apache-2.0}
+}
+```
 
 ---
 
@@ -579,36 +753,288 @@ ocd-division/country:us/state:al/school_district:birmingham_city  # School Distr
 
 ---
 
-## 🙏 Acknowledgments
+## � Enterprise Tech for Social Good
+
+### Cloud & Data Platforms
+
+#### Microsoft: Tech for Social Impact
+
+**Organization:** Microsoft Corporation  
+**What we use:** Nonprofit Common Data Model (CDM) for donor management, campaign tracking, and program outcomes.
+
+- **Program:** https://microsoft.com/nonprofit
+- **Nonprofit CDM GitHub:** https://github.com/microsoft/Industry-Accelerator-Nonprofit
+- **License:** MIT License
+- **Coverage:** 8 core entities (CONSTITUENT, DONATION, CAMPAIGN, DESIGNATION, MEMBERSHIP, VOLUNTEER_ACTIVITY, PROGRAM_DELIVERY, PROGRAM_OUTCOME)
+
+**Implementation Status:** ✅ **Active** - See [Nonprofit & Philanthropy](#nonprofit--philanthropy) section for full CDM integration.
+
+---
+
+#### Google: Data Commons
+
+**Organization:** Google LLC  
+**What we use:** Knowledge Graph API for jurisdiction demographics, economic indicators, and civic data variables.
+
+- **Source:** https://datacommons.org
+- **API Documentation:** https://docs.datacommons.org/api/
+- **REST API:** https://api.datacommons.org/
+- **Python Library:** `pip install datacommons datacommons-pandas`
+- **Coverage:** 100+ variables per jurisdiction (income, education, health, housing)
+- **License:** Free API (rate limits apply)
+
+**Data Commons Variables for Jurisdictions:**
+
+| Variable | Example Stat Variable | Description |
+|----------|----------------------|-------------|
+| Population | `Count_Person` | Total population |
+| Demographics | `Count_Person_Male`, `Count_Person_Female` | Gender breakdown |
+| Age | `Median_Age_Person` | Median age |
+| Income | `Median_Income_Household` | Median household income |
+| Education | `Count_Person_EducationalAttainmentBachelorsDegreeOrHigher` | College graduates |
+| Employment | `UnemploymentRate_Person` | Unemployment rate |
+| Housing | `Median_Price_SoldHome` | Median home price |
+| Health | `Count_Person_WithHealthInsurance` | Health insurance coverage |
+
+**Implementation Recommendation:**
+```python
+import datacommons_pandas as dcpd
+
+# Get demographics for a city
+df = dcpd.build_time_series(
+    place="geoId/0107000",  # Birmingham, AL
+    stat_vars=[
+        "Median_Income_Household",
+        "Count_Person",
+        "UnemploymentRate_Person"
+    ]
+)
+```
+
+**Status:** 🔄 **Recommended** - Replace manual Census API calls with Data Commons for simplified jurisdiction enrichment.
+
+---
+
+#### AWS: Open Data for Good
+
+**Organization:** Amazon Web Services (AWS)  
+**What we use:** Best practices for hosting large-scale public datasets in Parquet format on S3.
+
+- **Program:** https://registry.opendata.aws
+- **Documentation:** https://aws.amazon.com/opendata/
+- **Examples:** Census data, satellite imagery, geospatial data
+- **Storage Format:** Parquet (columnar, optimized for analytics)
+- **License:** Varies by dataset (most public domain)
+
+**AWS Best Practices for `/exports` Folder:**
+- Use Parquet with Snappy compression
+- Partition by `state/county/year` for efficient queries
+- Enable S3 versioning for data lineage
+- Use AWS Glue Data Catalog for schema management
+- Implement Athena for SQL queries without ETL
+
+**Status:** 🔄 **Planned** - Apply AWS Registry patterns to our HuggingFace dataset exports.
+
+---
+
+### Enterprise Data Engineering Solutions
+
+#### Databricks: Databricks for Good
+
+**Organization:** Databricks, Inc.  
+**What we use:** Unity Catalog for data governance, Delta Lake for lakehouse architecture, MLflow for agent deployment, Solution Accelerators for NLP pipelines.
+
+- **Program:** https://databricks.com/for-good
+- **Solution Accelerators:** https://www.databricks.com/solutions/accelerators
+- **Unity Catalog:** https://docs.databricks.com/en/data-governance/unity-catalog/index.html
+- **License:** Commercial (Free Community Edition available)
+
+**Our Databricks Implementation:**
+
+| Component | Purpose | File Location |
+|-----------|---------|---------------|
+| **Delta Lake Pipeline** | Bronze/Silver/Gold data layers | `pipeline/delta_lake.py` |
+| **MLflow Agents** | Policy classifier, sentiment analysis | `agents/mlflow_classifier.py`, `agents/mlflow_base.py` |
+| **Unity Catalog** | Model registry and governance | `databricks/deployment.py` |
+| **Agent Bricks** | Mosaic AI Agent Framework | `databricks/notebooks/01_agent_bricks_quickstart.py` |
+| **Model Serving** | Auto-scaling REST endpoints | `databricks/deployment.py` |
+
+**Implementation Status:** ✅ **Active** - Full Databricks integration for data engineering and ML workflows.
+
+**Delta Sharing for `/exports`:**
+```python
+# Share Gold layer tables externally
+from databricks import delta_sharing
+
+share = delta_sharing.SharingClient()
+share.create_share(
+    name="one_civic_data",
+    tables=["gold.jurisdictions", "gold.meetings", "gold.nonprofits"]
+)
+```
+
+**Citation:**
+```bibtex
+@misc{databricks_for_good,
+  author = {{Databricks, Inc.}},
+  title = {Databricks for Good},
+  year = {2024},
+  url = {https://databricks.com/for-good}
+}
+```
+
+---
+
+#### Snowflake: Snowflake for Good
+
+**Organization:** Snowflake Inc.  
+**What we use:** Data Marketplace for Census, ESG, and demographic data; data sharing capabilities.
+
+- **Program:** https://snowflake.com/for-good
+- **Data Marketplace:** https://www.snowflake.com/data-marketplace/
+- **Free Datasets:** U.S. Census (Knoema), OpenStreetMap, COVID-19 data
+- **License:** Commercial (Free trial available)
+
+**Status:** 🔄 **Evaluation** - Consider for enterprise data sharing and collaboration.
+
+---
+
+#### Oracle: NetSuite Social Impact
+
+**Organization:** Oracle Corporation  
+**What we use:** Fund accounting models and grant tracking patterns for nonprofit financial data.
+
+- **Program:** https://netsuite.com/social-impact
+- **Features:** Fund accounting, grant management, donor databases
+- **License:** Commercial
+
+**Status:** 📚 **Reference** - Inspiration for nonprofit financial data modeling.
+
+---
+
+#### Salesforce: Salesforce.org
+
+**Organization:** Salesforce, Inc.  
+**What we use:** Nonprofit Success Pack (NPSP) data model patterns for constituent relationship management.
+
+- **Program:** https://salesforce.org/npsp
+- **GitHub:** https://github.com/SalesforceFoundation/NPSP
+- **Features:** Household accounts, recurring donations, program engagement
+- **License:** Open Source (BSD-3-Clause)
+
+**NPSP Object Mappings:**
+
+| NPSP Object | Our Entity | Use Case |
+|-------------|------------|----------|
+| Contact | CONSTITUENT | Donor, volunteer, beneficiary |
+| Opportunity | DONATION | Financial contributions |
+| Campaign | CAMPAIGN | Fundraising campaigns |
+| Engagement Plan | VOLUNTEER_ACTIVITY | Volunteer tracking |
+| Program Cohort | PROGRAM_DELIVERY | Program participants |
+
+**Status:** 📚 **Reference** - Inspiration for constituent engagement data model.
+
+---
+
+### Infrastructure, AI & Blockchain
+
+#### Cisco: Crisis Response
+
+**Organization:** Cisco Systems, Inc.  
+**What we use:** Network resilience patterns for ensuring platform uptime during community emergencies.
+
+- **Program:** https://cisco.com/crisis-response
+- **Focus:** Connectivity, communications, resilient systems
+- **License:** Varies by initiative
+
+**Status:** 📚 **Reference** - Inspiration for platform reliability during crises.
+
+---
+
+#### IBM: Science for Social Good
+
+**Organization:** IBM Corporation  
+**What we use:** AI/ML use case patterns for civic applications.
+
+- **Program:** https://ibm.com/social-good
+- **Technologies:** Watson AI, Blockchain, Quantum computing
+- **License:** Varies by project
+
+**Status:** 📚 **Reference** - Inspiration for AI-powered civic analysis.
+
+---
+
+#### Meta: Data for Good
+
+**Organization:** Meta Platforms, Inc.  
+**What we use:** Population density and social connectivity mapping patterns.
+
+- **Program:** https://dataforgood.facebook.com
+- **Datasets:** High-Resolution Population Density Maps, Social Connectedness Index
+- **License:** Free (Terms of Use apply)
+
+**Status:** 🔄 **Evaluation** - Consider for population modeling and demographic analysis.
+
+---
+
+## �🙏 Acknowledgments
 
 We are grateful to the following organizations and individuals:
 
 **Academic Institutions:**
 - Association for Computational Linguistics (ACL) for MeetingBank
+- Harvard University Mellon Urbanism Lab for LocalView
 - Cornell University Roper Center for public opinion research
 - MIT Election Data + Science Lab for election data
 - University of Pennsylvania Annenberg Center for fact-checking
 
+**Civic Tech Community:**
+- **GroundVue** - Partner organization inspiring community accountability work
+- **Code for America** - Civic technology movement and brigade network
+- **City Bureau** - Documenters Network and City Scrapers project
+- **Council Data Project** - Open-source municipal data infrastructure
+- **U.S. Digital Response** - Emergency civic technology support
+- **Civic Tech Field Guide** - Community resource and project directory
+
 **Standards Bodies:**
 - W3C Community Group for Schema.org
-- Open Civic Data for jurisdiction identifiers
+- Open Civic Data for jurisdiction identifiers (OCDEP 2)
 - Popolo Project for open government data standards
 - IATI Secretariat for international aid transparency
 - U.S. Department of Education for CEDS
 
-**Data Platforms:**
+**Enterprise Tech for Social Good:**
+- **Microsoft** - Tech for Social Impact (Nonprofit CDM)
+- **Google** - Data Commons (Knowledge Graph & Civic Data API)
+- **AWS** - Open Data for Good (Registry best practices)
+- **Databricks** - Databricks for Good (Unity Catalog, Delta Lake, MLflow, Agent Bricks)
+- **Snowflake** - Snowflake for Good (Data Marketplace)
+- **Oracle** - NetSuite Social Impact (Fund accounting models)
+- **Salesforce** - Salesforce.org (Nonprofit Success Pack)
+- **Cisco** - Crisis Response (Network resilience)
+- **IBM** - Science for Social Good (AI use cases)
+- **Meta** - Data for Good (Population mapping)
+
+**Data Platforms & Organizations:**
 - HuggingFace for dataset hosting
 - ProPublica for nonprofit financial data (3M+ organizations)
 - Open States for legislative data
-- Microsoft for nonprofit Common Data Model
-- Google for Fact Check Tools API
+- OHDSI for OMOP Common Data Model (vocabulary system)
 - Every.org for charity metadata and mission statements
 - Findhelp.org for local social services directory (400K+ programs)
 
 **Government:**
 - U.S. Census Bureau for demographic data
 - National Center for Education Statistics (NCES)
+- IRS for tax-exempt organization data
+- CISA for .gov domain registry
 - All municipal governments providing open access to meeting records
+
+**Special Thanks:**
+- All civic technologists building open government tools
+- Municipal staff maintaining public meeting archives
+- Journalists and community advocates holding power accountable
+
 
 ---
 

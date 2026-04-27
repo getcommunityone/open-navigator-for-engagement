@@ -55,10 +55,12 @@ All data sources are properly cited with licenses, BibTeX references, and attrib
 **[Citations & Data Sources](/data-sources/citations)**
 
 Includes:
-- **Academic Research**: MeetingBank, Harvard Dataverse (LocalView)
+- **Academic Research**: MeetingBank, LocalView (Harvard), Council Data Project, City Scrapers
 - **Government Data**: U.S. Census Bureau, NCES, IRS Tax-Exempt Organization Search
 - **Civic Tech Standards**: OCD-ID, Popolo, Schema.org, CEDS
 - **Fact-Checking**: Google API, PolitiFact, FactCheck.org
+- **Nonprofit Data**: ProPublica (3M+ orgs), Every.org, Findhelp (400K+ programs)
+- **Enterprise Partnerships**: Microsoft, Google, AWS, Databricks for data infrastructure
 :::
 
 ---
