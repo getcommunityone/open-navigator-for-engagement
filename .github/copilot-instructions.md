@@ -1,19 +1,36 @@
 # GitHub Copilot Instructions for Open Navigator for Engagement
 
-## Documentation Standards
+## 🚨 CRITICAL: Documentation Standards
 
-### Always Use Docusaurus Format
+### ⚠️ ALWAYS Use Docusaurus Format - NO EXCEPTIONS
+
+**MANDATORY RULE:** When creating ANY documentation, guides, or markdown files:
+
+**✅ DO THIS:**
+- Create ALL documentation in `website/docs/` subdirectories
+- Add YAML frontmatter to every documentation file
+- Use kebab-case filenames
+- Place in appropriate subdirectory
+
+**❌ NEVER DO THIS:**
+- ❌ Create `.md` files in project root (except README.md, LICENSE, CONTRIBUTING.md)
+- ❌ Create files like `VARIABLE_MIGRATION.md`, `DOCKER_BUILD_TROUBLESHOOTING.md` in root
+- ❌ Create `UPPERCASE_FILE.md` files anywhere
+- ❌ Skip frontmatter in documentation files
+
+### Documentation File Location Rules
 
 When creating or editing documentation:
 
-1. **Location**: Place all documentation in `website/docs/` with appropriate subdirectories
+1. **Location**: ALWAYS place documentation in `website/docs/` with appropriate subdirectories
    - Deployment guides → `website/docs/deployment/`
    - How-to guides → `website/docs/guides/`
    - Data sources → `website/docs/data-sources/`
    - Case studies → `website/docs/case-studies/`
    - Integration docs → `website/docs/integrations/`
+   - Development guides → `website/docs/development/`
 
-2. **Frontmatter**: Always include YAML frontmatter at the top:
+2. **Frontmatter**: ALWAYS include YAML frontmatter at the top:
    ```markdown
    ---
    sidebar_position: 1
@@ -22,15 +39,47 @@ When creating or editing documentation:
    # Document Title
    ```
 
-3. **File naming**: Use kebab-case (lowercase with hyphens)
+3. **File naming**: ALWAYS use kebab-case (lowercase with hyphens)
    - ✅ `huggingface-spaces.md`
+   - ✅ `variable-migration.md`
+   - ✅ `docker-troubleshooting.md`
    - ❌ `HUGGINGFACE_DEPLOYMENT.md`
    - ❌ `HuggingFaceSpaces.md`
+   - ❌ `VARIABLE_MIGRATION.md`
 
 4. **Root directory**: Keep root directory clean
+   - ✅ Only keep these in root: README.md, LICENSE, CONTRIBUTING.md
+   - ✅ Move ALL other docs to `website/docs/`
    - ❌ Don't create new `.md` files in project root
-   - ✅ Only keep README.md, LICENSE, and CONTRIBUTING.md in root
-   - ✅ Move all other docs to `website/docs/`
+
+### Examples
+
+**When asked to create troubleshooting documentation:**
+```bash
+# ❌ WRONG
+/home/developer/projects/oral-health-policy-pulse/DOCKER_BUILD_TROUBLESHOOTING.md
+
+# ✅ CORRECT
+/home/developer/projects/oral-health-policy-pulse/website/docs/deployment/docker-troubleshooting.md
+```
+
+**When asked to create a migration guide:**
+```bash
+# ❌ WRONG
+/home/developer/projects/oral-health-policy-pulse/VARIABLE_MIGRATION.md
+
+# ✅ CORRECT
+/home/developer/projects/oral-health-policy-pulse/website/docs/deployment/variable-migration.md
+```
+
+**When asked to document a new feature:**
+```bash
+# ❌ WRONG
+/home/developer/projects/oral-health-policy-pulse/NEW_FEATURE.md
+
+# ✅ CORRECT
+/home/developer/projects/oral-health-policy-pulse/website/docs/guides/new-feature.md
+```
 
 ### Sidebar Organization
 

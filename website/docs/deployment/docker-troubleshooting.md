@@ -1,3 +1,7 @@
+---
+sidebar_position: 9
+---
+
 # 🐛 Docker Build Troubleshooting Guide
 
 ## Testing Docker Build Locally
