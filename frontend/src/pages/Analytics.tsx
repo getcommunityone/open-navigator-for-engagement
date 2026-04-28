@@ -1,6 +1,4 @@
 import { useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
-import axios from 'axios'
 import {
   ChartBarIcon,
   CurrencyDollarIcon,
@@ -8,20 +6,24 @@ import {
   DocumentChartBarIcon,
 } from '@heroicons/react/24/outline'
 
-interface BudgetData {
-  jurisdiction: string
-  state: string
-  fiscal_year: string
-  total_budget: number
-  budget_change: number
-  categories: {
-    education: number
-    infrastructure: number
-    public_safety: number
-    health: number
-    other: number
-  }
-}
+// Commented out for now - will be used when API is ready
+// import { useQuery } from '@tanstack/react-query'
+// import axios from 'axios'
+
+// interface BudgetData {
+//   jurisdiction: string
+//   state: string
+//   fiscal_year: string
+//   total_budget: number
+//   budget_change: number
+//   categories: {
+//     education: number
+//     infrastructure: number
+//     public_safety: number
+//     health: number
+//     other: number
+//   }
+// }
 
 export default function Analytics() {
   const [selectedState, setSelectedState] = useState<string>('all')

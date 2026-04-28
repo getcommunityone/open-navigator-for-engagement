@@ -29,6 +29,13 @@ const navigation = [
   { name: 'Home', href: '/', icon: HomeIcon },
   { name: 'Explore Data', href: '/explore', icon: MagnifyingGlassIcon },
   { 
+    section: 'Families & Individuals',
+    items: [
+      { name: 'Community Events', href: '/events', icon: BookOpenIcon },
+      { name: 'Services & Resources', href: '/services', icon: HeartIcon },
+    ]
+  },
+  { 
     section: 'Policy & Government',
     items: [
       { name: 'Policy Decisions', href: '/documents', icon: DocumentTextIcon },
@@ -43,13 +50,6 @@ const navigation = [
       { name: 'Nonprofits', href: '/nonprofits', icon: BuildingLibraryIcon },
       { name: 'Advocacy Topics', href: '/opportunities', icon: BellAlertIcon },
       { name: 'Fact-Checking', href: '/debate-grader', icon: AcademicCapIcon },
-    ]
-  },
-  { 
-    section: 'Families & Individuals',
-    items: [
-      { name: 'Community Events', href: '/events', icon: BookOpenIcon },
-      { name: 'Services & Resources', href: '/services', icon: HeartIcon },
     ]
   },
   { 
