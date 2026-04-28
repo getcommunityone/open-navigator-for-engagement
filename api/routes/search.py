@@ -19,6 +19,10 @@ router = APIRouter(tags=["search"])
 # Paths to gold datasets
 GOLD_DIR = Path("data/gold")
 
+# Cache for count queries (TTL: 1 hour)
+_count_cache = {}
+_count_cache_ttl = {}
+
 # Every.org API config (fallback only)
 EVERYORG_API_KEY = os.getenv('EVERYORG_API_KEY', '')
 EVERYORG_API_BASE = "https://partners.every.org/v0.2"
@@ -482,8 +486,74 @@ def search_meetings(query: str, state: Optional[str] = None, limit: int = 10) ->
     return results[:limit]
 
 
-def search_organizations(query: str, state: Optional[str] = None, ntee_code: Optional[str] = None, limit: int = 10) -> List[SearchResult]:
-    """Search nonprofit organizations using DuckDB for fast Parquet queries"""
+def count_organizations(state: Optional[str] = None, ntee_code: Optional[str] = None, query: Optional[str] = None) -> int:
+    """Count total organizations matching criteria (for pagination) - cached"""
+    # Create cache key
+    cache_key = f"count_{state}_{ntee_code}_{query}"
+    
+    # Check cache (1 hour TTL)
+    now = datetime.now()
+    if cache_key in _count_cache:
+        cached_time = _count_cache_ttl.get(cache_key)
+        if cached_time and (now - cached_time).total_seconds() < 3600:
+            return _count_cache[cache_key]
+    
+    try:
+        # Determine file path
+        if state:
+            file_pattern = f"{GOLD_DIR}/states/{state}/nonprofits_organizations.parquet"
+        else:
+            file_pattern = f"{GOLD_DIR}/national/nonprofits_organizations.parquet"
+        
+        file_path = Path(file_pattern)
+        if not file_path.exists():
+            return 0
+        
+        conn = duckdb.connect()
+        
+        # Detect schema
+        columns_query = f"DESCRIBE SELECT * FROM '{file_path}' LIMIT 0"
+        available_columns = set([row[0] for row in conn.execute(columns_query).fetchall()])
+        name_col = 'organization_name' if 'organization_name' in available_columns else 'name'
+        ntee_col = 'ntee_code' if 'ntee_code' in available_columns else 'ntee_cd'
+        
+        # Build WHERE clause
+        where_clauses = []
+        params = []
+        
+        if query and query.strip():
+            where_clauses.append(f"LOWER({name_col}) LIKE LOWER(?)")
+            params.append(f'%{query}%')
+        
+        if ntee_code and ntee_col in available_columns:
+            where_clauses.append(f"{ntee_col} LIKE ?")
+            params.append(f'{ntee_code}%')
+        
+        where_sql = " AND ".join(where_clauses) if where_clauses else "TRUE"
+        
+        # Count query
+        count_sql = f"SELECT COUNT(*) FROM '{file_path}' WHERE {where_sql}"
+        result = conn.execute(count_sql, params).fetchone()
+        conn.close()
+        
+        count = result[0] if result else 0
+        
+        # Cache the result
+        _count_cache[cache_key] = count
+        _count_cache_ttl[cache_key] = now
+        
+        return count
+    except Exception as e:
+        logger.error(f"Count error: {e}")
+        return 0
+
+
+def search_organizations(query: str, state: Optional[str] = None, ntee_code: Optional[str] = None, limit: int = 10, offset: int = 0, enrich: bool = False) -> List[SearchResult]:
+    """Search nonprofit organizations using DuckDB for fast Parquet queries
+    
+    Args:
+        enrich: If True, fetch additional data from Every.org API (slower)
+    """
     results = []
     
     try:
@@ -502,37 +572,53 @@ def search_organizations(query: str, state: Optional[str] = None, ntee_code: Opt
         # Initialize DuckDB connection
         conn = duckdb.connect()
         
-        # Build WHERE clauses
+        # First, check what columns exist in this file
+        columns_query = f"DESCRIBE SELECT * FROM '{file_path}' LIMIT 0"
+        available_columns = set([row[0] for row in conn.execute(columns_query).fetchall()])
+        
+        # Detect column name variations (handle different schemas)
+        name_col = 'organization_name' if 'organization_name' in available_columns else 'name'
+        ntee_col = 'ntee_code' if 'ntee_code' in available_columns else 'ntee_cd'
+        revenue_col = 'form_990_total_revenue' if 'form_990_total_revenue' in available_columns else 'revenue_amt'
+        asset_col = 'form_990_total_assets' if 'form_990_total_assets' in available_columns else 'asset_amt'
+        income_col = 'form_990_net_income' if 'form_990_net_income' in available_columns else 'income_amt'
+        
+        # Build WHERE clauses using detected column names
         where_clauses = []
         params = []
         
-        # Search query (case-insensitive LIKE) - use 'name' column
-        where_clauses.append("LOWER(name) LIKE LOWER(?)")
-        params.append(f'%{query}%')
+        # Search query (case-insensitive LIKE) - only if query provided
+        if query and query.strip():
+            where_clauses.append(f"LOWER({name_col}) LIKE LOWER(?)")
+            params.append(f'%{query}%')
         
         # State filter (if using national file)
         if state and not file_pattern.startswith(f"{GOLD_DIR}/states/"):
             where_clauses.append("state = ?")
             params.append(state)
         
-        # NTEE code filter - use 'ntee_cd' column
-        if ntee_code:
-            where_clauses.append("ntee_cd LIKE ?")
+        # NTEE code filter
+        if ntee_code and ntee_col in available_columns:
+            where_clauses.append(f"{ntee_col} LIKE ?")
             params.append(f'{ntee_code}%')
         
-        where_sql = " AND ".join(where_clauses)
+        # Default to TRUE if no filters (browse all)
+        where_sql = " AND ".join(where_clauses) if where_clauses else "TRUE"
         
-        # First, check what columns exist in this file
-        columns_query = f"DESCRIBE SELECT * FROM '{file_path}' LIMIT 0"
-        available_columns = set([row[0] for row in conn.execute(columns_query).fetchall()])
+        # Build column list with proper NULL handling for missing columns
+        select_columns = []
         
-        # Build column list - include form_990_* columns if they exist
-        select_columns = [
-            'name', 'city', 'state', 'ntee_cd', 'ein',
-            'revenue_amt', 'asset_amt', 'income_amt'
-        ]
+        # Add core columns (with aliases for consistency)
+        select_columns.append(f'{name_col} as name')
+        select_columns.append('city')
+        select_columns.append('state')
+        select_columns.append(f'{ntee_col} as ntee_cd' if ntee_col in available_columns else 'NULL as ntee_cd')
+        select_columns.append('ein')
+        select_columns.append(f'{revenue_col} as revenue_amt' if revenue_col in available_columns else 'NULL as revenue_amt')
+        select_columns.append(f'{asset_col} as asset_amt' if asset_col in available_columns else 'NULL as asset_amt')
+        select_columns.append(f'{income_col} as income_amt' if income_col in available_columns else 'NULL as income_amt')
         
-        # Add form_990 columns if available (for incremental enrichment)
+        # Track form_990 enrichment columns
         form_990_cols = []
         for col in ['form_990_website', 'form_990_mission', 'form_990_last_updated']:
             if col in available_columns:
@@ -541,26 +627,44 @@ def search_organizations(query: str, state: Optional[str] = None, ntee_code: Opt
         
         columns_sql = ', '.join(select_columns)
         
-        # SQL query with relevance scoring
-        sql = f"""
-            SELECT 
-                {columns_sql},
-                CASE 
-                    WHEN LOWER(name) LIKE LOWER(?) THEN 1.5
-                    WHEN LOWER(name) LIKE LOWER(?) THEN 1.0
-                    ELSE 0.5
-                END as score
-            FROM '{file_path}'
-            WHERE {where_sql}
-            ORDER BY score DESC, 
-                     COALESCE(TRY_CAST(revenue_amt AS BIGINT), 0) DESC, 
-                     COALESCE(TRY_CAST(asset_amt AS BIGINT), 0) DESC,
-                     name
-            LIMIT ?
-        """
+        # SQL query with relevance scoring (browse mode if no query)
+        if query and query.strip():
+            # Search mode: score by text match
+            sql = f"""
+                SELECT 
+                    {columns_sql},
+                    CASE 
+                        WHEN LOWER({name_col}) LIKE LOWER(?) THEN 1.5
+                        WHEN LOWER({name_col}) LIKE LOWER(?) THEN 1.0
+                        ELSE 0.5
+                    END as score
+                FROM '{file_path}'
+                WHERE {where_sql}
+                ORDER BY score DESC, 
+                         COALESCE(TRY_CAST({revenue_col} AS BIGINT), 0) DESC, 
+                         COALESCE(TRY_CAST({asset_col} AS BIGINT), 0) DESC,
+                         {name_col}
+                LIMIT ? OFFSET ?
+            """
+            # Execute query with scoring parameters
+            query_params = [f'{query}%', f'%{query}%'] + params + [limit, offset]
+        else:
+            # Browse mode: sort by size/activity
+            sql = f"""
+                SELECT 
+                    {columns_sql},
+                    1.0 as score
+                FROM '{file_path}'
+                WHERE {where_sql}
+                ORDER BY 
+                    COALESCE(TRY_CAST({revenue_col} AS BIGINT), 0) DESC, 
+                    COALESCE(TRY_CAST({asset_col} AS BIGINT), 0) DESC,
+                    {name_col}
+                LIMIT ? OFFSET ?
+            """
+            # Execute query without scoring parameters
+            query_params = params + [limit, offset]
         
-        # Execute query with parameters
-        query_params = [f'{query}%', f'%{query}%'] + params + [limit]
         rows = conn.execute(sql, query_params).fetchall()
         
         # NTEE code descriptions for better context
@@ -602,8 +706,8 @@ def search_organizations(query: str, state: Optional[str] = None, ntee_code: Opt
             
             score = row[-1]  # Score is always last
             
-            # Get enriched data with intelligent backfill
-            enrichment = get_enrichment_data(ein, existing_data) if ein else {}
+            # Get enriched data with intelligent backfill (only if requested)
+            enrichment = get_enrichment_data(ein, existing_data) if (ein and enrich) else {}
             
             # Build a more informative description
             ntee_desc = None
@@ -753,24 +857,39 @@ def search_causes(query: str, limit: int = 10) -> List[SearchResult]:
 
 @router.get("/api/search")
 async def unified_search(
-    q: str = Query(..., min_length=2, description="Search query"),
+    q: Optional[str] = Query(None, description="Search query (optional - browse by filters if omitted)"),
     types: Optional[str] = Query(None, description="Comma-separated result types: contacts,meetings,organizations,causes"),
     state: Optional[str] = Query(None, description="Filter by state (2-letter code)"),
     ntee_code: Optional[str] = Query(None, description="Filter organizations by NTEE code"),
-    limit: int = Query(20, ge=1, le=100, description="Maximum results per type")
+    limit: int = Query(20, ge=1, le=100, description="Maximum results per type"),
+    offset: int = Query(0, ge=0, description="Number of results to skip (for pagination)"),
+    page: int = Query(1, ge=1, description="Page number (alternative to offset)"),
+    enrich: bool = Query(False, description="Enable API enrichment (slower - fetches logos, causes from Every.org)")
 ):
     """
     Unified search across all data types
     
     Search for contacts, meetings, organizations, and causes in one query.
+    **NEW:** Query is now optional - you can browse by state/type without searching!
+    
+    **Pagination:**
+    - Use `offset` to skip results: `offset=20` skips first 20 results
+    - Or use `page` with `limit`: `page=2&limit=20` gets results 21-40
+    - `offset` takes precedence if both are provided
     
     **Examples:**
     - `/api/search?q=dental` - Search everything for "dental"
+    - `/api/search?types=organizations&state=GA` - Browse all orgs in Georgia
     - `/api/search?q=budget&types=meetings` - Search only meetings
     - `/api/search?q=health&state=AL` - Search in Alabama only
     - `/api/search?q=education&types=organizations,causes` - Search orgs and causes
+    - `/api/search?q=health&state=MA&page=2&limit=20` - Page 2 of MA health results
     """
     try:
+        # Calculate offset from page if offset not explicitly provided
+        if offset == 0 and page > 1:
+            offset = (page - 1) * limit
+        
         # Parse requested types
         if types:
             requested_types = [t.strip() for t in types.split(',')]
@@ -779,41 +898,81 @@ async def unified_search(
         
         all_results = []
         
-        # Search each requested type
+        # Optimize for single-type browse mode (no query)
+        # Let database handle pagination for efficiency
+        use_db_pagination = not q and len(requested_types) == 1
+        
+        if use_db_pagination:
+            # Single-type browse: pass offset to DB for efficient pagination
+            search_limit = limit
+            search_offset = offset
+        else:
+            # Multi-type or search mode: fetch extra for mixing/sorting
+            search_limit = offset + limit + 100
+            search_offset = 0
+        
         if 'contacts' in requested_types:
-            contact_results = search_contacts(q, state, limit=max(3, limit // 2))
+            contact_results = search_contacts(q or "", state, limit=search_limit)
             all_results.extend(contact_results)
         
         if 'meetings' in requested_types:
-            meeting_results = search_meetings(q, state, limit=max(3, limit // 2))
+            meeting_results = search_meetings(q or "", state, limit=search_limit)
             all_results.extend(meeting_results)
         
         if 'organizations' in requested_types:
-            org_results = search_organizations(q, state, ntee_code, limit=max(3, limit))
+            org_results = search_organizations(q or "", state, ntee_code, limit=search_limit, offset=search_offset, enrich=enrich)
             all_results.extend(org_results)
         
         if 'causes' in requested_types:
-            cause_results = search_causes(q, limit=max(3, limit // 2))
+            cause_results = search_causes(q or "", limit=search_limit)
             all_results.extend(cause_results)
         
         # Sort all results by score
         all_results.sort(key=lambda x: x.score, reverse=True)
         
+        # Apply pagination
+        if use_db_pagination:
+            # DB already paginated - use all results
+            paginated_results = all_results
+        else:
+            # Paginate in-memory from combined results
+            paginated_results = all_results[offset:offset + limit]
+        
         # Group by type for response
         grouped_results = {
-            'contacts': [r.to_dict() for r in all_results if r.result_type == 'contact'][:limit],
-            'meetings': [r.to_dict() for r in all_results if r.result_type == 'meeting'][:limit],
-            'organizations': [r.to_dict() for r in all_results if r.result_type == 'organization'][:limit],
-            'causes': [r.to_dict() for r in all_results if r.result_type == 'cause'][:limit],
+            'contacts': [r.to_dict() for r in paginated_results if r.result_type == 'contact'],
+            'meetings': [r.to_dict() for r in paginated_results if r.result_type == 'meeting'],
+            'organizations': [r.to_dict() for r in paginated_results if r.result_type == 'organization'],
+            'causes': [r.to_dict() for r in paginated_results if r.result_type == 'cause'],
         }
         
         # Calculate total results
-        total_results = sum(len(v) for v in grouped_results.values())
+        # For single-type browse mode, get accurate count from database
+        if not q and len(requested_types) == 1:
+            # Browse mode: count total matching records in DB
+            if 'organizations' in requested_types:
+                total_results = count_organizations(state=state, ntee_code=ntee_code, query=q)
+            else:
+                # Fallback to fetched results for other types
+                total_results = len(all_results)
+        else:
+            # Search/multi-type mode: use fetched results
+            total_results = len(all_results)
+        
+        total_pages = (total_results + limit - 1) // limit  # Ceiling division
         
         return {
-            "query": q,
+            "query": q or "",
             "total_results": total_results,
             "results": grouped_results,
+            "pagination": {
+                "page": page if offset == 0 or offset == (page - 1) * limit else (offset // limit) + 1,
+                "limit": limit,
+                "offset": offset,
+                "total_pages": total_pages,
+                "has_next": offset + limit < total_results,
+                "has_prev": offset > 0
+            },
             "filters": {
                 "state": state,
                 "ntee_code": ntee_code,

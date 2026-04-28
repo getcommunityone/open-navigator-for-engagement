@@ -32,6 +32,14 @@ interface SearchResponse {
     organizations: SearchResult[]
     causes: SearchResult[]
   }
+  pagination: {
+    page: number
+    limit: number
+    offset: number
+    total_pages: number
+    has_next: boolean
+    has_prev: boolean
+  }
   filters: {
     state?: string
     ntee_code?: string
@@ -43,10 +51,21 @@ export default function UnifiedSearch() {
   const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
   
-  const [query, setQuery] = useState(searchParams.get('q') || '')
-  const [activeQuery, setActiveQuery] = useState(searchParams.get('q') || '')
-  const [selectedTypes, setSelectedTypes] = useState<string[]>(['contacts', 'meetings', 'organizations', 'causes'])
-  const [selectedState, setSelectedState] = useState(searchParams.get('state') || '')
+  // Initialize state directly from URL params (lazy initializer for performance)
+  const [query, setQuery] = useState(() => searchParams.get('q') || '')
+  const [activeQuery, setActiveQuery] = useState(() => searchParams.get('q') || '')
+  const [selectedTypes, setSelectedTypes] = useState<string[]>(() => {
+    const typesParam = searchParams.get('types')
+    if (typesParam) {
+      const types = typesParam.split(',').filter(t => 
+        ['contacts', 'meetings', 'organizations', 'causes'].includes(t.trim())
+      )
+      return types.length > 0 ? types : ['contacts', 'meetings', 'organizations', 'causes']
+    }
+    return ['contacts', 'meetings', 'organizations', 'causes']
+  })
+  const [selectedState, setSelectedState] = useState(() => searchParams.get('state') || '')
+  const [currentPage, setCurrentPage] = useState(() => parseInt(searchParams.get('page') || '1'))
   const [showFilters, setShowFilters] = useState(false)
   const [showSuggestions, setShowSuggestions] = useState(false)
   
@@ -56,6 +75,8 @@ export default function UnifiedSearch() {
   useEffect(() => {
     const queryParam = searchParams.get('q')
     const stateParam = searchParams.get('state')
+    const typesParam = searchParams.get('types')
+    const pageParam = searchParams.get('page')
     
     if (queryParam) {
       setQuery(queryParam)
@@ -63,6 +84,17 @@ export default function UnifiedSearch() {
     }
     if (stateParam) {
       setSelectedState(stateParam)
+    }
+    if (typesParam) {
+      const types = typesParam.split(',').filter(t => 
+        ['contacts', 'meetings', 'organizations', 'causes'].includes(t.trim())
+      )
+      if (types.length > 0) {
+        setSelectedTypes(types)
+      }
+    }
+    if (pageParam) {
+      setCurrentPage(parseInt(pageParam))
     }
   }, [searchParams])
 
@@ -87,14 +119,22 @@ export default function UnifiedSearch() {
 
   // Main search results
   const { data: searchResults, isLoading, error } = useQuery<SearchResponse>({
-    queryKey: ['unified-search', activeQuery, selectedTypes, selectedState],
+    queryKey: ['unified-search', activeQuery, selectedTypes, selectedState, currentPage],
     queryFn: async () => {
-      if (!activeQuery) return null
+      // Allow searching with query OR with filters (browse mode)
+      if (!activeQuery && !selectedState && !selectedTypes.length) {
+        return null
+      }
       
       const params: any = {
-        q: activeQuery,
         types: selectedTypes.join(','),
-        limit: 20
+        limit: 20,
+        page: currentPage
+      }
+      
+      // Query is optional - can browse by state/type
+      if (activeQuery) {
+        params.q = activeQuery
       }
       
       if (selectedState) {
@@ -104,20 +144,44 @@ export default function UnifiedSearch() {
       const response = await axios.get('/api/search/', { params })
       return response.data
     },
-    enabled: activeQuery.length >= 2
+    // Enable if we have query OR filters (browse mode)
+    enabled: (activeQuery && activeQuery.length >= 2) || selectedState !== '' || selectedTypes.length > 0
   })
 
   const handleSearch = (e?: React.FormEvent) => {
     e?.preventDefault()
-    if (query.trim().length >= 2) {
+    // Allow search with query OR just filters (browse mode)
+    if (query.trim().length >= 2 || selectedState || selectedTypes.length > 0) {
       setActiveQuery(query)
       setShowSuggestions(false)
+      setCurrentPage(1) // Reset to first page on new search
       
       // Update URL
-      const params: any = { q: query }
+      const params: any = {}
+      if (query.trim()) params.q = query
       if (selectedState) params.state = selectedState
+      if (selectedTypes.length > 0 && selectedTypes.length < 4) {
+        params.types = selectedTypes.join(',')
+      }
       setSearchParams(params)
     }
+  }
+
+  const handlePageChange = (newPage: number) => {
+    setCurrentPage(newPage)
+    
+    // Update URL
+    const params: any = {}
+    if (activeQuery) params.q = activeQuery
+    if (selectedState) params.state = selectedState
+    if (selectedTypes.length > 0 && selectedTypes.length < 4) {
+      params.types = selectedTypes.join(',')
+    }
+    if (newPage > 1) params.page = newPage.toString()
+    setSearchParams(params)
+    
+    // Scroll to top
+    window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
   const handleSuggestionClick = (suggestion: string) => {
@@ -134,6 +198,7 @@ export default function UnifiedSearch() {
     // Update URL
     const params: any = { q: query }
     if (selectedState) params.state = selectedState
+    params.types = category
     setSearchParams(params)
   }
 
@@ -476,7 +541,7 @@ export default function UnifiedSearch() {
         </div>
 
         {/* Search Results */}
-        {activeQuery && (
+        {(activeQuery || selectedState || searchResults) && (
           <div>
             {isLoading && (
               <div className="text-center py-12">
@@ -496,7 +561,11 @@ export default function UnifiedSearch() {
                 {/* Results Summary */}
                 <div className="mb-6">
                   <h2 className="text-xl font-semibold text-gray-900">
-                    {searchResults.total_results} results for "{searchResults.query}"
+                    {searchResults.query ? (
+                      <>{searchResults.total_results} results for "{searchResults.query}"</>
+                    ) : (
+                      <>{searchResults.total_results} results</>
+                    )}
                   </h2>
                   {selectedState && (
                     <p className="text-sm text-gray-600 mt-1">
@@ -572,6 +641,72 @@ export default function UnifiedSearch() {
                     </p>
                   </div>
                 )}
+
+                {/* Pagination Controls */}
+                {searchResults.total_results > 0 && searchResults.pagination.total_pages > 1 && (
+                  <div className="mt-8 flex items-center justify-between bg-white rounded-lg border border-gray-200 p-4">
+                    <div className="text-sm text-gray-600">
+                      Page {searchResults.pagination.page} of {searchResults.pagination.total_pages}
+                      <span className="ml-2">•</span>
+                      <span className="ml-2">{searchResults.total_results} total results</span>
+                    </div>
+                    
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => handlePageChange(searchResults.pagination.page - 1)}
+                        disabled={!searchResults.pagination.has_prev}
+                        className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                          searchResults.pagination.has_prev
+                            ? 'bg-primary-600 text-white hover:bg-primary-700'
+                            : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                        }`}
+                      >
+                        ← Previous
+                      </button>
+                      
+                      {/* Page numbers */}
+                      <div className="flex items-center gap-1">
+                        {Array.from({ length: Math.min(5, searchResults.pagination.total_pages) }, (_, i) => {
+                          const pageNum = Math.max(
+                            1,
+                            Math.min(
+                              searchResults.pagination.page - 2 + i,
+                              searchResults.pagination.total_pages - 4
+                            )
+                          ) + Math.min(i, 4)
+                          
+                          if (pageNum > searchResults.pagination.total_pages) return null
+                          
+                          return (
+                            <button
+                              key={pageNum}
+                              onClick={() => handlePageChange(pageNum)}
+                              className={`px-3 py-1 rounded ${
+                                pageNum === searchResults.pagination.page
+                                  ? 'bg-primary-600 text-white font-semibold'
+                                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                              }`}
+                            >
+                              {pageNum}
+                            </button>
+                          )
+                        })}
+                      </div>
+                      
+                      <button
+                        onClick={() => handlePageChange(searchResults.pagination.page + 1)}
+                        disabled={!searchResults.pagination.has_next}
+                        className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                          searchResults.pagination.has_next
+                            ? 'bg-primary-600 text-white hover:bg-primary-700'
+                            : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                        }`}
+                      >
+                        Next →
+                      </button>
+                    </div>
+                  </div>
+                )}
               </>
             )}
           </div>
@@ -580,6 +715,18 @@ export default function UnifiedSearch() {
         {/* Initial State - Search Examples */}
         {!activeQuery && (
           <div className="bg-white rounded-lg shadow-sm p-8">
+            {(selectedState || selectedTypes.length < 4) && (
+              <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                <p className="text-blue-800 font-medium">
+                  {selectedState && `State filter: ${selectedState}`}
+                  {selectedState && selectedTypes.length < 4 && ' • '}
+                  {selectedTypes.length < 4 && `Type filter: ${selectedTypes.join(', ')}`}
+                </p>
+                <p className="text-blue-700 text-sm mt-1">
+                  Enter a search query above to see results with these filters applied.
+                </p>
+              </div>
+            )}
             <h2 className="text-xl font-semibold text-gray-900 mb-6">Try searching for:</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {[

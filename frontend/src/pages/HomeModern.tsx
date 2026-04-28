@@ -390,21 +390,21 @@ export default function HomeModern() {
                 <>
                   <Link 
                     to={`/search?types=organizations&state=${statsData.state}`}
-                    className="text-[#52796F] hover:text-[#354F52] underline decoration-2 decoration-[#84A98C] hover:decoration-[#52796F] transition-colors"
+                    className="font-semibold text-[#52796F] hover:text-[#354F52] no-underline hover:underline hover:decoration-2 transition-all duration-200"
                   >
                     {statsData.nonprofits_display} nonprofits
                   </Link>
                   {' • '}
                   <Link 
                     to={`/search?types=contacts&state=${statsData.state}`}
-                    className="text-[#52796F] hover:text-[#354F52] underline decoration-2 decoration-[#84A98C] hover:decoration-[#52796F] transition-colors"
+                    className="font-semibold text-[#52796F] hover:text-[#354F52] no-underline hover:underline hover:decoration-2 transition-all duration-200"
                   >
                     {statsData.contacts_display} leaders
                   </Link>
                   {' • '}
                   <Link 
                     to={`/search?types=causes&state=${statsData.state}`}
-                    className="text-[#52796F] hover:text-[#354F52] underline decoration-2 decoration-[#84A98C] hover:decoration-[#52796F] transition-colors"
+                    className="font-semibold text-[#52796F] hover:text-[#354F52] no-underline hover:underline hover:decoration-2 transition-all duration-200"
                   >
                     {statsData.causes_display} causes
                   </Link>
@@ -415,21 +415,21 @@ export default function HomeModern() {
                   {statsData.jurisdictions_display} cities • {' '}
                   <Link 
                     to="/search?types=organizations"
-                    className="text-[#52796F] hover:text-[#354F52] underline decoration-2 decoration-[#84A98C] hover:decoration-[#52796F] transition-colors"
+                    className="font-semibold text-[#52796F] hover:text-[#354F52] no-underline hover:underline hover:decoration-2 transition-all duration-200"
                   >
                     {statsData.nonprofits_display} nonprofits
                   </Link>
                   {' • '}
                   <Link 
                     to="/search?types=contacts"
-                    className="text-[#52796F] hover:text-[#354F52] underline decoration-2 decoration-[#84A98C] hover:decoration-[#52796F] transition-colors"
+                    className="font-semibold text-[#52796F] hover:text-[#354F52] no-underline hover:underline hover:decoration-2 transition-all duration-200"
                   >
                     {statsData.contacts_display} leaders
                   </Link>
                   {' • '}
                   <Link 
                     to="/search?types=causes"
-                    className="text-[#52796F] hover:text-[#354F52] underline decoration-2 decoration-[#84A98C] hover:decoration-[#52796F] transition-colors"
+                    className="font-semibold text-[#52796F] hover:text-[#354F52] no-underline hover:underline hover:decoration-2 transition-all duration-200"
                   >
                     {statsData.causes_display} causes
                   </Link>
@@ -441,21 +441,21 @@ export default function HomeModern() {
                 925 jurisdictions • {' '}
                 <Link 
                   to="/search?types=organizations"
-                  className="text-[#52796F] hover:text-[#354F52] underline decoration-2 decoration-[#84A98C] hover:decoration-[#52796F] transition-colors"
+                  className="font-semibold text-[#52796F] hover:text-[#354F52] no-underline hover:underline hover:decoration-2 transition-all duration-200"
                 >
                   43,726 nonprofits
                 </Link>
                 {' • '}
                 <Link 
                   to="/search?types=contacts"
-                  className="text-[#52796F] hover:text-[#354F52] underline decoration-2 decoration-[#84A98C] hover:decoration-[#52796F] transition-colors"
+                  className="font-semibold text-[#52796F] hover:text-[#354F52] no-underline hover:underline hover:decoration-2 transition-all duration-200"
                 >
                   10,000+ leaders
                 </Link>
                 {' • '}
                 <Link 
                   to="/search?types=causes"
-                  className="text-[#52796F] hover:text-[#354F52] underline decoration-2 decoration-[#84A98C] hover:decoration-[#52796F] transition-colors"
+                  className="font-semibold text-[#52796F] hover:text-[#354F52] no-underline hover:underline hover:decoration-2 transition-all duration-200"
                 >
                   650+ causes
                 </Link>
