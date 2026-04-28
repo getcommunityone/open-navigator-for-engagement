@@ -9,6 +9,16 @@ sidebar_label: Legal & Compliance
 This document ensures **Open Navigator for Engagement** complies with all data source terms of service, API policies, and legal requirements. Every data source is documented with its use policy, licensing terms, and compliance status.
 :::
 
+:::tip[Looking for Legal Policies?]
+**For complete legal documentation, see:**
+- **[Terms of Service](./legal/terms-of-service.md)** - Main legal agreement
+- **[Data Provider Terms](./legal/data-provider-terms.md)** - All third-party provider terms
+- **[Privacy Policy](./legal/privacy-policy.md)** - How we handle your information
+- **[Legal Overview](./legal/)** - Complete legal documentation index
+
+This page provides **technical compliance details** for developers and data users.
+:::
+
 ## 📋 Overview
 
 Open Navigator for Engagement is built on **publicly available government data** and **open APIs**. We respect all terms of service, implement proper rate limiting, provide attribution, and comply with all data use policies.
@@ -20,6 +30,11 @@ Open Navigator for Engagement is built on **publicly available government data**
 - ✅ **Privacy** - No collection of personal data beyond what's publicly available
 - ✅ **Rate Limiting** - Respectful API usage with proper delays
 - ✅ **Accessibility** - Making public data more accessible to communities
+
+**Legal Agreements:**
+- See [Terms of Service](./legal/terms-of-service.md) for user agreements
+- See [Data Provider Terms](./legal/data-provider-terms.md) for complete provider requirements
+- See [Privacy Policy](./legal/privacy-policy.md) for privacy practices
 
 ## 🏛️ U.S. Government Data Sources
 
@@ -564,15 +579,27 @@ See [LICENSE](https://github.com/getcommunityone/open-navigator-for-engagement/b
 
 ---
 
-## 📅 Last Updated
+### Legal Policies
+- **[Terms of Service](./legal/terms-of-service.md)** - User agreement and legal terms
+- **[Data Provider Terms](./legal/data-provider-terms.md)** - Complete third-party provider terms
+- **[Privacy Policy](./legal/privacy-policy.md)** - Privacy practices and user rights
+- **[Legal Overview](./legal/)** - Complete legal documentation index
 
-**Last Reviewed:** April 28, 2026  
-**Version:** 1.0
+### Data Documentation
+- [Citations & Data Sources](./data-sources/citations.md) - Complete academic citations and BibTeX
+- [Data Model & ERD](./data-sources/data-model-erd.md) - Database schema and relationships
+- [HuggingFace Datasets](./data-sources/huggingface-datasets.md) - Published dataset catalog
+- [API Integration Status](https://github.com/getcommunityone/open-navigator-for-engagement/blob/main/docs/API_INTEGRATION_STATUS.md) - Technical implementation details
 
-This document is reviewed and updated regularly to reflect:
-- New data sources added
-- Changes to terms of service
-- Privacy regulation updates
+---
+
+:::tip[Compliance is a Priority]
+We take legal compliance seriously. If you notice any issues with data usage, licensing, or terms of service compliance, please [open an issue](https://github.com/getcommunityone/open-navigator-for-engagement/issues) immediately.
+
+**All users must comply with:**
+- Our [Terms of Service](./legal/terms-of-service.md)
+- All third-party [Data Provider Terms](./legal/data-provider-terms.md)
+- Our [Privacy Policy](./legal/privacy-policy.md)
 - Community feedback
 
 ---
