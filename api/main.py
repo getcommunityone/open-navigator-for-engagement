@@ -100,10 +100,12 @@ else:
 # Include authentication routes
 from api.routes import auth as auth_routes
 from api.routes import social as social_routes
+from api.routes import search as search_routes
 from api.database import init_db
 
 app.include_router(auth_routes.router)
 app.include_router(social_routes.router)
+app.include_router(search_routes.router)
 
 # Custom Swagger UI with logo
 @app.get("/docs", include_in_schema=False)
