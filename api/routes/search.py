@@ -920,11 +920,92 @@ def search_causes(query: str, limit: int = 10) -> List[SearchResult]:
     return results[:limit]
 
 
+def search_jurisdictions(query: str, state: Optional[str] = None, city: Optional[str] = None, limit: int = 10, offset: int = 0) -> List[SearchResult]:
+    """Search cities, counties, townships, and school districts using DuckDB"""
+    results = []
+    
+    try:
+        conn = duckdb.connect()
+        
+        # Define jurisdiction files
+        jurisdiction_files = {
+            'city': f"{GOLD_DIR}/reference/jurisdictions_cities.parquet",
+            'county': f"{GOLD_DIR}/reference/jurisdictions_counties.parquet",
+            'township': f"{GOLD_DIR}/reference/jurisdictions_townships.parquet",
+            'school district': f"{GOLD_DIR}/reference/jurisdictions_school_districts.parquet"
+        }
+        
+        for jtype, file_path in jurisdiction_files.items():
+            file_path_obj = Path(file_path)
+            if not file_path_obj.exists():
+                continue
+            
+            try:
+                # Build SQL query - use state column (lowercase)
+                where_clauses = []
+                params = []
+                
+                if state:
+                    where_clauses.append("state = ?")
+                    params.append(state)
+                
+                if city and query:
+                    # If city is specified, search for jurisdictions matching the city name
+                    where_clauses.append("LOWER(NAME) LIKE LOWER(?)")
+                    params.append(f"%{city}%")
+                elif query:
+                    # General search across jurisdiction names
+                    where_clauses.append("LOWER(NAME) LIKE LOWER(?)")
+                    params.append(f"%{query}%")
+                
+                where_clause = " AND ".join(where_clauses) if where_clauses else "1=1"
+                
+                sql = f"""
+                    SELECT 
+                        NAME as name,
+                        state,
+                        GEOID as geoid,
+                        jurisdiction_type,
+                        1.0 as score
+                    FROM read_parquet(?)
+                    WHERE {where_clause}
+                    LIMIT ? OFFSET ?
+                """
+                
+                query_params = [str(file_path_obj)] + params + [limit, offset]
+                df = conn.execute(sql, query_params).fetchdf()
+                
+                for _, row in df.iterrows():
+                    results.append(SearchResult(
+                        title=f"{row['name']}",
+                        snippet=f"{row['jurisdiction_type'].title()}, {row['state']}",
+                        url=f"/jurisdictions/{row['geoid']}",
+                        result_type='jurisdiction',
+                        score=row['score'],
+                        metadata={
+                            'state': row['state'],
+                            'geoid': row['geoid'],
+                            'type': row['jurisdiction_type']
+                        }
+                    ))
+            
+            except Exception as e:
+                logger.error(f"Error searching {jtype} jurisdictions: {e}")
+                continue
+    
+    except Exception as e:
+        logger.error(f"Jurisdiction search error: {e}")
+    
+    results.sort(key=lambda x: x.score, reverse=True)
+    return results[:limit]
+
+
 @router.get("/api/search")
 async def unified_search(
     q: Optional[str] = Query(None, description="Search query (optional - browse by filters if omitted)"),
-    types: Optional[str] = Query(None, description="Comma-separated result types: contacts,meetings,organizations,causes"),
+    types: Optional[str] = Query(None, description="Comma-separated result types: contacts,meetings,organizations,causes,jurisdictions"),
     state: Optional[str] = Query(None, description="Filter by state (2-letter code)"),
+    city: Optional[str] = Query(None, description="Filter by city name"),
     ntee_code: Optional[str] = Query(None, description="Filter organizations by NTEE code"),
     limit: int = Query(20, ge=1, le=100, description="Maximum results per type"),
     offset: int = Query(0, ge=0, description="Number of results to skip (for pagination)"),
@@ -960,7 +1041,7 @@ async def unified_search(
         if types:
             requested_types = [t.strip() for t in types.split(',')]
         else:
-            requested_types = ['contacts', 'meetings', 'organizations', 'causes']
+            requested_types = ['contacts', 'meetings', 'organizations', 'causes', 'jurisdictions']
         
         all_results = []
         
@@ -993,6 +1074,10 @@ async def unified_search(
             cause_results = search_causes(q or "", limit=search_limit)
             all_results.extend(cause_results)
         
+        if 'jurisdictions' in requested_types:
+            jurisdiction_results = search_jurisdictions(q or "", state, city, limit=search_limit, offset=search_offset)
+            all_results.extend(jurisdiction_results)
+        
         # Sort all results by score
         all_results.sort(key=lambda x: x.score, reverse=True)
         
@@ -1010,6 +1095,7 @@ async def unified_search(
             'meetings': [r.to_dict() for r in paginated_results if r.result_type == 'meeting'],
             'organizations': [r.to_dict() for r in paginated_results if r.result_type == 'organization'],
             'causes': [r.to_dict() for r in paginated_results if r.result_type == 'cause'],
+            'jurisdictions': [r.to_dict() for r in paginated_results if r.result_type == 'jurisdiction'],
         }
         
         # Calculate total results

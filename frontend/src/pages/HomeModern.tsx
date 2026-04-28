@@ -1,6 +1,6 @@
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { useState, useEffect, Fragment } from 'react'
-import { Tab } from '@headlessui/react'
+import { Tab, Dialog, Transition } from '@headlessui/react'
 import { useQuery } from '@tanstack/react-query'
 import axios from 'axios'
 import { 
@@ -27,6 +27,7 @@ import {
 } from '@heroicons/react/24/outline'
 import { useLocation as useLocationContext } from '../contexts/LocationContext'
 import AddressLookup from '../components/AddressLookup'
+import JurisdictionDiscovery from '../components/JurisdictionDiscovery'
 
 export default function HomeModern() {
   const navigate = useNavigate()
@@ -37,7 +38,10 @@ export default function HomeModern() {
   const [searchScope, setSearchScope] = useState('city')
   const [showSuggestions, setShowSuggestions] = useState(false)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
-  const { location, setLocation } = useLocationContext()
+  const [jurisdictionSearch, setJurisdictionSearch] = useState('')
+  const [selectedStateFilter, setSelectedStateFilter] = useState('')
+  const [showJurisdictionsModal, setShowJurisdictionsModal] = useState(false)
+  const { location, setLocation} = useLocationContext()
 
   // Environment-aware URLs for docs and API
   // In development: Docusaurus on localhost:3000/docs, API on localhost:8000
@@ -49,11 +53,17 @@ export default function HomeModern() {
 
   // Fetch real stats from API - updates based on selected location
   const { data: statsData } = useQuery({
-    queryKey: ['platform-stats', location?.state],
+    queryKey: ['platform-stats', location?.state, location?.county, location?.city],
     queryFn: async () => {
       const params: any = {};
       if (location && location.state) {
         params.state = location.state;
+      }
+      if (location && location.county) {
+        params.county = location.county;
+      }
+      if (location && location.city) {
+        params.city = location.city;
       }
       const response = await axios.get('/api/stats', { params });
       return response.data.data;
@@ -389,6 +399,13 @@ export default function HomeModern() {
               statsData.level === 'state' ? (
                 <>
                   <Link 
+                    to={`/search?types=jurisdictions&state=${statsData.state}`}
+                    className="font-semibold text-[#52796F] hover:text-[#354F52] no-underline hover:underline hover:decoration-2 transition-all duration-200"
+                  >
+                    {statsData.jurisdictions_display} jurisdictions
+                  </Link>
+                  {' • '}
+                  <Link 
                     to={`/search?types=organizations&state=${statsData.state}`}
                     className="font-semibold text-[#52796F] hover:text-[#354F52] no-underline hover:underline hover:decoration-2 transition-all duration-200"
                   >
@@ -410,9 +427,46 @@ export default function HomeModern() {
                   </Link>
                   {' in '}{statsData.location} • 100% free
                 </>
+              ) : statsData.level === 'city' && statsData.jurisdictions_breakdown ? (
+                <>
+                  <button
+                    onClick={() => setShowJurisdictionsModal(true)}
+                    className="font-semibold text-[#52796F] hover:text-[#354F52] no-underline hover:underline hover:decoration-2 transition-all duration-200 cursor-pointer bg-transparent border-none"
+                  >
+                    {statsData.jurisdictions_display} jurisdictions
+                  </button>
+                  {' • '}
+                  <Link 
+                    to={`/search?types=organizations${statsData.state ? `&state=${statsData.state}` : ''}`}
+                    className="font-semibold text-[#52796F] hover:text-[#354F52] no-underline hover:underline hover:decoration-2 transition-all duration-200"
+                  >
+                    {statsData.nonprofits_display} nonprofits
+                  </Link>
+                  {' • '}
+                  <Link 
+                    to={`/search?types=contacts${statsData.state ? `&state=${statsData.state}` : ''}`}
+                    className="font-semibold text-[#52796F] hover:text-[#354F52] no-underline hover:underline hover:decoration-2 transition-all duration-200"
+                  >
+                    {statsData.contacts_display} leaders
+                  </Link>
+                  {' • '}
+                  <Link 
+                    to={`/search?types=causes${statsData.state ? `&state=${statsData.state}` : ''}`}
+                    className="font-semibold text-[#52796F] hover:text-[#354F52] no-underline hover:underline hover:decoration-2 transition-all duration-200"
+                  >
+                    {statsData.causes_display} causes
+                  </Link>
+                  {' in '}{statsData.location} • 100% free
+                </>
               ) : (
                 <>
-                  {statsData.jurisdictions_display} cities • {' '}
+                  <Link 
+                    to={`/search?types=jurisdictions${statsData.state ? `&state=${statsData.state}` : ''}`}
+                    className="font-semibold text-[#52796F] hover:text-[#354F52] no-underline hover:underline hover:decoration-2 transition-all duration-200"
+                  >
+                    {statsData.jurisdictions_display} jurisdictions
+                  </Link>
+                  {' • '}
                   <Link 
                     to="/search?types=organizations"
                     className="font-semibold text-[#52796F] hover:text-[#354F52] no-underline hover:underline hover:decoration-2 transition-all duration-200"
@@ -784,6 +838,179 @@ export default function HomeModern() {
         </div>
       </section>
 
+      {/* Jurisdiction Discovery Section */}
+      <section id="jurisdictions" className="py-20 px-4 bg-gradient-to-br from-gray-50 to-blue-50">
+        <div className="max-w-7xl mx-auto">
+          <div className="text-center mb-12">
+            <h2 className="text-4xl md:text-5xl font-bold mb-4" style={{ color: '#354F52' }}>
+              Explore Jurisdictions
+            </h2>
+            <p className="text-xl text-gray-600 mb-8">
+              Search 32,000+ cities, counties, and school districts across all 50 states
+            </p>
+            
+            {/* Search and Filter Controls */}
+            <div className="max-w-4xl mx-auto mb-8">
+              <div className="flex flex-col md:flex-row gap-4">
+                {/* Search Input */}
+                <div className="flex-1">
+                  <input
+                    type="text"
+                    value={jurisdictionSearch}
+                    onChange={(e) => setJurisdictionSearch(e.target.value)}
+                    placeholder="Search jurisdictions... (e.g., Fishers, Indiana)"
+                    className="w-full px-6 py-4 rounded-lg border-2 border-gray-300 focus:border-[#52796F] focus:outline-none text-lg"
+                  />
+                </div>
+                
+                {/* State Filter */}
+                <div className="md:w-48">
+                  <select
+                    value={selectedStateFilter}
+                    onChange={(e) => setSelectedStateFilter(e.target.value)}
+                    className="w-full px-4 py-4 rounded-lg border-2 border-gray-300 focus:border-[#52796F] focus:outline-none text-lg bg-white"
+                  >
+                    <option value="">All States</option>
+                    <option value="AL">Alabama</option>
+                    <option value="GA">Georgia</option>
+                    <option value="IN">Indiana</option>
+                    <option value="MA">Massachusetts</option>
+                    <option value="WA">Washington</option>
+                    <option value="WI">Wisconsin</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            {/* Stats Summary */}
+            {selectedStateFilter && statsData && (
+              <div className="max-w-2xl mx-auto mb-8 p-6 bg-white rounded-lg shadow-sm border border-gray-200">
+                <div className="flex items-center justify-center gap-2 text-lg">
+                  <MapIcon className="h-6 w-6 text-[#52796F]" />
+                  <span className="font-semibold text-gray-900">
+                    {selectedStateFilter}:
+                  </span>
+                  <span className="text-gray-700">
+                    {statsData.jurisdictions_display || '0'} jurisdictions •{' '}
+                    {statsData.nonprofits_display || '0'} nonprofits •{' '}
+                    {statsData.contacts_display || '0'} leaders •{' '}
+                    {statsData.causes_display || '0'} causes
+                  </span>
+                  <span className="text-green-600 font-semibold">• 100% free</span>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Discovery Results */}
+          <div className="space-y-4">
+            {/* Example: Fishers, Indiana */}
+            {(!jurisdictionSearch || 'fishers indiana'.includes(jurisdictionSearch.toLowerCase())) && 
+             (!selectedStateFilter || selectedStateFilter === 'IN') && (
+              <JurisdictionDiscovery
+                jurisdiction={{
+                  name: 'Fishers',
+                  state: 'Indiana',
+                  website: 'https://fishersin.gov',
+                  youtube_channels: ['CityOfFishers', 'CityFishers'],
+                  facebook: 'facebook.com/fishers.indiana',
+                  twitter: 'twitter.com/fishersin',
+                  agenda_portal: 'https://fishersin.gov/agenda-center/',
+                  meeting_platform: 'Custom agenda system (built into city website)',
+                  completeness: 75
+                }}
+              />
+            )}
+
+            {/* Example: Mobile, Alabama */}
+            {(!jurisdictionSearch || 'mobile alabama'.includes(jurisdictionSearch.toLowerCase())) && 
+             (!selectedStateFilter || selectedStateFilter === 'AL') && (
+              <JurisdictionDiscovery
+                jurisdiction={{
+                  name: 'Mobile',
+                  state: 'Alabama',
+                  website: 'https://cityofmobile.org',
+                  youtube_channels: ['CityofMobileAL'],
+                  facebook: 'facebook.com/cityofmobile',
+                  twitter: 'twitter.com/cityofmobile',
+                  agenda_portal: 'https://cityofmobile.org/council/agendas',
+                  meeting_platform: 'YouTube Live (670 meetings archived)',
+                  completeness: 80
+                }}
+              />
+            )}
+
+            {/* Example: Boston, Massachusetts */}
+            {(!jurisdictionSearch || 'boston massachusetts'.includes(jurisdictionSearch.toLowerCase())) && 
+             (!selectedStateFilter || selectedStateFilter === 'MA') && (
+              <JurisdictionDiscovery
+                jurisdiction={{
+                  name: 'Boston',
+                  state: 'Massachusetts',
+                  website: 'https://boston.gov',
+                  youtube_channels: ['CityofBoston'],
+                  facebook: 'facebook.com/CityofBoston',
+                  twitter: 'twitter.com/CityOfBoston',
+                  agenda_portal: 'https://boston.gov/departments/city-clerk/agendas-and-minutes',
+                  meeting_platform: 'Legistar (city council meetings)',
+                  completeness: 85
+                }}
+              />
+            )}
+
+            {/* Placeholder for no results */}
+            {jurisdictionSearch && jurisdictionSearch.length > 2 && 
+             !['fishers', 'mobile', 'boston'].some(city => jurisdictionSearch.toLowerCase().includes(city)) && (
+              <div className="text-center py-12 bg-white rounded-lg border border-gray-200">
+                <MapIcon className="h-16 w-16 text-gray-400 mx-auto mb-4" />
+                <h3 className="text-xl font-semibold text-gray-900 mb-2">
+                  Discovery in Progress
+                </h3>
+                <p className="text-gray-600 mb-4">
+                  "{jurisdictionSearch}" discovery data is being processed.
+                </p>
+                <p className="text-sm text-gray-500">
+                  Run the comprehensive discovery pipeline to add more jurisdictions:<br />
+                  <code className="bg-gray-100 px-2 py-1 rounded text-xs">
+                    python discovery/comprehensive_discovery_pipeline.py --state {selectedStateFilter || 'ALL'}
+                  </code>
+                </p>
+              </div>
+            )}
+
+            {!jurisdictionSearch && !selectedStateFilter && (
+              <div className="text-center py-8 text-gray-600">
+                <p className="text-lg mb-2">
+                  Search for a jurisdiction above to see its discovery status
+                </p>
+                <p className="text-sm">
+                  Try: "Fishers, Indiana" or "Mobile, Alabama" or "Boston, Massachusetts"
+                </p>
+              </div>
+            )}
+          </div>
+
+          {/* Call to Action */}
+          <div className="mt-12 text-center">
+            <div className="inline-flex flex-col md:flex-row gap-4">
+              <button
+                onClick={() => navigate('/search')}
+                className="px-8 py-4 rounded-lg text-white font-semibold transition-all hover:shadow-lg"
+                style={{ backgroundColor: '#354F52' }}
+              >
+                Search All Data
+              </button>
+              <button
+                onClick={() => window.open('https://github.com/getcommunityone/open-navigator-for-engagement', '_blank')}
+                className="px-8 py-4 rounded-lg bg-white border-2 border-[#354F52] text-[#354F52] font-semibold transition-all hover:bg-gray-50"
+              >
+                View on GitHub
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* Features Section */}
       <section id="features" className="py-20 px-4 bg-white">
         <div className="max-w-7xl mx-auto">
@@ -1147,6 +1374,85 @@ export default function HomeModern() {
           </p>
         </div>
       </footer>
+
+      {/* Jurisdictions Breakdown Modal */}
+      <Transition appear show={showJurisdictionsModal} as={Fragment}>
+        <Dialog as="div" className="relative z-50" onClose={() => setShowJurisdictionsModal(false)}>
+          <Transition.Child
+            as={Fragment}
+            enter="ease-out duration-300"
+            enterFrom="opacity-0"
+            enterTo="opacity-100"
+            leave="ease-in duration-200"
+            leaveFrom="opacity-100"
+            leaveTo="opacity-0"
+          >
+            <div className="fixed inset-0 bg-black bg-opacity-25" />
+          </Transition.Child>
+
+          <div className="fixed inset-0 overflow-y-auto">
+            <div className="flex min-h-full items-center justify-center p-4 text-center">
+              <Transition.Child
+                as={Fragment}
+                enter="ease-out duration-300"
+                enterFrom="opacity-0 scale-95"
+                enterTo="opacity-100 scale-100"
+                leave="ease-in duration-200"
+                leaveFrom="opacity-100 scale-100"
+                leaveTo="opacity-0 scale-95"
+              >
+                <Dialog.Panel className="w-full max-w-md transform overflow-hidden rounded-2xl bg-white p-6 text-left align-middle shadow-xl transition-all">
+                  <Dialog.Title
+                    as="h3"
+                    className="text-lg font-medium leading-6 text-gray-900 mb-4 flex items-center gap-2"
+                  >
+                    <MapIcon className="h-6 w-6 text-[#52796F]" />
+                    Your Jurisdictions
+                  </Dialog.Title>
+                  
+                  {statsData && statsData.jurisdictions_breakdown ? (
+                    <div className="mt-2 space-y-3">
+                      <p className="text-sm text-gray-600 mb-4">
+                        When you select a city, you're connected to 4 levels of government:
+                      </p>
+                      {statsData.jurisdictions_breakdown.map((item: any, index: number) => (
+                        <div
+                          key={index}
+                          className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
+                        >
+                          <div>
+                            <div className="font-medium text-gray-900">{item.type}</div>
+                            <div className="text-sm text-gray-600">{item.name}</div>
+                          </div>
+                          <CheckCircleIcon className="h-5 w-5 text-green-600" />
+                        </div>
+                      ))}
+                      
+                      <div className="mt-6 p-4 bg-blue-50 rounded-lg">
+                        <p className="text-sm text-blue-900">
+                          <strong>💡 Why this matters:</strong> Each jurisdiction has its own meetings, budgets, and leaders that affect your daily life. Track all of them in one place.
+                        </p>
+                      </div>
+                    </div>
+                  ) : (
+                    <p className="text-gray-600">No jurisdiction breakdown available.</p>
+                  )}
+
+                  <div className="mt-6">
+                    <button
+                      type="button"
+                      className="w-full inline-flex justify-center rounded-lg border border-transparent bg-[#354F52] px-4 py-2 text-sm font-medium text-white hover:bg-[#52796F] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#354F52] focus-visible:ring-offset-2"
+                      onClick={() => setShowJurisdictionsModal(false)}
+                    >
+                      Got it, thanks!
+                    </button>
+                  </div>
+                </Dialog.Panel>
+              </Transition.Child>
+            </div>
+          </div>
+        </Dialog>
+      </Transition>
     </div>
   )
 }

@@ -6,6 +6,7 @@ from pathlib import Path
 import pandas as pd
 from datetime import datetime, timedelta
 from typing import Dict, Any, Optional
+from loguru import logger
 
 router = APIRouter()
 
@@ -49,9 +50,12 @@ def calculate_stats(state: Optional[str] = None,
     """
     
     # Determine geographic level
-    if city and county and state:
+    if city and state:
         level = 'city'
-        location_display = f"{city}, {county}, {state}"
+        if county:
+            location_display = f"{city}, {county}, {state}"
+        else:
+            location_display = f"{city}, {state}"
     elif county and state:
         level = 'county'
         location_display = f"{county}, {state}"
@@ -66,10 +70,43 @@ def calculate_stats(state: Optional[str] = None,
     if state:
         # Filter to specific state's jurisdictions
         def filter_state(df):
-            state_col = 'STATE' if 'STATE' in df.columns else 'state'
-            return df[state_col].str.upper() == state.upper() if state_col in df.columns else True
+            state_col = 'state' if 'state' in df.columns else 'STATE'
+            if state_col not in df.columns:
+                return pd.Series([False] * len(df))
+            return df[state_col].str.upper() == state.upper()
         
-        jurisdictions = count_parquet_records('reference/jurisdictions_*.parquet', filter_state)
+        # For city level, show just that city (1 jurisdiction)
+        if city:
+            # When a city is selected, show 4 jurisdictions:
+            # 1. City, 2. County, 3. State, 4. School District
+            jurisdictions = 4  # City, County, State, School District
+        elif county:
+            # Count cities/townships in this county
+            cities_file = Path('data/gold/reference/jurisdictions_cities.parquet')
+            townships_file = Path('data/gold/reference/jurisdictions_townships.parquet')
+            count = 0
+            
+            if cities_file.exists():
+                df = pd.read_parquet(cities_file)
+                state_col = 'state' if 'state' in df.columns else 'STATE'
+                if state_col in df.columns:
+                    df = df[df[state_col].str.upper() == state.upper()]
+                    # Filter by county name (NAME column contains county info in some cases)
+                    # For now, count all in state - proper county filtering needs geocoding
+                    count += len(df)
+            
+            if townships_file.exists():
+                df = pd.read_parquet(townships_file)
+                state_col = 'state' if 'state' in df.columns else 'STATE'
+                if state_col in df.columns:
+                    df = df[df[state_col].str.upper() == state.upper()]
+                    count += len(df)
+            
+            jurisdictions = count if count > 0 else 1  # At least the county itself
+        else:
+            # State level - count all jurisdictions
+            jurisdictions = count_parquet_records('reference/jurisdictions_*.parquet', filter_state)
+        
         school_districts = count_parquet_records('reference/jurisdictions_school_districts.parquet', filter_state)
     else:
         jurisdictions = count_parquet_records('reference/jurisdictions_*.parquet')
@@ -83,12 +120,16 @@ def calculate_stats(state: Optional[str] = None,
             df = pd.read_parquet(state_file)
             
             # Filter by county if specified
-            if county and 'COUNTY' in df.columns:
-                df = df[df['COUNTY'].str.contains(county, case=False, na=False)]
+            if county:
+                county_col = 'COUNTY' if 'COUNTY' in df.columns else 'county'
+                if county_col in df.columns:
+                    df = df[df[county_col].str.contains(county, case=False, na=False)]
             
             # Filter by city if specified  
-            if city and 'CITY' in df.columns:
-                df = df[df['CITY'].str.contains(city, case=False, na=False)]
+            if city:
+                city_col = 'CITY' if 'CITY' in df.columns else 'city'
+                if city_col in df.columns:
+                    df = df[df[city_col].str.contains(city, case=False, na=False)]
             
             nonprofits = len(df)
         else:
@@ -99,14 +140,41 @@ def calculate_stats(state: Optional[str] = None,
     # Count meetings
     if state:
         meeting_pattern = f'states/{state}/meetings.parquet'
-        meetings = count_parquet_records(meeting_pattern)
+        meeting_file = Path(f'data/gold/{meeting_pattern}')
+        
+        if city and meeting_file.exists():
+            # Filter by city
+            df = pd.read_parquet(meeting_file)
+            place_col = 'place_name' if 'place_name' in df.columns else 'jurisdiction_name'
+            if place_col in df.columns:
+                # Match city name (case-insensitive)
+                df = df[df[place_col].str.contains(city, case=False, na=False)]
+            meetings = len(df)
+        else:
+            meetings = count_parquet_records(meeting_pattern)
     else:
         meetings = count_parquet_records('states/*/meetings.parquet')
     
     # Count contacts
     if state:
         contact_pattern = f'states/{state}/contacts_*.parquet'
-        contacts = count_parquet_records(contact_pattern)
+        contact_files = list(Path('data/gold/states').glob(f'{state}/contacts_*.parquet'))
+        
+        if city and contact_files:
+            # Filter by city across all contact files
+            contacts = 0
+            for contact_file in contact_files:
+                try:
+                    df = pd.read_parquet(contact_file)
+                    jurisdiction_col = 'jurisdiction' if 'jurisdiction' in df.columns else 'city'
+                    if jurisdiction_col in df.columns:
+                        df = df[df[jurisdiction_col].str.contains(city, case=False, na=False)]
+                    contacts += len(df)
+                except Exception as e:
+                    logger.error(f"Error filtering contacts by city in {contact_file}: {e}")
+                    continue
+        else:
+            contacts = count_parquet_records(contact_pattern)
     else:
         contacts = count_parquet_records('states/*/contacts_*.parquet')
     
@@ -125,6 +193,16 @@ def calculate_stats(state: Optional[str] = None,
     meetings_display = f'{meetings:,}'
     contacts_display = f'{contacts:,}'
     
+    # Build jurisdictions breakdown for city-level views
+    jurisdictions_breakdown = None
+    if city and state:
+        jurisdictions_breakdown = [
+            {'type': 'City', 'name': city},
+            {'type': 'County', 'name': county if county else 'County (TBD)'},
+            {'type': 'State', 'name': state},
+            {'type': 'School District', 'name': f'{city} School District'}
+        ]
+    
     return {
         'level': level,
         'location': location_display,
@@ -135,6 +213,7 @@ def calculate_stats(state: Optional[str] = None,
         # Core counts
         'jurisdictions': jurisdictions,
         'jurisdictions_display': f'{jurisdictions:,}',
+        'jurisdictions_breakdown': jurisdictions_breakdown,  # List of jurisdiction types for city-level
         'school_districts': school_districts,
         'school_districts_display': f'{school_districts:,}',
         
@@ -174,8 +253,12 @@ def get_cached_stats(state: Optional[str] = None,
     global STATS_CACHE
     
     # Build cache key based on geographic level
-    if city and county and state:
-        cache_key = f"city:{state}:{county}:{city}"
+    if city and state:
+        # City level (county is optional)
+        if county:
+            cache_key = f"city:{state}:{county}:{city}"
+        else:
+            cache_key = f"city:{state}:{city}"
     elif county and state:
         cache_key = f"county:{state}:{county}"
     elif state:

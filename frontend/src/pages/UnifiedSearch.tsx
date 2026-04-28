@@ -10,11 +10,12 @@ import {
   HeartIcon,
   XMarkIcon,
   AdjustmentsHorizontalIcon,
-  CheckIcon
+  CheckIcon,
+  MapPinIcon
 } from '@heroicons/react/24/outline'
 
 interface SearchResult {
-  type: 'contact' | 'meeting' | 'organization' | 'cause'
+  type: 'contact' | 'meeting' | 'organization' | 'cause' | 'jurisdiction'
   title: string
   subtitle: string
   description: string
@@ -31,6 +32,7 @@ interface SearchResponse {
     meetings: SearchResult[]
     organizations: SearchResult[]
     causes: SearchResult[]
+    jurisdictions: SearchResult[]
   }
   pagination: {
     page: number
@@ -58,11 +60,11 @@ export default function UnifiedSearch() {
     const typesParam = searchParams.get('types')
     if (typesParam) {
       const types = typesParam.split(',').filter(t => 
-        ['contacts', 'meetings', 'organizations', 'causes'].includes(t.trim())
+        ['contacts', 'meetings', 'organizations', 'causes', 'jurisdictions'].includes(t.trim())
       )
-      return types.length > 0 ? types : ['contacts', 'meetings', 'organizations', 'causes']
+      return types.length > 0 ? types : ['contacts', 'meetings', 'organizations', 'causes', 'jurisdictions']
     }
-    return ['contacts', 'meetings', 'organizations', 'causes']
+    return ['contacts', 'meetings', 'organizations', 'causes', 'jurisdictions']
   })
   const [selectedState, setSelectedState] = useState(() => searchParams.get('state') || '')
   const [currentPage, setCurrentPage] = useState(() => parseInt(searchParams.get('page') || '1'))
@@ -91,7 +93,7 @@ export default function UnifiedSearch() {
     }
     if (typesParam) {
       const types = typesParam.split(',').filter(t => 
-        ['contacts', 'meetings', 'organizations', 'causes'].includes(t.trim())
+        ['contacts', 'meetings', 'organizations', 'causes', 'jurisdictions'].includes(t.trim())
       )
       if (types.length > 0) {
         setSelectedTypes(types)
@@ -179,7 +181,7 @@ export default function UnifiedSearch() {
       const params: any = {}
       if (query.trim()) params.q = query
       if (selectedState) params.state = selectedState
-      if (selectedTypes.length > 0 && selectedTypes.length < 4) {
+      if (selectedTypes.length > 0 && selectedTypes.length < 5) {
         params.types = selectedTypes.join(',')
       }
       if (sortBy && sortBy !== 'relevance') params.sort = sortBy
@@ -195,7 +197,7 @@ export default function UnifiedSearch() {
     const params: any = {}
     if (activeQuery) params.q = activeQuery
     if (selectedState) params.state = selectedState
-    if (selectedTypes.length > 0 && selectedTypes.length < 4) {
+    if (selectedTypes.length > 0 && selectedTypes.length < 5) {
       params.types = selectedTypes.join(',')
     }
     if (sortBy && sortBy !== 'relevance') params.sort = sortBy
@@ -239,7 +241,7 @@ export default function UnifiedSearch() {
     const params: any = {}
     if (activeQuery) params.q = activeQuery
     if (selectedState) params.state = selectedState
-    if (newTypes.length > 0 && newTypes.length < 4) {
+    if (newTypes.length > 0 && newTypes.length < 5) {
       params.types = newTypes.join(',')
     }
     if (sortBy && sortBy !== 'relevance') params.sort = sortBy
@@ -257,6 +259,8 @@ export default function UnifiedSearch() {
         return <BuildingOfficeIcon className="h-5 w-5" />
       case 'cause':
         return <HeartIcon className="h-5 w-5" />
+      case 'jurisdiction':
+        return <MapPinIcon className="h-5 w-5" />
       default:
         return null
     }
@@ -272,6 +276,8 @@ export default function UnifiedSearch() {
         return 'bg-purple-100 text-purple-700 border-purple-200'
       case 'cause':
         return 'bg-pink-100 text-pink-700 border-pink-200'
+      case 'jurisdiction':
+        return 'bg-orange-100 text-orange-700 border-orange-200'
       default:
         return 'bg-gray-100 text-gray-700 border-gray-200'
     }
@@ -443,7 +449,7 @@ export default function UnifiedSearch() {
                     {previewResults.results.causes.slice(0, 3).map((result, idx) => (
                       <button
                         key={idx}
-                        onClick={() => handleSuggestionClick(result.title)}
+                        onClick={() => navigate(result.url)}
                         className="w-full text-left px-4 py-2 hover:bg-gray-50 flex items-start gap-3 transition-colors"
                       >
                         <HeartIcon className="h-5 w-5 text-gray-600 mt-0.5 flex-shrink-0" />
@@ -476,7 +482,7 @@ export default function UnifiedSearch() {
                     {previewResults.results.contacts.slice(0, 3).map((result, idx) => (
                       <button
                         key={idx}
-                        onClick={() => handleSuggestionClick(result.title)}
+                        onClick={() => navigate(result.url)}
                         className="w-full text-left px-4 py-2 hover:bg-gray-50 flex items-start gap-3 transition-colors"
                       >
                         <UserIcon className="h-5 w-5 text-gray-600 mt-0.5 flex-shrink-0" />
@@ -509,7 +515,7 @@ export default function UnifiedSearch() {
                     {previewResults.results.organizations.slice(0, 3).map((result, idx) => (
                       <button
                         key={idx}
-                        onClick={() => handleSuggestionClick(result.title)}
+                        onClick={() => navigate(result.url)}
                         className="w-full text-left px-4 py-2 hover:bg-gray-50 flex items-start gap-3 transition-colors last:rounded-b-lg"
                       >
                         <BuildingOfficeIcon className="h-5 w-5 text-gray-600 mt-0.5 flex-shrink-0" />
@@ -555,7 +561,7 @@ export default function UnifiedSearch() {
             </button>
 
             {/* Quick Type Filters */}
-            {(['contacts', 'meetings', 'organizations', 'causes'] as const).map((type) => (
+            {(['contacts', 'meetings', 'organizations', 'causes', 'jurisdictions'] as const).map((type) => (
               <button
                 key={type}
                 onClick={() => toggleType(type)}
@@ -851,6 +857,20 @@ export default function UnifiedSearch() {
                   </div>
                 )}
 
+                {selectedTypes.includes('jurisdictions') && searchResults.results.jurisdictions.length > 0 && (
+                  <div className="mb-8">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                      <MapPinIcon className="h-6 w-6 text-orange-600" />
+                      Jurisdictions ({searchResults.results.jurisdictions.length})
+                    </h3>
+                    <div className="grid grid-cols-1 gap-4">
+                      {searchResults.results.jurisdictions.map((result, idx) => (
+                        <ResultCard key={idx} result={result} />
+                      ))}
+                    </div>
+                  </div>
+                )}
+
                 {/* No Results */}
                 {searchResults.total_results === 0 && (
                   <div className="text-center py-12 bg-white rounded-lg border border-gray-200">
@@ -935,12 +955,12 @@ export default function UnifiedSearch() {
         {/* Initial State - Search Examples */}
         {!activeQuery && (
           <div className="bg-white rounded-lg shadow-sm p-8">
-            {(selectedState || selectedTypes.length < 4) && (
+            {(selectedState || selectedTypes.length < 5) && (
               <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
                 <p className="text-blue-800 font-medium">
                   {selectedState && `State filter: ${selectedState}`}
-                  {selectedState && selectedTypes.length < 4 && ' • '}
-                  {selectedTypes.length < 4 && `Type filter: ${selectedTypes.join(', ')}`}
+                  {selectedState && selectedTypes.length < 5 && ' • '}
+                  {selectedTypes.length < 5 && `Type filter: ${selectedTypes.join(', ')}`}
                 </p>
                 <p className="text-blue-700 text-sm mt-1">
                   Enter a search query above to see results with these filters applied.

@@ -59,6 +59,98 @@ July 2023, Toronto, Canada.
 - Source: https://dataverse.harvard.edu/
 - License: Varies by dataset
 
+### **City Scrapers** ⭐
+- Open source civic tech project for scraping local government meetings
+- Organization: Documenters.org / City Bureau
+- Source: https://cityscrapers.org/
+- GitHub: https://github.com/city-scrapers
+- License: MIT License (open source)
+- Coverage: Chicago, Pittsburgh, Detroit, Cleveland, Los Angeles (250+ government agencies)
+- What we use: Validated meeting URLs, Legistar/Granicus platform endpoints, spider code for scraper patterns
+- Used for: Meeting discovery, URL extraction, platform detection, scraper validation
+
+**City Scrapers Repositories:**
+- Chicago: https://github.com/city-scrapers/city-scrapers (~100 agencies)
+- Pittsburgh: https://github.com/city-scrapers/city-scrapers-pitt (~30 agencies)
+- Detroit: https://github.com/city-scrapers/city-scrapers-detroit (~40 agencies)
+- Cleveland: https://github.com/city-scrapers/city-scrapers-cle (~30 agencies)
+- Los Angeles: https://github.com/city-scrapers/city-scrapers-la (~50 agencies)
+
+**BibTeX:**
+```bibtex
+@software{city_scrapers,
+    title = {City Scrapers},
+    author = {{Documenters.org}},
+    year = {2024},
+    url = {https://cityscrapers.org/},
+    note = {Open source civic tech project providing validated scrapers for local government meetings across major U.S. cities}
+}
+```
+
+### **Google Civic Information API** ⭐
+- Government officials, polling locations, and election data
+- Organization: Google LLC
+- API Documentation: https://developers.google.com/civic-information
+- License: Free (with quota limits)
+- Rate Limit: 25,000 requests/day (free tier)
+- Coverage: U.S. federal, state, and local government officials; polling locations; election data
+- What we use: Elected officials by address, representative contact info, voting districts
+- Used for: Contact discovery, official verification, civic engagement tools
+
+**API Endpoints Used:**
+- Representatives by Address: Get all elected officials for a given address
+- Elections: Voter information, polling locations, ballot information
+- Divisions: Geographic/political divisions (OCD-IDs)
+
+**BibTeX:**
+```bibtex
+@misc{google_civic_api,
+    title = {Google Civic Information API},
+    author = {{Google LLC}},
+    year = {2024},
+    url = {https://developers.google.com/civic-information},
+    note = {API providing government official contact information, election data, and polling locations}
+}
+```
+
+**Terms of Service:**
+- Attribution required when displaying official data
+- Caching limited to 30 days
+- Must comply with Google API Terms of Service
+
+### **YouTube Data API v3** ⭐
+- Video metadata, channel information, and search for government meetings
+- Organization: Google LLC
+- API Documentation: https://developers.google.com/youtube/v3
+- License: Free (with quota limits)
+- Rate Limit: 10,000 units/day (free tier), search costs 100 units per request
+- Coverage: Global video platform with millions of government channels
+- What we use: Government channel discovery, meeting video metadata, transcript availability
+- Used for: Video discovery, channel statistics, meeting video archival
+
+**API Features Used:**
+- Search: Find government channels by jurisdiction name
+- Channels: Get channel metadata, subscriber counts, video counts
+- Videos: Metadata including title, description, upload date, duration
+- Captions: Check for closed caption/transcript availability
+
+**BibTeX:**
+```bibtex
+@misc{youtube_data_api,
+    title = {YouTube Data API v3},
+    author = {{Google LLC}},
+    year = {2024},
+    url = {https://developers.google.com/youtube/v3},
+    note = {API for accessing YouTube video metadata, channel information, and search functionality}
+}
+```
+
+**Terms of Service:**
+- YouTube API Services Terms: https://developers.google.com/youtube/terms/api-services-terms-of-service
+- Attribution required with YouTube logo
+- Quota limits enforced (10,000 units/day free)
+- Video embeds must use official YouTube player
+
 ### **Ballotpedia** ⭐
 - Ballot measures, referendums, and propositions
 - Organization: Lucy Burns Institute
