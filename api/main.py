@@ -259,7 +259,7 @@ async def root():
                 <img src="/static/communityone_logo.svg" alt="CommunityOne Logo" class="logo">
                 <div>
                     <h1>Open Navigator for Engagement API</h1>
-                    <p class="tagline">Multi-agent system for analyzing local government policy discussions</p>
+                    <p class="tagline">CommunityOne: The open path to everything local</p>
                 </div>
             </div>
             

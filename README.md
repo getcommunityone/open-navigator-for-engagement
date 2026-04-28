@@ -11,7 +11,7 @@ license: mit
 
 # 🏛️ Open Navigator for Engagement
 
-> *Find opportunities in local meetings, budgets, and public records*
+> **CommunityOne: The open path to everything local**
 >
 > AI-powered civic engagement platform with React + FastAPI web interface
 

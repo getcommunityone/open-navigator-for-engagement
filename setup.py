@@ -11,7 +11,7 @@ setup(
     version="1.0.0",
     author="Community One",
     author_email="support@communityone.org",
-    description="Multi-agent system for analyzing local government oral health policy discussions",
+    description="CommunityOne: The open path to everything local",
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://github.com/getcommunityone/open-navigator-for-engagement",

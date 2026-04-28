@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import { useEffect } from 'react';
 import {
   UserGroupIcon,
   BuildingOfficeIcon,
@@ -172,6 +173,14 @@ const familyOptions: ExploreCard[] = [
 ];
 
 export default function Explore() {
+  // Scroll to top with smooth behavior when page loads
+  useEffect(() => {
+    window.scrollTo({
+      top: 0,
+      behavior: 'smooth'
+    });
+  }, []);
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
       {/* Header */}

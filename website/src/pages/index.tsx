@@ -360,7 +360,7 @@ export default function Home(): ReactNode {
   return (
     <Layout
       title={`${siteConfig.title}`}
-      description="Find opportunities in local meetings and budgets">
+      description="The open path to everything local">
       
       <HomepageHeader />
       <main>

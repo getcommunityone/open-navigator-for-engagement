@@ -1,6 +1,15 @@
-import { HeartIcon, HomeIcon, AcademicCapIcon, PhoneIcon } from '@heroicons/react/24/outline';
+import { useEffect } from 'react';
+import { HeartIcon, HomeIcon, AcademicCapIcon, PhoneIcon, MapIcon } from '@heroicons/react/24/outline';
 
 export default function Services() {
+  // Scroll to top with smooth behavior when page loads
+  useEffect(() => {
+    window.scrollTo({
+      top: 0,
+      behavior: 'smooth'
+    });
+  }, []);
+
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       {/* Page Header */}
@@ -34,7 +43,8 @@ export default function Services() {
                 <li>Educational programs, tutoring, and after-school activities</li>
                 <li>Food assistance, housing support, and financial aid programs</li>
                 <li>Legal aid, translation services, and crisis hotlines</li>
-                <li>Recreation programs, senior services, and youth activities</li>
+                <li>Parks & recreation programs, dog parks, and community facilities</li>
+                <li>Senior services, youth activities, and family programs</li>
               </ul>
             </div>
           </div>
@@ -42,7 +52,7 @@ export default function Services() {
       </div>
 
       {/* Preview Service Categories */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {/* Health Services */}
         <div className="bg-white rounded-xl shadow-md p-6 border border-gray-200 opacity-60">
           <div className="flex items-center gap-3 mb-4">
@@ -88,6 +98,22 @@ export default function Services() {
             <li>• Housing assistance</li>
             <li>• Utility support</li>
             <li>• Emergency shelters</li>
+          </ul>
+        </div>
+
+        {/* Parks & Recreation */}
+        <div className="bg-white rounded-xl shadow-md p-6 border border-gray-200 opacity-60">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="p-2 bg-emerald-100 rounded-lg">
+              <MapIcon className="h-6 w-6 text-emerald-600" />
+            </div>
+            <h3 className="text-lg font-bold text-gray-900">Parks & Recreation</h3>
+          </div>
+          <ul className="space-y-2 text-sm text-gray-600">
+            <li>• Community parks</li>
+            <li>• Dog parks & pet areas</li>
+            <li>• Sports facilities</li>
+            <li>• Recreation programs</li>
           </ul>
         </div>
       </div>

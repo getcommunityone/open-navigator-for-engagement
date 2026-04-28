@@ -11,7 +11,7 @@ app_port: 7860
 
 # 🏛️ Open Navigator for Engagement
 
-**Find opportunities in local meetings, budgets, and public records**
+**CommunityOne: The open path to everything local**
 
 Open Navigator for Engagement is a comprehensive platform for discovering, analyzing, and tracking local government activities, nonprofit organizations, and civic engagement opportunities across the United States.
 
