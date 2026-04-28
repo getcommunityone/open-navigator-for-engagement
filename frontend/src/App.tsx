@@ -17,6 +17,9 @@ import Events from './pages/Events'
 import Services from './pages/Services'
 import Developers from './pages/Developers'
 import Hackathons from './pages/Hackathons'
+import OpenSource from './pages/OpenSource'
+import AdvocacyTopics from './pages/AdvocacyTopics'
+import FactChecking from './pages/FactChecking'
 
 function App() {
   return (
@@ -46,6 +49,9 @@ function App() {
         <Route path="services" element={<Services />} />
         <Route path="developers" element={<Developers />} />
         <Route path="hackathons" element={<Hackathons />} />
+        <Route path="opensource" element={<OpenSource />} />
+        <Route path="advocacy-topics" element={<AdvocacyTopics />} />
+        <Route path="fact-checking" element={<FactChecking />} />
       </Route>
     </Routes>
   )

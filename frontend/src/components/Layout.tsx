@@ -48,14 +48,14 @@ const navigation = [
     section: 'Community & Advocacy',
     items: [
       { name: 'Nonprofits', href: '/nonprofits', icon: BuildingLibraryIcon },
-      { name: 'Advocacy Topics', href: '/opportunities', icon: BellAlertIcon },
-      { name: 'Fact-Checking', href: '/debate-grader', icon: AcademicCapIcon },
+      { name: 'Advocacy Topics', href: '/advocacy-topics', icon: BellAlertIcon },
+      { name: 'Fact-Checking', href: '/fact-checking', icon: AcademicCapIcon },
     ]
   },
   { 
     section: 'Developers',
     items: [
-      { name: 'Open Source', href: 'https://github.com/getcommunityone/open-navigator-for-engagement', icon: CodeBracketIcon, external: true },
+      { name: 'Open Source', href: '/opensource', icon: CodeBracketIcon },
       { name: 'Hackathons', href: '/hackathons', icon: AcademicCapIcon },
     ]
   },
