@@ -39,7 +39,7 @@ This page documents all data sources, standards, and research contributions used
   </a>
   <a href="#nonprofit--philanthropy" className="card" style={{textDecoration: 'none', padding: '15px', borderLeft: '4px solid #F44336'}}>
     <strong>🏢 Nonprofit & Philanthropy</strong><br/>
-    <span style={{fontSize: '0.9em', color: '#666'}}>IRS EO-BMF (1.9M+ orgs), Google BigQuery (5M+ Form 990s), ProPublica (Nonprofits, Congress, Campaign Finance, Vital Signs), Every.org, Findhelp, 211, Microsoft CDM, ARDA, HIFLD, NCS</span>
+    <span style={{fontSize: '0.9em', color: '#666'}}>IRS EO-BMF (1.9M+ orgs), Google BigQuery (5M+ Form 990s), GivingTuesday Data Lake (5.4M+ raw XMLs), ProPublica (Nonprofits, Congress, Campaign Finance, Vital Signs), Every.org, Findhelp, 211, Microsoft CDM, ARDA, HIFLD, NCS</span>
   </a>
   <a href="#-fact-checking" className="card" style={{textDecoration: 'none', padding: '15px', borderLeft: '4px solid #8BC34A'}}>
     <strong>✅ Fact-Checking</strong><br/>
@@ -563,6 +563,7 @@ concept_id_1 | concept_id_2 | relationship_id
 **In this section:**
 - [IRS Exempt Organizations Business Master File (EO-BMF)](#irs-exempt-organizations-business-master-file-eo-bmf) - **PRIMARY BULK DATA SOURCE (1.9M+ orgs)**
 - [Google BigQuery IRS 990 Data](#google-bigquery-irs-990-data) - **RECOMMENDED FOR BULK FORM 990 ENRICHMENT (5M+ filings)**
+- [GivingTuesday 990 Data Infrastructure](#givingtuesday-990-data-infrastructure) - **AWS S3 DATA LAKE (5.4M+ raw Form 990 XMLs)**
 - [ProPublica Nonprofit Explorer](#propublica-nonprofit-explorer)
 - [ProPublica Congress API](#propublica-congress-api)
 - [ProPublica Campaign Finance API](#propublica-campaign-finance-api)
@@ -756,6 +757,166 @@ LIMIT 1000
 - **Free tier:** 1 TB queries/month = ~2-4 million nonprofit records
 - **Beyond free tier:** $5 per TB after first 1 TB
 - **Example:** Enriching 100,000 nonprofits with missions = ~20 GB = **Free**
+
+---
+
+### GivingTuesday 990 Data Infrastructure
+
+**Organization:** GivingTuesday  
+**What we use:** Raw Form 990 XML filings from AWS S3 for detailed financial data extraction, custom field parsing, and comprehensive nonprofit analysis.
+
+- **Website:** https://990data.givingtuesday.org/
+- **Data Lake:** `s3://gt990datalake-rawdata` (AWS S3, us-east-1 Virginia, Public Access)
+- **Console:** https://us-east-1.console.aws.amazon.com/s3/buckets/gt990datalake-rawdata
+- **Coverage:** 5.4M+ e-filed Form 990s (2011-present, ~300K new filings/year)
+- **Scale:** ~10 TB of raw XML data
+- **Update Frequency:** Ongoing (as IRS publishes new e-filings)
+- **License:** Public domain (IRS data) + Open source tools
+- **Access:** Free, no AWS credentials required (anonymous access via `--no-sign-request`)
+- **Format:** XML files (1-2 MB each) + CSV/Parquet indices
+
+**Data Lake Structure:**
+```
+s3://gt990datalake-rawdata/
+├── EfileData/
+│   ├── XmlFiles/              # Individual 990 XMLs (~5.4M files, ~10 TB)
+│   │   └── [OBJECT_ID]_public.xml  (e.g., 202233259349300703_public.xml)
+│   └── XmlZips/               # ZIP archives (97 files, ~38 GB → ~95 GB uncompressed)
+│       └── YYYY_TEOS_XML_*.zip     (e.g., 2023_TEOS_XML_01A.zip ~400 MB)
+└── Indices/
+    └── 990xmls/               # CSV indices with metadata
+        └── index_all_years_efiledata_xmls_created_on_2023-10-29.csv (~925 MB)
+```
+
+**Download Strategies:**
+
+| Approach | Best For | Time | Bandwidth | Storage |
+|----------|----------|------|-----------|---------|
+| **Individual XMLs** | Single state or targeted | ~2 hrs (22K orgs) | 32 GB | 32 GB |
+| **ZIP Archives** | All states / nationwide | ~6 hrs total | 38 GB | 95 GB |
+
+**Choose Individual XMLs when:**
+- You need data for 1-5 states only
+- You want to download only specific EINs
+- Storage space is limited
+- You want incremental caching
+
+**Choose ZIP Archives when:**
+- You need all 50 states
+- You're building a comprehensive database
+- You have 100+ GB storage
+- You want offline access to all filings
+
+**What You Can Extract:**
+- **Financials:** Revenue, expenses, assets, liabilities, net income, grants paid/received
+- **Programs:** Detailed program descriptions, accomplishments, expenses per program (up to 10)
+- **Governance:** Officer compensation, board members, key employees (with names and titles)
+- **Activities:** Legislative activities, lobbying expenses, political contributions
+- **Mission:** Organization mission statement and activity descriptions
+- **Website:** Organization website URLs
+- **Grants:** List of grant recipients with amounts (for grantmaking organizations)
+- **Custom Fields:** Any field in the IRS Form 990 schema (990, 990-EZ, 990-PF)
+
+**S3 Access Examples:**
+
+**Individual XMLs (for single state or targeted download):**
+```bash
+# List index files (no credentials needed)
+aws s3 ls s3://gt990datalake-rawdata/Indices/990xmls/ --no-sign-request
+
+# Download index (~925 MB)
+aws s3 cp s3://gt990datalake-rawdata/Indices/990xmls/index_all_years_efiledata_xmls_created_on_2023-10-29.csv . --no-sign-request
+
+# Download specific XML
+aws s3 cp s3://gt990datalake-rawdata/EfileData/XmlFiles/202233259349300703_public.xml . --no-sign-request
+
+# Batch download for single state (using our script)
+python scripts/batch_download_990s.py --state MA --health-only --concurrent 1000
+```
+
+**ZIP Archives (for all states / nationwide):**
+```bash
+# Download all 97 ZIPs (~38 GB) to local directory
+./scripts/download_990_zips.sh
+
+# Extract all ZIPs to get ~384K XMLs (~95 GB)
+./scripts/extract_990_zips.sh
+
+# Build local index for fast lookup
+python scripts/build_990_local_index.py
+
+# Now enrich from local files (no network needed!)
+python scripts/enrich_all_states_990.py
+```
+
+**Python Access:**
+```python
+import boto3
+from botocore import UNSIGNED
+from botocore.config import Config
+
+# Configure anonymous S3 client
+s3 = boto3.client('s3', config=Config(signature_version=UNSIGNED))
+
+# Download individual XML
+xml_obj = s3.get_object(
+    Bucket='gt990datalake-rawdata',
+    Key='EfileData/XmlFiles/202233259349300703_public.xml'
+)
+xml_content = xml_obj['Body'].read()
+
+# Download ZIP
+zip_obj = s3.get_object(
+    Bucket='gt990datalake-rawdata',
+    Key='EfileData/XmlZips/2023_TEOS_XML_01A.zip'
+)
+zip_content = zip_obj['Body'].read()
+```
+
+**Index Schema:**
+The CSV index contains: `EIN`, `TaxPeriod`, `ObjectId`, `URL`, `FormType`, `OrganizationName`, `DLN`, `SubmittedOn`
+
+**Key Advantages:**
+- **Raw XML Access:** Extract ANY field from Form 990, including custom/rare fields
+- **No Query Costs:** Download once, parse locally (unlike BigQuery queries)
+- **Offline Processing:** Process on your own infrastructure without rate limits
+- **Complete Historical Data:** All e-filed 990s since 2011
+- **Batch Downloads:** Download thousands of XMLs in parallel
+- **No Authentication:** Public S3 bucket (no AWS account needed)
+
+**Use Cases:**
+- **Custom Field Extraction:** Parse fields not available in BigQuery (e.g., specific schedules)
+- **Bulk Enrichment:** Download and process thousands of nonprofits locally
+- **Offline Analysis:** Build your own database from raw XML
+- **Historical Trends:** Analyze 10+ years of financial data
+- **Grant Research:** Extract detailed grant recipient lists from Form 990 Schedule I
+
+**BibTeX Citation:**
+```bibtex
+@misc{givingtuesday990data,
+  title = {GivingTuesday 990 Data Infrastructure},
+  author = {{GivingTuesday}},
+  year = {2023},
+  url = {https://990data.givingtuesday.org/},
+  note = {AWS S3 data lake of IRS Form 990 XML filings. Bucket: s3://gt990datalake-rawdata. Coverage: 5.4M+ filings (2011-present)}
+}
+```
+
+**Integration:**
+- **IRS EO-BMF** provides the complete organization registry (1.9M+ orgs)
+- **GivingTuesday Data Lake** enriches with raw XML for custom parsing
+- **Google BigQuery** offers SQL interface for standard fields
+- **ProPublica API** adds web-friendly access for individual lookups
+
+**Complements:**
+- See [Form 990 XML Data (GivingTuesday Data Lake)](./form-990-xml.md) for detailed integration guide
+- See [Form 990 Enrichment Guide](../guides/form-990-enrichment.md) for usage examples
+- See [IRS Bulk Data Integration](./irs-bulk-data.md) for EO-BMF foundation layer
+
+**Attribution:**
+When publishing analyses using this data, please cite:
+1. GivingTuesday 990 Data Infrastructure: https://990data.givingtuesday.org/
+2. Our enrichment tools: https://github.com/getcommunityone/open-navigator-for-engagement
 
 ---
 

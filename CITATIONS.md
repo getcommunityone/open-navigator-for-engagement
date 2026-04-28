@@ -201,26 +201,100 @@ We use the GivingTuesday 990 Data Lake for detailed nonprofit financial data fro
 
 **Organization:** GivingTuesday  
 **Website:** https://990data.givingtuesday.org/  
-**Data Lake:** `s3://gt990datalake-rawdata` (AWS S3, us-east-1 Virginia)  
+**Data Lake:** `s3://gt990datalake-rawdata` (AWS S3, us-east-1 Virginia, Public Access)  
 **Console:** https://us-east-1.console.aws.amazon.com/s3/buckets/gt990datalake-rawdata  
 **License:** Public domain (IRS data) + Open source tools  
-**Access:** Free, no AWS credentials required (`--no-sign-request`)
+**Access:** Free, no AWS credentials required (anonymous access via `--no-sign-request`)
 
 **What we use:**
-- **Raw 990 XMLs**: Individual e-filed Form 990 returns in XML format
-- **Indices**: CSV files listing all available 990s with metadata
-- **Coverage**: All e-filed 990s (2011-present, ~300K filings/year)
-- **Data extracted**: Revenue, expenses, assets, grants, programs, officer compensation, mission statements
+- **Raw 990 XMLs**: Individual e-filed Form 990 returns in XML format (1-2 MB each)
+- **Indices**: CSV/Parquet files listing all available 990s with metadata
+- **Coverage**: 5.4M+ e-filed Form 990s (2011-present, ~300K new filings/year)
+- **Scale**: ~10 TB of raw XML data
+- **Data extracted**: Revenue, expenses, assets, liabilities, grants, programs, officer compensation, mission statements, website URLs
 
 **Data Lake Structure:**
 ```
-gt990datalake-rawdata/
+s3://gt990datalake-rawdata/
 ├── EfileData/
-│   └── XmlFiles/              # Individual 990 XMLs
-│       └── [OBJECT_ID]_public.xml
+│   ├── XmlFiles/              # Individual 990 XMLs (~5.4M files, ~10 TB)
+│   │   └── [OBJECT_ID]_public.xml  (e.g., 202233259349300703_public.xml)
+│   └── XmlZips/               # ZIP archives (97 files, ~38 GB → ~95 GB uncompressed)
+│       └── YYYY_TEOS_XML_*.zip     (e.g., 2023_TEOS_XML_01A.zip ~400 MB)
 └── Indices/
-    └── 990xmls/               # CSV indices
-        └── index_all_years_efiledata_xmls_created_on_2023-10-29.csv
+    └── 990xmls/               # CSV indices with metadata
+        └── index_all_years_efiledata_xmls_created_on_2023-10-29.csv (~925 MB)
+```
+
+**Download Strategies:**
+
+| Approach | Best For | Time | Bandwidth | Storage |
+|----------|----------|------|-----------|---------|
+| **Individual XMLs** | Single state or targeted download | ~2 hrs (22K orgs) | 32 GB | 32 GB |
+| **ZIP Archives** | All states / nationwide | ~6 hrs total | 38 GB | 95 GB |
+
+**Choose Individual XMLs when:**
+- You need data for 1-5 states only
+- You want to download only specific EINs
+- Storage space is limited
+- You want incremental caching (download as needed)
+
+**Choose ZIP Archives when:**
+- You need all 50 states
+- You're building a comprehensive nonprofit database
+- You have 100+ GB storage
+- You want offline access to all filings
+
+**S3 Access Examples:**
+
+**Individual XMLs (for single state or targeted download):**
+```bash
+# List index files (no credentials needed)
+aws s3 ls s3://gt990datalake-rawdata/Indices/990xmls/ --no-sign-request
+
+# Download index (~925 MB)
+aws s3 cp s3://gt990datalake-rawdata/Indices/990xmls/index_all_years_efiledata_xmls_created_on_2023-10-29.csv . --no-sign-request
+
+# Download specific XML
+aws s3 cp s3://gt990datalake-rawdata/EfileData/XmlFiles/202233259349300703_public.xml . --no-sign-request
+
+# Batch download for single state (using our script)
+python scripts/batch_download_990s.py --state MA --health-only --concurrent 1000
+```
+
+**ZIP Archives (for all states / nationwide):**
+```bash
+# Download all 97 ZIPs (~38 GB) to local directory
+./scripts/download_990_zips.sh
+
+# Extract all ZIPs to get ~384K XMLs (~95 GB)
+./scripts/extract_990_zips.sh
+
+# Build local index for fast lookup
+python scripts/build_990_local_index.py
+
+# Now enrich from local files (no network needed!)
+python scripts/enrich_all_states_990.py
+```
+
+**Index Schema:**
+The CSV index contains columns: `EIN`, `TaxPeriod`, `ObjectId`, `URL`, `FormType`, `OrganizationName`, `DLN`, `SubmittedOn`
+
+**Python Access:**
+```python
+import boto3
+from botocore import UNSIGNED
+from botocore.config import Config
+
+# Configure anonymous S3 client
+s3 = boto3.client('s3', config=Config(signature_version=UNSIGNED))
+
+# Download XML
+xml_obj = s3.get_object(
+    Bucket='gt990datalake-rawdata',
+    Key='EfileData/XmlFiles/202233259349300703_public.xml'
+)
+xml_content = xml_obj['Body'].read()
 ```
 
 **BibTeX:**

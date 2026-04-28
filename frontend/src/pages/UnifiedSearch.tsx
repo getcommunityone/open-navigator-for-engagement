@@ -21,6 +21,7 @@ import {
   ArrowRightOnRectangleIcon
 } from '@heroicons/react/24/outline'
 import { useAuth } from '../contexts/AuthContext'
+import { formatCurrency } from '../utils/formatters'
 
 interface SearchResult {
   type: 'contact' | 'meeting' | 'organization' | 'cause' | 'jurisdiction'
@@ -382,9 +383,6 @@ export default function UnifiedSearch() {
     }
   }
 
-  // Use imported formatCurrency
-  const formatCurrency = formatCurrencyUtil
-
   const ResultCard = ({ result }: { result: SearchResult }) => (
     <div
       className="bg-white rounded-lg border border-gray-200 p-4 hover:shadow-md transition-shadow"
@@ -514,26 +512,55 @@ export default function UnifiedSearch() {
                         <span className="text-xs text-gray-500 font-normal">(Tax Year {result.metadata.tax_year})</span>
                       )}
                     </h4>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
-                      <div className="bg-green-50 p-3 rounded border border-green-200">
-                        <div className="text-xs text-green-700 font-medium mb-1">Total Revenue</div>
-                        <div className="text-lg font-bold text-green-900">
-                          {result.metadata.revenue ? formatCurrency(result.metadata.revenue) : 'N/A'}
+                    
+                    {/* Check if ANY financial data exists */}
+                    {!result.metadata.revenue && !result.metadata.assets && !result.metadata.income ? (
+                      <div className="bg-amber-50 p-4 rounded border border-amber-200 text-sm">
+                        <p className="text-amber-800 mb-2">
+                          <span className="font-semibold">📊 Form 990 data not yet available</span>
+                        </p>
+                        <p className="text-amber-700 text-xs">
+                          Financial information from IRS Form 990 filings is being enriched. 
+                          Check back later or visit{' '}
+                          <a 
+                            href={`https://projects.propublica.org/nonprofits/organizations/${result.metadata.ein}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="underline hover:text-amber-900"
+                          >
+                            ProPublica Nonprofit Explorer
+                          </a>
+                          {' '}for current data.
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
+                        <div className="bg-green-50 p-3 rounded border border-green-200">
+                          <div className="text-xs text-green-700 font-medium mb-1">Total Revenue</div>
+                          <div className="text-lg font-bold text-green-900">
+                            {result.metadata.revenue !== null && result.metadata.revenue !== undefined 
+                              ? formatCurrency(result.metadata.revenue) 
+                              : <span className="text-sm text-gray-500">Pending</span>}
+                          </div>
+                        </div>
+                        <div className="bg-blue-50 p-3 rounded border border-blue-200">
+                          <div className="text-xs text-blue-700 font-medium mb-1">Total Assets</div>
+                          <div className="text-lg font-bold text-blue-900">
+                            {result.metadata.assets !== null && result.metadata.assets !== undefined 
+                              ? formatCurrency(result.metadata.assets) 
+                              : <span className="text-sm text-gray-500">Pending</span>}
+                          </div>
+                        </div>
+                        <div className="bg-purple-50 p-3 rounded border border-purple-200">
+                          <div className="text-xs text-purple-700 font-medium mb-1">Net Income</div>
+                          <div className="text-lg font-bold text-purple-900">
+                            {result.metadata.income !== null && result.metadata.income !== undefined 
+                              ? formatCurrency(result.metadata.income) 
+                              : <span className="text-sm text-gray-500">Pending</span>}
+                          </div>
                         </div>
                       </div>
-                      <div className="bg-blue-50 p-3 rounded border border-blue-200">
-                        <div className="text-xs text-blue-700 font-medium mb-1">Total Assets</div>
-                        <div className="text-lg font-bold text-blue-900">
-                          {result.metadata.assets ? formatCurrency(result.metadata.assets) : 'N/A'}
-                        </div>
-                      </div>
-                      <div className="bg-purple-50 p-3 rounded border border-purple-200">
-                        <div className="text-xs text-purple-700 font-medium mb-1">Net Income</div>
-                        <div className="text-lg font-bold text-purple-900">
-                          {result.metadata.income ? formatCurrency(result.metadata.income) : 'N/A'}
-                        </div>
-                      </div>
-                    </div>
+                    )}
                   </div>
                   
                   {/* Board Members Section - Placeholder */}
@@ -1091,7 +1118,7 @@ export default function UnifiedSearch() {
               </div>
             )}
 
-            {searchResults && (
+            {searchResults && searchResults.total_results !== undefined && searchResults.pagination && (
               <>
                 {/* Results Summary */}
                 <div className="mb-6">
@@ -1263,7 +1290,7 @@ export default function UnifiedSearch() {
                 )}
 
                 {/* Results by Type */}
-                {selectedTypes.includes('contacts') && searchResults.results.contacts.length > 0 && (
+                {selectedTypes.includes('contacts') && searchResults.results?.contacts && searchResults.results.contacts.length > 0 && (
                   <div className="mb-8">
                     <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
                       <UserIcon className="h-6 w-6 text-blue-600" />
@@ -1277,7 +1304,7 @@ export default function UnifiedSearch() {
                   </div>
                 )}
 
-                {selectedTypes.includes('meetings') && searchResults.results.meetings.length > 0 && (
+                {selectedTypes.includes('meetings') && searchResults.results?.meetings && searchResults.results.meetings.length > 0 && (
                   <div className="mb-8">
                     <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
                       <CalendarIcon className="h-6 w-6 text-green-600" />
@@ -1291,7 +1318,7 @@ export default function UnifiedSearch() {
                   </div>
                 )}
 
-                {selectedTypes.includes('organizations') && searchResults.results.organizations.length > 0 && (
+                {selectedTypes.includes('organizations') && searchResults.results?.organizations && searchResults.results.organizations.length > 0 && (
                   <div className="mb-8">
                     <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
                       <BuildingOfficeIcon className="h-6 w-6 text-purple-600" />
@@ -1305,7 +1332,7 @@ export default function UnifiedSearch() {
                   </div>
                 )}
 
-                {selectedTypes.includes('causes') && searchResults.results.causes.length > 0 && (
+                {selectedTypes.includes('causes') && searchResults.results?.causes && searchResults.results.causes.length > 0 && (
                   <div className="mb-8">
                     <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
                       <HeartIcon className="h-6 w-6 text-pink-600" />
@@ -1319,7 +1346,7 @@ export default function UnifiedSearch() {
                   </div>
                 )}
 
-                {selectedTypes.includes('jurisdictions') && searchResults.results.jurisdictions.length > 0 && (
+                {selectedTypes.includes('jurisdictions') && searchResults.results?.jurisdictions && searchResults.results.jurisdictions.length > 0 && (
                   <div className="mb-8">
                     <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
                       <MapPinIcon className="h-6 w-6 text-orange-600" />
