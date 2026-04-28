@@ -298,10 +298,10 @@ class ContactsGoldTableCreator:
     
     def create_contacts_nonprofit_officers(self, snapshot_year: Optional[int] = None) -> pd.DataFrame:
         """
-        Create contacts_nonprofit_officers gold table from IRS 990 Schedule J data
+        Create contacts_nonprofit_officers gold table from IRS 990 officer data
         
-        Extracts officers, directors, and key employees from Form 990 filings
-        stored in the bigquery_officers JSON field.
+        Extracts officers, directors, and key employees from Form 990 filings.
+        Uses form_990_officers field from GivingTuesday Data Lake enrichment.
         
         Args:
             snapshot_year: If provided, creates versioned snapshot for this tax year
@@ -312,22 +312,50 @@ class ContactsGoldTableCreator:
         current_year = snapshot_year or datetime.now().year
         logger.info(f"Creating contacts_nonprofit_officers gold table for year {current_year}...")
         
-        # Load nonprofits with BigQuery officer data
-        nonprofits_file = self.meetings_gold_dir / "nonprofits_organizations.parquet"
+        # Try to load from state-partitioned files first
+        all_nonprofits = []
+        states_dir = self.meetings_gold_dir / "states"
         
-        if not nonprofits_file.exists():
-            logger.warning(f"⚠️  Nonprofits file not found: {nonprofits_file}")
-            logger.warning("   Run BigQuery enrichment first:")
-            logger.warning("   python scripts/enrich_nonprofits_bigquery.py --input ... --output ...")
-            return pd.DataFrame()
+        if states_dir.exists():
+            logger.info(f"Loading nonprofits from state-partitioned files: {states_dir}")
+            for state_dir in states_dir.iterdir():
+                nonprofit_file = state_dir / "nonprofits_organizations.parquet"
+                if nonprofit_file.exists():
+                    df = pd.read_parquet(nonprofit_file)
+                    all_nonprofits.append(df)
+                    logger.info(f"   Loaded {len(df):,} from {state_dir.name}")
+            
+            if all_nonprofits:
+                nonprofits_df = pd.concat(all_nonprofits, ignore_index=True)
+                logger.info(f"Total nonprofits loaded: {len(nonprofits_df):,}")
+            else:
+                logger.warning("No nonprofit files found in state directories")
+                return pd.DataFrame()
+        else:
+            # Fallback to single file
+            nonprofits_file = self.meetings_gold_dir / "nonprofits_organizations.parquet"
+            
+            if not nonprofits_file.exists():
+                logger.warning(f"⚠️  Nonprofits file not found: {nonprofits_file}")
+                logger.warning("   Run Form 990 enrichment first:")
+                logger.warning("   python scripts/enrich_nonprofits_gt990.py --input ... --output ...")
+                return pd.DataFrame()
+            
+            logger.info(f"Loading nonprofits from: {nonprofits_file}")
+            nonprofits_df = pd.read_parquet(nonprofits_file)
         
-        logger.info(f"Loading nonprofits from: {nonprofits_file}")
-        nonprofits_df = pd.read_parquet(nonprofits_file)
-        
-        # Check for bigquery_officers field
-        if 'bigquery_officers' not in nonprofits_df.columns:
-            logger.warning("⚠️  No 'bigquery_officers' field found in nonprofits data")
-            logger.warning("   Enrich with BigQuery first using --include-officers")
+        # Check for officer data (prefer form_990_officers from GT990, fallback to bigquery_officers)
+        officer_field = None
+        if 'form_990_officers' in nonprofits_df.columns:
+            officer_field = 'form_990_officers'
+            logger.info("✅ Using 'form_990_officers' from GivingTuesday Data Lake")
+        elif 'bigquery_officers' in nonprofits_df.columns:
+            officer_field = 'bigquery_officers'
+            logger.info("✅ Using 'bigquery_officers' from BigQuery (deprecated)")
+        else:
+            logger.warning("⚠️  No officer data found (form_990_officers or bigquery_officers)")
+            logger.warning("   Enrich with Form 990 data first:")
+            logger.warning("   python scripts/enrich_nonprofits_gt990.py --input ... --output ...")
             return pd.DataFrame()
         
         # Parse officer data from JSON
@@ -335,21 +363,29 @@ class ContactsGoldTableCreator:
         
         officers = []
         for _, org in nonprofits_df.iterrows():
-            if not org.get('bigquery_officers'):
+            if not org.get(officer_field):
                 continue
             
             try:
-                officers_list = json.loads(org['bigquery_officers'])
+                officers_list = json.loads(org[officer_field])
             except (json.JSONDecodeError, TypeError):
                 continue
             
             for officer in officers_list:
+                # Handle both form_990_officers (GT990) and bigquery_officers formats
+                # GT990 format: {"name": "...", "title": "...", "compensation": 123, "hours_per_week": 40}
+                # BigQuery format (hypothetical): {"person_name": "...", "title": "...", "compensation_amount": 123}
+                
+                name = officer.get('name') or officer.get('person_name')
+                if not name:
+                    continue
+                
                 officers.append({
                     # Officer info
-                    'name': officer.get('name'),
+                    'name': name,
                     'title': officer.get('title'),
-                    'compensation': officer.get('compensation'),
-                    'hours_per_week': officer.get('hours_per_week'),
+                    'compensation': officer.get('compensation') or officer.get('compensation_amount') or officer.get('compensation_org'),
+                    'hours_per_week': officer.get('hours_per_week') or officer.get('average_hours_per_week'),
                     
                     # Organization info
                     'organization_ein': org.get('ein'),
@@ -363,10 +399,13 @@ class ContactsGoldTableCreator:
                     'zip_code': org.get('zip_code'),
                     
                     # Metadata
-                    'snapshot_year': org.get('bigquery_officers_tax_year') or current_year,
-                    'source': 'irs_990_schedule_j',
+                    'snapshot_year': org.get('form_990_tax_year', '').split('-')[0] if org.get('form_990_tax_year') else current_year,
+                    'source': 'irs_990_form_990',
+                    'source_tax_year': org.get('form_990_tax_year'),
+                    'source_updated_date': org.get('form_990_last_updated'),
                     'contact_type': 'nonprofit_officer',
                     'extracted_date': datetime.now().strftime('%Y-%m-%d'),
+                    'last_updated': datetime.now().strftime('%Y-%m-%d'),
                 })
         
         if not officers:

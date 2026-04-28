@@ -128,7 +128,7 @@ class BigQueryNonprofitEnricher:
 )""")
         
         # Combine all CTEs
-        query = "WITH\n" + ",\n".join(ctes) + "\n\n"
+        query = "WITH\n" + ",\n".join(ctes) + ",\n\n"
         
         # Union all results and deduplicate (prefer most recent year)
         query += """
@@ -267,8 +267,23 @@ ORDER BY ein;
         eins = df[ein_column].dropna().unique().tolist()
         logger.info(f"   Unique EINs: {len(eins):,}")
         
-        # Query BigQuery
-        bq_data = self.query_bigquery(eins, years, include_officers)
+        # Batch queries to avoid query size limit (1MB)
+        # Each EIN is ~30 chars in the query, limit to ~5000 per batch
+        batch_size = 5000
+        all_bq_data = []
+        
+        for i in range(0, len(eins), batch_size):
+            batch = eins[i:i+batch_size]
+            logger.info(f"🔍 Querying batch {i//batch_size + 1}/{(len(eins)-1)//batch_size + 1} ({len(batch):,} EINs)...")
+            bq_data = self.query_bigquery(batch, years, include_officers)
+            if len(bq_data) > 0:
+                all_bq_data.append(bq_data)
+        
+        # Combine all batches
+        if len(all_bq_data) == 0:
+            bq_data = pd.DataFrame()
+        else:
+            bq_data = pd.concat(all_bq_data, ignore_index=True)
         
         if len(bq_data) == 0:
             logger.warning("⚠️  No data returned from BigQuery")

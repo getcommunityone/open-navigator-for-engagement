@@ -19,48 +19,69 @@ The system now enriches nonprofit data with **officer and board member informati
 
 ## 📊 Data Sources
 
-### IRS Form 990 Schedule J (Executive Compensation)
+### IRS Form 990 Part VII (Officers, Directors, Trustees)
 
-**Available via Google BigQuery:**
-- `bigquery-public-data.irs_990.irs_990_schedule_j_YYYY`
-- Updated annually
-- Includes all nonprofits filing Form 990
+**Primary Source: GivingTuesday Data Lake** 🎉
 
-**Fields Extracted:**
+We use the [GivingTuesday 990 Data Lake](https://990data.givingtuesday.org/) which hosts complete Form 990 XML files on AWS S3.
+
+**Advantages:**
+- ✅ **Recent Data**: 2013-2023 filings (vs BigQuery's 2017 cutoff)
+- ✅ **No Auth Required**: Public S3 bucket, no credentials needed
+- ✅ **Complete Coverage**: 5.4M+ Form 990 filings indexed
+- ✅ **Detailed**: Part VII includes officer names, titles, hours, compensation
+
+**Fields Extracted from Form 990 Part VII:**
 | Field | Description | Example |
 |-------|-------------|---------|
-| `person_name` | Officer/director name | "Sarah Johnson" |
-| `title_txt` | Position/title | "CEO", "Board Chair" |
-| `compensation_amount` | Annual compensation | 150000 |
-| `average_hours_per_week` | Hours worked | 40 |
+| `name` | Officer/director name | "Sarah Johnson" |
+| `title` | Position/title | "CEO", "Board Chair" |
+| `compensation` | Total annual compensation | 150000 |
+| `hours_per_week` | Average hours worked | 40 |
+| `compensation_org` | From this organization | 145000 |
+| `compensation_related` | From related orgs | 5000 |
+| `compensation_other` | Benefits, deferred comp | 2500 |
 
 ## 🚀 Quick Start
 
-### Step 1: Enrich Nonprofits with Officer Data
+### Step 1: Download GivingTuesday Data Lake Index (One-Time Setup)
 
 ```bash
 # Activate environment
 source .venv/bin/activate
 
-# Enrich with BigQuery (includes officers)
-python scripts/enrich_nonprofits_bigquery.py \
-  --input data/gold/nonprofits_organizations.parquet \
-  --output data/gold/nonprofits_organizations.parquet \
-  --update-in-place \
-  --project YOUR_GCP_PROJECT
+# Download the index of 5.4M+ Form 990 filings (~900MB)
+python scripts/enrich_nonprofits_gt990.py --download-index
+
+# Index will be cached at: data/cache/form990_gt_index.parquet
 ```
 
-This adds a `bigquery_officers` JSON field to each nonprofit record:
+### Step 2: Enrich Nonprofits with Officer Data
+
+```bash
+# Enrich with Form 990 data (includes officers from Part VII)
+python scripts/enrich_nonprofits_gt990.py \
+  --input data/gold/states/MA/nonprofits_organizations.parquet \
+  --output data/gold/states/MA/nonprofits_organizations.parquet \
+  --concurrent 20
+
+# This downloads XMLs from S3, parses them, and adds form_990_officers field
+```
+
+This adds a `form_990_officers` JSON field to each nonprofit record:
 
 ```json
 {
   "ein": "123456789",
   "organization_name": "Alabama Oral Health Foundation",
-  "bigquery_officers": [
+  "form_990_officers": [
     {
       "name": "Sarah Johnson",
       "title": "CEO",
       "compensation": 150000,
+      "compensation_org": 145000,
+      "compensation_related": 5000,
+      "compensation_other": 2500,
       "hours_per_week": 40
     },
     {
@@ -69,11 +90,13 @@ This adds a `bigquery_officers` JSON field to each nonprofit record:
       "compensation": 0,
       "hours_per_week": 5
     }
-  ]
+  ],
+  "form_990_tax_year": "2022-12-31",
+  "form_990_status": "found"
 }
 ```
 
-### Step 2: Create Contact Tables with Versioning
+### Step 3: Create Contact Tables with Versioning
 
 ```bash
 # Create nonprofit officer contacts
@@ -284,10 +307,11 @@ GET /api/search/?q=Board+Chair&ntee_code=E
 ### Data Pipeline
 
 **Automatic updates:**
-1. BigQuery enrichment runs annually (when new 990s filed)
-2. Contact tables regenerated with new snapshot_year
-3. Historical tables updated automatically
-4. Search index refreshed
+1. Form 990 enrichment runs annually (when new 990s filed to IRS)
+2. GivingTuesday Data Lake updated with new XMLs
+3. Contact tables regenerated with new snapshot_year
+4. Historical tables updated automatically
+5. Search index refreshed
 
 ## 📈 Statistics
 
@@ -300,22 +324,40 @@ GET /api/search/?q=Board+Chair&ntee_code=E
 
 ## 🔧 Technical Notes
 
-### BigQuery Query Performance
+### Data Source: GivingTuesday vs BigQuery
 
-The enrichment query joins:
-- `irs_990.irs_990_YYYY` (financial data)
-- `irs_990.irs_990_schedule_j_YYYY` (officer compensation)
+**Why GivingTuesday Data Lake?**
 
-**Optimization tips:**
-- Query by state first to reduce data
-- Use ARRAY_AGG to consolidate officers
-- Cache results (990s don't change after filing)
+During implementation, we discovered limitations with BigQuery's public IRS 990 dataset:
+- ❌ Data only available through 2017 (7+ years old)
+- ❌ Schedule J (officer compensation) tables not in public dataset
+- ❌ Requires Google Cloud authentication
+
+**GivingTuesday advantages:**
+- ✅ Current data through 2023
+- ✅ Complete Form 990 XMLs with Part VII officer data
+- ✅ Public S3 bucket, no authentication required
+- ✅ 5.4M+ filings indexed and searchable
+
+### Form 990 XML Parsing
+
+The enrichment script:
+1. Downloads index of 5.4M+ Form 990 filings from S3
+2. Looks up EINs to find most recent filing
+3. Downloads XML from `s3://gt990datalake-rawdata/` (public read)
+4. Parses Part VII (Form990PartVIISectionAGrp) for officer data
+5. Caches XMLs locally to avoid re-downloading
+
+**Parsing performance:**
+- ~2-5 seconds per nonprofit (includes download + parse)
+- Run with `--concurrent 20` for 20 parallel downloads
+- XMLs cached in `data/cache/form_990_xml/`
 
 ### Parquet Storage
 
 Officers stored as JSON string in nonprofit table:
 ```python
-'bigquery_officers': '[{"name":"Sarah Johnson","title":"CEO",...}]'
+'form_990_officers': '[{"name":"Sarah Johnson","title":"CEO",...}]'
 ```
 
 Expanded to individual rows in contacts table for searchability.
@@ -345,17 +387,18 @@ Expanded to individual rows in contacts table for searchability.
 
 ## 📚 Related Documentation
 
-- [IRS Form 990 XML Data](/docs/data-sources/form-990-xml)
-- [BigQuery IRS Dataset](/docs/data-sources/irs-bulk-data)
+- [IRS Form 990 XML Data (GivingTuesday)](https://990data.givingtuesday.org/)
+- [Form 990 Enrichment Script](/scripts/enrich_nonprofits_gt990.py)
 - [Contacts Gold Tables](/docs/guides/contacts-officials)
 - [Search API Reference](/docs/api-reference)
 
 ## 🎉 Next Steps
 
-1. **Enrich your nonprofit data** with officer information
-2. **Create versioned snapshots** for historical tracking
-3. **Search officers** via API or frontend
-4. **Analyze leadership** patterns and compensation
-5. **Track changes** over time with history tables
+1. **Download GivingTuesday index** (one-time setup, ~900MB)
+2. **Enrich your nonprofit data** with officer information from Form 990 XMLs
+3. **Create versioned snapshots** for historical tracking
+4. **Search officers** via API or frontend
+5. **Analyze leadership** patterns and compensation
+6. **Track changes** over time with history tables
 
-**Questions?** See [BigQuery enrichment script](https://github.com/getcommunityone/open-navigator-for-engagement/blob/main/scripts/enrich_nonprofits_bigquery.py) for implementation details.
+**Questions?** See [Form 990 enrichment script](https://github.com/getcommunityone/open-navigator-for-engagement/blob/main/scripts/enrich_nonprofits_gt990.py) for implementation details.
