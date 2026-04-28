@@ -63,14 +63,32 @@ export default function AddressLookup({ onLocationFound, initialAddress = '', co
         return
       }
 
-      // If we have multiple results, show suggestions
-      if (data.length > 1) {
-        setSuggestions(data)
+      // Deduplicate results - filter out duplicate cities/counties
+      const uniqueResults = data.reduce((acc: any[], current: any) => {
+        const addr = current.address
+        const key = `${addr.city || addr.town || ''}_${addr.county || ''}_${addr.state || ''}_${current.osm_type || ''}`
+        
+        // Check if we already have this location
+        const exists = acc.some((item) => {
+          const itemAddr = item.address
+          const itemKey = `${itemAddr.city || itemAddr.town || ''}_${itemAddr.county || ''}_${itemAddr.state || ''}_${item.osm_type || ''}`
+          return itemKey === key
+        })
+        
+        if (!exists) {
+          acc.push(current)
+        }
+        return acc
+      }, [])
+
+      // If we have multiple unique results, show suggestions
+      if (uniqueResults.length > 1) {
+        setSuggestions(uniqueResults)
         return
       }
 
       // Single result - process it
-      processResult(data[0])
+      processResult(uniqueResults[0])
     } catch (err) {
       console.error('Address lookup error:', err)
       setError('Failed to lookup address. Please try again.')
