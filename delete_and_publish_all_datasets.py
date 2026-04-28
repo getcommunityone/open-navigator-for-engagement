@@ -104,8 +104,11 @@ def publish_dataset(file_path: Path, api: HfApi, private: bool = False) -> dict:
         df = pd.read_parquet(file_path)
         logger.info(f"   Loaded {len(df):,} records, {len(df.columns)} columns")
         
+        # Reset index to avoid Arrow serialization issues
+        df = df.reset_index(drop=True)
+        
         # Create HuggingFace dataset
-        dataset = Dataset.from_pandas(df)
+        dataset = Dataset.from_pandas(df, preserve_index=False)
         
         # Create repo if it doesn't exist
         try:
