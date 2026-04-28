@@ -121,6 +121,14 @@ export default function HomeModern() {
   const handleSelectSuggestion = (suggestion: string) => {
     setKeyword(suggestion)
     setShowSuggestions(false)
+    
+    // Navigate to search results with the selected suggestion
+    const params = new URLSearchParams()
+    params.set('q', suggestion)
+    if (location && location.state) {
+      params.set('state', location.state)
+    }
+    navigate(`/search?${params.toString()}`)
   }
 
   const handleViewAllCategory = (category: string) => {
@@ -541,32 +549,28 @@ export default function HomeModern() {
                           <label className="block text-left text-sm font-medium text-gray-700 mb-2">
                             Search In
                           </label>
-                          <select
-                            value={location ? searchScope : 'community'}
-                            onChange={(e) => {
-                              const newValue = e.target.value
-                              if (!location && newValue === 'community') {
-                                // Switch to community tab to set location
-                                setSelectedTab(1)
-                              } else {
-                                setSearchScope(newValue)
-                              }
-                            }}
-                            className="w-full px-4 py-3 text-lg border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#354F52] focus:border-transparent bg-white text-gray-900"
-                          >
-                            {location ? (
-                              <>
-                                <option value="city">My City ({location.city})</option>
-                                <option value="county">My County ({location.county || 'County'})</option>
-                                <option value="state">My State ({location.state})</option>
-                                <option value="community">School Board ({location.city})</option>
-                              </>
-                            ) : (
-                              <>
-                                <option value="community">Set your location first</option>
-                              </>
-                            )}
-                          </select>
+                          {location ? (
+                            <select
+                              value={searchScope}
+                              onChange={(e) => setSearchScope(e.target.value)}
+                              className="w-full px-4 py-3 text-lg border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#354F52] focus:border-transparent bg-white text-gray-900"
+                            >
+                              <option value="city">My City ({location.city})</option>
+                              <option value="county">My County ({location.county || 'County'})</option>
+                              <option value="state">My State ({location.state})</option>
+                              <option value="community">School Board ({location.city})</option>
+                              <option value="national">Nationwide</option>
+                            </select>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => setSelectedTab(1)}
+                              className="w-full px-4 py-3 text-lg border-2 border-[#354F52] rounded-lg bg-[#E8EFEA] text-[#354F52] hover:bg-[#d9e5db] transition-colors font-semibold flex items-center justify-center gap-2"
+                            >
+                              <MapIcon className="h-5 w-5" />
+                              Set Your Location First
+                            </button>
+                          )}
                         </div>
 
                         <div className="lg:col-span-2">

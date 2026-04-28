@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useRef } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import axios from 'axios'
@@ -9,7 +9,8 @@ import {
   BuildingOfficeIcon,
   HeartIcon,
   XMarkIcon,
-  AdjustmentsHorizontalIcon
+  AdjustmentsHorizontalIcon,
+  CheckIcon
 } from '@heroicons/react/24/outline'
 
 interface SearchResult {
@@ -162,7 +163,14 @@ export default function UnifiedSearch() {
 
   const ResultCard = ({ result }: { result: SearchResult }) => (
     <div
-      onClick={() => navigate(result.url)}
+      onClick={() => {
+        // For organizations with EIN, open in new tab to nonprofit search with EIN filter
+        if (result.type === 'organization' && result.metadata?.ein) {
+          window.open(result.url, '_blank')
+        } else {
+          navigate(result.url)
+        }
+      }}
       className="bg-white rounded-lg border border-gray-200 p-4 hover:shadow-md transition-shadow cursor-pointer"
     >
       <div className="flex items-start gap-3">
@@ -176,6 +184,27 @@ export default function UnifiedSearch() {
           </h3>
           <p className="text-sm text-gray-600 mb-2">{result.subtitle}</p>
           <p className="text-sm text-gray-500 line-clamp-2">{result.description}</p>
+          
+          {/* Additional metadata for organizations */}
+          {result.type === 'organization' && result.metadata && (
+            <div className="mt-2 flex flex-wrap gap-2 text-xs">
+              {result.metadata.ein && (
+                <span className="px-2 py-1 bg-gray-100 text-gray-700 rounded">
+                  EIN: {result.metadata.ein}
+                </span>
+              )}
+              {result.metadata.revenue && result.metadata.revenue > 0 && (
+                <span className="px-2 py-1 bg-green-100 text-green-700 rounded">
+                  💰 Revenue: ${(result.metadata.revenue / 1000000).toFixed(1)}M
+                </span>
+              )}
+              {result.metadata.assets && result.metadata.assets > 0 && (
+                <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded">
+                  📊 Assets: ${(result.metadata.assets / 1000000).toFixed(1)}M
+                </span>
+              )}
+            </div>
+          )}
           
           {/* Type badge */}
           <div className="mt-2">
@@ -364,12 +393,15 @@ export default function UnifiedSearch() {
               <button
                 key={type}
                 onClick={() => toggleType(type)}
-                className={`flex items-center gap-2 px-4 py-2 rounded-lg border-2 transition-colors ${
+                className={`flex items-center gap-2 px-4 py-2 rounded-full border-2 transition-all ${
                   selectedTypes.includes(type)
-                    ? `${getTypeColor(type)} border-current`
-                    : 'border-gray-200 text-gray-600 hover:border-gray-300'
+                    ? `${getTypeColor(type)} border-current font-medium shadow-sm`
+                    : 'border-gray-300 bg-white text-gray-600 hover:border-gray-400 hover:bg-gray-50'
                 }`}
               >
+                {selectedTypes.includes(type) && (
+                  <CheckIcon className="h-4 w-4 flex-shrink-0" />
+                )}
                 {getTypeIcon(type)}
                 {type.charAt(0).toUpperCase() + type.slice(1)}
               </button>

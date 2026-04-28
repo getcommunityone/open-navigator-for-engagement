@@ -21,7 +21,8 @@ import {
   CodeBracketIcon,
   BuildingOfficeIcon,
   UserIcon,
-  CheckCircleIcon
+  CheckCircleIcon,
+  MapPinIcon
 } from '@heroicons/react/24/outline'
 import AddressLookup from '../components/AddressLookup'
 import { useLocation as useLocationContext } from '../contexts/LocationContext'
@@ -369,32 +370,28 @@ export default function Home() {
                           <label className="block text-left text-sm font-medium text-gray-700 mb-2">
                             Search In
                           </label>
-                          <select
-                            value={location ? searchScope : 'community'}
-                            onChange={(e) => {
-                              const newValue = e.target.value
-                              if (!location && newValue === 'community') {
-                                // Navigate to HomeModern with community tab
-                                navigate('/?tab=community')
-                              } else {
-                                setSearchScope(newValue)
-                              }
-                            }}
-                            className="w-full px-4 py-3 text-lg border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-white text-gray-900"
-                          >
-                            {location ? (
-                              <>
-                                <option value="city">My City ({location.city})</option>
-                                <option value="county">My County ({location.county || 'County'})</option>
-                                <option value="state">My State ({location.state})</option>
-                                <option value="community">School Board ({location.city})</option>
-                              </>
-                            ) : (
-                              <>
-                                <option value="community">Set your location first</option>
-                              </>
-                            )}
-                          </select>
+                          {location ? (
+                            <select
+                              value={searchScope}
+                              onChange={(e) => setSearchScope(e.target.value)}
+                              className="w-full px-4 py-3 text-lg border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-white text-gray-900"
+                            >
+                              <option value="city">My City ({location.city})</option>
+                              <option value="county">My County ({location.county || 'County'})</option>
+                              <option value="state">My State ({location.state})</option>
+                              <option value="community">School Board ({location.city})</option>
+                              <option value="national">Nationwide</option>
+                            </select>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => navigate('/?tab=community')}
+                              className="w-full px-4 py-3 text-lg border-2 border-primary-600 rounded-lg bg-primary-50 text-primary-700 hover:bg-primary-100 transition-colors font-semibold flex items-center justify-center gap-2"
+                            >
+                              <MapPinIcon className="h-5 w-5" />
+                              Set Your Location First
+                            </button>
+                          )}
                         </div>
 
                         <div className="lg:col-span-2">

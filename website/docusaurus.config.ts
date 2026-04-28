@@ -66,13 +66,12 @@ const config: Config = {
         theme: {
           customCss: './src/css/custom.css',
         },
-        // Google Analytics - only in production to avoid runtime errors in dev
-        ...(process.env.NODE_ENV === 'production' && {
-          gtag: {
-            trackingID: 'G-5EQV815915',
-            anonymizeIP: true,
-          },
-        }),
+        // Google Analytics - disabled to prevent runtime errors
+        // Re-enable for production deployment by uncommenting:
+        // gtag: {
+        //   trackingID: 'G-5EQV815915',
+        //   anonymizeIP: true,
+        // },
       } satisfies Preset.Options,
     ],
   ],
@@ -187,6 +186,23 @@ const config: Config = {
             {
               label: 'GroundVue (Partner)',
               href: 'https://www.groundvue.org/',
+            },
+          ],
+        },
+        {
+          title: 'Legal',
+          items: [
+            {
+              label: 'Privacy Policy',
+              to: 'legal/privacy-policy',
+            },
+            {
+              label: 'Terms of Service',
+              to: 'legal/terms-of-service',
+            },
+            {
+              label: 'Data Provider Terms',
+              to: 'legal/data-provider-terms',
             },
           ],
         },

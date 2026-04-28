@@ -38,6 +38,13 @@ Open Navigator for Engagement is built on **publicly available government data**
 
 ## 🏛️ U.S. Government Data Sources
 
+**In this section:**
+- [IRS Exempt Organizations Business Master File (EO-BMF)](#irs-exempt-organizations-business-master-file-eo-bmf)
+- [IRS Form 990 Data (Google BigQuery Public Datasets)](#irs-form-990-data-google-bigquery-public-datasets)
+- [U.S. Census Bureau Data](#us-census-bureau-data)
+- [Grants.gov API](#grantsgov-api)
+- [National Center for Education Statistics (NCES)](#national-center-for-education-statistics-nces)
+
 ### IRS Exempt Organizations Business Master File (EO-BMF)
 
 **Data Type:** Tax-exempt organization records (1.9M+ nonprofits)  
@@ -151,6 +158,12 @@ Open Navigator for Engagement is built on **publicly available government data**
 ---
 
 ## 🆓 Free Public APIs (API Key Required)
+
+**In this section:**
+- [Open States API](#open-states-api)
+- [Google Civic Information API](#google-civic-information-api)
+- [FEC / OpenFEC API](#fec--openfec-api)
+- [Google Data Commons](#google-data-commons)
 
 ### Open States API
 
@@ -279,6 +292,10 @@ FEC_API_KEY=your-api-key-here  # Only needed for API, not bulk downloads
 
 ## 🌐 Linked Open Data (No API Key Required)
 
+**In this section:**
+- [Wikidata](#wikidata)
+- [DBpedia](#dbpedia)
+
 ### Wikidata
 
 **Data Type:** Structured knowledge from Wikipedia  
@@ -334,6 +351,9 @@ User-Agent: CommunityOne/1.0 (https://communityone.com/; contact@example.com)
 
 ## 💰 Paid/Commercial Services (Reference Only)
 
+**In this section:**
+- [Ballotpedia API v3.0](#ballotpedia-api-v30)
+
 ### Ballotpedia API v3.0
 
 **Data Type:** Elected officials, ballot measures, election results  
@@ -361,6 +381,10 @@ User-Agent: CommunityOne/1.0 (https://communityone.com/; contact@example.com)
 ---
 
 ## 📊 Third-Party Datasets
+
+**In this section:**
+- [GivingTuesday 990 Data Lake](#givingtuesday-990-data-lake)
+- [ProPublica Nonprofit Explorer](#propublica-nonprofit-explorer)
 
 ### GivingTuesday 990 Data Lake
 
@@ -415,6 +439,11 @@ User-Agent: CommunityOne/1.0 (https://communityone.com/; contact@example.com)
 
 ## 🔒 Privacy & Data Protection
 
+**In this section:**
+- [Personal Information](#personal-information)
+- [GDPR & Privacy Compliance](#gdpr--privacy-compliance)
+- [Data Retention](#data-retention)
+
 ### Personal Information
 
 **What We Collect:**
@@ -455,6 +484,10 @@ User-Agent: CommunityOne/1.0 (https://communityone.com/; contact@example.com)
 
 ## 🚨 Rate Limiting & Fair Use
 
+**In this section:**
+- [Our Rate Limiting Policies](#our-rate-limiting-policies)
+- [User-Agent Requirements](#user-agent-requirements)
+
 ### Our Rate Limiting Policies
 
 To be respectful of data sources and comply with terms of service:
@@ -485,6 +518,10 @@ This allows data providers to:
 ---
 
 ## ✅ Attribution & Citations
+
+**In this section:**
+- [How We Provide Attribution](#how-we-provide-attribution)
+- [Required Attributions](#required-attributions)
 
 ### How We Provide Attribution
 

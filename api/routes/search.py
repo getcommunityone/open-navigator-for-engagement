@@ -355,8 +355,8 @@ def search_organizations(query: str, state: Optional[str] = None, ntee_code: Opt
         where_clauses = []
         params = []
         
-        # Search query (case-insensitive LIKE)
-        where_clauses.append("LOWER(organization_name) LIKE LOWER(?)")
+        # Search query (case-insensitive LIKE) - use 'name' column
+        where_clauses.append("LOWER(name) LIKE LOWER(?)")
         params.append(f'%{query}%')
         
         # State filter (if using national file)
@@ -364,29 +364,32 @@ def search_organizations(query: str, state: Optional[str] = None, ntee_code: Opt
             where_clauses.append("state = ?")
             params.append(state)
         
-        # NTEE code filter
+        # NTEE code filter - use 'ntee_cd' column
         if ntee_code:
-            where_clauses.append("ntee_code LIKE ?")
+            where_clauses.append("ntee_cd LIKE ?")
             params.append(f'{ntee_code}%')
         
         where_sql = " AND ".join(where_clauses)
         
-        # SQL query with relevance scoring
+        # SQL query with relevance scoring - fetch all available columns for enrichment
         sql = f"""
             SELECT 
-                organization_name,
+                name,
                 city,
                 state,
-                ntee_code,
+                ntee_cd,
                 ein,
+                revenue_amt,
+                asset_amt,
+                income_amt,
                 CASE 
-                    WHEN LOWER(organization_name) LIKE LOWER(?) THEN 1.5
-                    WHEN LOWER(organization_name) LIKE LOWER(?) THEN 1.0
+                    WHEN LOWER(name) LIKE LOWER(?) THEN 1.5
+                    WHEN LOWER(name) LIKE LOWER(?) THEN 1.0
                     ELSE 0.5
                 END as score
             FROM '{file_path}'
             WHERE {where_sql}
-            ORDER BY score DESC, organization_name
+            ORDER BY score DESC, name
             LIMIT ?
         """
         
@@ -394,22 +397,75 @@ def search_organizations(query: str, state: Optional[str] = None, ntee_code: Opt
         query_params = [f'{query}%', f'%{query}%'] + params + [limit]
         rows = conn.execute(sql, query_params).fetchall()
         
+        # NTEE code descriptions for better context
+        ntee_descriptions = {
+            'E': 'Health Services',
+            'E60': 'Health Support Services',
+            'E61': 'Blood Supply',
+            'E62': 'Emergency Medical Services',
+            'E65': 'Organ & Tissue Banks',
+            'E70': 'Public Health',
+            'E80': 'Health Treatment - Primary Care',
+            'E90': 'Nursing Services',
+            'E20': 'Hospitals & Primary Medical Care',
+            'E30': 'Ambulatory & Primary Health Care',
+            'E32': 'Clinics & Community Health Centers',
+            'P': 'Human Services',
+            'B': 'Education',
+            'X': 'Religion-Related',
+            'A': 'Arts, Culture & Humanities',
+        }
+        
         # Convert to SearchResult objects
         for row in rows:
-            org_name, city, state_code, ntee, ein, score = row
+            org_name, city, state_code, ntee, ein, revenue, assets, income, score = row
+            
+            # Build a more informative description
+            ntee_desc = None
+            if ntee:
+                # Try exact match first, then prefix match
+                ntee_desc = ntee_descriptions.get(ntee)
+                if not ntee_desc:
+                    # Try first character (major category)
+                    ntee_desc = ntee_descriptions.get(ntee[0]) if ntee else None
+            
+            description_parts = []
+            if ntee_desc:
+                description_parts.append(ntee_desc)
+            
+            # Convert financial data to numbers (handle None and string types)
+            try:
+                revenue_num = float(revenue) if revenue else 0
+                assets_num = float(assets) if assets else 0
+            except (ValueError, TypeError):
+                revenue_num = 0
+                assets_num = 0
+            
+            if revenue_num > 0:
+                description_parts.append(f"Revenue: ${revenue_num:,.0f}")
+            elif assets_num > 0:
+                description_parts.append(f"Assets: ${assets_num:,.0f}")
+            
+            if not description_parts:
+                description_parts.append(f"Nonprofit serving {city}")
+            
+            description = " • ".join(description_parts)
             
             results.append(SearchResult(
                 result_type="organization",
                 title=org_name if org_name else "Unknown",
                 subtitle=f"{city}, {state_code}" + (f" - NTEE: {ntee}" if ntee else ""),
-                description=f"Nonprofit organization serving {city}",
-                url=f"/nonprofits?ein={ein}",
+                description=description,
+                url=f"/nonprofits-hf?search={ein}&state={state_code}",
                 score=score,
                 metadata={
                     "ein": ein,
                     "city": city,
                     "state": state_code,
-                    "ntee_code": ntee
+                    "ntee_code": ntee,
+                    "revenue": revenue,
+                    "assets": assets,
+                    "income": income
                 }
             ))
         
