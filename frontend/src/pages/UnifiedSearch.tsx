@@ -277,6 +277,22 @@ export default function UnifiedSearch() {
     }
   }
 
+  const formatCurrency = (amount: number): string => {
+    if (!amount || amount === 0) return '$0'
+    
+    const absAmount = Math.abs(amount)
+    
+    if (absAmount >= 1_000_000_000) {
+      return `$${(amount / 1_000_000_000).toFixed(1)}B`
+    } else if (absAmount >= 1_000_000) {
+      return `$${(amount / 1_000_000).toFixed(1)}M`
+    } else if (absAmount >= 1_000) {
+      return `$${(amount / 1_000).toFixed(1)}K`
+    } else {
+      return `$${amount.toFixed(0)}`
+    }
+  }
+
   const ResultCard = ({ result }: { result: SearchResult }) => (
     <div
       className="bg-white rounded-lg border border-gray-200 p-4 hover:shadow-md transition-shadow"
@@ -333,12 +349,14 @@ export default function UnifiedSearch() {
               )}
               {result.metadata.revenue && result.metadata.revenue > 0 && (
                 <span className="px-2 py-1 bg-green-100 text-green-700 rounded">
-                  💰 Revenue: ${(result.metadata.revenue / 1000000).toFixed(1)}M
+                  💰 Revenue: {formatCurrency(result.metadata.revenue)}
+                  {result.metadata.tax_year && ` (${result.metadata.tax_year})`}
                 </span>
               )}
               {result.metadata.assets && result.metadata.assets > 0 && (
                 <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded">
-                  📊 Assets: ${(result.metadata.assets / 1000000).toFixed(1)}M
+                  📊 Assets: {formatCurrency(result.metadata.assets)}
+                  {result.metadata.tax_year && ` (${result.metadata.tax_year})`}
                 </span>
               )}
               {result.metadata.causes && result.metadata.causes.length > 0 && (

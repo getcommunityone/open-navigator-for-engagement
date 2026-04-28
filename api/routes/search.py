@@ -618,6 +618,7 @@ def search_organizations(query: str, state: Optional[str] = None, ntee_code: Opt
         select_columns.append(f'{revenue_col} as revenue_amt' if revenue_col in available_columns else 'NULL as revenue_amt')
         select_columns.append(f'{asset_col} as asset_amt' if asset_col in available_columns else 'NULL as asset_amt')
         select_columns.append(f'{income_col} as income_amt' if income_col in available_columns else 'NULL as income_amt')
+        select_columns.append('tax_period' if 'tax_period' in available_columns else 'NULL as tax_period')
         
         # Track form_990 enrichment columns
         form_990_cols = []
@@ -638,11 +639,27 @@ def search_organizations(query: str, state: Optional[str] = None, ntee_code: Opt
         elif sort == 'revenue-desc':
             order_by_clauses.append(f"COALESCE(TRY_CAST({revenue_col} AS BIGINT), 0) DESC")
         elif sort == 'revenue-asc':
-            order_by_clauses.append(f"COALESCE(TRY_CAST({revenue_col} AS BIGINT), 0) ASC")
+            # Low to high: Show positive values first (smallest to largest), then zeros, then negatives
+            order_by_clauses.append(f"""
+                CASE 
+                    WHEN TRY_CAST({revenue_col} AS BIGINT) IS NULL THEN 3
+                    WHEN TRY_CAST({revenue_col} AS BIGINT) <= 0 THEN 2
+                    ELSE 1
+                END ASC,
+                ABS(COALESCE(TRY_CAST({revenue_col} AS BIGINT), 0)) ASC
+            """)
         elif sort == 'assets-desc':
             order_by_clauses.append(f"COALESCE(TRY_CAST({asset_col} AS BIGINT), 0) DESC")
         elif sort == 'assets-asc':
-            order_by_clauses.append(f"COALESCE(TRY_CAST({asset_col} AS BIGINT), 0) ASC")
+            # Low to high: Show positive values first (smallest to largest), then zeros, then negatives
+            order_by_clauses.append(f"""
+                CASE 
+                    WHEN TRY_CAST({asset_col} AS BIGINT) IS NULL THEN 3
+                    WHEN TRY_CAST({asset_col} AS BIGINT) <= 0 THEN 2
+                    ELSE 1
+                END ASC,
+                ABS(COALESCE(TRY_CAST({asset_col} AS BIGINT), 0)) ASC
+            """)
         elif query and query.strip():
             # Relevance sort (only for search mode)
             order_by_clauses.append("score DESC")
@@ -713,12 +730,12 @@ def search_organizations(query: str, state: Optional[str] = None, ntee_code: Opt
         
         # Convert to SearchResult objects with intelligent enrichment
         for row in rows:
-            # Unpack base columns
-            org_name, city, state_code, ntee, ein, revenue, assets, income = row[:8]
+            # Unpack base columns (now includes tax_period)
+            org_name, city, state_code, ntee, ein, revenue, assets, income, tax_period = row[:9]
             
             # Unpack optional form_990 columns if present
             existing_data = {}
-            idx = 8
+            idx = 9
             if 'form_990_website' in form_990_cols:
                 existing_data['form_990_website'] = row[idx]
                 idx += 1
@@ -730,6 +747,11 @@ def search_organizations(query: str, state: Optional[str] = None, ntee_code: Opt
                 idx += 1
             
             score = row[-1]  # Score is always last
+            
+            # Parse tax year from tax_period (format: YYYYMM)
+            tax_year = None
+            if tax_period and str(tax_period).isdigit() and len(str(tax_period)) >= 4:
+                tax_year = int(str(tax_period)[:4])
             
             # Get enriched data with intelligent backfill (only if requested)
             enrichment = get_enrichment_data(ein, existing_data) if (ein and enrich) else {}
@@ -802,6 +824,7 @@ def search_organizations(query: str, state: Optional[str] = None, ntee_code: Opt
                 "revenue": revenue,
                 "assets": assets,
                 "income": income,
+                "tax_year": tax_year,
                 "data_sources": enrichment.get('data_sources', [])
             }
             
@@ -820,7 +843,7 @@ def search_organizations(query: str, state: Optional[str] = None, ntee_code: Opt
                 title=org_name if org_name else "Unknown",
                 subtitle=f"{city}, {state_code}" + (f" - NTEE: {ntee}" if ntee else ""),
                 description=description,
-                url=f"/nonprofits-hf?search={ein}&state={state_code}",
+                url=f"/nonprofits?state={state_code}&keyword={org_name}&ein={ein}",
                 score=score,
                 metadata=metadata
             ))
