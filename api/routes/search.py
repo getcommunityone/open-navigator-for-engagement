@@ -548,11 +548,12 @@ def count_organizations(state: Optional[str] = None, ntee_code: Optional[str] = 
         return 0
 
 
-def search_organizations(query: str, state: Optional[str] = None, ntee_code: Optional[str] = None, limit: int = 10, offset: int = 0, enrich: bool = False) -> List[SearchResult]:
+def search_organizations(query: str, state: Optional[str] = None, ntee_code: Optional[str] = None, limit: int = 10, offset: int = 0, enrich: bool = False, sort: str = 'relevance') -> List[SearchResult]:
     """Search nonprofit organizations using DuckDB for fast Parquet queries
     
     Args:
         enrich: If True, fetch additional data from Every.org API (slower)
+        sort: Sort order - 'relevance', 'name-asc', 'name-desc', 'revenue-asc', 'revenue-desc', 'assets-asc', 'assets-desc'
     """
     results = []
     
@@ -627,6 +628,36 @@ def search_organizations(query: str, state: Optional[str] = None, ntee_code: Opt
         
         columns_sql = ', '.join(select_columns)
         
+        # Build ORDER BY clause based on sort parameter
+        order_by_clauses = []
+        
+        if sort == 'name-asc':
+            order_by_clauses.append(f"{name_col} ASC")
+        elif sort == 'name-desc':
+            order_by_clauses.append(f"{name_col} DESC")
+        elif sort == 'revenue-desc':
+            order_by_clauses.append(f"COALESCE(TRY_CAST({revenue_col} AS BIGINT), 0) DESC")
+        elif sort == 'revenue-asc':
+            order_by_clauses.append(f"COALESCE(TRY_CAST({revenue_col} AS BIGINT), 0) ASC")
+        elif sort == 'assets-desc':
+            order_by_clauses.append(f"COALESCE(TRY_CAST({asset_col} AS BIGINT), 0) DESC")
+        elif sort == 'assets-asc':
+            order_by_clauses.append(f"COALESCE(TRY_CAST({asset_col} AS BIGINT), 0) ASC")
+        elif query and query.strip():
+            # Relevance sort (only for search mode)
+            order_by_clauses.append("score DESC")
+            order_by_clauses.append(f"COALESCE(TRY_CAST({revenue_col} AS BIGINT), 0) DESC")
+        else:
+            # Default browse mode: sort by revenue/assets
+            order_by_clauses.append(f"COALESCE(TRY_CAST({revenue_col} AS BIGINT), 0) DESC")
+            order_by_clauses.append(f"COALESCE(TRY_CAST({asset_col} AS BIGINT), 0) DESC")
+        
+        # Always add name as final sort for consistency
+        if 'name' not in sort:
+            order_by_clauses.append(f"{name_col}")
+        
+        order_by_sql = ', '.join(order_by_clauses)
+        
         # SQL query with relevance scoring (browse mode if no query)
         if query and query.strip():
             # Search mode: score by text match
@@ -640,10 +671,7 @@ def search_organizations(query: str, state: Optional[str] = None, ntee_code: Opt
                     END as score
                 FROM '{file_path}'
                 WHERE {where_sql}
-                ORDER BY score DESC, 
-                         COALESCE(TRY_CAST({revenue_col} AS BIGINT), 0) DESC, 
-                         COALESCE(TRY_CAST({asset_col} AS BIGINT), 0) DESC,
-                         {name_col}
+                ORDER BY {order_by_sql}
                 LIMIT ? OFFSET ?
             """
             # Execute query with scoring parameters
@@ -656,10 +684,7 @@ def search_organizations(query: str, state: Optional[str] = None, ntee_code: Opt
                     1.0 as score
                 FROM '{file_path}'
                 WHERE {where_sql}
-                ORDER BY 
-                    COALESCE(TRY_CAST({revenue_col} AS BIGINT), 0) DESC, 
-                    COALESCE(TRY_CAST({asset_col} AS BIGINT), 0) DESC,
-                    {name_col}
+                ORDER BY {order_by_sql}
                 LIMIT ? OFFSET ?
             """
             # Execute query without scoring parameters
@@ -810,7 +835,7 @@ def search_organizations(query: str, state: Optional[str] = None, ntee_code: Opt
 
 
 def search_causes(query: str, limit: int = 10) -> List[SearchResult]:
-    """Search causes and NTEE categories"""
+    """Search causes and NTEE categories - supports browse mode"""
     results = []
     
     try:
@@ -827,24 +852,30 @@ def search_causes(query: str, limit: int = 10) -> List[SearchResult]:
                 description = str(row.get('description', ''))
                 ntee_type = str(row.get('ntee_type', ''))
                 
-                score = max(
-                    calculate_relevance_score(description, query),
-                    calculate_relevance_score(code, query)
-                )
+                # Browse mode: return all causes
+                # Search mode: filter by relevance
+                if query and query.strip():
+                    score = max(
+                        calculate_relevance_score(description, query),
+                        calculate_relevance_score(code, query)
+                    )
+                    if score <= 0.3:
+                        continue  # Skip low relevance results
+                else:
+                    score = 1.0  # Default score for browse mode
                 
-                if score > 0.3:
-                    results.append(SearchResult(
-                        result_type="cause",
-                        title=description,
-                        subtitle=f"NTEE Code: {code}",
-                        description=f"Category type: {ntee_type}",
-                        url=f"/nonprofits?ntee_code={code}",
-                        score=score,
-                        metadata={
-                            "ntee_code": code,
-                            "ntee_type": ntee_type
-                        }
-                    ))
+                results.append(SearchResult(
+                    result_type="cause",
+                    title=description,
+                    subtitle=f"NTEE Code: {code}",
+                    description=f"Category type: {ntee_type}",
+                    url=f"/nonprofits?ntee_code={code}",
+                    score=score,
+                    metadata={
+                        "ntee_code": code,
+                        "ntee_type": ntee_type
+                    }
+                ))
             
             logger.info(f"Found {len(results)} cause results for query '{query}'")
     
@@ -864,7 +895,8 @@ async def unified_search(
     limit: int = Query(20, ge=1, le=100, description="Maximum results per type"),
     offset: int = Query(0, ge=0, description="Number of results to skip (for pagination)"),
     page: int = Query(1, ge=1, description="Page number (alternative to offset)"),
-    enrich: bool = Query(False, description="Enable API enrichment (slower - fetches logos, causes from Every.org)")
+    enrich: bool = Query(False, description="Enable API enrichment (slower - fetches logos, causes from Every.org)"),
+    sort: str = Query('relevance', description="Sort order: relevance, name-asc, name-desc, revenue-asc, revenue-desc, assets-asc, assets-desc")
 ):
     """
     Unified search across all data types
@@ -920,7 +952,7 @@ async def unified_search(
             all_results.extend(meeting_results)
         
         if 'organizations' in requested_types:
-            org_results = search_organizations(q or "", state, ntee_code, limit=search_limit, offset=search_offset, enrich=enrich)
+            org_results = search_organizations(q or "", state, ntee_code, limit=search_limit, offset=search_offset, enrich=enrich, sort=sort)
             all_results.extend(org_results)
         
         if 'causes' in requested_types:
@@ -976,7 +1008,8 @@ async def unified_search(
             "filters": {
                 "state": state,
                 "ntee_code": ntee_code,
-                "types": requested_types
+                "types": requested_types,
+                "sort": sort
             }
         }
     

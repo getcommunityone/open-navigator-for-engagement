@@ -68,6 +68,8 @@ export default function UnifiedSearch() {
   const [currentPage, setCurrentPage] = useState(() => parseInt(searchParams.get('page') || '1'))
   const [showFilters, setShowFilters] = useState(false)
   const [showSuggestions, setShowSuggestions] = useState(false)
+  const [sortBy, setSortBy] = useState(() => searchParams.get('sort') || 'relevance')
+  const [nteeCategory, setNteeCategory] = useState(() => searchParams.get('ntee') || '')
   
   const searchInputRef = useRef<HTMLInputElement>(null)
 
@@ -77,6 +79,8 @@ export default function UnifiedSearch() {
     const stateParam = searchParams.get('state')
     const typesParam = searchParams.get('types')
     const pageParam = searchParams.get('page')
+    const sortParam = searchParams.get('sort')
+    const nteeParam = searchParams.get('ntee')
     
     if (queryParam) {
       setQuery(queryParam)
@@ -95,6 +99,12 @@ export default function UnifiedSearch() {
     }
     if (pageParam) {
       setCurrentPage(parseInt(pageParam))
+    }
+    if (sortParam) {
+      setSortBy(sortParam)
+    }
+    if (nteeParam) {
+      setNteeCategory(nteeParam)
     }
   }, [searchParams])
 
@@ -119,7 +129,7 @@ export default function UnifiedSearch() {
 
   // Main search results
   const { data: searchResults, isLoading, error } = useQuery<SearchResponse>({
-    queryKey: ['unified-search', activeQuery, selectedTypes, selectedState, currentPage],
+    queryKey: ['unified-search', activeQuery, selectedTypes, selectedState, currentPage, sortBy, nteeCategory],
     queryFn: async () => {
       // Allow searching with query OR with filters (browse mode)
       if (!activeQuery && !selectedState && !selectedTypes.length) {
@@ -139,6 +149,15 @@ export default function UnifiedSearch() {
       
       if (selectedState) {
         params.state = selectedState
+      }
+      
+      // Add sort and filter parameters
+      if (sortBy && sortBy !== 'relevance') {
+        params.sort = sortBy
+      }
+      
+      if (nteeCategory) {
+        params.ntee_code = nteeCategory
       }
       
       const response = await axios.get('/api/search/', { params })
@@ -163,6 +182,8 @@ export default function UnifiedSearch() {
       if (selectedTypes.length > 0 && selectedTypes.length < 4) {
         params.types = selectedTypes.join(',')
       }
+      if (sortBy && sortBy !== 'relevance') params.sort = sortBy
+      if (nteeCategory) params.ntee = nteeCategory
       setSearchParams(params)
     }
   }
@@ -177,6 +198,8 @@ export default function UnifiedSearch() {
     if (selectedTypes.length > 0 && selectedTypes.length < 4) {
       params.types = selectedTypes.join(',')
     }
+    if (sortBy && sortBy !== 'relevance') params.sort = sortBy
+    if (nteeCategory) params.ntee = nteeCategory
     if (newPage > 1) params.page = newPage.toString()
     setSearchParams(params)
     
@@ -195,19 +218,33 @@ export default function UnifiedSearch() {
     setShowSuggestions(false)
     setSelectedTypes([category])
     
-    // Update URL
+    // Update URL with all current filters
     const params: any = { q: query }
     if (selectedState) params.state = selectedState
     params.types = category
+    if (sortBy && sortBy !== 'relevance') params.sort = sortBy
+    if (nteeCategory) params.ntee = nteeCategory
     setSearchParams(params)
   }
 
   const toggleType = (type: string) => {
-    if (selectedTypes.includes(type)) {
-      setSelectedTypes(selectedTypes.filter(t => t !== type))
-    } else {
-      setSelectedTypes([...selectedTypes, type])
+    const newTypes = selectedTypes.includes(type)
+      ? selectedTypes.filter(t => t !== type)
+      : [...selectedTypes, type]
+    
+    setSelectedTypes(newTypes)
+    setCurrentPage(1)
+    
+    // Update URL with all current filters
+    const params: any = {}
+    if (activeQuery) params.q = activeQuery
+    if (selectedState) params.state = selectedState
+    if (newTypes.length > 0 && newTypes.length < 4) {
+      params.types = newTypes.join(',')
     }
+    if (sortBy && sortBy !== 'relevance') params.sort = sortBy
+    if (nteeCategory) params.ntee = nteeCategory
+    setSearchParams(params)
   }
 
   const getTypeIcon = (type: string) => {
@@ -492,6 +529,11 @@ export default function UnifiedSearch() {
             >
               <AdjustmentsHorizontalIcon className="h-5 w-5" />
               Filters
+              {(selectedState || sortBy !== 'relevance' || nteeCategory) && (
+                <span className="ml-1 px-2 py-0.5 bg-primary-600 text-white text-xs rounded-full">
+                  {[selectedState, sortBy !== 'relevance' ? 'sorted' : null, nteeCategory].filter(Boolean).length}
+                </span>
+              )}
             </button>
 
             {/* Quick Type Filters */}
@@ -514,17 +556,78 @@ export default function UnifiedSearch() {
             ))}
           </div>
 
+          {/* Active Filters Display */}
+          {(selectedState || sortBy !== 'relevance' || nteeCategory) && (
+            <div className="mt-3 flex items-center gap-2 flex-wrap">
+              <span className="text-sm text-gray-600">Active filters:</span>
+              {selectedState && (
+                <span className="inline-flex items-center gap-1 px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm">
+                  State: {selectedState}
+                  <button
+                    onClick={() => {
+                      setSelectedState('')
+                      setTimeout(() => handleSearch(), 0)
+                    }}
+                    className="hover:bg-blue-200 rounded-full p-0.5"
+                  >
+                    <XMarkIcon className="h-3 w-3" />
+                  </button>
+                </span>
+              )}
+              {sortBy !== 'relevance' && (
+                <span className="inline-flex items-center gap-1 px-3 py-1 bg-purple-100 text-purple-800 rounded-full text-sm">
+                  Sort: {
+                    sortBy === 'name-asc' ? 'Name A-Z' :
+                    sortBy === 'name-desc' ? 'Name Z-A' :
+                    sortBy === 'revenue-desc' ? 'Revenue ↓' :
+                    sortBy === 'revenue-asc' ? 'Revenue ↑' :
+                    sortBy === 'assets-desc' ? 'Assets ↓' :
+                    sortBy === 'assets-asc' ? 'Assets ↑' : sortBy
+                  }
+                  <button
+                    onClick={() => {
+                      setSortBy('relevance')
+                      setTimeout(() => handleSearch(), 0)
+                    }}
+                    className="hover:bg-purple-200 rounded-full p-0.5"
+                  >
+                    <XMarkIcon className="h-3 w-3" />
+                  </button>
+                </span>
+              )}
+              {nteeCategory && (
+                <span className="inline-flex items-center gap-1 px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm">
+                  Category: {nteeCategory}
+                  <button
+                    onClick={() => {
+                      setNteeCategory('')
+                      setTimeout(() => handleSearch(), 0)
+                    }}
+                    className="hover:bg-green-200 rounded-full p-0.5"
+                  >
+                    <XMarkIcon className="h-3 w-3" />
+                  </button>
+                </span>
+              )}
+            </div>
+          )}
+
           {/* Advanced Filters Panel */}
           {showFilters && (
             <div className="mt-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {/* State Filter */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     State
                   </label>
                   <select
                     value={selectedState}
-                    onChange={(e) => setSelectedState(e.target.value)}
+                    onChange={(e) => {
+                      setSelectedState(e.target.value)
+                      setCurrentPage(1)
+                      setTimeout(() => handleSearch(), 0)
+                    }}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-gray-900 bg-white"
                   >
                     <option value="" className="text-gray-900">All States</option>
@@ -535,6 +638,89 @@ export default function UnifiedSearch() {
                     <option value="WI" className="text-gray-900">Wisconsin</option>
                   </select>
                 </div>
+
+                {/* Sort By */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Sort By
+                  </label>
+                  <select
+                    value={sortBy}
+                    onChange={(e) => {
+                      setSortBy(e.target.value)
+                      setCurrentPage(1)
+                      setTimeout(() => handleSearch(), 0)
+                    }}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-gray-900 bg-white"
+                  >
+                    <option value="relevance" className="text-gray-900">Relevance</option>
+                    <option value="name-asc" className="text-gray-900">Name (A-Z)</option>
+                    <option value="name-desc" className="text-gray-900">Name (Z-A)</option>
+                    <option value="revenue-desc" className="text-gray-900">Revenue (High to Low)</option>
+                    <option value="revenue-asc" className="text-gray-900">Revenue (Low to High)</option>
+                    <option value="assets-desc" className="text-gray-900">Assets (High to Low)</option>
+                    <option value="assets-asc" className="text-gray-900">Assets (Low to High)</option>
+                  </select>
+                </div>
+
+                {/* NTEE Category (for organizations) */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Category (NTEE)
+                  </label>
+                  <select
+                    value={nteeCategory}
+                    onChange={(e) => {
+                      setNteeCategory(e.target.value)
+                      setCurrentPage(1)
+                      setTimeout(() => handleSearch(), 0)
+                    }}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-gray-900 bg-white"
+                    disabled={!selectedTypes.includes('organizations')}
+                  >
+                    <option value="" className="text-gray-900">All Categories</option>
+                    <option value="A" className="text-gray-900">Arts & Culture</option>
+                    <option value="B" className="text-gray-900">Education</option>
+                    <option value="C" className="text-gray-900">Environment</option>
+                    <option value="D" className="text-gray-900">Animal-Related</option>
+                    <option value="E" className="text-gray-900">Health</option>
+                    <option value="F" className="text-gray-900">Mental Health</option>
+                    <option value="G" className="text-gray-900">Diseases</option>
+                    <option value="H" className="text-gray-900">Medical Research</option>
+                    <option value="I" className="text-gray-900">Crime & Legal</option>
+                    <option value="J" className="text-gray-900">Employment</option>
+                    <option value="K" className="text-gray-900">Food & Agriculture</option>
+                    <option value="L" className="text-gray-900">Housing</option>
+                    <option value="M" className="text-gray-900">Public Safety</option>
+                    <option value="N" className="text-gray-900">Recreation & Sports</option>
+                    <option value="O" className="text-gray-900">Youth Development</option>
+                    <option value="P" className="text-gray-900">Human Services</option>
+                    <option value="Q" className="text-gray-900">International</option>
+                    <option value="R" className="text-gray-900">Civil Rights</option>
+                    <option value="S" className="text-gray-900">Community</option>
+                    <option value="T" className="text-gray-900">Philanthropy</option>
+                    <option value="U" className="text-gray-900">Science</option>
+                    <option value="V" className="text-gray-900">Social Science</option>
+                    <option value="W" className="text-gray-900">Public Affairs</option>
+                    <option value="X" className="text-gray-900">Religion</option>
+                    <option value="Y" className="text-gray-900">Mutual Benefit</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Clear All Button */}
+              <div className="mt-4">
+                <button
+                  onClick={() => {
+                    setSelectedState('')
+                    setSortBy('relevance')
+                    setNteeCategory('')
+                    setTimeout(() => handleSearch(), 0)
+                  }}
+                  className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors"
+                >
+                  Clear All Filters
+                </button>
               </div>
             </div>
           )}
@@ -562,9 +748,25 @@ export default function UnifiedSearch() {
                 <div className="mb-6">
                   <h2 className="text-xl font-semibold text-gray-900">
                     {searchResults.query ? (
-                      <>{searchResults.total_results} results for "{searchResults.query}"</>
+                      <>
+                        {searchResults.total_results.toLocaleString()} results for "{searchResults.query}"
+                        {searchResults.total_results > 0 && (
+                          <span className="text-base font-normal text-gray-600 ml-2">
+                            (showing {searchResults.pagination.offset + 1}-
+                            {Math.min(searchResults.pagination.offset + searchResults.pagination.limit, searchResults.total_results)})
+                          </span>
+                        )}
+                      </>
                     ) : (
-                      <>{searchResults.total_results} results</>
+                      <>
+                        {searchResults.total_results.toLocaleString()} results
+                        {searchResults.total_results > 0 && (
+                          <span className="text-base font-normal text-gray-600 ml-2">
+                            (showing {searchResults.pagination.offset + 1}-
+                            {Math.min(searchResults.pagination.offset + searchResults.pagination.limit, searchResults.total_results)})
+                          </span>
+                        )}
+                      </>
                     )}
                   </h2>
                   {selectedState && (
