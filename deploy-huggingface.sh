@@ -118,6 +118,13 @@ else
 fi
 echo ""
 
+# Clean up old Docker artifacts to prevent disk space issues
+echo "🧹 Cleaning up old Docker artifacts..."
+docker stop open-navigator-test-container 2>/dev/null || true
+docker rm open-navigator-test-container 2>/dev/null || true
+docker rmi open-navigator-hf-test 2>/dev/null || true
+echo ""
+
 # Run Docker build test before deployment (unless skipped)
 if [ "$SKIP_TEST" = true ]; then
     echo "⚠️  Skipping pre-deployment Docker build test (--skip-test flag)"

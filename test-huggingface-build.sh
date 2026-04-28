@@ -30,6 +30,14 @@ echo -e "${BLUE}🔨 Testing Hugging Face Docker Build${NC}"
 echo "==========================================="
 echo ""
 
+# Clean up old test artifacts BEFORE build to prevent disk space issues
+echo -e "${BLUE}🧹 Cleaning up old test artifacts...${NC}"
+docker stop $CONTAINER_NAME 2>/dev/null || true
+docker rm $CONTAINER_NAME 2>/dev/null || true
+docker rmi $IMAGE_NAME 2>/dev/null || true
+echo -e "${GREEN}✅ Old test artifacts removed${NC}"
+echo ""
+
 # Cleanup function
 cleanup() {
     if [ "$KEEP_RUNNING" = true ]; then
@@ -51,6 +59,11 @@ cleanup() {
         docker stop $CONTAINER_NAME 2>/dev/null || true
         docker rm $CONTAINER_NAME 2>/dev/null || true
         docker rmi $IMAGE_NAME 2>/dev/null || true
+        
+        # Clean up dangling images and build cache to prevent disk space issues
+        echo -e "${BLUE}🧹 Cleaning up Docker build cache...${NC}"
+        docker builder prune -f --filter "until=24h" > /dev/null 2>&1 || true
+        echo -e "${GREEN}✅ Build cache cleaned${NC}"
     fi
 }
 
