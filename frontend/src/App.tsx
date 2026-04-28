@@ -8,6 +8,7 @@ import Heatmap from './pages/Heatmap'
 import Documents from './pages/Documents'
 import Opportunities from './pages/Opportunities'
 import Nonprofits from './pages/Nonprofits'
+import NonprofitsHF from './pages/NonprofitsHF'
 import Settings from './pages/Settings'
 import PeopleFinder from './pages/PeopleFinder'
 import DebateFinder from './pages/DebateGrader'
@@ -44,6 +45,7 @@ function App() {
         <Route path="documents" element={<Documents />} />
         <Route path="opportunities" element={<Opportunities />} />
         <Route path="nonprofits" element={<Nonprofits />} />
+        <Route path="nonprofits-hf" element={<NonprofitsHF />} />
         <Route path="debate-grader" element={<DebateFinder />} />
         <Route path="profile" element={<Profile />} />
         <Route path="settings" element={<Settings />} />

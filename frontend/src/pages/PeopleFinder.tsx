@@ -84,7 +84,7 @@ export default function PeopleFinder() {
         params.state = location.state
       }
       
-      const response = await axios.get('/api/search', { params })
+      const response = await axios.get('/api/search/', { params })
       return response.data
     },
     staleTime: 60000, // Cache for 1 minute

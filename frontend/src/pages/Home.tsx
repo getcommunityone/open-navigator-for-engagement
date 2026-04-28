@@ -48,7 +48,7 @@ export default function Home() {
         return null;
       }
       
-      const url = '/api/search';
+      const url = '/api/search/';
       const params: any = {
         q: keyword,
         types: 'causes,contacts,organizations',
@@ -371,7 +371,7 @@ export default function Home() {
                             Search In
                           </label>
                           {location ? (
-                            <div className="space-y-2">
+                            <div className="relative">
                               <select
                                 value={searchScope}
                                 onChange={(e) => setSearchScope(e.target.value)}
@@ -386,7 +386,7 @@ export default function Home() {
                               <button
                                 type="button"
                                 onClick={() => navigate('/?tab=community')}
-                                className="w-full text-xs text-primary-600 hover:text-primary-700 font-medium underline flex items-center justify-center gap-1"
+                                className="absolute -bottom-6 left-0 right-0 text-xs text-primary-600 hover:text-primary-700 font-medium underline flex items-center justify-center gap-1"
                               >
                                 <MapPinIcon className="h-3 w-3" />
                                 Change Location

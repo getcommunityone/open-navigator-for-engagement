@@ -617,6 +617,30 @@ def search_organizations(query: str, state: Optional[str] = None, ntee_code: Opt
             # Use enriched mission as primary description, fallback to NTEE + financial
             description = enrichment.get('mission') if enrichment.get('mission') else None
             
+            # Validate mission: if it contains a different org name, it's stale data
+            if description and org_name:
+                # Check if mission mentions a completely different org name
+                # (e.g., "Catalyst Institute" when org name is "CAREQUEST INSTITUTE")
+                mission_lower = description.lower()
+                name_words = set(org_name.lower().split())
+                
+                # If mission starts with an org name that's not in our actual org name, skip it
+                first_sentence = description.split('.')[0].lower()
+                if ' is a nonprofit' in first_sentence or ' is an nonprofit' in first_sentence:
+                    # Extract the subject (organization name before "is a nonprofit")
+                    subject = first_sentence.split(' is a')[0].strip()
+                    subject_words = set(subject.split())
+                    
+                    # If the subject shares NO significant words with our org name, it's stale
+                    # (e.g., "catalyst institute" vs "carequest institute")
+                    significant_words = subject_words - {'the', 'a', 'an', 'of', 'for', 'and', 'inc', 'llc'}
+                    name_significant = name_words - {'the', 'a', 'an', 'of', 'for', 'and', 'inc', 'llc', 'institute'}
+                    
+                    if significant_words and not (significant_words & name_significant):
+                        # Stale data - mission talks about a different org
+                        logger.warning(f"Stale mission data for {org_name}: '{subject}' != '{org_name}'")
+                        description = None
+            
             if not description:
                 description_parts = []
                 if ntee_desc:

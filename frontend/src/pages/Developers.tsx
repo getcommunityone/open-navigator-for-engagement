@@ -180,7 +180,7 @@ export default function Developers() {
 import requests
 
 response = requests.get(
-  'http://localhost:8000/api/search',
+  'http://localhost:8000/api/search/',
   params={
     'q': 'dental health',
     'state': 'AL',

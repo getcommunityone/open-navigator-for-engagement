@@ -72,7 +72,7 @@ export default function UnifiedSearch() {
     queryFn: async () => {
       if (!query || query.length < 2) return null
       
-      const response = await axios.get('/api/search', {
+      const response = await axios.get('/api/search/', {
         params: {
           q: query,
           types: 'causes,contacts,organizations',
@@ -101,7 +101,7 @@ export default function UnifiedSearch() {
         params.state = selectedState
       }
       
-      const response = await axios.get('/api/search', { params })
+      const response = await axios.get('/api/search/', { params })
       return response.data
     },
     enabled: activeQuery.length >= 2
@@ -188,15 +188,8 @@ export default function UnifiedSearch() {
           <div className="flex items-start justify-between gap-2">
             <div className="flex-1">
               <h3 
-                onClick={() => {
-                  // For organizations with EIN, open in new tab to nonprofit search with EIN filter
-                  if (result.type === 'organization' && result.metadata?.ein) {
-                    window.open(result.url, '_blank')
-                  } else {
-                    navigate(result.url)
-                  }
-                }}
-                className="font-semibold text-gray-900 mb-1 hover:text-primary-600 cursor-pointer"
+                onClick={() => navigate(result.url)}
+                className="font-semibold text-gray-900 cursor-pointer hover:text-blue-600 mb-1"
               >
                 {result.title}
               </h3>

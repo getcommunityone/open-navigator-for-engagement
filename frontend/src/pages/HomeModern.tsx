@@ -47,6 +47,17 @@ export default function HomeModern() {
   const apiBaseUrl = import.meta.env.VITE_API_URL || 
     (import.meta.env.DEV ? 'http://localhost:8000' : '')
 
+  // Fetch real stats from API
+  const { data: statsData } = useQuery({
+    queryKey: ['platform-stats'],
+    queryFn: async () => {
+      const response = await axios.get('/api/stats');
+      return response.data.data;
+    },
+    staleTime: 1000 * 60 * 60, // Cache for 1 hour
+    refetchOnWindowFocus: false
+  })
+
   // Live search preview (type-ahead with actual results from API)
   const { data: previewResults, isLoading: previewLoading, error: previewError } = useQuery({
     queryKey: ['search-preview-home', keyword, location?.state],
@@ -57,7 +68,7 @@ export default function HomeModern() {
         return null;
       }
       
-      const url = '/api/search';
+      const url = '/api/search/';
       const params: any = {
         q: keyword,
         types: 'causes,contacts,organizations',
@@ -370,7 +381,7 @@ export default function HomeModern() {
 
           <p className="text-xl md:text-2xl text-gray-600 mb-12 max-w-3xl mx-auto animate-[slideUp_0.8s_ease-out_0.4s_both]">
             Follow leaders, charities, and causes in your community.<br />
-            90,000+ cities • 3M+ nonprofits • 100% free
+            {statsData ? `${statsData.jurisdictions_display} cities • ${statsData.nonprofits_display} nonprofits • 100% free` : '90,000+ cities • 3M+ nonprofits • 100% free'}
           </p>
 
           {/* Tabbed Search Interface */}
@@ -428,8 +439,23 @@ export default function HomeModern() {
                               className="w-full px-4 py-3 text-lg border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#354F52] focus:border-transparent text-gray-900"
                             />
                             
+                            {/* Error Message */}
+                            {showSuggestions && previewError && (
+                              <div className="absolute z-50 w-full mt-2 border-2 border-red-300 rounded-lg shadow-2xl" style={{ backgroundColor: '#FEF2F2' }}>
+                                <div className="px-4 py-3 flex items-start gap-3">
+                                  <svg className="h-5 w-5 text-red-500 mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                                  </svg>
+                                  <div className="flex-1">
+                                    <h3 className="text-sm font-semibold text-red-800 mb-1">Unable to Load Results</h3>
+                                    <p className="text-sm text-red-600">We're having trouble connecting to our search service. Please try again in a moment.</p>
+                                  </div>
+                                </div>
+                              </div>
+                            )}
+                            
                             {/* Rich Preview Dropdown with Grouped Results */}
-                            {showSuggestions && previewResults && previewResults.total_results > 0 && (
+                            {showSuggestions && !previewError && previewResults && previewResults.total_results > 0 && (
                               <div className="absolute z-50 w-full mt-2 border-2 border-gray-300 rounded-lg shadow-2xl max-h-96 overflow-y-auto" style={{ backgroundColor: '#ffffff' }}>
                                 
                                 {/* Causes Section */}
@@ -568,7 +594,7 @@ export default function HomeModern() {
                             Search In
                           </label>
                           {location ? (
-                            <div className="space-y-2">
+                            <div className="relative">
                               <select
                                 value={searchScope}
                                 onChange={(e) => setSearchScope(e.target.value)}
@@ -583,7 +609,7 @@ export default function HomeModern() {
                               <button
                                 type="button"
                                 onClick={() => setSelectedTab(1)}
-                                className="w-full text-xs text-primary-600 hover:text-primary-700 font-medium underline flex items-center justify-center gap-1"
+                                className="absolute -bottom-6 left-0 right-0 text-xs text-primary-600 hover:text-primary-700 font-medium underline flex items-center justify-center gap-1"
                               >
                                 <MapIcon className="h-3 w-3" />
                                 Change Location
@@ -664,15 +690,15 @@ export default function HomeModern() {
           <div className="relative z-[1] flex flex-wrap justify-center gap-8 text-sm text-gray-600 animate-[slideUp_0.8s_ease-out_0.8s_both]">
             <div className="flex items-center gap-2">
               <CheckCircleIcon className="h-5 w-5 text-green-500" />
-              <span>90,000+ Jurisdictions</span>
+              <span>{statsData?.jurisdictions_display || '90,000+'} Jurisdictions</span>
             </div>
             <div className="flex items-center gap-2">
               <CheckCircleIcon className="h-5 w-5 text-green-500" />
-              <span>3M+ Nonprofits</span>
+              <span>{statsData?.nonprofits_display || '3M+'} Nonprofits</span>
             </div>
             <div className="flex items-center gap-2">
               <CheckCircleIcon className="h-5 w-5 text-green-500" />
-              <span>15,000+ Decisions Tracked</span>
+              <span>{statsData?.meetings_display || '500K+'} Meetings Analyzed</span>
             </div>
           </div>
         </div>
@@ -779,37 +805,101 @@ export default function HomeModern() {
               Our Impact
             </h2>
             <p className="text-xl text-gray-600">
-              Real numbers from real communities with impactful KPIs
+              Real numbers from real data tables {statsData?.last_updated && <span className="text-sm text-gray-500">(updated {new Date(statsData.last_updated).toLocaleDateString()})</span>}
             </p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {[
-              { value: '90,000+', label: 'Jurisdictions Tracked', description: 'Cities, counties, states, and tribal governments', color: '#354F52' },
-              { value: '3M+', label: 'Nonprofits & Churches', description: 'With financials, programs, and impact data', color: '#52796F' },
-              { value: '500K+', label: 'Meeting Pages Analyzed', description: 'AI-extracted decisions and budget items', color: '#84A98C' },
-              { value: '$2T+', label: 'Budget Dollars', description: 'Real-time tracking and delta analysis', color: '#4A90E2' },
-              { value: '100K+', label: 'Elected Officials', description: 'Voting records and decision patterns', color: '#9B59B6' },
-              { value: '300K+', label: 'Churches & Congregations', description: 'Community-based organizations mapped', color: '#6B8E23' },
-              { value: '15,000+', label: 'Policy Decisions', description: 'With deferral tracking and stakeholder positions', color: '#DC143C' },
-              { value: '13,000+', label: 'School Districts', description: 'NCES-validated educational boundaries', color: '#8B4513' },
-              { value: '50 States', label: 'Nationwide Coverage', description: 'Including territories and tribal nations', color: '#2E8B57' },
-              { value: '1,000s', label: 'Grant Opportunities', description: 'Federal, state, and foundation funding', color: '#FF6B6B' },
-              { value: '10K+', label: 'Fact-Checked Claims', description: 'PolitiFact, FactCheck.org integration', color: '#4ECDC4' },
-              { value: '100%', label: 'Free & Open Source', description: 'MIT License, HuggingFace datasets', color: '#95E1D3' },
-            ].map((stat, index) => (
-              <div key={index} className="text-center p-8 rounded-2xl bg-gradient-to-br from-gray-50 to-white shadow-md hover:shadow-xl transition-shadow group">
-                <div className="text-5xl font-bold mb-2 group-hover:scale-110 transition-transform" style={{ color: stat.color }}>
-                  {stat.value}
+            {(() => {
+              const stats = [
+                { 
+                  value: statsData?.jurisdictions_display || '90,000+', 
+                  label: 'Jurisdictions Tracked', 
+                  description: 'Cities, counties, states, and tribal governments', 
+                  color: '#354F52' 
+                },
+                { 
+                  value: statsData?.nonprofits_display || '3M+', 
+                  label: 'Nonprofits & Churches', 
+                  description: statsData ? `${statsData.states_with_data} states with full IRS BMF data` : 'With financials, programs, and impact data', 
+                  color: '#52796F' 
+                },
+                { 
+                  value: statsData?.meetings_display || '500K+', 
+                  label: 'Meeting Pages Analyzed', 
+                  description: 'AI-extracted decisions and budget items', 
+                  color: '#84A98C' 
+                },
+                { 
+                  value: statsData?.budget_tracked || '$2T+', 
+                  label: 'Budget Dollars', 
+                  description: 'Real-time tracking and delta analysis', 
+                  color: '#4A90E2' 
+                },
+                { 
+                  value: statsData?.contacts_display || '100K+', 
+                  label: 'Elected Officials', 
+                  description: 'Voting records and decision patterns', 
+                  color: '#9B59B6' 
+                },
+                { 
+                  value: statsData?.churches || '300K+', 
+                  label: 'Churches & Congregations', 
+                  description: 'Community-based organizations mapped', 
+                  color: '#6B8E23' 
+                },
+                { 
+                  value: statsData?.meetings_display || '15,000+', 
+                  label: 'Policy Decisions', 
+                  description: 'With deferral tracking and stakeholder positions', 
+                  color: '#DC143C' 
+                },
+                { 
+                  value: statsData?.school_districts_display || '13,000+', 
+                  label: 'School Districts', 
+                  description: 'NCES-validated educational boundaries', 
+                  color: '#8B4513' 
+                },
+                { 
+                  value: statsData ? `${statsData.states_total} States` : '50 States', 
+                  label: 'Nationwide Coverage', 
+                  description: 'Including territories and tribal nations', 
+                  color: '#2E8B57' 
+                },
+                { 
+                  value: statsData?.grant_opportunities || '1,000s', 
+                  label: 'Grant Opportunities', 
+                  description: 'Federal, state, and foundation funding', 
+                  color: '#FF6B6B' 
+                },
+                { 
+                  value: statsData?.fact_checks || '10K+', 
+                  label: 'Fact-Checked Claims', 
+                  description: 'PolitiFact, FactCheck.org integration', 
+                  color: '#4ECDC4' 
+                },
+                { 
+                  value: '100%', 
+                  label: 'Free & Open Source', 
+                  description: 'MIT License, HuggingFace datasets', 
+                  color: '#95E1D3' 
+                },
+              ];
+              
+              return stats.map((stat, index) => (
+                <div key={index} className="text-center p-8 rounded-2xl bg-gradient-to-br from-gray-50 to-white shadow-md hover:shadow-xl transition-shadow group">
+                  <div className="text-5xl font-bold mb-2 group-hover:scale-110 transition-transform" style={{ color: stat.color }}>
+                    {stat.value}
+                  </div>
+                  <div className="text-gray-800 font-semibold mb-1">
+                    {stat.label}
+                  </div>
+                  <div className="text-sm text-gray-600">
+                    {stat.description}
+                  </div>
                 </div>
-                <div className="text-gray-800 font-semibold mb-1">
-                  {stat.label}
-                </div>
-                <div className="text-sm text-gray-600">
-                  {stat.description}
-                </div>
-              </div>
-            ))}
+              ));
+            })()}
           </div>
         </div>
       </section>

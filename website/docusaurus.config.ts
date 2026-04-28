@@ -107,7 +107,7 @@ const config: Config = {
       logo: {
         alt: 'CommunityOne Logo',
         src: 'img/communityone_logo.svg',
-        href: 'http://localhost:5173',
+        href: process.env.APP_URL || 'https://www.communityone.com',
         target: '_self',
       },
       items: [
