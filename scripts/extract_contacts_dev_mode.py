@@ -142,7 +142,7 @@ def split_contacts_by_state():
         attendance_df = None
     
     # Need to join with meetings to get state
-    meetings_file = gold_dir / "meetings_transcripts.parquet"
+    meetings_file = gold_dir / "national" / "meetings_transcripts.parquet"
     if meetings_file.exists():
         meetings_df = pd.read_parquet(meetings_file)
         
@@ -203,8 +203,9 @@ def cleanup_temp_files():
     logger.info("=" * 70)
     
     gold_dir = Path("data/gold")
+    national_dir = gold_dir / "national"
     temp_files = [
-        gold_dir / "meetings_transcripts.parquet",
+        national_dir / "meetings_transcripts.parquet",
         gold_dir / "contacts_local_officials.parquet",
         gold_dir / "contacts_meeting_attendance.parquet"
     ]

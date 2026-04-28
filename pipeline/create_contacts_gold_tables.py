@@ -1,4 +1,4 @@
-"""
+"""  
 Create Contacts Gold Tables from Meeting Data
 
 Extract structured contact information from meeting transcripts:
@@ -11,7 +11,7 @@ Gold Tables Created:
 2. contacts_state_legislators - From Open States API  
 3. contacts_school_board - School board members
 
-Input: data/gold/meetings_transcripts.parquet
+Input: data/gold/national/meetings_transcripts.parquet
 Output: data/gold/contacts_*.parquet
 """
 
@@ -171,8 +171,8 @@ class ContactsGoldTableCreator:
         """
         logger.info("Creating contacts_local_officials gold table...")
         
-        # Load meetings transcripts
-        transcripts_path = self.meetings_gold_dir / "meetings_transcripts.parquet"
+        # Load meetings transcripts from national directory
+        transcripts_path = self.meetings_gold_dir / "national" / "meetings_transcripts.parquet"
         
         if not transcripts_path.exists():
             logger.error(f"Meetings transcripts not found: {transcripts_path}")

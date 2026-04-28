@@ -239,7 +239,7 @@ import pandas as pd
 
 # Load attendance and meetings
 attendance = pd.read_parquet('data/gold/contacts_meeting_attendance.parquet')
-meetings = pd.read_parquet('data/gold/meetings_calendar.parquet')
+meetings = pd.read_parquet('data/gold/national/meetings_calendar.parquet')
 
 # Join to get meeting details for each official
 meeting_details = attendance.merge(
@@ -266,7 +266,7 @@ print(f"\nJerry Schultz attended {len(official_meetings)} meetings")
 
 ```python
 attendance = pd.read_parquet('data/gold/contacts_meeting_attendance.parquet')
-topics = pd.read_parquet('data/gold/meetings_topics.parquet')
+topics = pd.read_parquet('data/gold/national/meetings_topics.parquet')
 
 # Join attendance with topics
 officials_topics = attendance.merge(
@@ -287,7 +287,7 @@ print(health_meetings.groupby('name').size().sort_values(ascending=False).head(1
 ### Combine with Demographics
 
 ```python
-demographics = pd.read_parquet('data/gold/meetings_demographics.parquet')
+demographics = pd.read_parquet('data/gold/national/meetings_demographics.parquet')
 
 # Link officials to demographic context
 officials_demo = officials.merge(
@@ -348,7 +348,7 @@ find_meeting_attendees('unknown_0')
 def official_meeting_history(official_name):
     """Get all meetings attended by an official"""
     attendance = pd.read_parquet('data/gold/contacts_meeting_attendance.parquet')
-    meetings = pd.read_parquet('data/gold/meetings_calendar.parquet')
+    meetings = pd.read_parquet('data/gold/national/meetings_calendar.parquet')
     
     # Get official's meetings
     official_meetings = attendance[attendance['name'] == official_name]
@@ -489,7 +489,7 @@ Want to improve official extraction?
 **Problem**: Empty output file
 
 **Solution**:
-1. Check that meeting transcripts exist: `ls -lh data/gold/meetings_transcripts.parquet`
+1. Check that meeting transcripts exist: `ls -lh data/gold/national/meetings_transcripts.parquet`
 2. Run meetings pipeline first: `python scripts/create_all_gold_tables.py --meetings-only`
 3. Check transcript format - some may not have roll calls
 

@@ -14,8 +14,8 @@ def split_transcripts_by_state():
     """Split meetings_transcripts.parquet by state."""
     logger.info("📝 Splitting meetings_transcripts.parquet by state...")
     
-    # Load transcripts (already has state column)
-    transcripts_file = Path("data/gold/meetings_transcripts.parquet")
+    # Load transcripts from national directory
+    transcripts_file = Path("data/gold/national/meetings_transcripts.parquet")
     df_trans = pd.read_parquet(transcripts_file)
     
     logger.info(f"   Loaded {len(df_trans):,} transcripts from {len(df_trans['state'].unique())} states")

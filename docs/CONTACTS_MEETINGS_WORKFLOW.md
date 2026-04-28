@@ -242,7 +242,7 @@ python scripts/manage_contacts.py extract --limit 100000
 The source data file is missing:
 ```bash
 # Check if file exists
-ls -lh data/gold/meetings_transcripts.parquet
+ls -lh data/gold/national/meetings_transcripts.parquet
 
 # If missing, regenerate from pipeline
 python scripts/create_all_gold_tables.py --meetings-only

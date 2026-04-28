@@ -5,14 +5,15 @@ This script processes meeting data from the cache layer (2006-2023) and creates
 curated gold tables for analysis and dashboards.
 
 Gold Tables Created:
-1. meetings_calendar - Meeting dates, locations, jurisdictions
-2. meetings_transcripts - Full searchable meeting text
+1. meetings_calendar - Meeting dates, locations, jurisdictions (data/gold/national/)
+2. meetings_transcripts - Full searchable meeting text (data/gold/national/)
 3. meetings_topics - Extracted topics and themes
 4. meetings_demographics - Link meetings to jurisdiction demographics
 5. meetings_decisions - Identified policy decisions and votes
 
 Input: data/cache/localview/meetings.YYYY.parquet (2006-2023)
-Output: data/gold/meetings_*.parquet
+Output: data/gold/national/meetings_*.parquet (national-level aggregated data)
+        data/gold/states/{STATE}/meetings_*.parquet (state-partitioned data)
 """
 
 import pandas as pd
@@ -96,8 +97,10 @@ class MeetingGoldTableCreator:
         
         calendar_df = pd.DataFrame(calendar_data)
         
-        # Save to parquet
-        output_path = self.gold_dir / "meetings_calendar.parquet"
+        # Save to parquet in national directory
+        national_dir = self.gold_dir / "national"
+        national_dir.mkdir(parents=True, exist_ok=True)
+        output_path = national_dir / "meetings_calendar.parquet"
         calendar_df.to_parquet(output_path, index=False)
         logger.success(f"Created {output_path} with {len(calendar_df):,} records")
         
@@ -133,8 +136,10 @@ class MeetingGoldTableCreator:
         
         transcript_df = pd.DataFrame(transcript_data)
         
-        # Save to parquet
-        output_path = self.gold_dir / "meetings_transcripts.parquet"
+        # Save to parquet in national directory
+        national_dir = self.gold_dir / "national"
+        national_dir.mkdir(parents=True, exist_ok=True)
+        output_path = national_dir / "meetings_transcripts.parquet"
         transcript_df.to_parquet(output_path, index=False)
         logger.success(f"Created {output_path} with {len(transcript_df):,} records")
         
@@ -173,8 +178,10 @@ class MeetingGoldTableCreator:
         
         demo_df = pd.DataFrame(demo_data)
         
-        # Save to parquet
-        output_path = self.gold_dir / "meetings_demographics.parquet"
+        # Save to parquet in national directory
+        national_dir = self.gold_dir / "national"
+        national_dir.mkdir(parents=True, exist_ok=True)
+        output_path = national_dir / "meetings_demographics.parquet"
         demo_df.to_parquet(output_path, index=False)
         logger.success(f"Created {output_path} with {len(demo_df):,} records")
         
@@ -234,8 +241,10 @@ class MeetingGoldTableCreator:
         
         topic_df = pd.DataFrame(topic_data)
         
-        # Save to parquet
-        output_path = self.gold_dir / "meetings_topics.parquet"
+        # Save to parquet in national directory
+        national_dir = self.gold_dir / "national"
+        national_dir.mkdir(parents=True, exist_ok=True)
+        output_path = national_dir / "meetings_topics.parquet"
         topic_df.to_parquet(output_path, index=False)
         logger.success(f"Created {output_path} with {len(topic_df):,} records")
         
@@ -294,8 +303,10 @@ class MeetingGoldTableCreator:
         
         decision_df = pd.DataFrame(decision_data)
         
-        # Save to parquet
-        output_path = self.gold_dir / "meetings_decisions.parquet"
+        # Save to parquet in national directory
+        national_dir = self.gold_dir / "national"
+        national_dir.mkdir(parents=True, exist_ok=True)
+        output_path = national_dir / "meetings_decisions.parquet"
         decision_df.to_parquet(output_path, index=False)
         logger.success(f"Created {output_path} with {len(decision_df):,} records")
         
@@ -325,9 +336,10 @@ class MeetingGoldTableCreator:
         logger.success("ALL MEETING GOLD TABLES CREATED!")
         logger.success("=" * 60)
         
-        # Show summary
-        gold_files = list(self.gold_dir.glob("meetings_*.parquet"))
-        logger.info(f"\nCreated {len(gold_files)} gold tables:")
+        # Show summary from national directory
+        national_dir = self.gold_dir / "national"
+        gold_files = list(national_dir.glob("meetings_*.parquet"))
+        logger.info(f"\nCreated {len(gold_files)} gold tables in {national_dir}:")
         for file in sorted(gold_files):
             df_check = pd.read_parquet(file)
             logger.info(f"  - {file.name}: {len(df_check):,} records")

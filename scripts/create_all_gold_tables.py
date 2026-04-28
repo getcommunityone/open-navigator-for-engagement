@@ -22,7 +22,7 @@ Usage:
     python scripts/create_all_gold_tables.py --skip-discovery
 
 Output:
-    data/gold/meetings_*.parquet
+    data/gold/national/meetings_*.parquet
     data/gold/nonprofits_*.parquet
 """
 

@@ -39,7 +39,7 @@ from tqdm import tqdm
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 # File paths
-MEETINGS_TRANSCRIPTS = Path("data/gold/meetings_transcripts.parquet")
+MEETINGS_TRANSCRIPTS = Path("data/gold/national/meetings_transcripts.parquet")
 CONTACTS_OFFICIALS = Path("data/gold/contacts_local_officials.parquet")
 MEETING_ATTENDANCE = Path("data/gold/contacts_meeting_attendance.parquet")
 
