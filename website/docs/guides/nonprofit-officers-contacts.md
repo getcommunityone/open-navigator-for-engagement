@@ -99,11 +99,15 @@ This adds a `form_990_officers` JSON field to each nonprofit record:
 ### Step 3: Create Contact Tables with Versioning
 
 ```bash
-# Create nonprofit officer contacts
+# Create nonprofit officer contacts (state-specific)
 python -c "
 from pipeline.create_contacts_gold_tables import ContactsGoldTableCreator
 
-creator = ContactsGoldTableCreator()
+# Massachusetts nonprofit officers
+creator = ContactsGoldTableCreator(
+    output_dir='data/gold',
+    state_code='MA'  # Output to data/gold/states/MA/
+)
 
 # Create current year + 2 historical years
 creator.create_all_contacts_tables(
@@ -114,11 +118,13 @@ creator.create_all_contacts_tables(
 ```
 
 **Creates:**
-- `contacts_nonprofit_officers.parquet` - Current year
-- `contacts_nonprofit_officers_2023.parquet` - 2023 snapshot
-- `contacts_nonprofit_officers_2022.parquet` - 2022 snapshot  
-- `contacts_nonprofit_officers_2021.parquet` - 2021 snapshot
-- `contacts_nonprofit_officers_history.parquet` - Combined history
+- `data/gold/states/MA/contacts_nonprofit_officers.parquet` - Current year
+- `data/gold/states/MA/contacts_nonprofit_officers_2023.parquet` - 2023 snapshot
+- `data/gold/states/MA/contacts_nonprofit_officers_2022.parquet` - 2022 snapshot  
+- `data/gold/states/MA/contacts_nonprofit_officers_2021.parquet` - 2021 snapshot
+- `data/gold/states/MA/contacts_nonprofit_officers_history.parquet` - Combined history
+
+**Note:** Files are organized by state in `data/gold/states/{STATE}/` to match the pattern used for other contact types.
 
 ### Step 3: Search Officers
 
@@ -217,8 +223,8 @@ creator.create_nonprofit_officers_history(years=[2023, 2022, 2021])
 ```python
 import pandas as pd
 
-# Load history
-history = pd.read_parquet('data/gold/contacts_nonprofit_officers_history.parquet')
+# Load history for specific state
+history = pd.read_parquet('data/gold/states/MA/contacts_nonprofit_officers_history.parquet')
 
 # Find all positions held by a person
 sarah_history = history[history['name'] == 'Sarah Johnson']
@@ -239,10 +245,10 @@ turnover = history.groupby('organization_ein')['name'].nunique()
 ```python
 import pandas as pd
 
-officers = pd.read_parquet('data/gold/contacts_nonprofit_officers.parquet')
+# Load from state directory
+officers = pd.read_parquet('data/gold/states/AL/contacts_nonprofit_officers.parquet')
 
 health_ceos = officers[
-    (officers['state'] == 'AL') &
     (officers['organization_ntee_code'].str.startswith('E')) &
     (officers['title'].str.contains('CEO|Executive Director', case=False, na=False))
 ]
@@ -364,10 +370,17 @@ Expanded to individual rows in contacts table for searchability.
 
 ### Annual Snapshots
 
-**File naming convention:**
-- Current: `contacts_nonprofit_officers.parquet`
-- Historical: `contacts_nonprofit_officers_2023.parquet`
-- Combined: `contacts_nonprofit_officers_history.parquet`
+**File organization (state-based):**
+- Current: `data/gold/states/{STATE}/contacts_nonprofit_officers.parquet`
+- Historical: `data/gold/states/{STATE}/contacts_nonprofit_officers_2023.parquet`
+- Combined: `data/gold/states/{STATE}/contacts_nonprofit_officers_history.parquet`
+
+**Example for Massachusetts:**
+- `data/gold/states/MA/contacts_nonprofit_officers.parquet`
+- `data/gold/states/MA/contacts_nonprofit_officers_2023.parquet`
+- `data/gold/states/MA/contacts_nonprofit_officers_history.parquet`
+
+This matches the organization pattern for other contact types (`contacts_local_officials.parquet`, `contacts_meeting_attendance.parquet`).
 
 ## 🚨 Limitations
 

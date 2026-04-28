@@ -160,9 +160,27 @@ def search_contacts(query: str, state: Optional[str] = None, limit: int = 10) ->
             except Exception as e:
                 logger.debug(f"Error searching {file_path}: {e}")
         
-        # Search nonprofit officers if available
-        nonprofit_file = GOLD_DIR / "contacts_nonprofit_officers.parquet"
-        if nonprofit_file.exists():
+        # Search nonprofit officers from state directories
+        nonprofit_files = []
+        
+        # If state specified, search that state's directory
+        if state:
+            state_nonprofit_file = GOLD_DIR / "states" / state / "contacts_nonprofit_officers.parquet"
+            if state_nonprofit_file.exists():
+                nonprofit_files.append(state_nonprofit_file)
+        else:
+            # Search all state directories
+            for state_dir in (GOLD_DIR / "states").glob("*/"):
+                state_file = state_dir / "contacts_nonprofit_officers.parquet"
+                if state_file.exists():
+                    nonprofit_files.append(state_file)
+        
+        # Also check legacy root location for backward compatibility
+        legacy_file = GOLD_DIR / "contacts_nonprofit_officers.parquet"
+        if legacy_file.exists():
+            nonprofit_files.append(legacy_file)
+        
+        for nonprofit_file in nonprofit_files:
             try:
                 logger.info(f"Searching nonprofit officers: {nonprofit_file}")
                 

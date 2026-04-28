@@ -45,13 +45,22 @@ class ContactsGoldTableCreator:
     def __init__(
         self,
         meetings_gold_dir: str = "data/gold",
-        output_dir: str = "data/gold"
+        output_dir: str = "data/gold",
+        state_code: Optional[str] = None
     ):
         self.meetings_gold_dir = Path(meetings_gold_dir)
-        self.output_dir = Path(output_dir)
+        self.state_code = state_code
+        
+        # Use state-based directory structure if state_code provided
+        if state_code:
+            self.output_dir = Path(output_dir) / "states" / state_code
+        else:
+            self.output_dir = Path(output_dir)
+        
         self.output_dir.mkdir(parents=True, exist_ok=True)
         
         logger.info(f"Meetings Gold Dir: {self.meetings_gold_dir}")
+        logger.info(f"State Code: {state_code or 'ALL (national)'}")
         logger.info(f"Output Dir: {self.output_dir}")
     
     def extract_officials_from_transcript(self, text: str, jurisdiction: str) -> List[Dict]:

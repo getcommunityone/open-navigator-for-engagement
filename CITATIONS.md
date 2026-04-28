@@ -542,6 +542,190 @@ The Popolo specification builds upon and references the following W3C, IETF, and
 
 ---
 
+## 🎯 **Grant Research and Fundraising Platforms**
+
+These platforms are built on open-source principles or community-funded models to keep grant and fundraising data accessible.
+
+### **Grantmakers.io** ⭐
+
+**"Free as in Freedom" Grant Research**
+
+Grantmakers.io is the gold standard for open, community-supported foundation research. It provides lightning-fast search through IRS 990-PF data with no login required.
+
+**Organization:** Community-supported open-source project  
+**Website:** https://www.grantmakers.io/  
+**Data Source:** IRS Form 990-PF (Private Foundation tax returns)  
+**License:** Open source, community-funded  
+**Access:** 100% free, no account or API key required  
+**Coverage:** All U.S. private foundations filing Form 990-PF (75,000+ grantmaking foundations)
+
+**What we use:**
+- **Foundation Giving Histories**: Search foundations by who they've funded in the past
+- **Grantee Databases**: Find all grants made to specific organizations
+- **Geographic Targeting**: Search by state, city, or region
+- **Funding Amounts**: Filter by grant size ranges
+- **NTEE Categories**: Search by nonprofit sector (health, education, environment, etc.)
+- **Year-over-Year Trends**: Track foundation giving patterns over time
+
+**Key Features:**
+- ⚡ **Lightning-Fast Search**: Instant results across millions of grant records
+- 🔓 **No Login Required**: Completely open access, no barriers
+- 📊 **Detailed 990-PF Data**: Full foundation financials, officers, assets
+- 🎯 **Relationship Mapping**: Discover foundation-grantee connections
+- 📈 **Trend Analysis**: Multi-year giving patterns and focus areas
+- 🆓 **Always Free**: Community-funded to remain accessible
+
+**Use Cases:**
+- **Grant Prospecting**: Find foundations that fund similar organizations in your area
+- **Relationship Research**: Identify foundations that have supported oral health, public health, or civic engagement
+- **Competitive Analysis**: See which organizations are receiving grants in your field
+- **Foundation Vetting**: Review foundation assets, giving patterns, and leadership before applying
+
+**Example Searches:**
+- Foundations that funded "fluoridation" or "oral health" projects
+- Grantmakers in Massachusetts supporting health policy advocacy
+- Foundations with >$10M assets funding civic engagement
+- All grants made by Robert Wood Johnson Foundation to nonprofits in Alabama
+
+**BibTeX:**
+```bibtex
+@misc{grantmakersio,
+    title = {Grantmakers.io: Open Foundation Research Platform},
+    year = {2026},
+    url = {https://www.grantmakers.io/},
+    note = {Community-supported open-source platform for searching IRS 990-PF private foundation data}
+}
+```
+
+**Citation:** "Grantmakers.io. Community-supported open foundation research. https://www.grantmakers.io/"
+
+---
+
+### **Zeffy** ⭐
+
+**100% Free Fundraising with AI-Powered Grant Matching**
+
+Zeffy is unique for being a completely free fundraising platform that also offers an AI-powered grant search tool to help match nonprofit missions with potential grant opportunities.
+
+**Organization:** Zeffy, Inc.  
+**Website:** https://www.zeffy.com/  
+**Platform:** Fundraising + Grant Discovery  
+**Cost:** 100% free for nonprofits (donor-covered fees model)  
+**Grant Tool:** AI-powered grant opportunity matching  
+**Coverage:** U.S. and Canadian grant opportunities
+
+**What we use:**
+- **AI Grant Matching**: Automated matching of nonprofit missions to relevant grant opportunities
+- **Fundraising Infrastructure**: Donation processing, event ticketing, membership management
+- **Donor Management**: CRM for tracking constituent relationships
+- **Grant Alerts**: Notifications when new matching opportunities are posted
+
+**Key Features:**
+- 💰 **100% Free**: No platform fees, monthly charges, or hidden costs
+- 🤖 **AI-Powered Matching**: Machine learning matches your mission to grant opportunities
+- 📧 **Grant Alerts**: Email notifications for new matching grants
+- 🎟️ **All-in-One Platform**: Donations, events, memberships, grants in one system
+- 🇺🇸 🇨🇦 **North America Coverage**: U.S. and Canadian grant databases
+- 📊 **Impact Reporting**: Built-in analytics for grant reporting requirements
+
+**Grant Discovery Capabilities:**
+- **Mission-Based Matching**: Upload your mission statement, get matched grants
+- **Federal Grants**: Monitors Grants.gov for federal opportunities
+- **Foundation Grants**: Tracks private foundation RFPs and announcements
+- **Corporate Giving**: Alerts for corporate philanthropy programs
+- **Local Grants**: Community foundation and regional funder opportunities
+
+**Use Cases for This Project:**
+- **Nonprofit Fundraising**: Organizations can use Zeffy for zero-cost donation processing
+- **Grant Prospecting**: AI helps match oral health nonprofits to relevant grant opportunities
+- **Event Fundraising**: Free ticketing for fundraising galas, community events
+- **Membership Management**: Track supporters, volunteers, members at no cost
+- **Sustainability**: Recommend to small nonprofits to reduce overhead costs
+
+**Why It's Important:**
+Traditional fundraising platforms charge 3-5% fees on donations, which drains resources from small nonprofits. Zeffy's donor-covered model means 100% of donations go to the organization, making it especially valuable for grassroots oral health advocacy groups.
+
+**BibTeX:**
+```bibtex
+@misc{zeffy_platform,
+    title = {Zeffy: 100% Free Fundraising Platform with AI Grant Matching},
+    author = {{Zeffy, Inc.}},
+    year = {2026},
+    url = {https://www.zeffy.com/},
+    note = {Free fundraising platform with AI-powered grant discovery for U.S. and Canadian nonprofits}
+}
+```
+
+**Citation:** "Zeffy. 100% Free Fundraising Platform with AI Grant Matching. https://www.zeffy.com/"
+
+---
+
+### **Community Foundations** ⭐
+
+**Local Grant Opportunities Often Overlooked**
+
+Community foundations are often the most accessible grant sources for local nonprofits, yet they're frequently overlooked because they don't appear in major federal databases. Most maintain their own open listings for regional grants.
+
+**What Community Foundations Are:**
+Community foundations are public charities that pool donations from individuals, families, and businesses to support local nonprofits through competitive grants, scholarship programs, and donor-advised funds.
+
+**Why They Matter:**
+- 🏘️ **Local Focus**: Prioritize organizations serving their specific geographic region
+- 💵 **Smaller, Accessible Grants**: $500-$50,000 range, ideal for grassroots groups
+- 🤝 **Relationship-Based**: Local foundations know local issues and local leaders
+- 📋 **Simpler Applications**: Less bureaucratic than federal or national foundations
+- ⚡ **Faster Decisions**: Many have quarterly or rolling deadlines
+- 🎯 **Mission Alignment**: Support for community health, civic engagement, education
+
+**Examples of Community Foundations:**
+
+| Foundation | Region | Website | Grant Focus Areas |
+|------------|--------|---------|-------------------|
+| **Central Alabama Community Foundation** | Birmingham, AL metro | https://www.cacfbirmingham.org/ | Health, education, civic engagement, arts |
+| **Community Foundation for Greater Atlanta** | Atlanta, GA metro | https://cfgreateratlanta.org/ | Health equity, education, economic mobility |
+| **Boston Foundation** | Boston, MA metro | https://www.tbf.org/ | Health, housing, education, civic participation |
+| **Community Foundation of Greater Memphis** | Memphis, TN metro | https://cfgm.org/ | Health, youth development, community engagement |
+| **Silicon Valley Community Foundation** | San Francisco Bay Area | https://www.siliconvalleycf.org/ | Health, education, immigration, environment |
+| **Greater Kansas City Community Foundation** | Kansas City, MO/KS | https://www.growyourgiving.org/ | Health, education, civic infrastructure |
+| **Seattle Foundation** | Seattle, WA metro | https://www.seattlefoundation.org/ | Racial equity, community health, economic opportunity |
+
+**How to Find Your Local Community Foundation:**
+1. **Council on Foundations Directory**: https://www.cof.org/community-foundation-locator
+2. **Candid (formerly Foundation Center)**: https://candid.org/find-us/foundation-finder
+3. **State Associations**: Most states have a community foundation association
+4. **Google Search**: "[Your City] Community Foundation" or "[Your County] Community Foundation"
+
+**Grant Opportunities:**
+- **Competitive Grants**: Open RFPs for nonprofits in specific focus areas
+- **Capacity Building Grants**: Support for operations, staffing, strategic planning
+- **Donor-Advised Funds**: Individuals/families make grants through the foundation
+- **Fiscal Sponsorship**: Some foundations sponsor projects for groups without 501(c)(3) status
+- **Scholarship Programs**: Education grants for students (often administered by community foundations)
+
+**For Oral Health Advocacy:**
+Many community foundations have health equity or preventive health focus areas that align perfectly with fluoridation advocacy, dental access programs, and oral health education. They're often the best first step for local grassroots campaigns.
+
+**How We Use Community Foundation Data:**
+- **Local Grant Mapping**: Identify which community foundations serve each jurisdiction
+- **Nonprofit Funding Sources**: Link organizations to local foundation grants received
+- **Geographic Targeting**: Recommend local funders when users search by city/county
+- **Grant Prospecting**: Alert nonprofits to community foundation RFPs in their area
+
+**BibTeX:**
+```bibtex
+@misc{community_foundations,
+    title = {Community Foundations: Local Grant Opportunities},
+    author = {{Council on Foundations}},
+    year = {2026},
+    url = {https://www.cof.org/community-foundation-locator},
+    note = {Network of 700+ community foundations providing local grants across the United States}
+}
+```
+
+**Citation:** "Community Foundations. Council on Foundations. https://www.cof.org/community-foundation-locator"
+
+---
+
 ## 🙏 **Acknowledgments**
 
 We are grateful to the authors of MeetingBank for making their dataset publicly available for research purposes. Their work on meeting summarization has been instrumental in developing civic engagement tools.
