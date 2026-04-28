@@ -1,3 +1,7 @@
+---
+sidebar_position: 11
+---
+
 # Legal Documentation Summary
 
 **Created:** April 28, 2026  
@@ -191,85 +195,28 @@ website/docs/legal-compliance.md  # Now links to new legal docs
 ## 🎯 Next Steps
 
 ### For Users
-1. Read [Terms of Service](./website/docs/legal/terms-of-service.md)
-2. Understand [Data Provider Terms](./website/docs/legal/data-provider-terms.md) for sources you use
-3. Review [Privacy Policy](./website/docs/legal/privacy-policy.md) for privacy practices
+1. Read [Terms of Service](./terms-of-service.md)
+2. Understand [Data Provider Terms](./data-provider-terms.md) for sources you use
+3. Review [Privacy Policy](./privacy-policy.md) for privacy practices
 
 ### For Developers
 1. Implement required attributions (especially Charity Navigator)
 2. Set up rate limiting for all APIs
-3. Add User-Agent headers to all API requests
-4. Monitor API usage against quotas
-5. Document compliance measures
+3. Configure User-Agent headers
+4. Implement cache TTL enforcement
+5. Add attribution UI components to frontend
 
-### For Administrators
-1. Add contact email addresses to legal documents
-2. Set up monitoring for provider ToS changes
-3. Schedule quarterly reviews of all terms
-4. Create compliance dashboard for rate limit tracking
-5. Test documentation build (in progress)
+### For Deployment
+1. ✅ Replace placeholder contact information
+2. ✅ Add physical mailing address
+3. ✅ Specify governing jurisdiction
+4. ✅ Configure DPO contact (if EU users)
+5. ✅ Test all attribution displays
+6. ✅ Verify rate limit enforcement
+7. ✅ Review legal pages in production
 
-## 📞 Required Actions
+## 🔗 Related Documents
 
-**Update placeholders in legal documents:**
-
-1. **Contact Information** (all documents):
-   - Replace `[contact email to be added]` with actual email
-   - Replace `[Physical address to be added]` with actual address
-   - Add Data Protection Officer contact (if applicable for GDPR)
-
-2. **Governing Law** (terms-of-service.md):
-   - Replace `[Your State]` with actual state for jurisdiction
-
-3. **Links** (if needed):
-   - Verify all external links are current
-   - Test internal documentation links
-
-## ✅ Compliance Checklist
-
-**Before going live:**
-- [ ] Add contact email to all legal documents
-- [ ] Add physical address to legal documents
-- [ ] Review governing law jurisdiction
-- [ ] Add DPO contact (if applicable)
-- [ ] Implement Charity Navigator attribution on frontend
-- [ ] Add "Powered by Open States" to relevant pages
-- [ ] Add "Data provided by Google" to relevant pages
-- [ ] Set up rate limiting for all APIs
-- [ ] Configure User-Agent headers
-- [ ] Test compliance monitoring
-- [ ] Review with legal counsel (recommended)
-
-## 📚 Documentation Build
-
-**Build Status:** In progress (background process)
-
-To manually verify:
-```bash
-cd website
-npm run build
-```
-
-Expected: All markdown files compile without errors
-
-## 🎓 Summary
-
-**Mission Accomplished:** ✅
-
-Created comprehensive legal framework that:
-1. ✅ Incorporates ALL data provider terms
-2. ✅ Applies most restrictive terms principle
-3. ✅ Documents 30+ data sources
-4. ✅ Provides clear attribution requirements
-5. ✅ Includes CCPA and GDPR compliance
-6. ✅ Protects user privacy
-7. ✅ Sets clear usage boundaries
-8. ✅ Provides compliance checklists
-
-**Result:** Open Navigator for Engagement now has Terms of Service that are **at least as restrictive as ALL provider terms**, ensuring full compliance with all data sources.
-
----
-
-**Created by:** GitHub Copilot  
-**Date:** April 28, 2026  
-**Total Documents:** 5 legal documents + README + updates to legal-compliance.md
+- [Legal Documentation Complete](./legal-documentation-complete.md)
+- [Legal Compliance Guide](../legal-compliance.md)
+- [Data Sources Documentation](../data-sources/)

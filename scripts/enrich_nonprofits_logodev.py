@@ -122,8 +122,9 @@ class LogoDevEnricher:
             return self.cache[cache_key]
         
         try:
-            # Logo.dev URL format: https://img.logo.dev/{domain}?token={api_key}&size={size}
-            logo_url = f"{self.api_base}/{domain}?token={self.api_key}&size={size}"
+            # Logo.dev URL format: https://img.logo.dev/{domain}?token={api_key}
+            # Note: Logo.dev returns optimized logo, size parameter not supported
+            logo_url = f"{self.api_base}/{domain}?token={self.api_key}"
             
             # Logo.dev doesn't support HEAD requests properly, use GET
             response = requests.get(logo_url, timeout=5, allow_redirects=True)

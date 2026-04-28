@@ -733,7 +733,19 @@ export default function HomeModern() {
                                         }}
                                         className="w-full text-left px-4 py-2 bg-white hover:bg-gray-50 flex items-start gap-3 transition-colors last:rounded-b-lg"
                                       >
-                                        <BuildingOfficeIcon className="h-5 w-5 text-gray-600 mt-0.5 flex-shrink-0" />
+                                        {result.metadata?.logo_url ? (
+                                          <img 
+                                            src={result.metadata.logo_url} 
+                                            alt={`${result.title} logo`}
+                                            className="h-5 w-5 rounded object-contain mt-0.5 flex-shrink-0"
+                                            onError={(e) => {
+                                              // Fallback to icon if image fails to load
+                                              e.currentTarget.style.display = 'none';
+                                              e.currentTarget.nextElementSibling?.classList.remove('hidden');
+                                            }}
+                                          />
+                                        ) : null}
+                                        <BuildingOfficeIcon className={`h-5 w-5 text-gray-600 mt-0.5 flex-shrink-0 ${result.metadata?.logo_url ? 'hidden' : ''}`} />
                                         <div className="flex-1 min-w-0">
                                           <div className="font-medium text-gray-900 truncate">{result.title}</div>
                                           <div className="text-sm text-gray-600 truncate">{result.subtitle}</div>

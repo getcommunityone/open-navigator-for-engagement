@@ -1,7 +1,8 @@
-import { useState, useRef, useEffect } from 'react'
-import { useNavigate, useSearchParams } from 'react-router-dom'
+import { useState, useRef, useEffect, Fragment } from 'react'
+import { useNavigate, useSearchParams, Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import axios from 'axios'
+import { Menu, Transition } from '@headlessui/react'
 import { 
   MagnifyingGlassIcon, 
   UserIcon, 
@@ -15,8 +16,11 @@ import {
   ChevronDownIcon,
   ChevronUpIcon,
   GlobeAltIcon,
-  VideoCameraIcon
+  VideoCameraIcon,
+  Cog6ToothIcon,
+  ArrowRightOnRectangleIcon
 } from '@heroicons/react/24/outline'
+import { useAuth } from '../contexts/AuthContext'
 
 interface SearchResult {
   type: 'contact' | 'meeting' | 'organization' | 'cause' | 'jurisdiction'
@@ -64,11 +68,11 @@ export default function UnifiedSearch() {
     const typesParam = searchParams.get('types')
     if (typesParam) {
       const types = typesParam.split(',').filter(t => 
-        ['contacts', 'meetings', 'organizations', 'causes', 'jurisdictions'].includes(t.trim())
+        ['contacts', 'organizations', 'causes', 'jurisdictions', 'meetings'].includes(t.trim())
       )
-      return types.length > 0 ? types : ['contacts', 'meetings', 'organizations', 'causes', 'jurisdictions']
+      return types.length > 0 ? types : ['contacts', 'organizations', 'causes', 'jurisdictions']
     }
-    return ['contacts', 'meetings', 'organizations', 'causes', 'jurisdictions']
+    return ['contacts', 'organizations', 'causes', 'jurisdictions']
   })
   const [selectedState, setSelectedState] = useState(() => searchParams.get('state') || '')
   const [currentPage, setCurrentPage] = useState(() => parseInt(searchParams.get('page') || '1'))
@@ -87,9 +91,39 @@ export default function UnifiedSearch() {
     }
     return []
   })
+  
+  // Derived state: Always have state code available from URL OR jurisdiction details
+  const [effectiveState, setEffectiveState] = useState(() => {
+    const urlState = searchParams.get('state')
+    if (urlState) return urlState
+    
+    // Extract from jurisdiction details if available
+    const detailsParam = searchParams.get('jurisdiction_details')
+    if (detailsParam) {
+      try {
+        const details = JSON.parse(decodeURIComponent(detailsParam))
+        // Find state in jurisdiction hierarchy
+        for (const j of details) {
+          if (j.state) return j.state
+          if (j.type === 'State' || j.type === 'state') {
+            const stateMap: Record<string, string> = {
+              'Massachusetts': 'MA', 'Alabama': 'AL', 'Georgia': 'GA',
+              'Washington': 'WA', 'Wisconsin': 'WI', 'California': 'CA',
+              'Texas': 'TX', 'New York': 'NY', 'Florida': 'FL'
+            }
+            return stateMap[j.name] || j.name
+          }
+        }
+      } catch (e) {
+        // Ignore parse errors
+      }
+    }
+    return ''
+  })
   const [expandedJurisdictions, setExpandedJurisdictions] = useState<Set<number>>(new Set())
   
   const searchInputRef = useRef<HTMLInputElement>(null)
+  const { user, isAuthenticated, login, logout, isLoading } = useAuth()
 
   // Initialize from URL parameters on mount
   useEffect(() => {
@@ -107,6 +141,33 @@ export default function UnifiedSearch() {
     }
     if (stateParam) {
       setSelectedState(stateParam)
+      setEffectiveState(stateParam)
+    } else if (jurisdictionDetailsParam) {
+      // Extract state from jurisdiction details
+      try {
+        const details = JSON.parse(decodeURIComponent(jurisdictionDetailsParam))
+        setJurisdictionDetails(details)
+        
+        // Find and set effective state
+        for (const j of details) {
+          if (j.state) {
+            setEffectiveState(j.state)
+            break
+          }
+          if (j.type === 'State' || j.type === 'state') {
+            const stateMap: Record<string, string> = {
+              'Massachusetts': 'MA', 'Alabama': 'AL', 'Georgia': 'GA',
+              'Washington': 'WA', 'Wisconsin': 'WI', 'California': 'CA',
+              'Texas': 'TX', 'New York': 'NY', 'Florida': 'FL'
+            }
+            const stateCode = stateMap[j.name] || j.name
+            setEffectiveState(stateCode)
+            break
+          }
+        }
+      } catch (e) {
+        setJurisdictionDetails([])
+      }
     }
     if (typesParam) {
       const types = typesParam.split(',').filter(t => 
@@ -116,42 +177,26 @@ export default function UnifiedSearch() {
         setSelectedTypes(types)
       }
     }
-    if (pageParam) {
-      setCurrentPage(parseInt(pageParam))
-    }
-    if (sortParam) {
-      setSortBy(sortParam)
-    }
-    if (nteeParam) {
-      setNteeCategory(nteeParam)
-    }
-    if (jurisdictionDetailsParam) {
-      try {
-        setJurisdictionDetails(JSON.parse(decodeURIComponent(jurisdictionDetailsParam)))
-      } catch (e) {
-        setJurisdictionDetails([])
-      }
-    }
-  }, [searchParams])
+  }, [searchParams, effectiveState])
 
-  // Auto-focus search input on mount (e.g., when returning from jurisdiction selection)
-  useEffect(() => {
-    searchInputRef.current?.focus()
-  }, [])
-
-  // Live search preview (type-ahead with actual results)
+  // Preview/autocomplete query for search suggestions
   const { data: previewResults } = useQuery<SearchResponse>({
-    queryKey: ['search-preview', query],
+    queryKey: ['search-preview', query, effectiveState],
     queryFn: async () => {
       if (!query || query.length < 2) return null
       
-      const response = await axios.get('/api/search/', {
-        params: {
-          q: query,
-          types: 'causes,contacts,organizations',
-          limit: 3
-        }
-      })
+      const params: any = {
+        q: query,
+        types: 'causes,contacts,organizations',
+        limit: 3
+      }
+      
+      // Use effectiveState - already computed from URL or jurisdiction details
+      if (effectiveState) {
+        params.state = effectiveState
+      }
+      
+      const response = await axios.get('/api/search/', { params })
       return response.data
     },
     enabled: query.length >= 2 && showSuggestions,
@@ -362,12 +407,29 @@ export default function UnifiedSearch() {
             </div>
             
             {/* Logo for organizations */}
-            {result.type === 'organization' && result.metadata?.logo_url && (
-              <img 
-                src={result.metadata.logo_url} 
-                alt={result.title}
-                className="w-12 h-12 rounded object-cover flex-shrink-0"
-              />
+            {result.type === 'organization' && (
+              result.metadata?.logo_url ? (
+                <img 
+                  src={result.metadata.logo_url} 
+                  alt={result.title}
+                  className="w-12 h-12 rounded object-contain flex-shrink-0 bg-gray-100 border border-gray-200"
+                  onError={(e) => {
+                    e.currentTarget.style.display = 'none'
+                    e.currentTarget.nextElementSibling!.style.display = 'flex'
+                  }}
+                />
+              ) : null
+            )}
+            {result.type === 'organization' && (
+              <div 
+                className="w-12 h-12 rounded flex items-center justify-center text-white text-lg font-bold flex-shrink-0"
+                style={{ 
+                  backgroundColor: '#52796F',
+                  display: result.metadata?.logo_url ? 'none' : 'flex'
+                }}
+              >
+                {result.title.charAt(0)}
+              </div>
             )}
           </div>
           
@@ -428,7 +490,107 @@ export default function UnifiedSearch() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="max-w-6xl mx-auto p-6">
+      {/* Top Navigation Bar */}
+      <div className="bg-white border-b border-gray-200 mb-6">
+        <div className="max-w-6xl mx-auto px-6 py-3 flex items-center justify-between">
+          <Link to="/" className="flex items-center gap-2">
+            <img 
+              src="/communityone_logo.svg" 
+              alt="CommunityOne Logo" 
+              className="h-10"
+            />
+            <h1 className="text-xl font-bold" style={{ color: '#354F52' }}>
+              Open Navigator
+            </h1>
+          </Link>
+          
+          {/* Login/Avatar */}
+          <div className="flex items-center gap-4">
+            {isLoading ? (
+              <div className="px-3 py-2">
+                <div className="animate-spin h-8 w-8 border-3 border-gray-300 border-t-primary-600 rounded-full"></div>
+              </div>
+            ) : isAuthenticated && user ? (
+              <Menu as="div" className="relative">
+                <Menu.Button className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-gray-100 transition-colors">
+                  {user.avatar_url ? (
+                    <img 
+                      src={user.avatar_url} 
+                      alt={user.full_name || user.email}
+                      className="h-9 w-9 rounded-full border-2 border-primary-500 shadow-sm"
+                      onError={(e) => {
+                        e.currentTarget.style.display = 'none';
+                        const fallback = e.currentTarget.nextElementSibling as HTMLElement | null;
+                        if (fallback) fallback.style.display = 'flex';
+                      }}
+                    />
+                  ) : null}
+                  <div 
+                    className="h-9 w-9 rounded-full bg-gradient-to-br from-primary-500 to-primary-600 flex items-center justify-center text-white font-bold text-sm shadow-sm"
+                    style={{ display: user.avatar_url ? 'none' : 'flex' }}
+                  >
+                    {(user.full_name || user.username || user.email).charAt(0).toUpperCase()}
+                  </div>
+                  <span className="text-sm font-medium text-gray-700">
+                    {user.full_name || user.username || user.email.split('@')[0]}
+                  </span>
+                  <ChevronDownIcon className="h-4 w-4 text-gray-600" />
+                </Menu.Button>
+                
+                <Transition
+                  as={Fragment}
+                  enter="transition ease-out duration-100"
+                  enterFrom="transform opacity-0 scale-95"
+                  enterTo="transform opacity-100 scale-100"
+                  leave="transition ease-in duration-75"
+                  leaveFrom="transform opacity-100 scale-100"
+                  leaveTo="transform opacity-0 scale-95"
+                >
+                  <Menu.Items className="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-lg border border-gray-200 focus:outline-none z-50">
+                    <div className="px-4 py-3 border-b border-gray-200">
+                      <p className="text-sm font-medium text-gray-900">{user.full_name || user.username}</p>
+                      <p className="text-xs text-gray-500 truncate">{user.email}</p>
+                    </div>
+                    <div className="py-1">
+                      <Menu.Item>
+                        {({ active }) => (
+                          <Link
+                            to="/settings"
+                            className={`${active ? 'bg-gray-50' : ''} flex items-center gap-2 px-4 py-2 text-sm text-gray-700`}
+                          >
+                            <Cog6ToothIcon className="h-4 w-4" />
+                            Settings
+                          </Link>
+                        )}
+                      </Menu.Item>
+                      <Menu.Item>
+                        {({ active }) => (
+                          <button
+                            onClick={logout}
+                            className={`${active ? 'bg-gray-50' : ''} flex items-center gap-2 w-full px-4 py-2 text-sm text-red-600`}
+                          >
+                            <ArrowRightOnRectangleIcon className="h-4 w-4" />
+                            Sign Out
+                          </button>
+                        )}
+                      </Menu.Item>
+                    </div>
+                  </Menu.Items>
+                </Transition>
+              </Menu>
+            ) : (
+              <button
+                onClick={login}
+                className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors font-medium"
+              >
+                Login
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+      
+      <div className="max-w-6xl mx-auto px-6 pb-6">
         {/* Search Header */}
         <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
           <h1 className="text-3xl font-bold text-gray-900 mb-4">Search</h1>
@@ -559,7 +721,28 @@ export default function UnifiedSearch() {
                         onClick={() => navigate(result.url)}
                         className="w-full text-left px-4 py-2 hover:bg-gray-50 flex items-start gap-3 transition-colors last:rounded-b-lg"
                       >
-                        <BuildingOfficeIcon className="h-5 w-5 text-gray-600 mt-0.5 flex-shrink-0" />
+                        {/* Logo with fallback */}
+                        {result.metadata?.logo_url ? (
+                          <img 
+                            src={result.metadata.logo_url} 
+                            alt={result.title}
+                            className="h-10 w-10 rounded object-contain flex-shrink-0 bg-gray-100 border border-gray-200"
+                            onError={(e) => {
+                              e.currentTarget.style.display = 'none'
+                              e.currentTarget.nextElementSibling!.style.display = 'flex'
+                            }}
+                          />
+                        ) : null}
+                        <div 
+                          className="h-10 w-10 rounded flex items-center justify-center text-white text-sm font-bold flex-shrink-0"
+                          style={{ 
+                            backgroundColor: '#52796F',
+                            display: result.metadata?.logo_url ? 'none' : 'flex'
+                          }}
+                        >
+                          {result.title.charAt(0)}
+                        </div>
+                        
                         <div className="flex-1 min-w-0">
                           <div className="font-medium text-gray-900 truncate">{result.title}</div>
                           <div className="text-sm text-gray-600 truncate">{result.subtitle}</div>
@@ -601,8 +784,8 @@ export default function UnifiedSearch() {
               )}
             </button>
 
-            {/* Quick Type Filters */}
-            {(['contacts', 'meetings', 'organizations', 'causes', 'jurisdictions'] as const).map((type) => (
+            {/* Quick Type Filters - Meetings pill on far right */}
+            {(['contacts', 'organizations', 'causes', 'jurisdictions', 'meetings'] as const).map((type) => (
               <button
                 key={type}
                 onClick={() => toggleType(type)}

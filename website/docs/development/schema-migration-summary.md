@@ -1,3 +1,7 @@
+---
+sidebar_position: 5
+---
+
 # Schema Migration Summary
 
 **Date:** April 28, 2026  
@@ -250,7 +254,7 @@ CREATE TABLE dim_organization ...;
 CREATE TABLE dim_jurisdiction ...;
 ```
 
-See: `website/docs/deployment/schema-migration.md` for complete migration steps
+See: [Schema Migration Guide](../deployment/schema-migration.md) for complete migration steps
 
 ## Impact Summary
 
@@ -263,3 +267,32 @@ See: `website/docs/deployment/schema-migration.md` for complete migration steps
 **Meetings:** None → Added  
 
 **Bottom Line:** The gap between ERD documentation and actual schema implementation is **CLOSED** ✅
+
+## 🔗 Related Documentation
+
+- [Schema Migration Guide](../deployment/schema-migration.md)
+- [Databricks Deployment](../deployment/databricks.md)
+- [Data Model ERD](../../databricks/README.md)
+- [Database Schema Files](../../databricks/)
+
+## 📝 Next Steps
+
+1. **Review New Schema:**
+   - Examine `databricks/communityone_schema.sql`
+   - Understand new table relationships
+   - Review foreign key constraints
+
+2. **Plan Data Migration:**
+   - If migrating from old schema
+   - Test migration scripts
+   - Backup existing data
+
+3. **Update Queries:**
+   - Update references from `fact_oral_health_observation`
+   - Use new dimension tables (`dim_organization`, `dim_jurisdiction`)
+   - Leverage new fact tables for enhanced analytics
+
+4. **Deploy:**
+   - Create new tables in Databricks
+   - Load initial data
+   - Verify relationships and constraints

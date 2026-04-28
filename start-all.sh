@@ -39,10 +39,32 @@ fi
 echo -e "${GREEN}✅ Dependencies OK${NC}"
 echo ""
 
+# Function to kill processes on required ports
+kill_port_processes() {
+    local ports=(3000 5173 8000)
+    
+    echo -e "${BLUE}Checking for processes on ports...${NC}"
+    
+    for port in "${ports[@]}"; do
+        local pid=$(lsof -ti:$port 2>/dev/null)
+        if [ ! -z "$pid" ]; then
+            echo -e "${YELLOW}⚠️  Killing process on port $port (PID: $pid)${NC}"
+            kill -9 $pid 2>/dev/null || true
+            sleep 0.5
+        fi
+    done
+    
+    echo -e "${GREEN}✅ Ports cleared${NC}"
+    echo ""
+}
+
 # Function to check if tmux is available
 has_tmux() {
     command -v tmux >/dev/null 2>&1
 }
+
+# Kill any processes on the ports we need
+kill_port_processes
 
 # Function to start with tmux (preferred)
 start_with_tmux() {

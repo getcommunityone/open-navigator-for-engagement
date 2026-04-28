@@ -9,11 +9,10 @@ import Heading from '@theme/Heading';
 
 import styles from './index.module.css';
 
-// App URL: use environment variable or default to production
-const APP_URL = process.env.APP_URL || 'https://www.communityone.com';
-
 function HomepageHeader() {
   const {siteConfig} = useDocusaurusContext();
+  // Get app URL from custom fields (safe for client-side code)
+  const APP_URL = siteConfig.customFields?.appUrl as string || 'https://www.communityone.com';
   const logoUrl = useBaseUrl('/img/communityone_logo.svg');
   return (
     <header className={clsx('hero hero--primary', styles.heroBanner)}>
@@ -38,6 +37,9 @@ function HomepageHeader() {
 }
 
 function AudiencePathways() {
+  const {siteConfig} = useDocusaurusContext();
+  const APP_URL = siteConfig.customFields?.appUrl as string || 'https://www.communityone.com';
+  
   return (
     <section className="container margin-vert--xl">
       <div className="row">
@@ -320,6 +322,9 @@ function WhyItMatters() {
 }
 
 function GetStartedCTA() {
+  const {siteConfig} = useDocusaurusContext();
+  const APP_URL = siteConfig.customFields?.appUrl as string || 'https://www.communityone.com';
+  
   return (
     <section style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', padding: '4rem 0', color: 'white' }}>
       <div className="container text--center">

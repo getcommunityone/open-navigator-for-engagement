@@ -28,6 +28,11 @@ const config: Config = {
 
   onBrokenLinks: 'warn',
 
+  // Custom fields to make environment variables available in client-side code
+  customFields: {
+    appUrl: process.env.APP_URL || (process.env.NODE_ENV === 'development' ? 'http://localhost:5173' : 'https://www.communityone.com'),
+  },
+
   // Even if you don't use internationalization, you can use this field to set
   // useful metadata like html lang. For example, if your site is Chinese, you
   // may want to replace "en" with "zh-Hans".
@@ -107,7 +112,7 @@ const config: Config = {
       logo: {
         alt: 'CommunityOne Logo',
         src: 'img/communityone_logo.svg',
-        href: process.env.APP_URL || 'https://www.communityone.com',
+        href: process.env.APP_URL || (process.env.NODE_ENV === 'development' ? 'http://localhost:5173' : 'https://www.communityone.com'),
         target: '_self',
       },
       items: [
