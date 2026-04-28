@@ -203,6 +203,11 @@ const config: Config = {
       theme: prismThemes.github,
       darkTheme: prismThemes.dracula,
     },
+    // Google Analytics
+    gtag: {
+      trackingID: 'G-5EQV815915',
+      anonymizeIP: true,
+    },
   } satisfies Preset.ThemeConfig,
 };
 

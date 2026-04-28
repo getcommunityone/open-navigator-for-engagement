@@ -3,12 +3,27 @@
 
 FROM node:20-slim AS docs-builder
 WORKDIR /build
+
+# Set baseUrl to /docs/ for HuggingFace deployment  # Docs are served at nginx /docs/ location
+# routeBasePath: '/' in docusaurus.config.ts prevents /docs/docs/ nesting
+ENV DOCUSAURUS_BASE_URL=/docs/
+
 COPY website/package*.json ./
 RUN npm config set fetch-retry-mintimeout 20000 && \
     npm config set fetch-retry-maxtimeout 120000 && \
     npm ci --prefer-offline --no-audit || npm install --prefer-offline --no-audit
+
+# Add cache-busting argument to force rebuild when needed
+ARG CACHE_BUST=2026-04-27-12-00-fix-double-docs-prefix
+
 COPY website/ ./
-RUN npm run build
+
+# Verify environment variable is set and build
+RUN echo "Building Docusaurus with DOCUSAURUS_BASE_URL=$DOCUSAURUS_BASE_URL" && \
+    echo "Cache bust: 2026-04-27-12-00-fix-double-docs-prefix" && \
+    npm run build && \
+    echo "Verifying baseUrl in build output..." && \
+    grep -r "baseUrl" build/ | head -5 || true
 
 FROM python:3.11-slim
 
@@ -37,16 +52,17 @@ COPY . .
 COPY --from=docs-builder /build/build /app/static/docs
 
 # Build frontend inline (vite.config.ts outputs to ../api/static/)
-# CACHE BUST 2026-04-26 15:30 UTC - Force rebuild to fix dist path issue
+# Set production environment variables for Vite
+ENV VITE_CANONICAL_DOMAIN=www.communityone.com
+ENV VITE_API_URL=/api
+# Cache bust: 2026-04-26-v2
 RUN cd /app/frontend && npm ci && npm run build
 
 # Frontend is already built to /app/api/static/ via vite.config.ts
 # Create frontend directory in /app/static for nginx
 RUN mkdir -p /app/static/frontend && \
-    echo "Listing /app/api/static/ contents:" && \
     ls -la /app/api/static/ && \
-    cp -r /app/api/static/* /app/static/frontend/ && \
-    echo "Frontend copied successfully"
+    cp -r /app/api/static/* /app/static/frontend/
 
 # Create necessary directories
 RUN mkdir -p /app/logs /app/data /var/log/supervisor
