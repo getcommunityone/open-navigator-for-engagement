@@ -6,8 +6,8 @@ set -e
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
-DATA_DIR="${PROJECT_ROOT}/data/form990"
-ZIPS_DIR="${DATA_DIR}/zips"
+DATA_DIR="${PROJECT_ROOT}/data/cache/form990"
+ZIPS_DIR="${DATA_DIR}"
 XMLS_DIR="${DATA_DIR}/xmls"
 
 # Colors

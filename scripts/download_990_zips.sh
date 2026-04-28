@@ -7,8 +7,8 @@ set -e
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
-DATA_DIR="${PROJECT_ROOT}/data/form990"
-ZIPS_DIR="${DATA_DIR}/zips"
+DATA_DIR="${PROJECT_ROOT}/data/cache/form990"
+ZIPS_DIR="${DATA_DIR}"
 XMLS_DIR="${DATA_DIR}/xmls"
 
 # Colors
@@ -28,7 +28,7 @@ mkdir -p "$ZIPS_DIR"
 mkdir -p "$XMLS_DIR"
 
 # Check if we have the index
-INDEX_FILE="${DATA_DIR}/cache/form990_gt_index.parquet"
+INDEX_FILE="${DATA_DIR}/form990_gt_index.parquet"
 if [ ! -f "$INDEX_FILE" ]; then
     echo -e "${YELLOW}⚠️  Form 990 index not found. Download it first:${NC}"
     echo ""
@@ -55,13 +55,12 @@ echo -e "${GREEN}📦 Downloading 97 ZIP files (~38 GB compressed)...${NC}"
 echo -e "${YELLOW}⏱️  Estimated time: 1-4 hours depending on bandwidth${NC}"
 echo ""
 
-python3 << 'EOF'
+python3 << EOF
 import boto3
 from botocore import UNSIGNED
 from botocore.config import Config
 from pathlib import Path
 from concurrent.futures import ThreadPoolExecutor, as_completed
-import os
 
 s3 = boto3.client('s3', config=Config(signature_version=UNSIGNED))
 bucket = 'gt990datalake-rawdata'
@@ -74,7 +73,7 @@ zips = [obj['Key'] for obj in response.get('Contents', []) if obj['Key'].endswit
 print(f"Found {len(zips)} ZIP files")
 print("")
 
-zips_dir = Path(os.environ['ZIPS_DIR'])
+zips_dir = Path('${ZIPS_DIR}')
 
 def download_zip(key):
     filename = Path(key).name

@@ -82,12 +82,25 @@ class GivingTuesday990Enricher:
         self,
         index_path: str = "data/cache/form990_gt_index.parquet",
         cache_dir: str = "data/cache/form_990_xml",
-        max_concurrent: int = 20
+        max_concurrent: int = 20,
+        use_local_xmls: bool = False,
+        local_index_path: str = "data/cache/form990/local_index_dev_states.parquet"
     ):
-        """Initialize the enricher"""
+        """Initialize the enricher
+        
+        Args:
+            index_path: Path to GivingTuesday index
+            cache_dir: Directory to cache downloaded XMLs
+            max_concurrent: Max concurrent S3 requests
+            use_local_xmls: If True, use locally extracted XMLs instead of downloading
+            local_index_path: Path to local XML index (created by build_990_local_index.py)
+        """
         self.index_path = Path(index_path)
         self.cache_dir = Path(cache_dir)
         self.cache_dir.mkdir(parents=True, exist_ok=True)
+        
+        self.use_local_xmls = use_local_xmls
+        self.local_index_path = Path(local_index_path)
         
         # S3 client for GivingTuesday Data Lake (no credentials needed)
         self.s3 = boto3.client(
@@ -100,17 +113,31 @@ class GivingTuesday990Enricher:
         self.max_concurrent = max_concurrent
         self.semaphore = asyncio.Semaphore(max_concurrent)
         
-        # Load index if it exists
+        # Load appropriate index
         self.index_df = None
-        if self.index_path.exists():
-            logger.info(f"📚 Loading existing index from {self.index_path}")
-            self.index_df = pd.read_parquet(self.index_path)
-            logger.info(f"   Index contains {len(self.index_df):,} Form 990 filings")
+        if use_local_xmls:
+            if self.local_index_path.exists():
+                logger.info(f"📚 Loading local XML index from {self.local_index_path}")
+                self.index_df = pd.read_parquet(self.local_index_path)
+                logger.info(f"   Local index contains {len(self.index_df):,} Form 990 XMLs")
+            else:
+                logger.warning(f"⚠️  Local index not found: {self.local_index_path}")
+                logger.warning(f"   Run: python scripts/build_990_local_index.py")
+        else:
+            if self.index_path.exists():
+                logger.info(f"📚 Loading GivingTuesday index from {self.index_path}")
+                self.index_df = pd.read_parquet(self.index_path)
+                logger.info(f"   Index contains {len(self.index_df):,} Form 990 filings")
         
         logger.info(f"🚀 GivingTuesday 990 enricher initialized")
-        logger.info(f"   Data Lake: s3://{self.bucket}")
-        logger.info(f"   Max concurrent requests: {max_concurrent}")
-        logger.info(f"   Cache directory: {self.cache_dir}")
+        if use_local_xmls:
+            logger.info(f"   Mode: LOCAL XMLs")
+            logger.info(f"   Local index: {self.local_index_path}")
+        else:
+            logger.info(f"   Mode: DOWNLOAD from S3")
+            logger.info(f"   Data Lake: s3://{self.bucket}")
+            logger.info(f"   Max concurrent requests: {max_concurrent}")
+            logger.info(f"   Cache directory: {self.cache_dir}")
     
     def download_index(self, index_key: str = "Indices/990xmls/index_all_years_efiledata_xmls_created_on_2023-10-29.csv"):
         """
@@ -176,35 +203,41 @@ class GivingTuesday990Enricher:
         """
         Find the most recent Form 990 filing for an EIN
         
-        Returns dict with OBJECT_ID and other metadata, or None if not found
+        Returns dict with OBJECT_ID/file_path and other metadata, or None if not found
         """
         if self.index_df is None:
-            logger.warning("⚠️  Index not loaded. Run --download-index first.")
+            logger.warning("⚠️  Index not loaded.")
             return None
         
         # Ensure EIN is 9 digits with leading zeros
         ein = str(ein).zfill(9)
         
+        # For local XMLs, use 'ein' column; for GT index, use 'EIN'
+        ein_col = 'ein' if self.use_local_xmls else 'EIN'
+        
         # Find all filings for this EIN
-        filings = self.index_df[self.index_df['EIN'] == ein]
+        filings = self.index_df[self.index_df[ein_col] == ein]
         
         if len(filings) == 0:
             return None
         
         # Prefer most recent if multiple filings
-        if prefer_recent and 'TaxPeriod' in filings.columns:
-            filings = filings.sort_values('TaxPeriod', ascending=False)
+        if prefer_recent:
+            if self.use_local_xmls and 'tax_year' in filings.columns:
+                filings = filings.sort_values('tax_year', ascending=False)
+            elif 'TaxPeriod' in filings.columns:
+                filings = filings.sort_values('TaxPeriod', ascending=False)
         
         # Return first (most recent) filing as dict
         return filings.iloc[0].to_dict()
     
     async def fetch_and_parse_990(self, ein: str, filing_info: Optional[Dict] = None) -> Dict:
         """
-        Fetch and parse a Form 990 XML from GivingTuesday Data Lake
+        Fetch and parse a Form 990 XML (from S3 or local file)
         
         Args:
             ein: 9-digit EIN
-            filing_info: Optional dict from find_filing() with OBJECT_ID
+            filing_info: Optional dict from find_filing() with OBJECT_ID or file_path
         
         Returns:
             Dict with extracted fields or {'form_990_status': 'not_found'}
@@ -235,6 +268,31 @@ class GivingTuesday990Enricher:
                     json.dump(result, f)
                 return result
             
+            # Use local XML if available
+            if self.use_local_xmls and 'file_path' in filing_info:
+                try:
+                    from pathlib import Path
+                    project_root = Path(__file__).parent.parent
+                    xml_path = project_root / filing_info['file_path']
+                    
+                    with open(xml_path, 'rb') as f:
+                        xml_content = f.read()
+                    
+                    # Parse XML
+                    result = self.parse_990_xml(xml_content, filing_info)
+                    
+                    # Cache result
+                    with open(cache_file, 'w') as f:
+                        json.dump(result, f)
+                    
+                    return result
+                    
+                except Exception as e:
+                    logger.error(f"Error reading local XML for EIN {ein}: {e}")
+                    result = {'form_990_status': 'error', 'form_990_error': str(e), 'form_990_last_updated': datetime.now().isoformat()}
+                    return result
+            
+            # Otherwise download from S3
             # Construct S3 key using ObjectId (or use direct URL if available)
             # GivingTuesday index columns: ObjectId, URL, TaxPeriod, FormType
             direct_url = filing_info.get('URL')
@@ -639,11 +697,20 @@ Data Lake: https://990data.givingtuesday.org/
     parser.add_argument('--index-key', type=str,
                         default='Indices/990xmls/index_all_years_efiledata_xmls_created_on_2023-10-29.csv',
                         help='S3 key for index file')
+    parser.add_argument('--use-local', action='store_true',
+                        help='Use locally extracted XMLs instead of downloading from S3')
+    parser.add_argument('--local-index', type=str,
+                        default='data/cache/form990/local_index_dev_states.parquet',
+                        help='Path to local XML index (default: data/cache/form990/local_index_dev_states.parquet)')
     
     args = parser.parse_args()
     
     # Initialize enricher
-    enricher = GivingTuesday990Enricher(max_concurrent=args.concurrent)
+    enricher = GivingTuesday990Enricher(
+        max_concurrent=args.concurrent,
+        use_local_xmls=args.use_local,
+        local_index_path=args.local_index
+    )
     
     # Download index if requested
     if args.download_index:

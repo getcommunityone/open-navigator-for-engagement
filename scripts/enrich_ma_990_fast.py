@@ -36,6 +36,7 @@ async def main():
     parser.add_argument('--concurrent', type=int, default=100, help='Concurrent requests')
     parser.add_argument('--health-only', action='store_true', help='Only health orgs (NTEE E)')
     parser.add_argument('--sample', type=int, help='Sample N orgs for testing')
+    parser.add_argument('--use-local', action='store_true', help='Use locally extracted XMLs')
     args = parser.parse_args()
     
     conn = duckdb.connect()
@@ -46,10 +47,20 @@ async def main():
     
     # Step 1: Load GT990 index and filter to MA EINs
     logger.info("\n📊 Step 1: Pre-filtering with DuckDB...")
-    logger.info("   Loading GT990 index (925 MB)...")
     
-    index_df = pd.read_parquet('data/cache/form990_gt_index.parquet')
-    logger.info(f"   ✅ Loaded {len(index_df):,} Form 990 filings")
+    if args.use_local:
+        logger.info("   Using locally extracted Form 990 XMLs...")
+        index_path = 'data/cache/form990/local_index_dev_states.parquet'
+        index_df = pd.read_parquet(index_path)
+        logger.info(f"   ✅ Loaded {len(index_df):,} local XMLs")
+        # Rename columns to match GT990 format
+        index_df['ObjectId'] = index_df['object_id']
+        index_df['TaxPeriod'] = index_df['tax_year'].astype(str) + '12'  # Assume December
+        index_df['EIN'] = index_df['ein']
+    else:
+        logger.info("   Loading GT990 index (925 MB)...")
+        index_df = pd.read_parquet('data/cache/form990_gt_index.parquet')
+        logger.info(f"   ✅ Loaded {len(index_df):,} Form 990 filings")
     
     # Load MA organizations
     logger.info("   Loading MA organizations...")
@@ -102,8 +113,12 @@ async def main():
     # Step 2: Enrich with GT990
     logger.info(f"\n🚀 Step 2: Enriching {len(joined):,} organizations...")
     logger.info(f"   Concurrency: {args.concurrent}")
+    logger.info(f"   Mode: {'LOCAL XMLs' if args.use_local else 'DOWNLOAD from S3'}")
     
-    enricher = GivingTuesday990Enricher(max_concurrent=args.concurrent)
+    enricher = GivingTuesday990Enricher(
+        max_concurrent=args.concurrent,
+        use_local_xmls=args.use_local
+    )
     
     enriched_df = await enricher.enrich_dataframe(
         joined,

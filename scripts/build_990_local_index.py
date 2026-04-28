@@ -15,8 +15,8 @@ from concurrent.futures import ProcessPoolExecutor, as_completed
 from tqdm import tqdm
 
 PROJECT_ROOT = Path(__file__).parent.parent
-XMLS_DIR = PROJECT_ROOT / "data" / "form990" / "xmls"
-INDEX_FILE = PROJECT_ROOT / "data" / "form990" / "local_index.parquet"
+XMLS_DIR = PROJECT_ROOT / "data" / "cache" / "form990" / "xmls_dev_states"
+INDEX_FILE = PROJECT_ROOT / "data" / "cache" / "form990" / "local_index_dev_states.parquet"
 
 
 def extract_metadata_from_xml(xml_path: Path) -> Optional[Dict[str, str]]:
@@ -24,42 +24,71 @@ def extract_metadata_from_xml(xml_path: Path) -> Optional[Dict[str, str]]:
     Extract key metadata from Form 990 XML.
     
     Returns:
-        Dict with: EIN, org_name, tax_year, form_type, object_id
+        Dict with: EIN, org_name, tax_year, form_type, object_id, state
     """
     try:
         tree = ET.parse(xml_path)
         root = tree.getroot()
         
-        # Handle namespace (IRS uses different namespaces by year)
-        ns_match = re.match(r'\{(.+)\}', root.tag)
-        ns = {'irs': ns_match.group(1)} if ns_match else {}
+        # Helper function to find element ignoring namespace
+        def find_elem(tag_name: str):
+            # Try with namespace first
+            ns_match = re.match(r'\{(.+)\}', root.tag)
+            if ns_match:
+                ns = {'irs': ns_match.group(1)}
+                elem = root.find(f'.//irs:{tag_name}', ns)
+                if elem is not None:
+                    return elem
+            
+            # Try without namespace
+            elem = root.find(f'.//{tag_name}')
+            if elem is not None:
+                return elem
+            
+            # Try searching by tag name (ignoring namespace)
+            for elem in root.iter():
+                if elem.tag.endswith('}' + tag_name) or elem.tag == tag_name:
+                    return elem
+            return None
         
         # Extract EIN
-        ein_elem = (root.find('.//irs:EIN', ns) or 
-                   root.find('.//EIN') or
-                   root.find('.//*[local-name()="EIN"]'))
-        ein = ein_elem.text if ein_elem is not None else None
+        ein_elem = find_elem('EIN')
+        ein = ein_elem.text.strip() if ein_elem is not None and ein_elem.text else None
         
-        # Extract org name
-        name_elem = (root.find('.//irs:BusinessName/irs:BusinessNameLine1Txt', ns) or
-                    root.find('.//irs:Filer/irs:BusinessName/irs:BusinessNameLine1', ns) or
-                    root.find('.//*[local-name()="BusinessNameLine1Txt"]') or
-                    root.find('.//*[local-name()="BusinessNameLine1"]'))
-        org_name = name_elem.text if name_elem is not None else None
+        # Extract org name (try multiple possible tag names)
+        org_name = None
+        for tag in ['BusinessNameLine1Txt', 'BusinessNameLine1']:
+            name_elem = find_elem(tag)
+            if name_elem is not None and name_elem.text:
+                org_name = name_elem.text.strip()
+                break
         
         # Extract tax year
-        year_elem = (root.find('.//irs:TaxYr', ns) or
-                    root.find('.//*[local-name()="TaxYr"]'))
-        tax_year = int(year_elem.text) if year_elem is not None else None
+        year_elem = find_elem('TaxYr')
+        tax_year = None
+        if year_elem is not None and year_elem.text:
+            try:
+                tax_year = int(year_elem.text.strip())
+            except ValueError:
+                pass
+        
+        # Extract state
+        state_elem = find_elem('StateAbbreviationCd')
+        state = state_elem.text.strip() if state_elem is not None and state_elem.text else None
+        
+        # Fallback: Get state from parent directory
+        if not state and xml_path.parent.name in ['WA', 'MA', 'AL', 'GA', 'WI']:
+            state = xml_path.parent.name
         
         # Determine form type from root element
         form_type = None
-        if 'Return990' in root.tag:
-            form_type = '990'
-        elif 'Return990EZ' in root.tag:
-            form_type = '990-EZ'
-        elif 'Return990PF' in root.tag:
+        root_tag = root.tag.split('}')[-1]  # Remove namespace
+        if 'Return990PF' in root_tag:
             form_type = '990-PF'
+        elif 'Return990EZ' in root_tag:
+            form_type = '990-EZ'
+        elif 'Return990' in root_tag:
+            form_type = '990'
         
         # Extract ObjectId from filename
         object_id = xml_path.stem.replace('_public', '')
@@ -71,6 +100,7 @@ def extract_metadata_from_xml(xml_path: Path) -> Optional[Dict[str, str]]:
             'ein': ein,
             'org_name': org_name,
             'tax_year': tax_year,
+            'state': state,
             'form_type': form_type,
             'object_id': object_id,
             'file_path': str(xml_path.relative_to(PROJECT_ROOT)),
@@ -78,7 +108,7 @@ def extract_metadata_from_xml(xml_path: Path) -> Optional[Dict[str, str]]:
         }
         
     except Exception as e:
-        print(f"Error parsing {xml_path.name}: {e}")
+        # Only print errors if verbose mode (skip for now to reduce noise)
         return None
 
 
@@ -103,9 +133,15 @@ def main():
         print(f"Run: ./scripts/download_990_zips.sh && ./scripts/extract_990_zips.sh")
         return 1
     
-    # Find all XML files
+    # Find all XML files (in state subdirectories)
     print(f"📁 Scanning {XMLS_DIR}...")
-    xml_files = list(XMLS_DIR.glob("*.xml"))
+    xml_files = []
+    for state_dir in XMLS_DIR.glob('*'):
+        if state_dir.is_dir():
+            state_xmls = list(state_dir.glob("*.xml"))
+            print(f"  {state_dir.name}: {len(state_xmls):,} XMLs")
+            xml_files.extend(state_xmls)
+    
     total_files = len(xml_files)
     
     if total_files == 0:
@@ -137,9 +173,6 @@ def main():
     # Create DataFrame
     df = pd.DataFrame(all_results)
     
-    # Add state column (will be populated during enrichment)
-    df['state'] = None
-    
     # Sort by EIN and tax year (most recent first)
     df = df.sort_values(['ein', 'tax_year'], ascending=[True, False])
     
@@ -148,6 +181,12 @@ def main():
     print(f"  Total filings:        {len(df):,}")
     print(f"  Unique EINs:          {df['ein'].nunique():,}")
     print(f"  Tax years:            {df['tax_year'].min():.0f} - {df['tax_year'].max():.0f}")
+    
+    if 'state' in df.columns and df['state'].notna().any():
+        print(f"  States:")
+        for state, count in df['state'].value_counts().items():
+            print(f"    - {state}: {count:,}")
+    
     print(f"  Form types:")
     for form_type, count in df['form_type'].value_counts().items():
         print(f"    - {form_type}: {count:,}")
