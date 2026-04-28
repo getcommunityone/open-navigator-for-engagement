@@ -88,9 +88,9 @@ export default function Developers() {
               <h3 className="text-lg font-bold text-gray-900">Data</h3>
             </div>
             <ul className="space-y-2 text-sm text-gray-600">
-              <li>• 90K+ jurisdictions</li>
-              <li>• 3M+ nonprofits</li>
-              <li>• 500K+ meeting pages</li>
+              <li>• 925 jurisdictions</li>
+              <li>• 43,726 nonprofits</li>
+              <li>• 6,913 meeting pages</li>
               <li>• Medallion architecture</li>
             </ul>
           </div>

@@ -68,11 +68,11 @@ const policyMakerOptions: ExploreCard[] = [
 const advocateOptions: ExploreCard[] = [
   {
     title: 'Nonprofits & Churches',
-    description: 'Search 3M+ nonprofits including 300K+ churches with financial data, programs, and impact metrics.',
+    description: 'Search 43,726 nonprofits including 4,372 churches with financial data from 5 states.',
     icon: BuildingOfficeIcon,
     path: '/nonprofits',
     color: '#354F52',
-    stats: '3M+ organizations',
+    stats: '43,726 organizations',
   },
   {
     title: 'Advocacy Topics',

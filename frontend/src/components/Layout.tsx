@@ -460,10 +460,10 @@ export default function Layout() {
           <div className="text-sm text-gray-600">
             <div className="font-medium mb-1">Open Data Sources</div>
             <div className="text-xs">
-              • 90K+ Jurisdictions<br />
-              • 3M+ Nonprofits<br />
-              • 500K+ Meeting Pages<br />
-              • 100K+ Officials
+              • 925 Jurisdictions<br />
+              • 43,726 Nonprofits<br />
+              • 6,913 Meeting Pages<br />
+              • 362 Officials
             </div>
           </div>
         </div>

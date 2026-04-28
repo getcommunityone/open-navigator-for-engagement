@@ -47,11 +47,15 @@ export default function HomeModern() {
   const apiBaseUrl = import.meta.env.VITE_API_URL || 
     (import.meta.env.DEV ? 'http://localhost:8000' : '')
 
-  // Fetch real stats from API
+  // Fetch real stats from API - updates based on selected location
   const { data: statsData } = useQuery({
-    queryKey: ['platform-stats'],
+    queryKey: ['platform-stats', location?.state],
     queryFn: async () => {
-      const response = await axios.get('/api/stats');
+      const params: any = {};
+      if (location && location.state) {
+        params.state = location.state;
+      }
+      const response = await axios.get('/api/stats', { params });
       return response.data.data;
     },
     staleTime: 1000 * 60 * 60, // Cache for 1 hour
@@ -243,7 +247,7 @@ export default function HomeModern() {
     {
       icon: UserGroupIcon,
       title: 'Elected Officials',
-      description: 'Follow 100K+ officials across 90K+ jurisdictions with voting records and decision patterns',
+      description: 'Follow 362 officials across 925 jurisdictions with voting records and decision patterns',
       link: '/people',
       color: '#84A98C'
     },
@@ -257,7 +261,7 @@ export default function HomeModern() {
     {
       icon: BuildingLibraryIcon,
       title: 'Nonprofits & Churches',
-      description: '3M+ nonprofits including 300K+ churches with financial data, programs, and impact metrics',
+      description: '43,726 nonprofits including 4,372 churches with financial data from 5 states',
       link: '/nonprofits',
       color: '#9B59B6'
     },
@@ -381,7 +385,83 @@ export default function HomeModern() {
 
           <p className="text-xl md:text-2xl text-gray-600 mb-12 max-w-3xl mx-auto animate-[slideUp_0.8s_ease-out_0.4s_both]">
             Follow leaders, charities, and causes in your community.<br />
-            {statsData ? `${statsData.jurisdictions_display} cities • ${statsData.nonprofits_display} nonprofits • 100% free` : '90,000+ cities • 3M+ nonprofits • 100% free'}
+            {statsData ? (
+              statsData.level === 'state' ? (
+                <>
+                  <Link 
+                    to={`/search?types=organizations&state=${statsData.state}`}
+                    className="text-[#52796F] hover:text-[#354F52] underline decoration-2 decoration-[#84A98C] hover:decoration-[#52796F] transition-colors"
+                  >
+                    {statsData.nonprofits_display} nonprofits
+                  </Link>
+                  {' • '}
+                  <Link 
+                    to={`/search?types=contacts&state=${statsData.state}`}
+                    className="text-[#52796F] hover:text-[#354F52] underline decoration-2 decoration-[#84A98C] hover:decoration-[#52796F] transition-colors"
+                  >
+                    {statsData.contacts_display} leaders
+                  </Link>
+                  {' • '}
+                  <Link 
+                    to={`/search?types=causes&state=${statsData.state}`}
+                    className="text-[#52796F] hover:text-[#354F52] underline decoration-2 decoration-[#84A98C] hover:decoration-[#52796F] transition-colors"
+                  >
+                    {statsData.causes_display} causes
+                  </Link>
+                  {' in '}{statsData.location} • 100% free
+                </>
+              ) : (
+                <>
+                  {statsData.jurisdictions_display} cities • {' '}
+                  <Link 
+                    to="/search?types=organizations"
+                    className="text-[#52796F] hover:text-[#354F52] underline decoration-2 decoration-[#84A98C] hover:decoration-[#52796F] transition-colors"
+                  >
+                    {statsData.nonprofits_display} nonprofits
+                  </Link>
+                  {' • '}
+                  <Link 
+                    to="/search?types=contacts"
+                    className="text-[#52796F] hover:text-[#354F52] underline decoration-2 decoration-[#84A98C] hover:decoration-[#52796F] transition-colors"
+                  >
+                    {statsData.contacts_display} leaders
+                  </Link>
+                  {' • '}
+                  <Link 
+                    to="/search?types=causes"
+                    className="text-[#52796F] hover:text-[#354F52] underline decoration-2 decoration-[#84A98C] hover:decoration-[#52796F] transition-colors"
+                  >
+                    {statsData.causes_display} causes
+                  </Link>
+                  {' • 100% free'}
+                </>
+              )
+            ) : (
+              <>
+                925 jurisdictions • {' '}
+                <Link 
+                  to="/search?types=organizations"
+                  className="text-[#52796F] hover:text-[#354F52] underline decoration-2 decoration-[#84A98C] hover:decoration-[#52796F] transition-colors"
+                >
+                  43,726 nonprofits
+                </Link>
+                {' • '}
+                <Link 
+                  to="/search?types=contacts"
+                  className="text-[#52796F] hover:text-[#354F52] underline decoration-2 decoration-[#84A98C] hover:decoration-[#52796F] transition-colors"
+                >
+                  10,000+ leaders
+                </Link>
+                {' • '}
+                <Link 
+                  to="/search?types=causes"
+                  className="text-[#52796F] hover:text-[#354F52] underline decoration-2 decoration-[#84A98C] hover:decoration-[#52796F] transition-colors"
+                >
+                  650+ causes
+                </Link>
+                {' • 100% free'}
+              </>
+            )}
           </p>
 
           {/* Tabbed Search Interface */}
@@ -694,7 +774,7 @@ export default function HomeModern() {
             </div>
             <div className="flex items-center gap-2">
               <CheckCircleIcon className="h-5 w-5 text-green-500" />
-              <span>{statsData?.nonprofits_display || '3M+'} Nonprofits</span>
+              <span>{statsData?.nonprofits_display || '43,726'} Nonprofits</span>
             </div>
             <div className="flex items-center gap-2">
               <CheckCircleIcon className="h-5 w-5 text-green-500" />
@@ -802,10 +882,18 @@ export default function HomeModern() {
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-16">
             <h2 className="text-4xl md:text-5xl font-bold mb-4" style={{ color: '#354F52' }}>
-              Our Impact
+              {statsData?.level === 'state' ? `Our Impact in ${statsData.location}` : 'Our Impact'}
             </h2>
             <p className="text-xl text-gray-600">
-              Real numbers from real data tables {statsData?.last_updated && <span className="text-sm text-gray-500">(updated {new Date(statsData.last_updated).toLocaleDateString()})</span>}
+              {statsData?.level === 'state' ? 
+                `Real numbers for ${statsData.location} from live data tables` :
+                `Real numbers from real data tables`
+              }
+              {statsData?.last_updated && (
+                <span className="text-sm text-gray-500 ml-2">
+                  (updated {new Date(statsData.last_updated).toLocaleDateString()})
+                </span>
+              )}
             </p>
           </div>
 
@@ -813,55 +901,55 @@ export default function HomeModern() {
             {(() => {
               const stats = [
                 { 
-                  value: statsData?.jurisdictions_display || '90,000+', 
+                  value: statsData?.jurisdictions_display || '925', 
                   label: 'Jurisdictions Tracked', 
                   description: 'Cities, counties, states, and tribal governments', 
                   color: '#354F52' 
                 },
                 { 
-                  value: statsData?.nonprofits_display || '3M+', 
+                  value: statsData?.nonprofits_display || '43,726', 
                   label: 'Nonprofits & Churches', 
-                  description: statsData ? `${statsData.states_with_data} states with full IRS BMF data` : 'With financials, programs, and impact data', 
+                  description: statsData ? `${statsData.states_with_data} states with full IRS BMF data` : '5 states with full IRS BMF data', 
                   color: '#52796F' 
                 },
                 { 
-                  value: statsData?.meetings_display || '500K+', 
+                  value: statsData?.meetings_display || '6,913', 
                   label: 'Meeting Pages Analyzed', 
                   description: 'AI-extracted decisions and budget items', 
                   color: '#84A98C' 
                 },
                 { 
-                  value: statsData?.budget_tracked || '$2T+', 
+                  value: statsData?.budget_tracked || 'N/A', 
                   label: 'Budget Dollars', 
                   description: 'Real-time tracking and delta analysis', 
                   color: '#4A90E2' 
                 },
                 { 
-                  value: statsData?.contacts_display || '100K+', 
+                  value: statsData?.contacts_display || '362', 
                   label: 'Elected Officials', 
                   description: 'Voting records and decision patterns', 
                   color: '#9B59B6' 
                 },
                 { 
-                  value: statsData?.churches || '300K+', 
+                  value: statsData?.churches || '4,372', 
                   label: 'Churches & Congregations', 
                   description: 'Community-based organizations mapped', 
                   color: '#6B8E23' 
                 },
                 { 
-                  value: statsData?.meetings_display || '15,000+', 
+                  value: statsData?.policy_decisions || 'N/A', 
                   label: 'Policy Decisions', 
                   description: 'With deferral tracking and stakeholder positions', 
                   color: '#DC143C' 
                 },
                 { 
-                  value: statsData?.school_districts_display || '13,000+', 
+                  value: statsData?.school_districts_display || '306', 
                   label: 'School Districts', 
                   description: 'NCES-validated educational boundaries', 
                   color: '#8B4513' 
                 },
                 { 
-                  value: statsData ? `${statsData.states_total} States` : '50 States', 
+                  value: statsData?.states_with_data ? `${statsData.states_with_data} State${statsData.states_with_data !== 1 ? 's' : ''}` : '5 States', 
                   label: 'Nationwide Coverage', 
                   description: 'Including territories and tribal nations', 
                   color: '#2E8B57' 
@@ -873,7 +961,7 @@ export default function HomeModern() {
                   color: '#FF6B6B' 
                 },
                 { 
-                  value: statsData?.fact_checks || '10K+', 
+                  value: statsData?.fact_checks || 'N/A', 
                   label: 'Fact-Checked Claims', 
                   description: 'PolitiFact, FactCheck.org integration', 
                   color: '#4ECDC4' 

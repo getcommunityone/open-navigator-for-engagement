@@ -231,7 +231,7 @@ Public comments at government meetings become part of the official record. Avoid
 
 ### Essential Services
 
-Open Navigator connects you with 3M+ nonprofits and community organizations, including:
+Open Navigator connects you with 43,726 nonprofits and community organizations from 5 states, including:
 
 **Food Security:**
 - Food banks and pantries

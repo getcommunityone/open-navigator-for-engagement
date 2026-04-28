@@ -29,9 +29,9 @@ Complete platform documentation including:
 
 ### 🚀 **Main Application** → [/](/​)
 Interactive dashboard with:
-- 90,000+ jurisdictions tracked
-- 3M+ nonprofit organizations
-- Meeting minutes analysis
+- 925 jurisdictions tracked (cities, counties, states)
+- 43,726 nonprofit organizations (5 states with full IRS BMF data)
+- 6,913 meeting minutes analyzed
 - Budget tracking
 - Video transcript search
 
@@ -46,12 +46,13 @@ RESTful API providing:
 
 | Data Type | Coverage |
 |-----------|----------|
-| **Jurisdictions** | 90,000+ (cities, counties, states) |
-| **School Districts** | 13,000+ districts nationwide |
-| **Nonprofits** | 3,000,000+ tax-exempt organizations |
-| **Meeting Minutes** | Thousands of government meetings |
-| **Video Transcripts** | School board & council meetings |
-| **Financial Data** | IRS Form 990s, municipal budgets |
+| **Jurisdictions** | 925 (cities, counties, states) |
+| **School Districts** | 306 districts |
+| **Nonprofits** | 43,726 tax-exempt organizations |
+| **Meeting Minutes** | 6,913 government meetings |
+| **Elected Officials** | 362 tracked officials |
+| **Churches** | 4,372 congregations |
+| **States with IRS Data** | 5 states |
 
 ## 🎓 Who It's For
 

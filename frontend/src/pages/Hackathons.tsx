@@ -168,9 +168,9 @@ export default function Hackathons() {
           <div>
             <h3 className="font-semibold text-gray-900 mb-2">Data Access</h3>
             <ul className="space-y-1 text-gray-700">
-              <li>• 90,000+ jurisdiction records</li>
-              <li>• 3M+ nonprofit organizations</li>
-              <li>• 500K+ meeting pages with transcripts</li>
+              <li>• 925 jurisdiction records</li>
+              <li>• 43,726 nonprofit organizations</li>
+              <li>• 6,913 meeting pages with transcripts</li>
               <li>• API access and bulk downloads</li>
             </ul>
           </div>

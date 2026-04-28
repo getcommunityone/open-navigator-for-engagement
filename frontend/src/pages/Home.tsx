@@ -191,7 +191,7 @@ export default function Home() {
           <p className="text-xl mb-12 max-w-3xl mx-auto" style={{ color: '#354F52' }}>
             Track what local governments and charities say, spend—and block.
             <br />
-            Find leaders by name. Discover causes. 90,000+ cities. 3M+ charities. All free.
+            Find leaders by name. Discover causes. 925 jurisdictions. 43,726 nonprofits. All free.
           </p>
 
           {/* Tabbed Interface */}

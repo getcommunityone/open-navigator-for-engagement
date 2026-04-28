@@ -12,26 +12,25 @@ This document lists all nonprofit data sources and reference websites used by Op
 
 ### ProPublica Nonprofit Explorer ⭐
 
-**Source:** ProPublica  
-**URL:** https://projects.propublica.org/nonprofits/  
-**API:** https://projects.propublica.org/nonprofits/api  
+**Source:** IRS Business Master File (BMF)  
+**URL:** https://www.irs.gov/charities-non-profits/tax-exempt-organization-search-bulk-data-downloads  
 
 **What It Contains:**
-- **3M+ nonprofit organizations** (all IRS-registered 501(c) organizations)
+- **43,726 nonprofit organizations** (from 5 states with full IRS BMF data)
 - **IRS Form 990 data** - Complete financial disclosures
 - Revenue, expenses, assets, and liabilities
 - Executive compensation
 - Mission statements and program descriptions
-- Historical filings (10+ years of data)
+- NTEE codes for categorization
 
 **Why We Use It:**
-> "ProPublica's Nonprofit Explorer provides the most comprehensive, free, public access to IRS Form 990 data. It includes every nonprofit that files with the IRS."
+> "The IRS Business Master File provides the most authoritative, complete data on tax-exempt organizations directly from the IRS."
 
 **Coverage:**
-- ✅ **Volume:** 3M+ organizations
-- ✅ **Free API:** No rate limits for non-commercial use
+- ✅ **Volume:** 43,726 organizations from 5 states
+- ✅ **Free Access:** Public domain data
 - ✅ **Data Quality:** Direct from IRS filings
-- ✅ **Historical Data:** Multiple years available
+- ✅ **Monthly Updates:** Refreshed regularly
 
 ---
 

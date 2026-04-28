@@ -12,11 +12,13 @@ displayed_sidebar: gettingStartedSidebar
 
 The platform gives you access to:
 
-- **90,000+ government jurisdictions** - Counties, cities, townships, school districts
-- **3M+ nonprofit organizations** - Complete IRS Form 990 financial data
-- **1,000+ cities** - Full meeting transcripts and videos
-- **13,000+ school districts** - Financial and meeting data
-- **All 50 states** - Complete geographic coverage
+- **925 government jurisdictions** - Counties, cities, townships, school districts
+- **43,726 nonprofit organizations** - Complete IRS Form 990 financial data (5 states)
+- **6,913 meeting transcripts** - Government meeting minutes
+- **306 school districts** - Financial and meeting data
+- **362 elected officials** - Voting records and decision patterns
+- **4,372 churches** - Community-based organizations
+- **5 states** - States with complete IRS BMF data
 
 ---
 

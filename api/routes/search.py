@@ -14,7 +14,7 @@ import requests
 from functools import lru_cache
 from datetime import datetime, timedelta
 
-router = APIRouter(prefix="/api/search", tags=["search"])
+router = APIRouter(tags=["search"])
 
 # Paths to gold datasets
 GOLD_DIR = Path("data/gold")
@@ -751,7 +751,7 @@ def search_causes(query: str, limit: int = 10) -> List[SearchResult]:
     return results[:limit]
 
 
-@router.get("/")
+@router.get("/api/search")
 async def unified_search(
     q: str = Query(..., min_length=2, description="Search query"),
     types: Optional[str] = Query(None, description="Comma-separated result types: contacts,meetings,organizations,causes"),
@@ -826,7 +826,7 @@ async def unified_search(
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.get("/suggest")
+@router.get("/api/search/suggest")
 async def search_suggestions(
     q: str = Query(..., min_length=1, description="Partial search query"),
     limit: int = Query(5, ge=1, le=20, description="Maximum suggestions")
