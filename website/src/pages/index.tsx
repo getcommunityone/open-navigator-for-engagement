@@ -329,13 +329,13 @@ function GetStartedCTA() {
         <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', flexWrap: 'wrap' }}>
           <Link
             className="button button--success button--lg"
-            to="/docs/for-advocates"
+            to="for-advocates"
             style={{ minWidth: '200px' }}>
             📊 For Advocates
           </Link>
           <Link
             className="button button--info button--lg"
-            to="/docs/for-developers"
+            to="for-developers"
             style={{ minWidth: '200px' }}>
             🛠️ For Developers
           </Link>
