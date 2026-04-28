@@ -313,7 +313,7 @@ export default function HomeModern() {
           <div className="inline-flex items-center gap-2 px-4 py-2 bg-white rounded-full shadow-sm mb-6 animate-[slideUp_0.6s_ease-out]">
             <SparklesIcon className="h-5 w-5" style={{ color: '#354F52' }} />
             <span className="text-sm font-medium" style={{ color: '#354F52' }}>
-              Local Impact Made Easy
+              Local Community Impact Made Easy
             </span>
           </div>
 
