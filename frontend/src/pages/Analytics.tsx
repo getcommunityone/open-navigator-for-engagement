@@ -1,11 +1,10 @@
 import { useState } from 'react'
-import { useQuery } from '@tantml:invoke>
+import { useQuery } from '@tanstack/react-query'
 import axios from 'axios'
 import {
   ChartBarIcon,
   CurrencyDollarIcon,
-  TrendingUpIcon,
-  TrendingDownIcon,
+  ArrowTrendingUpIcon,
   DocumentChartBarIcon,
 } from '@heroicons/react/24/outline'
 
@@ -129,7 +128,7 @@ export default function Analytics() {
                 </p>
                 <p className="mt-2 text-3xl font-bold text-emerald-600 flex items-center gap-2">
                   +3.2%
-                  <TrendingUpIcon className="h-6 w-6" />
+                  <ArrowTrendingUpIcon className="h-6 w-6" />
                 </p>
               </div>
             </div>

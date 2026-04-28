@@ -3,6 +3,7 @@ import Layout from './components/Layout'
 import Home from './pages/Home'
 import HomeModern from './pages/HomeModern'
 import Dashboard from './pages/Dashboard'
+import Analytics from './pages/Analytics'
 import Heatmap from './pages/Heatmap'
 import Documents from './pages/Documents'
 import Opportunities from './pages/Opportunities'
@@ -31,7 +32,8 @@ function App() {
       {/* All other pages with sidebar layout */}
       <Route path="/" element={<Layout />}>
         <Route path="explore" element={<Explore />} />
-        <Route path="analytics" element={<Dashboard />} />
+        <Route path="dashboard" element={<Dashboard />} />
+        <Route path="analytics" element={<Analytics />} />
         <Route path="people" element={<PeopleFinder />} />
         <Route path="heatmap" element={<Heatmap />} />
         <Route path="documents" element={<Documents />} />
