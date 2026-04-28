@@ -63,16 +63,14 @@ export default function AddressLookup({ onLocationFound, initialAddress = '', co
         return
       }
 
-      // Deduplicate results - filter out duplicate cities/counties
+      // Deduplicate results using OSM unique IDs
       const uniqueResults = data.reduce((acc: any[], current: any) => {
-        const addr = current.address
-        const key = `${addr.city || addr.town || ''}_${addr.county || ''}_${addr.state || ''}_${current.osm_type || ''}`
+        // Use OSM type + ID as unique key (most reliable)
+        const osmKey = `${current.osm_type}_${current.osm_id}`
         
-        // Check if we already have this location
         const exists = acc.some((item) => {
-          const itemAddr = item.address
-          const itemKey = `${itemAddr.city || itemAddr.town || ''}_${itemAddr.county || ''}_${itemAddr.state || ''}_${item.osm_type || ''}`
-          return itemKey === key
+          const itemKey = `${item.osm_type}_${item.osm_id}`
+          return itemKey === osmKey
         })
         
         if (!exists) {
@@ -329,24 +327,30 @@ export default function AddressLookup({ onLocationFound, initialAddress = '', co
         <div className="mt-4 border border-gray-200 rounded-lg overflow-hidden">
           <div className="bg-gray-50 px-4 py-2 border-b border-gray-200">
             <p className="text-sm font-medium text-gray-700">
-              Multiple addresses found. Please select one:
+              Multiple locations found. Please select one:
             </p>
           </div>
           <div className="divide-y divide-gray-200">
-            {suggestions.map((suggestion, index) => (
-              <button
-                key={index}
-                onClick={() => handleSuggestionClick(suggestion)}
-                className="w-full px-4 py-3 text-left hover:bg-gray-50 transition-colors"
-              >
-                <p className="text-sm font-medium text-gray-900">
-                  {suggestion.display_name}
-                </p>
-                <p className="text-xs text-gray-500 mt-1">
-                  {suggestion.address.city || suggestion.address.town}, {suggestion.address.state}
-                </p>
-              </button>
-            ))}
+            {suggestions.map((suggestion, index) => {
+              const addr = suggestion.address
+              const locationType = suggestion.osm_type === 'relation' && addr.county && !addr.city ? 'County' : 'City'
+              const locationName = addr.city || addr.town || addr.village || addr.county || 'Unknown'
+              
+              return (
+                <button
+                  key={index}
+                  onClick={() => handleSuggestionClick(suggestion)}
+                  className="w-full px-4 py-3 text-left hover:bg-gray-50 transition-colors"
+                >
+                  <p className="text-sm font-medium text-gray-900">
+                    {locationName}, {addr.state}
+                  </p>
+                  <p className="text-xs text-gray-500 mt-1">
+                    {locationType} • {addr.county ? `${addr.county} County` : ''}
+                  </p>
+                </button>
+              )
+            })}
           </div>
         </div>
       )}

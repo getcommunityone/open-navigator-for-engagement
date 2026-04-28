@@ -445,12 +445,23 @@ def search_meetings(query: str, state: Optional[str] = None, limit: int = 10) ->
                 df = pd.read_parquet(file_path)
                 state_code = file_path.parent.name
                 
+                # Detect schema - different files have different column names
+                columns = set(df.columns)
+                
+                # Map column names (handle LocalView vs CityScrapers vs other formats)
+                title_col = 'vid_title' if 'vid_title' in columns else 'title'
+                body_col = 'caption_text_clean' if 'caption_text_clean' in columns else ('caption_text' if 'caption_text' in columns else 'body')
+                jurisdiction_col = 'place_name' if 'place_name' in columns else ('jurisdiction_name' if 'jurisdiction_name' in columns else 'jurisdiction')
+                date_col = 'meeting_date' if 'meeting_date' in columns else 'date'
+                id_col = 'vid_id' if 'vid_id' in columns else ('meeting_id' if 'meeting_id' in columns else 'id')
+                
                 # Search in title, body, jurisdiction
                 for _, row in df.iterrows():
-                    title = str(row.get('title', ''))
-                    body = str(row.get('body', ''))[:500]  # First 500 chars
-                    jurisdiction = str(row.get('jurisdiction_name', ''))
-                    meeting_date = str(row.get('meeting_date', ''))
+                    title = str(row.get(title_col, ''))
+                    body = str(row.get(body_col, ''))[:500]  # First 500 chars
+                    jurisdiction = str(row.get(jurisdiction_col, ''))
+                    meeting_date = str(row.get(date_col, ''))
+                    meeting_id = str(row.get(id_col, ''))
                     
                     score = max(
                         calculate_relevance_score(title, query),
@@ -467,13 +478,13 @@ def search_meetings(query: str, state: Optional[str] = None, limit: int = 10) ->
                             title=title,
                             subtitle=f"{jurisdiction}, {state_code} - {meeting_date}",
                             description=snippet,
-                            url=f"/documents?meeting_id={row.get('meeting_id', '')}",
+                            url=f"/documents?meeting_id={meeting_id}",
                             score=score,
                             metadata={
                                 "jurisdiction": jurisdiction,
                                 "state": state_code,
                                 "date": meeting_date,
-                                "meeting_id": row.get('meeting_id', '')
+                                "meeting_id": meeting_id
                             }
                         ))
             except Exception as e:
