@@ -66,6 +66,11 @@ const config: Config = {
         theme: {
           customCss: './src/css/custom.css',
         },
+        // Google Analytics - moved from themeConfig
+        gtag: {
+          trackingID: 'G-5EQV815915',
+          anonymizeIP: true,
+        },
       } satisfies Preset.Options,
     ],
   ],
@@ -203,12 +208,8 @@ const config: Config = {
       theme: prismThemes.github,
       darkTheme: prismThemes.dracula,
     },
-    // Google Analytics
-    gtag: {
-      trackingID: 'G-5EQV815915',
-      anonymizeIP: true,
-    },
   } satisfies Preset.ThemeConfig,
 };
 
 export default config;
+  
