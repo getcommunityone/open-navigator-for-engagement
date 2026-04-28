@@ -118,6 +118,12 @@ open-navigator-data/
 │   ├── election_cycles    # Election dates & periods
 │   └── election_influences # Pre/post-election decision patterns
 │
+├── campaigns/              # 💰 Political campaign finance (FEC data)
+│   ├── candidates         # Federal candidates (House, Senate, President)
+│   ├── committees         # PACs, Super PACs, campaign committees
+│   ├── contributions      # Individual political contributions $200+
+│   └── nonprofit_donors   # Nonprofit leadership political giving analysis
+│
 ├── civic/                  # 🗳️ Google Civic & Wikidata
 │   ├── civic_divisions    # OCD divisions
 │   ├── representatives    # From Google Civic API
@@ -225,7 +231,11 @@ nonprofits_locations.parquet
 nonprofits_irs_eobmf.parquet
 nonprofits_constituents.parquet
 nonprofits_donations.parquet
-nonprofits_campaigns.parquet
+nonprofits_campaigns.parquet        # Nonprofit fundraising campaigns (NOT political)
+campaigns_candidates.parquet        # Political candidates (FEC)
+campaigns_committees.parquet        # Political committees/PACs (FEC)
+campaigns_contributions.parquet     # Political contributions (FEC)
+campaigns_nonprofit_donors.parquet  # Nonprofit leadership political giving (FEC analysis)
 nonprofits_memberships.parquet
 nonprofits_volunteer_activities.parquet
 nonprofits_program_delivery.parquet
@@ -301,10 +311,11 @@ standards-schema-org.parquet
 11. **Wikidata SPARQL** → Entity relationships
 12. **DBpedia** → Wikipedia structured data
 13. **Google Civic** → Representatives
-14. **GitHub API** → Civic tech projects, contributors, issues
-15. **Civic Tech Field Guide** → Curated project taxonomy
-16. **Code for America** → Brigade projects and hackathons
-17. **Digital Public Goods Alliance** → DPG-certified open source projects
+14. **OpenFEC API** → Political contributions, candidates, committees (campaign finance)
+15. **GitHub API** → Civic tech projects, contributors, issues
+16. **Civic Tech Field Guide** → Curated project taxonomy
+17. **Code for America** → Brigade projects and hackathons
+18. **Digital Public Goods Alliance** → DPG-certified open source projects
 
 ### Phase 3: Processing (Gold Layer)
 1. **Meeting Extraction** → Agenda/minutes text
@@ -1673,6 +1684,85 @@ erDiagram
         string chamber
         int vote_yes
         int vote_no
+    }
+    
+    %% ========================================
+    %% POLITICAL CAMPAIGN FINANCE (FEC DATA)
+    %% ========================================
+    %% Data Source: OpenFEC API (https://api.open.fec.gov/developers/)
+    %% Tracks individual political contributions, candidates, and committees
+    %% Links to nonprofits via employer matching and officer name matching
+    
+    JURISDICTION ||--o{ POLITICAL_CANDIDATE : represents
+    POLITICAL_CANDIDATE ||--o{ POLITICAL_CONTRIBUTION : receives
+    POLITICAL_COMMITTEE ||--o{ POLITICAL_CONTRIBUTION : receives
+    ORGANIZATION ||--o{ NONPROFIT_POLITICAL_DONOR : employs
+    POLITICAL_CONTRIBUTION ||--o{ NONPROFIT_POLITICAL_DONOR : matched_from
+    
+    POLITICAL_CANDIDATE {
+        string candidate_id PK "FEC candidate ID"
+        string state_code FK
+        string candidate_name
+        string party "DEM, REP, IND, etc"
+        string office "H=House, S=Senate, P=President"
+        string office_full "House, Senate, President"
+        string district "Congressional district (for House)"
+        string election_year
+        string incumbent_challenge "I=Incumbent, C=Challenger, O=Open"
+        string candidate_status "Active, Inactive"
+        int cycle "Election cycle year"
+        datetime created_at
+    }
+    
+    POLITICAL_COMMITTEE {
+        string committee_id PK "FEC committee ID"
+        string state_code FK
+        string committee_name
+        string committee_type "H=House, S=Senate, P=Presidential, N=PAC, Q=Super PAC"
+        string committee_type_full
+        string designation "P=Principal, A=Authorized, J=Joint"
+        string designation_full
+        string party "DEM, REP, etc"
+        string treasurer_name
+        string organization_type
+        string filing_frequency
+        datetime created_at
+    }
+    
+    POLITICAL_CONTRIBUTION {
+        string contribution_id PK "FEC sub_id"
+        string state_code FK
+        string contributor_name
+        string contributor_city
+        string contributor_state
+        string contributor_zip
+        string contributor_employer "Links to ORGANIZATION"
+        string contributor_occupation
+        float contribution_amount
+        datetime contribution_date
+        string recipient_committee_id FK
+        string recipient_committee_name
+        string candidate_id FK
+        string candidate_name
+        string election_type
+        string entity_type "Individual, Committee, etc"
+        string memo_text
+        datetime created_at
+    }
+    
+    %% Analysis table linking political contributions to nonprofit leadership
+    NONPROFIT_POLITICAL_DONOR {
+        string donor_analysis_id PK
+        string ein FK "Links to ORGANIZATION"
+        string organization_name
+        string contributor_name
+        string contributor_title "Inferred from employer or matched from officers"
+        float contribution_amount
+        datetime contribution_date
+        string recipient_name "Committee or candidate name"
+        string candidate_name
+        string match_method "Employer Name, Officer Name Match"
+        datetime created_at
     }
     
     %% ========================================

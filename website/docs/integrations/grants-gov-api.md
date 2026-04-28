@@ -169,7 +169,7 @@ funding = details['data']['fundingDetails']
 | `openDate` | Application open date | 2024-10-15 |
 | `closeDate` | Application deadline | 2024-12-31 |
 | `opportunityStatus` | Status | posted, forecasted, closed |
-| `cfdaList` | Assistance Listing Numbers | [{"cfdaNumber": "93.223"}] |
+| `cfdaList` | Assistance Listing Numbers | `[{"cfdaNumber": "93.223"}]` |
 | `fundingCategories` | Funding category codes | HL (Health) |
 
 ## Integration with Existing Data

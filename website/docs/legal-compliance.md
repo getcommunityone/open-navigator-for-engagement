@@ -197,28 +197,44 @@ GOOGLE_CIVIC_API_KEY=your-api-key-here
 
 ### FEC / OpenFEC API
 
-**Data Type:** Campaign finance, political contributions  
+**Data Type:** Campaign finance, political contributions, candidate data, committee filings  
 **Source:** [OpenFEC API](https://api.open.fec.gov/developers/)  
+**Bulk Downloads:** [FEC Bulk Data Portal](https://www.fec.gov/data/browse-data/?tab=bulk-data)  
 **License:** Public Domain (U.S. Government Work)  
 **Terms of Use:** [FEC.gov Terms of Use](https://www.fec.gov/updates/sale-or-use-contributor-information/)
 
 **Compliance Status:** ✅ **COMPLIANT**
+
+**API Access:**
 - **Free tier:** 1,000 requests/hour (API key required)
 - **Demo key:** 30 requests/hour (no registration)
 - API key free at [api.data.gov](https://api.data.gov/signup/)
 - Must not use contributor data for commercial solicitation
+
+**Bulk Download Access:**
+- **Free unlimited downloads** of complete datasets (CSV, FEC format)
+- No API key required for bulk downloads
+- Available datasets:
+  - Individual contributions (Schedule A)
+  - Operating expenditures (Schedule B)
+  - Committee master files
+  - Candidate master files
+  - Campaign finance totals by election cycle
+- Updated nightly (most datasets)
+- Complete historical data from 1980s to present
 
 **Implementation:** `discovery/fec_integration.py`
 
 **Use Policy Key Points:**
 - FEC data is public domain
 - **CRITICAL:** Cannot use contributor information for commercial solicitation or fundraising
-- Must comply with API rate limits
+- Must comply with API rate limits (API only)
 - Attribution to FEC required
+- Bulk downloads have no rate limits
 
 **Environment Variable:**
 ```bash
-FEC_API_KEY=your-api-key-here
+FEC_API_KEY=your-api-key-here  # Only needed for API, not bulk downloads
 ```
 
 ---

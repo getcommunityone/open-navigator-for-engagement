@@ -827,10 +827,69 @@ LIMIT 1000
 
 ---
 
+### Federal Election Commission (FEC) - Bulk Data & OpenFEC API
+
+**Organization:** Federal Election Commission (FEC), U.S. Government  
+**What we use:** **PRIMARY SOURCE** for campaign finance data - individual contributions, candidate filings, committee data, and political expenditures for comprehensive campaign finance analysis.
+
+- **OpenFEC API:** https://api.open.fec.gov/developers/
+- **Bulk Data Portal:** https://www.fec.gov/data/browse-data/?tab=bulk-data
+- **Documentation:** https://www.fec.gov/campaign-finance-data/
+- **Coverage:** Complete FEC data from 1980s to present (updated nightly)
+- **Data Included:**
+  - **Individual contributions** $200+ (Schedule A)
+  - **Operating expenditures** (Schedule B)
+  - **Candidate master files** (House, Senate, Presidential)
+  - **Committee master files** (PACs, Super PACs, party committees)
+  - **Campaign finance totals** by election cycle
+  - **Independent expenditures** and electioneering communications
+- **Access Methods:**
+  - **Bulk Downloads:** Free, unlimited, no API key (CSV and FEC format)
+  - **OpenFEC API:** Free with API key (1,000 requests/hour)
+  - **Demo Key:** 30 requests/hour (no registration)
+- **API Key:** Free at https://api.data.gov/signup/
+- **License:** Public Domain (U.S. Government)
+- **Update Frequency:** Nightly (most datasets)
+
+**Use Cases:**
+- Map donor networks and political influence patterns
+- Link nonprofit leadership donations to policy decisions
+- Track campaign finance in health advocacy organizations
+- Analyze funding sources for ballot initiatives
+- Cross-reference contributions with government grant awards
+- "Follow the money" from donor to policy outcome
+
+**Critical Policy Restriction:**
+- ⚠️ **Cannot use contributor data for commercial solicitation or fundraising**
+- FEC data is for transparency and research, not marketing
+
+**BibTeX:**
+```bibtex
+@misc{fec_data_2024,
+  author = {{Federal Election Commission}},
+  title = {Campaign Finance Data and Bulk Downloads},
+  year = {2024},
+  url = {https://www.fec.gov/data/},
+  note = {Updated nightly. Accessed: 2024}
+}
+
+@misc{openfec_api_2024,
+  author = {{Federal Election Commission}},
+  title = {OpenFEC API},
+  year = {2024},
+  url = {https://api.open.fec.gov/developers/},
+  note = {RESTful API for campaign finance data. Accessed: 2024}
+}
+```
+
+**Integration:** `discovery/fec_integration.py`
+
+---
+
 ### ProPublica Campaign Finance API
 
 **Organization:** ProPublica, Inc.  
-**What we use:** Federal Election Commission (FEC) filings, campaign contributions, committee data, and expenditures to analyze the influence of money in politics.
+**What we use:** Simplified access to FEC data with pre-aggregated summaries and top donor analysis (complements direct FEC data access).
 
 - **Source:** https://projects.propublica.org/api-docs/campaign-finance/
 - **API Documentation:** https://projects.propublica.org/api-docs/campaign-finance/
@@ -846,11 +905,13 @@ LIMIT 1000
 - **Rate Limits:** 5,000 requests per day
 - **License:** Free for non-commercial and commercial use with attribution
 
+**Note:** ProPublica API provides easier-to-use summaries of FEC data. For bulk analysis, use FEC Bulk Downloads directly.
+
 **Use Cases:**
-- "Follow the money" - link campaign contributions to policy decisions
-- Analyze donor influence on local and federal officials
-- Track funding sources for ballot initiatives and referendums
-- Political economy analysis: correlate budget decisions with donor interests
+- Quick lookups of candidate finance summaries
+- Pre-aggregated top donor analysis
+- Industry contribution patterns
+- Journalist-friendly data formatting
 
 **BibTeX:**
 ```bibtex

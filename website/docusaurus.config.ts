@@ -66,11 +66,13 @@ const config: Config = {
         theme: {
           customCss: './src/css/custom.css',
         },
-        // Google Analytics - moved from themeConfig
-        gtag: {
-          trackingID: 'G-5EQV815915',
-          anonymizeIP: true,
-        },
+        // Google Analytics - only in production to avoid runtime errors in dev
+        ...(process.env.NODE_ENV === 'production' && {
+          gtag: {
+            trackingID: 'G-5EQV815915',
+            anonymizeIP: true,
+          },
+        }),
       } satisfies Preset.Options,
     ],
   ],

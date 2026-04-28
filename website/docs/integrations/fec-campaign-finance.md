@@ -4,22 +4,29 @@ sidebar_position: 7
 
 # FEC Campaign Finance Integration
 
-Track political contributions and campaign finance data using the **Federal Election Commission (FEC) API**.
+Track political contributions and campaign finance data using the **Federal Election Commission (FEC)** via **OpenFEC API** and **Bulk Downloads**.
 
 ## 🎯 Overview
 
 The FEC integration enables tracking of:
-- Individual political contributions
+- Individual political contributions ($200+)
 - Federal candidates (House, Senate, President)
 - Political committees and PACs
 - Nonprofit leadership political giving
 - Donor networks in advocacy organizations
+- Campaign expenditures and disbursements
+
+**Two access methods:**
+1. **OpenFEC API** - Real-time queries, filtered searches (API key required)
+2. **Bulk Downloads** - Complete datasets, no rate limits (no API key needed)
 
 This data integrates with nonprofit and contacts data to reveal political influence patterns.
 
 ## 🔑 Get API Access
 
-### 1. Sign Up for Free API Key
+### OpenFEC API (Real-time Queries)
+
+**1. Sign Up for Free API Key**
 
 Visit: **https://api.data.gov/signup/**
 
@@ -27,7 +34,7 @@ Visit: **https://api.data.gov/signup/**
 - No credit card required
 - Instant activation
 
-### 2. Set Environment Variable
+**2. Set Environment Variable**
 
 ```bash
 # Add to your .env file
@@ -38,6 +45,36 @@ export FEC_API_KEY="your_api_key_here"
 ```
 
 Without an API key, you'll use `DEMO_KEY` (limited to 30 requests/hour).
+
+### Bulk Downloads (Complete Datasets)
+
+**No API key required!** Download complete datasets directly:
+
+**Bulk Data Portal:** https://www.fec.gov/data/browse-data/?tab=bulk-data
+
+**Available datasets:**
+- **Contributions** (Schedule A) - All individual contributions $200+
+- **Expenditures** (Schedule B) - All operating expenditures
+- **Candidate Master** - All federal candidates
+- **Committee Master** - All PACs and committees
+- **Campaign Finance Totals** - Summary by cycle
+
+**Format:** CSV, FEC format  
+**Update Frequency:** Nightly  
+**Historical Coverage:** 1980s to present  
+**Rate Limits:** None (direct download)  
+
+**When to use bulk downloads:**
+- Analyzing complete datasets (millions of records)
+- Historical analysis across election cycles
+- Offline analysis without API rate limits
+- Data warehousing and archival
+
+**When to use API:**
+- Real-time contribution lookups
+- Filtered searches (by name, employer, state)
+- Incremental updates
+- Web application queries
 
 ## 📊 Gold Tables Created
 
@@ -145,6 +182,100 @@ grant_recipients = grants['organization_name'].unique()
 overlap = set(donor_orgs) & set(grant_recipients)
 print(f"Organizations that both donate politically and receive grants: {len(overlap)}")
 ```
+
+## 💾 Using Bulk Downloads
+
+For large-scale analysis, use FEC bulk downloads instead of the API:
+
+### Download Complete Datasets
+
+```bash
+# Download candidate master file (all federal candidates)
+wget https://www.fec.gov/files/bulk-downloads/2024/cn24.zip
+unzip cn24.zip
+
+# Download committee master file (all PACs and committees)
+wget https://www.fec.gov/files/bulk-downloads/2024/cm24.zip
+unzip cm24.zip
+
+# Download individual contributions (Schedule A)
+# Warning: Very large file (100s of MB to GBs)
+wget https://www.fec.gov/files/bulk-downloads/2024/indiv24.zip
+unzip indiv24.zip
+```
+
+### Process Bulk Data with Pandas
+
+```python
+import pandas as pd
+from pathlib import Path
+
+# Load contributions for specific cycle
+contributions_file = Path("data/fec/bulk/indiv24.txt")
+df = pd.read_csv(
+    contributions_file,
+    sep="|",
+    header=None,
+    names=[
+        "CMTE_ID", "AMNDT_IND", "RPT_TP", "TRANSACTION_PGI",
+        "IMAGE_NUM", "TRANSACTION_TP", "ENTITY_TP", "NAME",
+        "CITY", "STATE", "ZIP_CODE", "EMPLOYER", "OCCUPATION",
+        "TRANSACTION_DT", "TRANSACTION_AMT", "OTHER_ID",
+        "TRAN_ID", "FILE_NUM", "MEMO_CD", "MEMO_TEXT", "SUB_ID"
+    ],
+    encoding="latin1",
+    low_memory=False
+)
+
+# Filter to Massachusetts contributors
+ma_contributions = df[df['STATE'] == 'MA']
+
+# Filter to health sector
+health_donors = ma_contributions[
+    ma_contributions['EMPLOYER'].str.contains('Health|Hospital|Dental', case=False, na=False)
+]
+
+print(f"Found {len(health_donors):,} health sector contributions from MA")
+print(f"Total amount: ${health_donors['TRANSACTION_AMT'].sum():,.2f}")
+
+# Save to parquet for faster future access
+health_donors.to_parquet('data/gold/states/MA/campaigns_contributions.parquet')
+```
+
+### Bulk Download File Formats
+
+**Candidate Master File (cn.txt):**
+- Delimiter: Pipe (`|`)
+- Columns: `CAND_ID`, `CAND_NAME`, `CAND_PTY_AFFILIATION`, `CAND_ELECTION_YR`, `CAND_OFFICE_ST`, `CAND_OFFICE`, `CAND_OFFICE_DISTRICT`, etc.
+
+**Committee Master File (cm.txt):**
+- Delimiter: Pipe (`|`)
+- Columns: `CMTE_ID`, `CMTE_NM`, `TRES_NM`, `CMTE_CITY`, `CMTE_ST`, `CMTE_TP`, `CMTE_PTY_AFFILIATION`, etc.
+
+**Individual Contributions (indiv.txt):**
+- Delimiter: Pipe (`|`)
+- Columns: `CMTE_ID`, `NAME`, `CITY`, `STATE`, `ZIP_CODE`, `EMPLOYER`, `OCCUPATION`, `TRANSACTION_DT`, `TRANSACTION_AMT`, etc.
+- Contains all contributions $200+ as required by law
+
+### Advantages of Bulk Downloads
+
+✅ **Complete data** - No pagination, no missing records  
+✅ **No rate limits** - Download once, analyze forever  
+✅ **Historical data** - Access to all election cycles  
+✅ **Offline analysis** - No API dependency  
+✅ **Faster processing** - Local files vs HTTP requests  
+
+### When to Use Each Method
+
+| Scenario | Method | Reason |
+|----------|--------|--------|
+| Find specific donor | API | Filtered search, fast lookup |
+| All MA contributions | Bulk Download | Complete dataset, no limits |
+| Real-time updates | API | Latest filings |
+| Historical analysis | Bulk Download | Multi-cycle coverage |
+| Web application | API | Dynamic queries |
+| Research/analysis | Bulk Download | Full data access |
+
 
 ## 🛠️ API Reference
 

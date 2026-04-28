@@ -418,7 +418,7 @@ if __name__ == "__main__":
 ## 🔗 Resources
 
 - [Legal Compliance Documentation](../legal-compliance.md)
-- [Citations & Data Sources](./citations.md)
+- [Citations & Data Sources](../data-sources/citations.md)
 - [API Integration Status](https://github.com/getcommunityone/open-navigator-for-engagement/blob/main/docs/API_INTEGRATION_STATUS.md)
 - [Project License (MIT)](https://github.com/getcommunityone/open-navigator-for-engagement/blob/main/LICENSE)
 
