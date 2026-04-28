@@ -1,17 +1,25 @@
 """  
-Create Contacts Gold Tables from Meeting Data
+Create Contacts Gold Tables from Meeting Data and Nonprofit 990 Filings
 
-Extract structured contact information from meeting transcripts:
+Extract structured contact information from meeting transcripts and IRS 990 data:
 - Local officials (mayors, council members, commissioners)
 - State legislators (from Open States API)
 - School board members
+- Nonprofit officers and board members (from IRS 990 Schedule J)
 
 Gold Tables Created:
 1. contacts_local_officials - Extracted from meeting roll calls
 2. contacts_state_legislators - From Open States API  
 3. contacts_school_board - School board members
+4. contacts_nonprofit_officers - Officers, directors, trustees from IRS 990
 
-Input: data/gold/national/meetings_transcripts.parquet
+Versioned Tables (Annual Snapshots):
+- contacts_nonprofit_officers_YYYY - Annual snapshots for historical tracking
+- contacts_nonprofit_officers_history - Combined history across all years
+
+Input: 
+- data/gold/national/meetings_transcripts.parquet
+- data/gold/nonprofits_organizations.parquet (with bigquery_officers field)
 Output: data/gold/contacts_*.parquet
 """
 
@@ -288,6 +296,158 @@ class ContactsGoldTableCreator:
         
         return legislators_df
     
+    def create_contacts_nonprofit_officers(self, snapshot_year: Optional[int] = None) -> pd.DataFrame:
+        """
+        Create contacts_nonprofit_officers gold table from IRS 990 Schedule J data
+        
+        Extracts officers, directors, and key employees from Form 990 filings
+        stored in the bigquery_officers JSON field.
+        
+        Args:
+            snapshot_year: If provided, creates versioned snapshot for this tax year
+        
+        Returns:
+            DataFrame with officer contact information
+        """
+        current_year = snapshot_year or datetime.now().year
+        logger.info(f"Creating contacts_nonprofit_officers gold table for year {current_year}...")
+        
+        # Load nonprofits with BigQuery officer data
+        nonprofits_file = self.meetings_gold_dir / "nonprofits_organizations.parquet"
+        
+        if not nonprofits_file.exists():
+            logger.warning(f"⚠️  Nonprofits file not found: {nonprofits_file}")
+            logger.warning("   Run BigQuery enrichment first:")
+            logger.warning("   python scripts/enrich_nonprofits_bigquery.py --input ... --output ...")
+            return pd.DataFrame()
+        
+        logger.info(f"Loading nonprofits from: {nonprofits_file}")
+        nonprofits_df = pd.read_parquet(nonprofits_file)
+        
+        # Check for bigquery_officers field
+        if 'bigquery_officers' not in nonprofits_df.columns:
+            logger.warning("⚠️  No 'bigquery_officers' field found in nonprofits data")
+            logger.warning("   Enrich with BigQuery first using --include-officers")
+            return pd.DataFrame()
+        
+        # Parse officer data from JSON
+        import json
+        
+        officers = []
+        for _, org in nonprofits_df.iterrows():
+            if not org.get('bigquery_officers'):
+                continue
+            
+            try:
+                officers_list = json.loads(org['bigquery_officers'])
+            except (json.JSONDecodeError, TypeError):
+                continue
+            
+            for officer in officers_list:
+                officers.append({
+                    # Officer info
+                    'name': officer.get('name'),
+                    'title': officer.get('title'),
+                    'compensation': officer.get('compensation'),
+                    'hours_per_week': officer.get('hours_per_week'),
+                    
+                    # Organization info
+                    'organization_ein': org.get('ein'),
+                    'organization_name': org.get('organization_name') or org.get('name'),
+                    'organization_ntee_code': org.get('ntee_code'),
+                    'organization_type': 'nonprofit',
+                    
+                    # Location
+                    'state': org.get('state'),
+                    'city': org.get('city'),
+                    'zip_code': org.get('zip_code'),
+                    
+                    # Metadata
+                    'snapshot_year': org.get('bigquery_officers_tax_year') or current_year,
+                    'source': 'irs_990_schedule_j',
+                    'contact_type': 'nonprofit_officer',
+                    'extracted_date': datetime.now().strftime('%Y-%m-%d'),
+                })
+        
+        if not officers:
+            logger.warning("⚠️  No officer data found in nonprofits")
+            return pd.DataFrame()
+        
+        contacts_df = pd.DataFrame(officers)
+        
+        logger.success(f"✅ Extracted {len(contacts_df):,} officer contacts")
+        logger.info(f"   Unique officers: {contacts_df['name'].nunique():,}")
+        logger.info(f"   Unique organizations: {contacts_df['organization_ein'].nunique():,}")
+        logger.info(f"   With compensation data: {contacts_df['compensation'].notna().sum():,}")
+        
+        # Calculate statistics
+        if snapshot_year:
+            year_contacts = contacts_df[contacts_df['snapshot_year'] == snapshot_year]
+            logger.info(f"   Year {snapshot_year} contacts: {len(year_contacts):,}")
+        
+        # Save versioned snapshot if year specified
+        if snapshot_year:
+            snapshot_file = self.output_dir / f"contacts_nonprofit_officers_{snapshot_year}.parquet"
+            contacts_df.to_parquet(snapshot_file, index=False)
+            logger.success(f"✅ Saved snapshot: {snapshot_file}")
+        
+        # Save current year
+        output_path = self.output_dir / "contacts_nonprofit_officers.parquet"
+        contacts_df.to_parquet(output_path, index=False)
+        logger.success(f"✅ Saved: {output_path}")
+        
+        return contacts_df
+    
+    def create_nonprofit_officers_history(self, years: Optional[List[int]] = None) -> pd.DataFrame:
+        """
+        Create historical view of nonprofit officers across multiple years
+        
+        Combines annual snapshots to show officer turnover and compensation changes
+        
+        Args:
+            years: List of years to include (default: last 3 years)
+        
+        Returns:
+            DataFrame with historical officer data
+        """
+        if years is None:
+            current_year = datetime.now().year
+            years = [current_year, current_year - 1, current_year - 2]
+        
+        logger.info(f"Creating nonprofit officers history for years: {years}")
+        
+        # Load all available snapshot files
+        snapshot_files = []
+        for year in years:
+            snapshot_file = self.output_dir / f"contacts_nonprofit_officers_{year}.parquet"
+            if snapshot_file.exists():
+                snapshot_files.append((year, snapshot_file))
+            else:
+                logger.warning(f"⚠️  Snapshot for {year} not found: {snapshot_file}")
+        
+        if not snapshot_files:
+            logger.warning("⚠️  No snapshot files found")
+            return pd.DataFrame()
+        
+        # Combine all snapshots
+        dfs = []
+        for year, file_path in snapshot_files:
+            df = pd.read_parquet(file_path)
+            logger.info(f"   Loaded {len(df):,} contacts from {year}")
+            dfs.append(df)
+        
+        history_df = pd.concat(dfs, ignore_index=True)
+        
+        # Save combined history
+        output_path = self.output_dir / "contacts_nonprofit_officers_history.parquet"
+        history_df.to_parquet(output_path, index=False)
+        logger.success(f"✅ Saved history: {output_path}")
+        logger.info(f"   Total historical records: {len(history_df):,}")
+        logger.info(f"   Years covered: {sorted(history_df['snapshot_year'].unique())}")
+        logger.info(f"   Unique officers: {history_df['name'].nunique():,}")
+        
+        return history_df
+    
     def create_contacts_school_board(self) -> pd.DataFrame:
         """
         Create contacts_school_board gold table
@@ -308,8 +468,13 @@ class ContactsGoldTableCreator:
         
         return school_board_df
     
-    def create_all_contacts_tables(self):
-        """Create all contacts gold tables"""
+    def create_all_contacts_tables(self, include_nonprofit_officers: bool = True, snapshot_years: Optional[List[int]] = None):
+        """Create all contacts gold tables
+        
+        Args:
+            include_nonprofit_officers: Whether to create nonprofit officer contacts
+            snapshot_years: Years for nonprofit officer snapshots (default: current + last 2 years)
+        """
         logger.info("=" * 60)
         logger.info("CREATING CONTACTS GOLD TABLES")
         logger.info("=" * 60)
@@ -318,6 +483,22 @@ class ContactsGoldTableCreator:
         self.create_contacts_local_officials()
         self.create_contacts_state_legislators()
         self.create_contacts_school_board()
+        
+        if include_nonprofit_officers:
+            if snapshot_years is None:
+                current_year = datetime.now().year
+                snapshot_years = [current_year, current_year - 1, current_year - 2]
+            
+            # Create current year snapshot
+            self.create_contacts_nonprofit_officers(snapshot_year=snapshot_years[0])
+            
+            # Create snapshots for historical years if data exists
+            for year in snapshot_years[1:]:
+                logger.info(f"\n📅 Creating snapshot for {year}...")
+                self.create_contacts_nonprofit_officers(snapshot_year=year)
+            
+            # Create combined history
+            self.create_nonprofit_officers_history(years=snapshot_years)
         
         logger.success("=" * 60)
         logger.success("ALL CONTACTS GOLD TABLES CREATED!")

@@ -20,6 +20,7 @@ import Hackathons from './pages/Hackathons'
 import OpenSource from './pages/OpenSource'
 import AdvocacyTopics from './pages/AdvocacyTopics'
 import FactChecking from './pages/FactChecking'
+import UnifiedSearch from './pages/UnifiedSearch'
 
 function App() {
   return (
@@ -35,6 +36,7 @@ function App() {
       {/* All other pages with sidebar layout */}
       <Route path="/" element={<Layout />}>
         <Route path="explore" element={<Explore />} />
+        <Route path="search" element={<UnifiedSearch />} />
         <Route path="dashboard" element={<Dashboard />} />
         <Route path="analytics" element={<Analytics />} />
         <Route path="people" element={<PeopleFinder />} />

@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { MapPinIcon, MagnifyingGlassIcon } from '@heroicons/react/24/outline'
+import { stateNameToCode } from '../utils/stateMapping'
 
 interface LocationData {
   address: string
@@ -79,9 +80,14 @@ export default function AddressLookup({ onLocationFound, initialAddress = '', co
   const processResult = (result: any) => {
     const addr = result.address
 
+    // Convert state name to 2-letter code
+    const stateName = addr.state || ''
+    const stateCode = stateNameToCode(stateName)
+    console.log(`🗺️ [AddressLookup] State conversion: "${stateName}" → "${stateCode}"`)
+
     const locationData: LocationData = {
       address: result.display_name,
-      state: addr.state || '',
+      state: stateCode,
       county: addr.county || '',
       city: addr.city || addr.town || addr.village || addr.municipality || '',
       latitude: parseFloat(result.lat),
@@ -95,6 +101,7 @@ export default function AddressLookup({ onLocationFound, initialAddress = '', co
       return
     }
 
+    console.log('📍 [AddressLookup] Location found:', locationData)
     setSuggestions([])
     setFoundLocation(locationData)
     onLocationFound(locationData)

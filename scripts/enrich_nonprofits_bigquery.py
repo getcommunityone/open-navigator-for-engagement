@@ -54,13 +54,14 @@ class BigQueryNonprofitEnricher:
             logger.error("  gcloud auth application-default login")
             raise
     
-    def build_query(self, eins: list[str], years: list[str] = None) -> str:
+    def build_query(self, eins: list[str], years: list[str] = None, include_officers: bool = True) -> str:
         """
-        Build SQL query to extract missions and websites for given EINs.
+        Build SQL query to extract missions, websites, and officer data for given EINs.
         
         Args:
             eins: List of EIN strings to query
             years: List of tax years to query (default: ['2023', '2022', '2021'])
+            include_officers: Whether to include officer/board member data from Schedule J
         
         Returns:
             SQL query string
@@ -108,41 +109,110 @@ class BigQueryNonprofitEnricher:
 )""")
             union_selects.append(f"SELECT * FROM {cte_ez_name}")
         
+        # Add officer data CTEs if requested
+        if include_officers:
+            for year in years:
+                officer_cte = f'officers_{year}'
+                ctes.append(f"""
+{officer_cte} AS (
+  SELECT 
+    ein,
+    person_name,
+    title_txt AS title,
+    compensation_amount,
+    average_hours_per_week,
+    '{year}' AS tax_year
+  FROM `bigquery-public-data.irs_990.irs_990_schedule_j_{year}`
+  WHERE ein IN ({ein_list})
+    AND person_name IS NOT NULL
+)""")
+        
         # Combine all CTEs
         query = "WITH\n" + ",\n".join(ctes) + "\n\n"
         
         # Union all results and deduplicate (prefer most recent year)
         query += """
--- Combine all sources and deduplicate (prefer most recent)
-SELECT 
-  ein,
-  FIRST_VALUE(mission) OVER (PARTITION BY ein ORDER BY tax_year DESC, form_type) AS mission,
-  FIRST_VALUE(website) OVER (PARTITION BY ein ORDER BY tax_year DESC, form_type) AS website,
-  FIRST_VALUE(tax_year) OVER (PARTITION BY ein ORDER BY tax_year DESC, form_type) AS tax_year,
-  FIRST_VALUE(form_type) OVER (PARTITION BY ein ORDER BY tax_year DESC, form_type) AS form_type
-FROM (
-  """ + "\n  UNION ALL\n  ".join(union_selects) + """
+-- Combine financial data sources and deduplicate (prefer most recent)
+financial_data AS (
+  SELECT 
+    ein,
+    FIRST_VALUE(mission) OVER (PARTITION BY ein ORDER BY tax_year DESC, form_type) AS mission,
+    FIRST_VALUE(website) OVER (PARTITION BY ein ORDER BY tax_year DESC, form_type) AS website,
+    FIRST_VALUE(tax_year) OVER (PARTITION BY ein ORDER BY tax_year DESC, form_type) AS tax_year,
+    FIRST_VALUE(form_type) OVER (PARTITION BY ein ORDER BY tax_year DESC, form_type) AS form_type
+  FROM (
+    """ + "\n    UNION ALL\n    ".join(union_selects) + """
+  )
+  QUALIFY ROW_NUMBER() OVER (PARTITION BY ein ORDER BY tax_year DESC, form_type) = 1
+)"""
+        
+        if include_officers:
+            # Aggregate officers into JSON array
+            query += """,
+
+-- Aggregate officers by EIN (most recent year)
+officer_data AS (
+  SELECT 
+    ein,
+    tax_year,
+    ARRAY_AGG(
+      STRUCT(
+        person_name AS name,
+        title,
+        compensation_amount AS compensation,
+        average_hours_per_week AS hours_per_week
+      ) 
+      ORDER BY compensation_amount DESC NULLS LAST
+    ) AS officers
+  FROM (
+    SELECT *,
+      ROW_NUMBER() OVER (PARTITION BY ein ORDER BY tax_year DESC) AS rn
+    FROM (
+      """ + "\n      UNION ALL\n      ".join([f"SELECT * FROM officers_{year}" for year in years]) + """
+    )
+  )
+  WHERE rn = 1
+  GROUP BY ein, tax_year
 )
-QUALIFY ROW_NUMBER() OVER (PARTITION BY ein ORDER BY tax_year DESC, form_type) = 1
+
+-- Final join
+SELECT 
+  f.ein,
+  f.mission,
+  f.website,
+  f.tax_year,
+  f.form_type,
+  o.officers,
+  o.tax_year AS officers_tax_year
+FROM financial_data f
+LEFT JOIN officer_data o USING (ein)
+ORDER BY f.ein;
+"""
+        else:
+            query += """
+SELECT * FROM financial_data
 ORDER BY ein;
 """
         
         return query
     
-    def query_bigquery(self, eins: list[str], years: list[str] = None) -> pd.DataFrame:
+    def query_bigquery(self, eins: list[str], years: list[str] = None, include_officers: bool = True) -> pd.DataFrame:
         """
-        Query BigQuery for mission and website data.
+        Query BigQuery for mission, website, and officer data.
         
         Args:
             eins: List of EIN strings
             years: List of tax years to query
+            include_officers: Whether to include officer/board member data
         
         Returns:
-            DataFrame with columns: ein, mission, website, tax_year, form_type
+            DataFrame with columns: ein, mission, website, tax_year, form_type, officers (if include_officers=True)
         """
-        query = self.build_query(eins, years)
+        query = self.build_query(eins, years, include_officers)
         
         logger.info(f"🔍 Querying BigQuery for {len(eins):,} EINs...")
+        if include_officers:
+            logger.info("   Including officer and board member data")
         logger.debug(f"Query length: {len(query):,} characters")
         
         try:
@@ -156,39 +226,49 @@ ORDER BY ein;
             logger.info(f"✅ BigQuery returned {len(df):,} records")
             logger.info(f"   Missions: {df['mission'].notna().sum():,}")
             logger.info(f"   Websites: {df['website'].notna().sum():,}")
+            if include_officers and 'officers' in df.columns:
+                orgs_with_officers = df['officers'].apply(lambda x: x is not None and len(x) > 0).sum()
+                logger.info(f"   Organizations with officers: {orgs_with_officers:,}")
             
             return df
             
         except Exception as e:
             logger.error(f"❌ BigQuery query failed: {e}")
             # Return empty DataFrame with correct schema
-            return pd.DataFrame(columns=['ein', 'mission', 'website', 'tax_year', 'form_type'])
+            base_cols = ['ein', 'mission', 'website', 'tax_year', 'form_type']
+            if include_officers:
+                base_cols.extend(['officers', 'officers_tax_year'])
+            return pd.DataFrame(columns=base_cols)
     
     def enrich_dataframe(
         self, 
         df: pd.DataFrame, 
         ein_column: str = 'ein',
-        years: list[str] = None
+        years: list[str] = None,
+        include_officers: bool = True
     ) -> pd.DataFrame:
         """
-        Enrich a DataFrame with BigQuery mission and website data.
+        Enrich a DataFrame with BigQuery mission, website, and officer data.
         
         Args:
             df: Input DataFrame with EIN column
             ein_column: Name of the EIN column
             years: Tax years to query
+            include_officers: Whether to include officer/board member data
         
         Returns:
-            Enriched DataFrame with bigquery_mission, bigquery_website, etc.
+            Enriched DataFrame with bigquery_mission, bigquery_website, bigquery_officers, etc.
         """
         logger.info(f"📊 Enriching {len(df):,} organizations from BigQuery")
+        if include_officers:
+            logger.info("   Including officer and board member data")
         
         # Get unique EINs
         eins = df[ein_column].dropna().unique().tolist()
         logger.info(f"   Unique EINs: {len(eins):,}")
         
         # Query BigQuery
-        bq_data = self.query_bigquery(eins, years)
+        bq_data = self.query_bigquery(eins, years, include_officers)
         
         if len(bq_data) == 0:
             logger.warning("⚠️  No data returned from BigQuery")
@@ -198,15 +278,30 @@ ORDER BY ein;
             df['bigquery_tax_year'] = None
             df['bigquery_form_type'] = None
             df['bigquery_updated_date'] = None
+            if include_officers:
+                df['bigquery_officers'] = None
+                df['bigquery_officers_tax_year'] = None
             return df
         
         # Rename columns to avoid conflicts
-        bq_data = bq_data.rename(columns={
+        rename_map = {
             'mission': 'bigquery_mission',
             'website': 'bigquery_website',
             'tax_year': 'bigquery_tax_year',
             'form_type': 'bigquery_form_type'
-        })
+        }
+        if include_officers and 'officers' in bq_data.columns:
+            rename_map['officers'] = 'bigquery_officers'
+            rename_map['officers_tax_year'] = 'bigquery_officers_tax_year'
+        
+        bq_data = bq_data.rename(columns=rename_map)
+        
+        # Convert officers array to JSON string for storage
+        if include_officers and 'bigquery_officers' in bq_data.columns:
+            import json
+            bq_data['bigquery_officers'] = bq_data['bigquery_officers'].apply(
+                lambda x: json.dumps([dict(o) for o in x]) if x and len(x) > 0 else None
+            )
         
         # Add timestamp
         from datetime import datetime
@@ -232,6 +327,10 @@ ORDER BY ein;
         logger.info(f"✅ Enrichment complete:")
         logger.info(f"   Added missions: {missions_added:,} ({100*missions_added/len(enriched):.1f}%)")
         logger.info(f"   Added websites: {websites_added:,} ({100*websites_added/len(enriched):.1f}%)")
+        
+        if include_officers and 'bigquery_officers' in enriched.columns:
+            officers_added = enriched['bigquery_officers'].notna().sum()
+            logger.info(f"   Added officers: {officers_added:,} ({100*officers_added/len(enriched):.1f}%)")
         
         return enriched
 

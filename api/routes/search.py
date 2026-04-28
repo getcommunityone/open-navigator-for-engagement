@@ -6,6 +6,7 @@ from fastapi import APIRouter, Query, HTTPException
 from typing import Optional, List, Dict, Any
 from pathlib import Path
 import pandas as pd
+import duckdb
 from loguru import logger
 import re
 
@@ -70,57 +71,189 @@ def calculate_relevance_score(text: str, query: str) -> float:
 
 
 def search_contacts(query: str, state: Optional[str] = None, limit: int = 10) -> List[SearchResult]:
-    """Search local officials"""
+    """Search local officials AND nonprofit officers using DuckDB for fast Parquet queries"""
     results = []
     
     try:
-        # Search state files first
-        if state:
-            contact_files = list(GOLD_DIR.glob(f"states/{state}/contacts_local_officials.parquet"))
-        else:
-            contact_files = list(GOLD_DIR.glob("states/*/contacts_local_officials.parquet"))
+        # Initialize DuckDB connection
+        conn = duckdb.connect()
         
-        for file_path in contact_files[:5]:  # Limit to 5 states for performance
+        # Search 1: Local Officials
+        if state:
+            local_file_pattern = f"{GOLD_DIR}/states/{state}/contacts_local_officials.parquet"
+            local_file_paths = [Path(local_file_pattern)]
+        else:
+            local_file_pattern = f"{GOLD_DIR}/states/*/contacts_local_officials.parquet"
+            local_file_paths = list(GOLD_DIR.glob("states/*/contacts_local_officials.parquet"))[:5]
+        
+        logger.info(f"Searching {len(local_file_paths)} local official contact files")
+        
+        for file_path in local_file_paths:
+            if not file_path.exists():
+                continue
+            
             try:
-                df = pd.read_parquet(file_path)
-                state_code = file_path.parent.name
+                # SQL query with relevance scoring across name, title, jurisdiction
+                sql = """
+                    SELECT 
+                        name,
+                        title,
+                        jurisdiction,
+                        state,
+                        GREATEST(
+                            CASE 
+                                WHEN LOWER(name) LIKE LOWER(?) THEN 1.5
+                                WHEN LOWER(name) LIKE LOWER(?) THEN 1.0
+                                ELSE 0.0
+                            END,
+                            CASE 
+                                WHEN LOWER(title) LIKE LOWER(?) THEN 1.5
+                                WHEN LOWER(title) LIKE LOWER(?) THEN 1.0
+                                ELSE 0.0
+                            END,
+                            CASE 
+                                WHEN LOWER(jurisdiction) LIKE LOWER(?) THEN 1.5
+                                WHEN LOWER(jurisdiction) LIKE LOWER(?) THEN 1.0
+                                ELSE 0.0
+                            END
+                        ) as score
+                    FROM read_parquet(?)
+                    WHERE LOWER(name) LIKE LOWER(?) 
+                       OR LOWER(title) LIKE LOWER(?) 
+                       OR LOWER(jurisdiction) LIKE LOWER(?)
+                    ORDER BY score DESC
+                    LIMIT ?
+                """
                 
-                # Search in name, title, jurisdiction
-                for _, row in df.iterrows():
-                    name = str(row.get('official_name', ''))
-                    title = str(row.get('title', ''))
-                    jurisdiction = str(row.get('jurisdiction_name', ''))
-                    
-                    score = max(
-                        calculate_relevance_score(name, query),
-                        calculate_relevance_score(title, query),
-                        calculate_relevance_score(jurisdiction, query)
-                    )
+                query_pattern = f'%{query}%'
+                query_start = f'{query}%'
+                
+                rows = conn.execute(sql, [
+                    query_start, query_pattern,  # name scoring
+                    query_start, query_pattern,  # title scoring
+                    query_start, query_pattern,  # jurisdiction scoring
+                    str(file_path),              # file path
+                    query_pattern, query_pattern, query_pattern,  # WHERE clause
+                    limit
+                ]).fetchall()
+                
+                # Convert to SearchResult objects
+                for row in rows:
+                    name, title, jurisdiction, state_code, score = row
                     
                     if score > 0.3:  # Relevance threshold
                         results.append(SearchResult(
                             result_type="contact",
-                            title=name,
+                            title=name if name else "Unknown",
                             subtitle=f"{title} - {jurisdiction}, {state_code}",
                             description=f"Local official in {jurisdiction}",
-                            url=f"/people?official={row.get('official_id', '')}",
+                            url=f"/people/{name.replace(' ', '-') if name else 'unknown'}",
                             score=score,
                             metadata={
                                 "title": title,
                                 "jurisdiction": jurisdiction,
                                 "state": state_code,
-                                "official_id": row.get('official_id', '')
+                                "name": name
                             }
                         ))
+                
             except Exception as e:
                 logger.debug(f"Error searching {file_path}: {e}")
+        
+        # Search nonprofit officers if available
+        nonprofit_file = GOLD_DIR / "contacts_nonprofit_officers.parquet"
+        if nonprofit_file.exists():
+            try:
+                logger.info(f"Searching nonprofit officers: {nonprofit_file}")
+                
+                officer_sql = """
+                    SELECT 
+                        name,
+                        title,
+                        organization_name,
+                        city,
+                        state,
+                        compensation,
+                        GREATEST(
+                            CASE 
+                                WHEN LOWER(name) LIKE LOWER(?) THEN 1.5
+                                WHEN LOWER(name) LIKE LOWER(?) THEN 1.0
+                                ELSE 0.0
+                            END,
+                            CASE 
+                                WHEN LOWER(title) LIKE LOWER(?) THEN 1.0
+                                WHEN LOWER(title) LIKE LOWER(?) THEN 0.5
+                                ELSE 0.0
+                            END,
+                            CASE 
+                                WHEN LOWER(organization_name) LIKE LOWER(?) THEN 1.0
+                                WHEN LOWER(organization_name) LIKE LOWER(?) THEN 0.5
+                                ELSE 0.0
+                            END
+                        ) AS score
+                    FROM read_parquet(?)
+                    WHERE (LOWER(name) LIKE LOWER(?) 
+                       OR LOWER(title) LIKE LOWER(?) 
+                       OR LOWER(organization_name) LIKE LOWER(?))
+                """
+                
+                query_pattern = f'%{query}%'
+                query_start = f'{query}%'
+                params = [
+                    query_start, query_pattern,  # name scoring
+                    query_start, query_pattern,  # title scoring  
+                    query_start, query_pattern,  # organization scoring
+                    str(nonprofit_file),
+                    query_pattern, query_pattern, query_pattern  # WHERE clause
+                ]
+                
+                if state:
+                    officer_sql += " AND LOWER(state) = LOWER(?)"
+                    params.append(state)
+                
+                officer_sql += " ORDER BY score DESC, compensation DESC NULLS LAST LIMIT ?"
+                params.append(limit)
+                
+                officer_rows = conn.execute(officer_sql, params).fetchall()
+                
+                for row in officer_rows:
+                    name, title, org_name, city, state_code, compensation, score = row
+                    
+                    if score > 0.3:
+                        comp_text = f" (${compensation:,.0f})" if compensation else ""
+                        
+                        results.append(SearchResult(
+                            result_type="contact",
+                            title=name if name else "Unknown",
+                            subtitle=f"{title} - {org_name}{comp_text}",
+                            description=f"Nonprofit officer in {city}, {state_code}",
+                            url=f"/nonprofits?name={org_name.replace(' ', '-') if org_name else 'unknown'}",
+                            score=score,
+                            metadata={
+                                "title": title,
+                                "organization": org_name,
+                                "city": city,
+                                "state": state_code,
+                                "compensation": compensation,
+                                "contact_type": "nonprofit_officer"
+                            }
+                        ))
+                
+                logger.info(f"Found {len([r for r in results if r.metadata.get('contact_type') == 'nonprofit_officer'])} nonprofit officer results")
+                
+            except Exception as e:
+                logger.debug(f"Error searching nonprofit officers: {e}")
+        
+        conn.close()
+        
+        # Sort all results by score and limit
+        results.sort(key=lambda x: x.score, reverse=True)
+        logger.info(f"DuckDB search found {len(results)} contacts for query '{query}'")
+        return results[:limit]
     
     except Exception as e:
         logger.error(f"Contact search error: {e}")
-    
-    # Sort by score and limit
-    results.sort(key=lambda x: x.score, reverse=True)
-    return results[:limit]
+        return results
 
 
 def search_meetings(query: str, state: Optional[str] = None, limit: int = 10) -> List[SearchResult]:
@@ -181,64 +314,94 @@ def search_meetings(query: str, state: Optional[str] = None, limit: int = 10) ->
 
 
 def search_organizations(query: str, state: Optional[str] = None, ntee_code: Optional[str] = None, limit: int = 10) -> List[SearchResult]:
-    """Search nonprofit organizations"""
+    """Search nonprofit organizations using DuckDB for fast Parquet queries"""
     results = []
     
     try:
-        # Search state organization files
+        # Determine file path
         if state:
-            org_files = list(GOLD_DIR.glob(f"states/{state}/nonprofits_organizations.parquet"))
+            file_pattern = f"{GOLD_DIR}/states/{state}/nonprofits_organizations.parquet"
         else:
-            # Search national file for better performance
-            org_files = list(GOLD_DIR.glob("national/nonprofits_organizations.parquet"))
+            file_pattern = f"{GOLD_DIR}/national/nonprofits_organizations.parquet"
         
-        for file_path in org_files[:1]:  # Limit to 1 file for performance
-            try:
-                df = pd.read_parquet(file_path)
-                
-                # Filter by NTEE code if provided
-                if ntee_code:
-                    df = df[df['ntee_code'].str.startswith(ntee_code, na=False)]
-                
-                # Filter by state if provided and using national file
-                if state and 'state' in df.columns:
-                    df = df[df['state'] == state]
-                
-                # Limit to first 1000 rows for performance
-                df = df.head(1000)
-                
-                # Search in name, mission, programs
-                for _, row in df.iterrows():
-                    name = str(row.get('name', ''))
-                    city = str(row.get('city', ''))
-                    state_code = str(row.get('state', ''))
-                    ntee = str(row.get('ntee_code', ''))
-                    
-                    score = calculate_relevance_score(name, query)
-                    
-                    if score > 0.3:
-                        results.append(SearchResult(
-                            result_type="organization",
-                            title=name,
-                            subtitle=f"{city}, {state_code} - {ntee}",
-                            description=f"Nonprofit organization serving {city}",
-                            url=f"/nonprofits?ein={row.get('ein', '')}",
-                            score=score,
-                            metadata={
-                                "ein": row.get('ein', ''),
-                                "city": city,
-                                "state": state_code,
-                                "ntee_code": ntee
-                            }
-                        ))
-            except Exception as e:
-                logger.debug(f"Error searching {file_path}: {e}")
-    
+        # Check if file exists
+        file_path = Path(file_pattern)
+        if not file_path.exists():
+            logger.warning(f"File not found: {file_pattern}")
+            return results
+        
+        # Initialize DuckDB connection
+        conn = duckdb.connect()
+        
+        # Build WHERE clauses
+        where_clauses = []
+        params = []
+        
+        # Search query (case-insensitive LIKE)
+        where_clauses.append("LOWER(organization_name) LIKE LOWER(?)")
+        params.append(f'%{query}%')
+        
+        # State filter (if using national file)
+        if state and not file_pattern.startswith(f"{GOLD_DIR}/states/"):
+            where_clauses.append("state = ?")
+            params.append(state)
+        
+        # NTEE code filter
+        if ntee_code:
+            where_clauses.append("ntee_code LIKE ?")
+            params.append(f'{ntee_code}%')
+        
+        where_sql = " AND ".join(where_clauses)
+        
+        # SQL query with relevance scoring
+        sql = f"""
+            SELECT 
+                organization_name,
+                city,
+                state,
+                ntee_code,
+                ein,
+                CASE 
+                    WHEN LOWER(organization_name) LIKE LOWER(?) THEN 1.5
+                    WHEN LOWER(organization_name) LIKE LOWER(?) THEN 1.0
+                    ELSE 0.5
+                END as score
+            FROM '{file_path}'
+            WHERE {where_sql}
+            ORDER BY score DESC, organization_name
+            LIMIT ?
+        """
+        
+        # Execute query with parameters
+        query_params = [f'{query}%', f'%{query}%'] + params + [limit]
+        rows = conn.execute(sql, query_params).fetchall()
+        
+        # Convert to SearchResult objects
+        for row in rows:
+            org_name, city, state_code, ntee, ein, score = row
+            
+            results.append(SearchResult(
+                result_type="organization",
+                title=org_name if org_name else "Unknown",
+                subtitle=f"{city}, {state_code}" + (f" - NTEE: {ntee}" if ntee else ""),
+                description=f"Nonprofit organization serving {city}",
+                url=f"/nonprofits?ein={ein}",
+                score=score,
+                metadata={
+                    "ein": ein,
+                    "city": city,
+                    "state": state_code,
+                    "ntee_code": ntee
+                }
+            ))
+        
+        conn.close()
+        logger.info(f"DuckDB search found {len(results)} organizations for query '{query}'")
+        
     except Exception as e:
         logger.error(f"Organization search error: {e}")
     
-    results.sort(key=lambda x: x.score, reverse=True)
-    return results[:limit]
+    return results
 
 
 def search_causes(query: str, limit: int = 10) -> List[SearchResult]:
@@ -248,32 +411,37 @@ def search_causes(query: str, limit: int = 10) -> List[SearchResult]:
     try:
         # Search NTEE codes
         ntee_file = GOLD_DIR / "reference" / "causes_ntee_codes.parquet"
+        logger.info(f"Searching causes in: {ntee_file}, exists: {ntee_file.exists()}")
+        
         if ntee_file.exists():
             df = pd.read_parquet(ntee_file)
+            logger.info(f"Loaded {len(df)} NTEE codes, columns: {df.columns.tolist()}")
             
             for _, row in df.iterrows():
                 code = str(row.get('ntee_code', ''))
                 description = str(row.get('description', ''))
-                category = str(row.get('category', ''))
+                ntee_type = str(row.get('ntee_type', ''))
                 
                 score = max(
                     calculate_relevance_score(description, query),
-                    calculate_relevance_score(category, query)
+                    calculate_relevance_score(code, query)
                 )
                 
                 if score > 0.3:
                     results.append(SearchResult(
                         result_type="cause",
                         title=description,
-                        subtitle=f"NTEE Code: {code} - {category}",
-                        description=f"Nonprofit category: {category}",
+                        subtitle=f"NTEE Code: {code}",
+                        description=f"Category type: {ntee_type}",
                         url=f"/nonprofits?ntee_code={code}",
                         score=score,
                         metadata={
                             "ntee_code": code,
-                            "category": category
+                            "ntee_type": ntee_type
                         }
                     ))
+            
+            logger.info(f"Found {len(results)} cause results for query '{query}'")
     
     except Exception as e:
         logger.error(f"Cause search error: {e}")
@@ -312,19 +480,19 @@ async def unified_search(
         
         # Search each requested type
         if 'contacts' in requested_types:
-            contact_results = search_contacts(q, state, limit=limit // 4)
+            contact_results = search_contacts(q, state, limit=max(3, limit // 2))
             all_results.extend(contact_results)
         
         if 'meetings' in requested_types:
-            meeting_results = search_meetings(q, state, limit=limit // 4)
+            meeting_results = search_meetings(q, state, limit=max(3, limit // 2))
             all_results.extend(meeting_results)
         
         if 'organizations' in requested_types:
-            org_results = search_organizations(q, state, ntee_code, limit=limit // 2)
+            org_results = search_organizations(q, state, ntee_code, limit=max(3, limit))
             all_results.extend(org_results)
         
         if 'causes' in requested_types:
-            cause_results = search_causes(q, limit=limit // 4)
+            cause_results = search_causes(q, limit=max(3, limit // 2))
             all_results.extend(cause_results)
         
         # Sort all results by score

@@ -78,7 +78,7 @@ export default function Layout() {
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault()
     if (searchQuery.trim()) {
-      navigate(`/documents?search=${encodeURIComponent(searchQuery)}`)
+      navigate(`/search?q=${encodeURIComponent(searchQuery)}`)
     }
   }
 
@@ -119,7 +119,7 @@ export default function Layout() {
               <div className="relative w-full">
                 <input
                   type="text"
-                  placeholder="Search documents, nonprofits, locations..."
+                  placeholder="Search people, meetings, organizations, causes..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="w-full px-4 py-2 pl-10 border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"

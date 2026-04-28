@@ -1,5 +1,8 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { useQuery } from '@tanstack/react-query'
+import axios from 'axios'
 import { MagnifyingGlassIcon, UserGroupIcon, AcademicCapIcon, UsersIcon, CodeBracketIcon } from '@heroicons/react/24/outline'
+import { useLocation } from '../contexts/LocationContext'
 import FollowButton from '../components/FollowButton'
 
 type PersonRole = 'decision-makers' | 'support' | 'public' | 'open-source'
@@ -62,101 +65,48 @@ const roleCategories = {
   }
 }
 
-// Mock data - replace with API call
-const mockPeople: Person[] = [
-  {
-    id: 1,
-    name: 'Sarah Johnson',
-    role: 'decision-makers',
-    specificRole: 'Board Members',
-    organization: 'City Council',
-    location: 'District 3',
-    contact: 'sjohnson@city.gov'
-  },
-  {
-    id: 2,
-    name: 'Michael Chen',
-    role: 'decision-makers',
-    specificRole: 'Policy Voters',
-    organization: 'School Board',
-    location: 'Zone 2',
-    contact: 'mchen@schools.org'
-  },
-  {
-    id: 3,
-    name: 'Dr. Emily Martinez',
-    role: 'support',
-    specificRole: 'Expert Advisors',
-    organization: 'Public Health Department',
-    location: 'County Office',
-    contact: 'emartinez@health.gov'
-  },
-  {
-    id: 4,
-    name: 'James Wilson',
-    role: 'support',
-    specificRole: 'Program Staff',
-    organization: 'Community Health Center',
-    location: 'Downtown Clinic',
-    contact: 'jwilson@chc.org'
-  },
-  {
-    id: 5,
-    name: 'Maria Garcia',
-    role: 'public',
-    specificRole: 'Advocates',
-    organization: 'Parents for Better Schools',
-    location: 'Westside',
-    contact: 'maria@pbs.org'
-  },
-  {
-    id: 6,
-    name: 'Alex Chen',
-    role: 'open-source',
-    specificRole: 'Project Maintainers',
-    organization: 'openbudgetoakland',
-    location: 'GitHub',
-    contact: '@alexchen'
-  },
-  {
-    id: 7,
-    name: 'Jordan Taylor',
-    role: 'open-source',
-    specificRole: 'Core Contributors',
-    organization: 'transitland',
-    location: 'GitHub',
-    contact: '@jordantaylor'
-  },
-  {
-    id: 8,
-    name: 'Sam Rodriguez',
-    role: 'open-source',
-    specificRole: 'Project Maintainers',
-    organization: 'affordable-housing-finder',
-    location: 'GitHub',
-    contact: '@samrodriguez'
-  },
-  {
-    id: 9,
-    name: 'Casey Kim',
-    role: 'open-source',
-    specificRole: 'Community Developers',
-    organization: 'health-equity-tracker',
-    location: 'GitHub',
-    contact: '@caseykim'
-  },
-]
-
 export default function PeopleFinder() {
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedRole, setSelectedRole] = useState<PersonRole | 'all'>('all')
-  const [people] = useState<Person[]>(mockPeople)
+  const { location } = useLocation()
+
+  // Fetch contacts from API
+  const { data: contactsData, isLoading } = useQuery({
+    queryKey: ['people-finder', location?.state],
+    queryFn: async () => {
+      const params: any = {
+        q: 'mayor', // Search for mayors and other officials (broad search)
+        types: 'contacts',
+        limit: 1000 // Get many results
+      }
+      
+      if (location && location.state) {
+        params.state = location.state
+      }
+      
+      const response = await axios.get('/api/search', { params })
+      return response.data
+    },
+    staleTime: 60000, // Cache for 1 minute
+  })
+
+  // Convert API contacts to Person format
+  const people: Person[] = (contactsData?.results?.contacts || []).map((contact: any, index: number) => ({
+    id: index + 1,
+    name: contact.metadata.name,
+    role: 'decision-makers' as PersonRole,
+    specificRole: contact.metadata.title || 'Official',
+    organization: contact.metadata.jurisdiction || 'Local Government',
+    location: `${contact.metadata.jurisdiction || ''}, ${contact.metadata.state || ''}`.trim().replace(/^,\s*/, ''),
+    contact: undefined,
+  }))
 
   const filteredPeople = people.filter(person => {
     const matchesSearch = searchQuery === '' || 
       person.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       person.organization.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      person.location.toLowerCase().includes(searchQuery.toLowerCase())
+      person.location.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      person.specificRole.toLowerCase().includes(searchQuery.toLowerCase())
     
     const matchesRole = selectedRole === 'all' || person.role === selectedRole
     
@@ -170,19 +120,31 @@ export default function PeopleFinder() {
           Find Leaders
         </h1>
         <p className="text-gray-600">
-          Discover elected officials, decision makers, and community leaders in your area
+          Discover elected officials, decision makers, and community leaders
+          {location && location.state && (
+            <span className="font-medium text-primary-600"> in {location.state}</span>
+          )}
         </p>
       </div>
 
+      {/* Loading State */}
+      {isLoading && (
+        <div className="flex justify-center items-center py-12">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
+        </div>
+      )}
+
       {/* Search Bar */}
+      {!isLoading && (
+        <>
       <div className="mb-8">
         <div className="relative">
           <input
             type="text"
-            placeholder="Search by name, organization, repository, or location..."
+            placeholder="Search by name, title, organization, or location..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full px-4 py-3 pl-12 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+            className="w-full px-4 py-3 pl-12 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent text-gray-900"
           />
           <MagnifyingGlassIcon className="absolute left-4 top-3.5 h-6 w-6 text-gray-400" />
         </div>
@@ -346,6 +308,8 @@ export default function PeopleFinder() {
           </div>
         )}
       </div>
+      </>
+      )}
     </div>
   )
 }
