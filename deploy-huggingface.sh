@@ -2,6 +2,14 @@
 
 # Quick deployment script for Hugging Face Spaces
 # Deploys all three apps: Documentation, Frontend, and API
+#
+# Pre-deployment checks:
+# 1. Docusaurus build verification (catches config errors early)
+# 2. Docker build test (validates full deployment)
+#
+# Usage:
+#   ./deploy-huggingface.sh                    # Deploy with all tests
+#   ./deploy-huggingface.sh --skip-test        # Skip tests (not recommended)
 
 set -e
 
@@ -124,6 +132,42 @@ docker stop open-navigator-test-container 2>/dev/null || true
 docker rm open-navigator-test-container 2>/dev/null || true
 docker rmi open-navigator-hf-test 2>/dev/null || true
 echo ""
+
+# Verify Docusaurus build before Docker (faster feedback on config errors)
+echo "📚 Verifying Docusaurus build..."
+echo "This catches configuration errors before the slow Docker build"
+echo ""
+
+if [ -d "website/node_modules" ]; then
+    echo "✅ Node modules already installed"
+else
+    echo "📦 Installing website dependencies..."
+    cd website
+    npm ci --prefer-offline --no-audit || npm install --prefer-offline --no-audit
+    cd ..
+fi
+echo ""
+
+echo "🔨 Building documentation site..."
+if (cd website && npm run build); then
+    echo ""
+    echo "✅ Docusaurus build succeeded!"
+    echo ""
+else
+    echo ""
+    echo "❌ Docusaurus build failed!"
+    echo ""
+    echo "Common issues:"
+    echo "  - Duplicate plugin configurations (e.g., gtag in both preset and themeConfig)"
+    echo "  - Invalid frontmatter in .md files"
+    echo "  - Broken internal links"
+    echo "  - Missing dependencies"
+    echo ""
+    echo "Fix the errors above before deploying."
+    echo "Test locally with: cd website && npm run build"
+    echo ""
+    exit 1
+fi
 
 # Run Docker build test before deployment (unless skipped)
 if [ "$SKIP_TEST" = true ]; then

@@ -6,6 +6,7 @@ on:
     branches:
       - main
       - develop
+      - huggingface-deploy  # Test deploy branch before HF build
   pull_request:
     branches:
       - main
@@ -52,6 +53,7 @@ jobs:
           echo "✅ Frontend build successful"
 
   # Test 2: Documentation Site Build
+  # CRITICAL: This catches Docusaurus config errors (like duplicate gtag) before HuggingFace deployment
   docs-build:
     name: Documentation Build (Docusaurus)
     runs-on: ubuntu-latest
