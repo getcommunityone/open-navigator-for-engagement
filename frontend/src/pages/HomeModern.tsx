@@ -442,7 +442,10 @@ export default function HomeModern() {
                                       </div>
                                       <button
                                         type="button"
-                                        onClick={() => handleViewAllCategory('causes')}
+                                        onMouseDown={(e) => {
+                                          e.preventDefault();
+                                          handleViewAllCategory('causes');
+                                        }}
                                         className="text-xs text-primary-600 hover:text-primary-700 font-medium"
                                       >
                                         View All
@@ -452,7 +455,10 @@ export default function HomeModern() {
                                       <button
                                         key={idx}
                                         type="button"
-                                        onClick={() => handleSelectSuggestion(result.title)}
+                                        onMouseDown={(e) => {
+                                          e.preventDefault();
+                                          handleSelectSuggestion(result.title);
+                                        }}
                                         className="w-full text-left px-4 py-2 bg-white hover:bg-gray-50 flex items-start gap-3 transition-colors"
                                       >
                                         <HeartIcon className="h-5 w-5 text-gray-600 mt-0.5 flex-shrink-0" />
@@ -475,7 +481,10 @@ export default function HomeModern() {
                                       </div>
                                       <button
                                         type="button"
-                                        onClick={() => handleViewAllCategory('contacts')}
+                                        onMouseDown={(e) => {
+                                          e.preventDefault();
+                                          handleViewAllCategory('contacts');
+                                        }}
                                         className="text-xs text-primary-600 hover:text-primary-700 font-medium"
                                       >
                                         View All
@@ -485,7 +494,10 @@ export default function HomeModern() {
                                       <button
                                         key={idx}
                                         type="button"
-                                        onClick={() => handleSelectSuggestion(result.title)}
+                                        onMouseDown={(e) => {
+                                          e.preventDefault();
+                                          handleSelectSuggestion(result.title);
+                                        }}
                                         className="w-full text-left px-4 py-2 bg-white hover:bg-gray-50 flex items-start gap-3 transition-colors"
                                       >
                                         <UserIcon className="h-5 w-5 text-gray-600 mt-0.5 flex-shrink-0" />
@@ -508,7 +520,10 @@ export default function HomeModern() {
                                       </div>
                                       <button
                                         type="button"
-                                        onClick={() => handleViewAllCategory('organizations')}
+                                        onMouseDown={(e) => {
+                                          e.preventDefault();
+                                          handleViewAllCategory('organizations');
+                                        }}
                                         className="text-xs text-primary-600 hover:text-primary-700 font-medium"
                                       >
                                         View All
@@ -518,7 +533,10 @@ export default function HomeModern() {
                                       <button
                                         key={idx}
                                         type="button"
-                                        onClick={() => handleSelectSuggestion(result.title)}
+                                        onMouseDown={(e) => {
+                                          e.preventDefault();
+                                          handleSelectSuggestion(result.title);
+                                        }}
                                         className="w-full text-left px-4 py-2 bg-white hover:bg-gray-50 flex items-start gap-3 transition-colors last:rounded-b-lg"
                                       >
                                         <BuildingOfficeIcon className="h-5 w-5 text-gray-600 mt-0.5 flex-shrink-0" />
@@ -550,17 +568,27 @@ export default function HomeModern() {
                             Search In
                           </label>
                           {location ? (
-                            <select
-                              value={searchScope}
-                              onChange={(e) => setSearchScope(e.target.value)}
-                              className="w-full px-4 py-3 text-lg border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#354F52] focus:border-transparent bg-white text-gray-900"
-                            >
-                              <option value="city">My City ({location.city})</option>
-                              <option value="county">My County ({location.county || 'County'})</option>
-                              <option value="state">My State ({location.state})</option>
-                              <option value="community">School Board ({location.city})</option>
-                              <option value="national">Nationwide</option>
-                            </select>
+                            <div className="space-y-2">
+                              <select
+                                value={searchScope}
+                                onChange={(e) => setSearchScope(e.target.value)}
+                                className="w-full px-4 py-3 text-lg border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#354F52] focus:border-transparent bg-white text-gray-900"
+                              >
+                                <option value="city">My City ({location.city})</option>
+                                <option value="county">My County ({location.county || 'County'})</option>
+                                <option value="state">My State ({location.state})</option>
+                                <option value="community">School Board ({location.city})</option>
+                                <option value="national">Nationwide</option>
+                              </select>
+                              <button
+                                type="button"
+                                onClick={() => setSelectedTab(1)}
+                                className="w-full text-xs text-primary-600 hover:text-primary-700 font-medium underline flex items-center justify-center gap-1"
+                              >
+                                <MapIcon className="h-3 w-3" />
+                                Change Location
+                              </button>
+                            </div>
                           ) : (
                             <button
                               type="button"
@@ -574,6 +602,9 @@ export default function HomeModern() {
                         </div>
 
                         <div className="lg:col-span-2">
+                          <label className="block text-left text-sm font-medium text-gray-700 mb-2 invisible">
+                            Search
+                          </label>
                           <button
                             type="submit"
                             className="w-full text-white px-6 py-3 rounded-lg transition-all text-lg font-semibold flex items-center justify-center gap-2 hover:shadow-lg"

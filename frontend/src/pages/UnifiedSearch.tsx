@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import axios from 'axios'
@@ -51,6 +51,20 @@ export default function UnifiedSearch() {
   const [showSuggestions, setShowSuggestions] = useState(false)
   
   const searchInputRef = useRef<HTMLInputElement>(null)
+
+  // Initialize from URL parameters on mount
+  useEffect(() => {
+    const queryParam = searchParams.get('q')
+    const stateParam = searchParams.get('state')
+    
+    if (queryParam) {
+      setQuery(queryParam)
+      setActiveQuery(queryParam)
+    }
+    if (stateParam) {
+      setSelectedState(stateParam)
+    }
+  }, [searchParams])
 
   // Live search preview (type-ahead with actual results)
   const { data: previewResults } = useQuery<SearchResponse>({
@@ -163,15 +177,7 @@ export default function UnifiedSearch() {
 
   const ResultCard = ({ result }: { result: SearchResult }) => (
     <div
-      onClick={() => {
-        // For organizations with EIN, open in new tab to nonprofit search with EIN filter
-        if (result.type === 'organization' && result.metadata?.ein) {
-          window.open(result.url, '_blank')
-        } else {
-          navigate(result.url)
-        }
-      }}
-      className="bg-white rounded-lg border border-gray-200 p-4 hover:shadow-md transition-shadow cursor-pointer"
+      className="bg-white rounded-lg border border-gray-200 p-4 hover:shadow-md transition-shadow"
     >
       <div className="flex items-start gap-3">
         <div className={`p-2 rounded-lg border ${getTypeColor(result.type)}`}>
@@ -179,11 +185,48 @@ export default function UnifiedSearch() {
         </div>
         
         <div className="flex-1">
-          <h3 className="font-semibold text-gray-900 mb-1 hover:text-primary-600">
-            {result.title}
-          </h3>
-          <p className="text-sm text-gray-600 mb-2">{result.subtitle}</p>
-          <p className="text-sm text-gray-500 line-clamp-2">{result.description}</p>
+          <div className="flex items-start justify-between gap-2">
+            <div className="flex-1">
+              <h3 
+                onClick={() => {
+                  // For organizations with EIN, open in new tab to nonprofit search with EIN filter
+                  if (result.type === 'organization' && result.metadata?.ein) {
+                    window.open(result.url, '_blank')
+                  } else {
+                    navigate(result.url)
+                  }
+                }}
+                className="font-semibold text-gray-900 mb-1 hover:text-primary-600 cursor-pointer"
+              >
+                {result.title}
+              </h3>
+              <p className="text-sm text-gray-600 mb-2">{result.subtitle}</p>
+            </div>
+            
+            {/* Logo for organizations */}
+            {result.type === 'organization' && result.metadata?.logo_url && (
+              <img 
+                src={result.metadata.logo_url} 
+                alt={result.title}
+                className="w-12 h-12 rounded object-cover flex-shrink-0"
+              />
+            )}
+          </div>
+          
+          <p className="text-sm text-gray-500 line-clamp-2 mb-2">{result.description}</p>
+          
+          {/* Website link for organizations */}
+          {result.type === 'organization' && result.metadata?.website && (
+            <a
+              href={result.metadata.website}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={(e) => e.stopPropagation()}
+              className="text-sm text-blue-600 hover:text-blue-800 hover:underline inline-flex items-center gap-1 mb-2"
+            >
+              🔗 {result.metadata.website}
+            </a>
+          )}
           
           {/* Additional metadata for organizations */}
           {result.type === 'organization' && result.metadata && (
@@ -201,6 +244,11 @@ export default function UnifiedSearch() {
               {result.metadata.assets && result.metadata.assets > 0 && (
                 <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded">
                   📊 Assets: ${(result.metadata.assets / 1000000).toFixed(1)}M
+                </span>
+              )}
+              {result.metadata.causes && result.metadata.causes.length > 0 && (
+                <span className="px-2 py-1 bg-purple-100 text-purple-700 rounded">
+                  🏷️ {result.metadata.causes.slice(0, 3).join(', ')}
                 </span>
               )}
             </div>

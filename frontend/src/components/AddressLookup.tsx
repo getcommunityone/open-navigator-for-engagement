@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { MapPinIcon, MagnifyingGlassIcon } from '@heroicons/react/24/outline'
 import { stateNameToCode } from '../utils/stateMapping'
+import { useLocation as useLocationContext } from '../contexts/LocationContext'
 
 interface LocationData {
   address: string
@@ -18,6 +19,7 @@ interface AddressLookupProps {
 }
 
 export default function AddressLookup({ onLocationFound, initialAddress = '', compact = false }: AddressLookupProps) {
+  const { clearLocation } = useLocationContext()
   const [address, setAddress] = useState(initialAddress)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -445,6 +447,7 @@ export default function AddressLookup({ onLocationFound, initialAddress = '', co
                   setFoundLocation(null)
                   setAddress('')
                   setError(null)
+                  clearLocation() // Clear the global location context
                 }}
                 className="text-sm text-primary-600 hover:text-primary-700 font-medium underline"
               >

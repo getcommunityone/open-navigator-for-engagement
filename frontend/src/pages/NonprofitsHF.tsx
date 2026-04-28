@@ -1,5 +1,6 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
+import { useSearchParams } from 'react-router-dom'
 import { searchNonprofits } from '../utils/huggingface'
 
 const DATASET_NAME = "CommunityOne/one-nonprofits-organizations"
@@ -87,11 +88,22 @@ const US_STATES = [
 ]
 
 export default function Nonprofits() {
-  const [searchQuery, setSearchQuery] = useState('dental')
-  const [state, setState] = useState('AL')
-  const [nteeCode, setNteeCode] = useState('E')
+  const [searchParams] = useSearchParams()
+  
+  // Initialize from URL parameters
+  const [searchQuery, setSearchQuery] = useState(searchParams.get('search') || 'dental')
+  const [state, setState] = useState(searchParams.get('state') || 'AL')
+  const [nteeCode, setNteeCode] = useState('')
   const [page, setPage] = useState(0)
   const pageSize = 100
+
+  // Update search query from URL when it changes
+  useEffect(() => {
+    const searchParam = searchParams.get('search')
+    const stateParam = searchParams.get('state')
+    if (searchParam) setSearchQuery(searchParam)
+    if (stateParam) setState(stateParam)
+  }, [searchParams])
 
   // Query HuggingFace dataset
   const { data: nonprofits, isLoading, error } = useQuery({

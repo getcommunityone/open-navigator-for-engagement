@@ -371,17 +371,27 @@ export default function Home() {
                             Search In
                           </label>
                           {location ? (
-                            <select
-                              value={searchScope}
-                              onChange={(e) => setSearchScope(e.target.value)}
-                              className="w-full px-4 py-3 text-lg border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-white text-gray-900"
-                            >
-                              <option value="city">My City ({location.city})</option>
-                              <option value="county">My County ({location.county || 'County'})</option>
-                              <option value="state">My State ({location.state})</option>
-                              <option value="community">School Board ({location.city})</option>
-                              <option value="national">Nationwide</option>
-                            </select>
+                            <div className="space-y-2">
+                              <select
+                                value={searchScope}
+                                onChange={(e) => setSearchScope(e.target.value)}
+                                className="w-full px-4 py-3 text-lg border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-white text-gray-900"
+                              >
+                                <option value="city">My City ({location.city})</option>
+                                <option value="county">My County ({location.county || 'County'})</option>
+                                <option value="state">My State ({location.state})</option>
+                                <option value="community">School Board ({location.city})</option>
+                                <option value="national">Nationwide</option>
+                              </select>
+                              <button
+                                type="button"
+                                onClick={() => navigate('/?tab=community')}
+                                className="w-full text-xs text-primary-600 hover:text-primary-700 font-medium underline flex items-center justify-center gap-1"
+                              >
+                                <MapPinIcon className="h-3 w-3" />
+                                Change Location
+                              </button>
+                            </div>
                           ) : (
                             <button
                               type="button"
@@ -395,6 +405,9 @@ export default function Home() {
                         </div>
 
                         <div className="lg:col-span-2">
+                          <label className="block text-left text-sm font-medium text-gray-700 mb-2 invisible">
+                            Search
+                          </label>
                           <button
                             type="submit"
                             className="w-full text-white px-6 py-3 rounded-lg transition-colors text-lg font-semibold flex items-center justify-center gap-2"

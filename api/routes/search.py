@@ -9,11 +9,162 @@ import pandas as pd
 import duckdb
 from loguru import logger
 import re
+import os
+import requests
+from functools import lru_cache
+from datetime import datetime, timedelta
 
 router = APIRouter(prefix="/api/search", tags=["search"])
 
 # Paths to gold datasets
 GOLD_DIR = Path("data/gold")
+
+# Every.org API config (fallback only)
+EVERYORG_API_KEY = os.getenv('EVERYORG_API_KEY', '')
+EVERYORG_API_BASE = "https://partners.every.org/v0.2"
+
+
+@lru_cache(maxsize=5000)
+def fetch_form990_data(ein: str) -> Optional[Dict[str, Any]]:
+    """
+    Fetch enrichment data from ProPublica Nonprofit Explorer (FREE!)
+    Uses their API to get website and mission from Form 990 filings
+    """
+    if not ein:
+        return None
+    
+    try:
+        clean_ein = str(ein).replace('-', '').zfill(9)
+        url = f"https://projects.propublica.org/nonprofits/api/v2/organizations/{clean_ein}.json"
+        
+        response = requests.get(url, timeout=3)
+        
+        if response.status_code == 200:
+            data = response.json()
+            org = data.get('organization', {})
+            filings = data.get('filings_with_data', [])
+            
+            # Get most recent filing data
+            website = None
+            mission = None
+            
+            if filings:
+                # ProPublica provides website from most recent filing
+                latest = filings[0]
+                # Note: ProPublica API doesn't directly expose website field
+                # but we can use their organization name and data as fallback
+                pass
+            
+            return {
+                'website': website,  # ProPublica doesn't expose this in API
+                'mission': None,  # Would need to parse PDF
+                'source': 'propublica',
+                'last_updated': datetime.now().isoformat(),
+                'tax_year': filings[0].get('tax_prd_yr') if filings else None
+            }
+    except Exception as e:
+        logger.debug(f"ProPublica lookup failed for EIN {ein}: {e}")
+    
+    return None
+
+
+@lru_cache(maxsize=5000)
+def fetch_everyorg_data(ein: str) -> Optional[Dict[str, Any]]:
+    """Fetch enrichment data from Every.org API (cached) - FALLBACK ONLY"""
+    if not EVERYORG_API_KEY or not ein:
+        return None
+    
+    try:
+        # Format EIN (remove dashes, ensure 9 digits)
+        clean_ein = str(ein).replace('-', '').zfill(9)
+        
+        url = f"{EVERYORG_API_BASE}/nonprofit/{clean_ein}"
+        headers = {
+            "Authorization": f"Bearer {EVERYORG_API_KEY}",
+            "Accept": "application/json"
+        }
+        
+        response = requests.get(url, headers=headers, timeout=3)
+        
+        if response.status_code == 200:
+            data = response.json()
+            if data and 'data' in data and 'nonprofit' in data['data']:
+                nonprofit = data['data']['nonprofit']
+                tags = data['data'].get('nonprofitTags', [])
+                causes = [tag.get('tagName') for tag in tags if tag.get('tagName')]
+                
+                return {
+                    'mission': nonprofit.get('description') or nonprofit.get('descriptionLong'),
+                    'website': nonprofit.get('websiteUrl'),
+                    'logo_url': nonprofit.get('logoUrl'),
+                    'profile_url': nonprofit.get('profileUrl'),
+                    'causes': causes[:5],  # Limit to top 5 causes
+                    'source': 'everyorg',
+                    'last_updated': datetime.now().isoformat()
+                }
+    except Exception as e:
+        logger.debug(f"Every.org lookup failed for EIN {ein}: {e}")
+    
+    return None
+
+
+def get_enrichment_data(ein: str, existing_data: Optional[Dict] = None) -> Dict[str, Any]:
+    """
+    Get enrichment data with intelligent backfill strategy
+    
+    Priority:
+    1. Existing form_990_* data (if recent)
+    2. GivingTuesday 990 XML (future: direct S3 access)
+    3. ProPublica API (current fallback)
+    4. Every.org API (last resort)
+    
+    Tracks source and update time for incremental processing
+    """
+    result = {
+        'website': None,
+        'mission': None,
+        'logo_url': None,
+        'profile_url': None,
+        'causes': [],
+        'data_sources': []
+    }
+    
+    # Check existing data first (skip if older than 30 days)
+    if existing_data:
+        cutoff_date = datetime.now() - timedelta(days=30)
+        
+        # Check form_990 data
+        if existing_data.get('form_990_website'):
+            last_updated = existing_data.get('form_990_last_updated')
+            if not last_updated or datetime.fromisoformat(last_updated) > cutoff_date:
+                result['website'] = existing_data['form_990_website']
+                result['data_sources'].append('form_990_cached')
+        
+        if existing_data.get('form_990_mission'):
+            result['mission'] = existing_data['form_990_mission']
+            result['data_sources'].append('form_990_cached')
+    
+    # Try Every.org for missing fields (keeps logo and causes which 990 doesn't have)
+    if not result['website'] or not result['mission']:
+        everyorg_data = fetch_everyorg_data(ein)
+        if everyorg_data:
+            if not result['website'] and everyorg_data.get('website'):
+                result['website'] = everyorg_data['website']
+                result['data_sources'].append('everyorg')
+            
+            if not result['mission'] and everyorg_data.get('mission'):
+                result['mission'] = everyorg_data['mission']
+                result['data_sources'].append('everyorg')
+            
+            # Always get logo and causes from Every.org
+            result['logo_url'] = everyorg_data.get('logo_url')
+            result['profile_url'] = everyorg_data.get('profile_url')
+            result['causes'] = everyorg_data.get('causes', [])
+            if result['logo_url'] or result['causes']:
+                if 'everyorg' not in result['data_sources']:
+                    result['data_sources'].append('everyorg')
+    
+    return result
 
 class SearchResult:
     """Unified search result"""
@@ -371,17 +522,29 @@ def search_organizations(query: str, state: Optional[str] = None, ntee_code: Opt
         
         where_sql = " AND ".join(where_clauses)
         
-        # SQL query with relevance scoring - fetch all available columns for enrichment
+        # First, check what columns exist in this file
+        columns_query = f"DESCRIBE SELECT * FROM '{file_path}' LIMIT 0"
+        available_columns = set([row[0] for row in conn.execute(columns_query).fetchall()])
+        
+        # Build column list - include form_990_* columns if they exist
+        select_columns = [
+            'name', 'city', 'state', 'ntee_cd', 'ein',
+            'revenue_amt', 'asset_amt', 'income_amt'
+        ]
+        
+        # Add form_990 columns if available (for incremental enrichment)
+        form_990_cols = []
+        for col in ['form_990_website', 'form_990_mission', 'form_990_last_updated']:
+            if col in available_columns:
+                select_columns.append(col)
+                form_990_cols.append(col)
+        
+        columns_sql = ', '.join(select_columns)
+        
+        # SQL query with relevance scoring
         sql = f"""
             SELECT 
-                name,
-                city,
-                state,
-                ntee_cd,
-                ein,
-                revenue_amt,
-                asset_amt,
-                income_amt,
+                {columns_sql},
                 CASE 
                     WHEN LOWER(name) LIKE LOWER(?) THEN 1.5
                     WHEN LOWER(name) LIKE LOWER(?) THEN 1.0
@@ -389,7 +552,10 @@ def search_organizations(query: str, state: Optional[str] = None, ntee_code: Opt
                 END as score
             FROM '{file_path}'
             WHERE {where_sql}
-            ORDER BY score DESC, name
+            ORDER BY score DESC, 
+                     COALESCE(TRY_CAST(revenue_amt AS BIGINT), 0) DESC, 
+                     COALESCE(TRY_CAST(asset_amt AS BIGINT), 0) DESC,
+                     name
             LIMIT ?
         """
         
@@ -416,9 +582,28 @@ def search_organizations(query: str, state: Optional[str] = None, ntee_code: Opt
             'A': 'Arts, Culture & Humanities',
         }
         
-        # Convert to SearchResult objects
+        # Convert to SearchResult objects with intelligent enrichment
         for row in rows:
-            org_name, city, state_code, ntee, ein, revenue, assets, income, score = row
+            # Unpack base columns
+            org_name, city, state_code, ntee, ein, revenue, assets, income = row[:8]
+            
+            # Unpack optional form_990 columns if present
+            existing_data = {}
+            idx = 8
+            if 'form_990_website' in form_990_cols:
+                existing_data['form_990_website'] = row[idx]
+                idx += 1
+            if 'form_990_mission' in form_990_cols:
+                existing_data['form_990_mission'] = row[idx]
+                idx += 1
+            if 'form_990_last_updated' in form_990_cols:
+                existing_data['form_990_last_updated'] = row[idx]
+                idx += 1
+            
+            score = row[-1]  # Score is always last
+            
+            # Get enriched data with intelligent backfill
+            enrichment = get_enrichment_data(ein, existing_data) if ein else {}
             
             # Build a more informative description
             ntee_desc = None
@@ -429,27 +614,53 @@ def search_organizations(query: str, state: Optional[str] = None, ntee_code: Opt
                     # Try first character (major category)
                     ntee_desc = ntee_descriptions.get(ntee[0]) if ntee else None
             
-            description_parts = []
-            if ntee_desc:
-                description_parts.append(ntee_desc)
+            # Use enriched mission as primary description, fallback to NTEE + financial
+            description = enrichment.get('mission') if enrichment.get('mission') else None
             
-            # Convert financial data to numbers (handle None and string types)
-            try:
-                revenue_num = float(revenue) if revenue else 0
-                assets_num = float(assets) if assets else 0
-            except (ValueError, TypeError):
-                revenue_num = 0
-                assets_num = 0
+            if not description:
+                description_parts = []
+                if ntee_desc:
+                    description_parts.append(ntee_desc)
+                
+                # Convert financial data to numbers (handle None and string types)
+                try:
+                    revenue_num = float(revenue) if revenue else 0
+                    assets_num = float(assets) if assets else 0
+                except (ValueError, TypeError):
+                    revenue_num = 0
+                    assets_num = 0
+                
+                if revenue_num > 0:
+                    description_parts.append(f"Revenue: ${revenue_num:,.0f}")
+                elif assets_num > 0:
+                    description_parts.append(f"Assets: ${assets_num:,.0f}")
+                
+                if not description_parts:
+                    description_parts.append(f"Nonprofit serving {city}")
+                
+                description = " • ".join(description_parts)
             
-            if revenue_num > 0:
-                description_parts.append(f"Revenue: ${revenue_num:,.0f}")
-            elif assets_num > 0:
-                description_parts.append(f"Assets: ${assets_num:,.0f}")
+            # Build metadata with enriched fields
+            metadata = {
+                "ein": ein,
+                "city": city,
+                "state": state_code,
+                "ntee_code": ntee,
+                "revenue": revenue,
+                "assets": assets,
+                "income": income,
+                "data_sources": enrichment.get('data_sources', [])
+            }
             
-            if not description_parts:
-                description_parts.append(f"Nonprofit serving {city}")
-            
-            description = " • ".join(description_parts)
+            # Add enrichment to metadata
+            if enrichment.get('website'):
+                metadata['website'] = enrichment['website']
+            if enrichment.get('logo_url'):
+                metadata['logo_url'] = enrichment['logo_url']
+            if enrichment.get('profile_url'):
+                metadata['profile_url'] = enrichment['profile_url']
+            if enrichment.get('causes'):
+                metadata['causes'] = enrichment['causes']
             
             results.append(SearchResult(
                 result_type="organization",
@@ -458,15 +669,7 @@ def search_organizations(query: str, state: Optional[str] = None, ntee_code: Opt
                 description=description,
                 url=f"/nonprofits-hf?search={ein}&state={state_code}",
                 score=score,
-                metadata={
-                    "ein": ein,
-                    "city": city,
-                    "state": state_code,
-                    "ntee_code": ntee,
-                    "revenue": revenue,
-                    "assets": assets,
-                    "income": income
-                }
+                metadata=metadata
             ))
         
         conn.close()

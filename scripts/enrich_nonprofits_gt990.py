@@ -11,11 +11,13 @@ Data Lake:
 - XMLs: EfileData/XmlFiles/[OBJECT_ID]_public.xml
 
 Data enriched:
+- Website URLs (WebsiteAddressTxt)
+- Mission statements and program descriptions (ActivityOrMissionDesc)
 - Total revenue, expenses, net income
 - Assets, liabilities, net assets
 - Program expenses, administrative, fundraising
 - Contributions, grants, investment income
-- Mission statements and program descriptions
+- Officer compensation and leadership (Part VII)
 
 Usage:
     # Install dependencies first
@@ -420,8 +422,15 @@ class GivingTuesday990Enricher:
                 # Grants
                 'form_990_grants_paid': get_num(form_990, 'GrantsAndSimilarAmountsPaidAmt') or get_num(form_990, 'GrantsAndAllocations'),
                 
-                # Mission (from return header)
-                'form_990_mission': get_text(root, 'ReturnHeader', 'Filer', 'BusinessName', 'BusinessNameLine1Txt'),
+                # Website (Part I Line 1)
+                'form_990_website': get_text(form_990, 'WebsiteAddressTxt') or get_text(form_990, 'WebsiteAddress'),
+                
+                # Mission (Part I Line 1 or Part III)
+                'form_990_mission': (
+                    get_text(form_990, 'ActivityOrMissionDesc') or 
+                    get_text(form_990, 'MissionDesc') or
+                    get_text(root, 'ReturnHeader', 'Filer', 'BusinessName', 'BusinessNameLine1Txt')
+                ),
                 
                 # Officers and Directors (Part VII)
                 'form_990_officers': officers_json,
