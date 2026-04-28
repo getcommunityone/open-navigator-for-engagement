@@ -1,3 +1,7 @@
+---
+sidebar_position: 16
+---
+
 # 💰 COST-EFFECTIVE STORAGE STRATEGY (Personal Budget)
 
 **TL;DR: Use Hugging Face Datasets - it's FREE and unlimited for public data!**

@@ -395,16 +395,21 @@ User-Agent: CommunityOne/1.0 (https://communityone.com/; contact@example.com)
 **Terms of Use:** [ProPublica Data Store Terms](https://www.propublica.org/datastore/terms)
 
 **Compliance Status:** ✅ **COMPLIANT**
-- Free API access
+- Free API access (no authentication or API key required)
 - IRS data is public domain
 - Must attribute to ProPublica
-- Non-commercial and commercial use allowed with attribution
+- Editorial/analytical use allowed, but cannot redistribute or commercialize raw data
 
 **Use Policy Key Points:**
-- Free unlimited API access
-- Must provide attribution to ProPublica
-- Rate limiting recommended (be respectful)
+- ✅ Free unlimited API access
+- ✅ Must provide attribution to ProPublica
+- ✅ Can use data for publication, analysis, and editorial purposes
+- ❌ Cannot republish raw data in its entirety
+- ❌ Cannot sell access to the data or charge for it
+- ❌ Cannot sell advertising specifically against the data
+- ❌ Cannot sub-license or resell the data
 - ProPublica's analysis may have separate copyright
+- Rate limiting recommended (be respectful, ~1 req/sec suggested)
 
 ---
 
