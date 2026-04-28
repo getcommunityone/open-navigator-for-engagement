@@ -87,7 +87,7 @@ function AudiencePathways() {
             <div style={{ textAlign: 'center' }}>
               <Link
                 className="button button--success button--lg"
-                to="/docs/for-advocates"
+                to="for-advocates"
                 style={{ marginBottom: '0.5rem', width: '80%' }}>
                 Start Here: Advocacy Docs →
               </Link>
@@ -141,16 +141,16 @@ function AudiencePathways() {
             <div style={{ textAlign: 'center' }}>
               <Link
                 className="button button--primary button--lg"
-                to="/docs/for-developers"
+                to="for-developers"
                 style={{ marginBottom: '0.5rem', width: '80%' }}>
                 Start Here: Developer Docs →
               </Link>
               <div style={{ marginTop: '1rem', fontSize: '0.9rem', color: '#555' }}>
-                <Link to="/docs/quickstart" style={{ fontWeight: 'bold' }}>
+                <Link to="quickstart" style={{ fontWeight: 'bold' }}>
                   ⚡ Quick Start Guide
                 </Link>
                 {' | '}
-                <Link to="/docs/architecture" style={{ fontWeight: 'bold' }}>
+                <Link to="architecture" style={{ fontWeight: 'bold' }}>
                   🏗️ Architecture
                 </Link>
               </div>
@@ -164,7 +164,7 @@ function AudiencePathways() {
         <div className="col text--center">
           <p style={{ fontSize: '1rem', color: '#666' }}>
             Not sure which path to take?{' '}
-            <Link to="/docs/intro" style={{ fontWeight: 'bold' }}>
+            <Link to="intro" style={{ fontWeight: 'bold' }}>
               Start with the Introduction →
             </Link>
           </p>

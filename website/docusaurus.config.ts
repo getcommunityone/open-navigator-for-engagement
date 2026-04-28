@@ -130,11 +130,11 @@ const config: Config = {
           label: 'Developers',
         },
         {
-          to: '/docs/data-sources/citations',
+          to: 'data-sources/citations',
           label: 'Citations',
           position: 'left',
         },
-        {to: '/blog', label: 'Blog', position: 'left'},
+        {to: 'blog', label: 'Blog', position: 'left'},
         {
           href: 'https://github.com/getcommunityone/open-navigator-for-engagement',
           label: 'GitHub',
@@ -150,19 +150,19 @@ const config: Config = {
           items: [
             {
               label: 'Getting Started',
-              to: '/docs/intro',
+              to: 'intro',
             },
             {
               label: 'Citations & Data Sources',
-              to: '/docs/data-sources/citations',
+              to: 'data-sources/citations',
             },
             {
               label: 'Data Sources',
-              to: '/docs/data-sources',
+              to: 'data-sources',
             },
             {
               label: 'API Reference',
-              to: '/docs/api',
+              to: 'api',
             },
           ],
         },
@@ -171,7 +171,7 @@ const config: Config = {
           items: [
             {
               label: 'Launch Open Navigator',
-              to: '/docs/dashboard',
+              to: 'dashboard',
             },
             {
               label: 'GitHub',
@@ -188,7 +188,7 @@ const config: Config = {
           items: [
             {
               label: 'Blog',
-              to: '/blog',
+              to: 'blog',
             },
             {
               label: 'License (MIT)',
