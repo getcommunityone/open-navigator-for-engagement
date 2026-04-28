@@ -13,7 +13,7 @@ Enrich nonprofit data with **FREE** Form 990 data (website, mission, financials,
 
 The search API now uses this priority:
 
-1. **Cached Form 990 data** (if exists and <30 days old)
+1. **Cached Form 990 data** (if exists and less than 30 days old)
    - Source: `form_990_cached`
    - Columns: `form_990_website`, `form_990_mission`, `form_990_last_updated`
    

@@ -379,7 +379,7 @@ export default function AddressLookup({ onLocationFound, initialAddress = '', co
               {foundLocation.city && (
                 <button
                   onClick={() => {
-                    window.location.href = `/nonprofits?state=${foundLocation.state}&city=${foundLocation.city}`
+                    window.location.href = `/?scope=city`
                   }}
                   className="bg-white rounded-lg p-4 shadow-sm hover:shadow-md hover:border-2 hover:border-blue-500 transition-all text-left w-full group"
                 >
@@ -405,7 +405,7 @@ export default function AddressLookup({ onLocationFound, initialAddress = '', co
               {foundLocation.county && (
                 <button
                   onClick={() => {
-                    window.location.href = `/nonprofits?state=${foundLocation.state}&county=${encodeURIComponent(foundLocation.county)}`
+                    window.location.href = `/?scope=county`
                   }}
                   className="bg-white rounded-lg p-4 shadow-sm hover:shadow-md hover:border-2 hover:border-green-500 transition-all text-left w-full group"
                 >
@@ -431,7 +431,7 @@ export default function AddressLookup({ onLocationFound, initialAddress = '', co
               {foundLocation.state && (
                 <button
                   onClick={() => {
-                    window.location.href = `/nonprofits?state=${foundLocation.state}`
+                    window.location.href = `/?scope=state`
                   }}
                   className="bg-white rounded-lg p-4 shadow-sm hover:shadow-md hover:border-2 hover:border-purple-500 transition-all text-left w-full group"
                 >
@@ -457,7 +457,7 @@ export default function AddressLookup({ onLocationFound, initialAddress = '', co
               {foundLocation.city && (
                 <button
                   onClick={() => {
-                    window.location.href = `/documents?state=${foundLocation.state}&city=${foundLocation.city}&type=school_board`
+                    window.location.href = `/?scope=community`
                   }}
                   className="bg-white rounded-lg p-4 shadow-sm hover:shadow-md hover:border-2 hover:border-amber-500 transition-all text-left w-full group"
                 >

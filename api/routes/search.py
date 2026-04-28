@@ -137,16 +137,17 @@ def get_enrichment_data(ein: str, existing_data: Optional[Dict] = None) -> Dict[
     if existing_data:
         cutoff_date = datetime.now() - timedelta(days=30)
         
-        # Check form_990 data
-        if existing_data.get('form_990_website'):
-            last_updated = existing_data.get('form_990_last_updated')
-            if not last_updated or datetime.fromisoformat(last_updated) > cutoff_date:
-                result['website'] = existing_data['form_990_website']
-                result['data_sources'].append('form_990_cached')
+        # Check enrichment data (from any source: form_990, bigquery, etc.)
+        if existing_data.get('enrichment_website'):
+            last_updated = existing_data.get('enrichment_last_updated')
+            if not last_updated or (isinstance(last_updated, str) and datetime.fromisoformat(last_updated) > cutoff_date):
+                result['website'] = existing_data['enrichment_website']
+                result['data_sources'].append('cached')
         
-        if existing_data.get('form_990_mission'):
-            result['mission'] = existing_data['form_990_mission']
-            result['data_sources'].append('form_990_cached')
+        if existing_data.get('enrichment_mission'):
+            result['mission'] = existing_data['enrichment_mission']
+            if 'cached' not in result['data_sources']:
+                result['data_sources'].append('cached')
     
     # Try Every.org for missing fields (keeps logo and causes which 990 doesn't have)
     if not result['website'] or not result['mission']:
@@ -559,12 +560,13 @@ def count_organizations(state: Optional[str] = None, ntee_code: Optional[str] = 
         return 0
 
 
-def search_organizations(query: str, state: Optional[str] = None, ntee_code: Optional[str] = None, limit: int = 10, offset: int = 0, enrich: bool = False, sort: str = 'relevance') -> List[SearchResult]:
+def search_organizations(query: str, state: Optional[str] = None, ntee_code: Optional[str] = None, limit: int = 10, offset: int = 0, enrich: bool = False, sort: str = 'relevance', ein: Optional[str] = None) -> List[SearchResult]:
     """Search nonprofit organizations using DuckDB for fast Parquet queries
     
     Args:
         enrich: If True, fetch additional data from Every.org API (slower)
         sort: Sort order - 'relevance', 'name-asc', 'name-desc', 'revenue-asc', 'revenue-desc', 'assets-asc', 'assets-desc'
+        ein: If provided, filter to exact EIN match (for direct organization links)
     """
     results = []
     
@@ -599,8 +601,13 @@ def search_organizations(query: str, state: Optional[str] = None, ntee_code: Opt
         where_clauses = []
         params = []
         
-        # Search query (case-insensitive LIKE) - only if query provided
-        if query and query.strip():
+        # EIN filter (exact match - highest priority for direct organization links)
+        if ein and ein.strip():
+            where_clauses.append("ein = ?")
+            params.append(ein.strip())
+        
+        # Search query (case-insensitive LIKE) - only if query provided and no EIN
+        if query and query.strip() and not ein:
             where_clauses.append(f"LOWER({name_col}) LIKE LOWER(?)")
             params.append(f'%{query}%')
         
@@ -631,14 +638,57 @@ def search_organizations(query: str, state: Optional[str] = None, ntee_code: Opt
         select_columns.append(f'{income_col} as income_amt' if income_col in available_columns else 'NULL as income_amt')
         select_columns.append('tax_period' if 'tax_period' in available_columns else 'NULL as tax_period')
         
-        # Track form_990 enrichment columns
-        form_990_cols = []
-        for col in ['form_990_website', 'form_990_mission', 'form_990_last_updated']:
-            if col in available_columns:
-                select_columns.append(col)
-                form_990_cols.append(col)
+        # Track enrichment columns (form_990 and bigquery)
+        enrichment_cols = []
+        enrichment_col_map = {}
+        
+        # Check for website columns (multiple possible names) - ALWAYS add if exists
+        website_col_added = False
+        for col_name in ['bigquery_website', 'form_990_website', 'website', 'everyorg_website']:
+            if col_name in available_columns:
+                select_columns.append(f'{col_name} as enrichment_website')
+                enrichment_cols.append('enrichment_website')
+                enrichment_col_map['enrichment_website'] = col_name
+                website_col_added = True
+                logger.debug(f"Added website column: {col_name}")
+                break
+        
+        # Check for mission columns
+        mission_col_added = False
+        for col_name in ['bigquery_mission', 'form_990_mission', 'mission', 'everyorg_mission']:
+            if col_name in available_columns:
+                select_columns.append(f'{col_name} as enrichment_mission')
+                enrichment_cols.append('enrichment_mission')
+                enrichment_col_map['enrichment_mission'] = col_name
+                mission_col_added = True
+                logger.debug(f"Added mission column: {col_name}")
+                break
+        
+        # Check for logo columns
+        logo_col_added = False
+        for col_name in ['logodev_logo_url', 'everyorg_logo_url', 'logo_url']:
+            if col_name in available_columns:
+                select_columns.append(f'{col_name} as enrichment_logo')
+                enrichment_cols.append('enrichment_logo')
+                enrichment_col_map['enrichment_logo'] = col_name
+                logo_col_added = True
+                logger.debug(f"Added logo column: {col_name}")
+                break
+        
+        # Last updated timestamp
+        for col_name in ['bigquery_updated_date', 'form_990_last_updated', 'everyorg_last_updated']:
+            if col_name in available_columns:
+                select_columns.append(f'{col_name} as enrichment_last_updated')
+                enrichment_cols.append('enrichment_last_updated')
+                enrichment_col_map['enrichment_last_updated'] = col_name
+                logger.debug(f"Added timestamp column: {col_name}")
+                break
         
         columns_sql = ', '.join(select_columns)
+        
+        # Log what we're selecting
+        logger.info(f"🔍 Enrichment columns to select: {enrichment_cols}")
+        logger.info(f"📋 Full SQL columns: {columns_sql}")
         
         # Build ORDER BY clause based on sort parameter
         order_by_clauses = []
@@ -744,18 +794,30 @@ def search_organizations(query: str, state: Optional[str] = None, ntee_code: Opt
             # Unpack base columns (now includes tax_period)
             org_name, city, state_code, ntee, ein, revenue, assets, income, tax_period = row[:9]
             
-            # Unpack optional form_990 columns if present
+            # Unpack optional enrichment columns if present
             existing_data = {}
             idx = 9
-            if 'form_990_website' in form_990_cols:
-                existing_data['form_990_website'] = row[idx]
+            
+            logger.debug(f"Row has {len(row)} columns, enrichment_cols: {enrichment_cols}")
+            
+            if 'enrichment_website' in enrichment_cols:
+                existing_data['enrichment_website'] = row[idx]
+                logger.info(f"Extracted website from index {idx}: {row[idx]}")
                 idx += 1
-            if 'form_990_mission' in form_990_cols:
-                existing_data['form_990_mission'] = row[idx]
+            if 'enrichment_mission' in enrichment_cols:
+                existing_data['enrichment_mission'] = row[idx]
+                logger.debug(f"Extracted mission from index {idx}")
                 idx += 1
-            if 'form_990_last_updated' in form_990_cols:
-                existing_data['form_990_last_updated'] = row[idx]
+            if 'enrichment_logo' in enrichment_cols:
+                existing_data['enrichment_logo'] = row[idx]
+                logger.debug(f"Extracted logo from index {idx}")
                 idx += 1
+            if 'enrichment_last_updated' in enrichment_cols:
+                existing_data['enrichment_last_updated'] = row[idx]
+                logger.debug(f"Extracted timestamp from index {idx}")
+                idx += 1
+            
+            logger.debug(f"existing_data for {org_name}: {existing_data}")
             
             score = row[-1]  # Score is always last
             
@@ -836,25 +898,48 @@ def search_organizations(query: str, state: Optional[str] = None, ntee_code: Opt
                 "assets": assets,
                 "income": income,
                 "tax_year": tax_year,
-                "data_sources": enrichment.get('data_sources', [])
+                "data_sources": []
             }
             
-            # Add enrichment to metadata
-            if enrichment.get('website'):
-                metadata['website'] = enrichment['website']
-            if enrichment.get('logo_url'):
-                metadata['logo_url'] = enrichment['logo_url']
-            if enrichment.get('profile_url'):
-                metadata['profile_url'] = enrichment['profile_url']
-            if enrichment.get('causes'):
-                metadata['causes'] = enrichment['causes']
+            # ALWAYS add enrichment from parquet columns (existing_data) - no enrich flag needed
+            if existing_data.get('enrichment_website'):
+                metadata['website'] = existing_data['enrichment_website']
+                metadata['data_sources'].append('cached')
+                logger.info(f"✅ Added website from parquet: {existing_data['enrichment_website']}")
+            
+            if existing_data.get('enrichment_mission'):
+                metadata['mission'] = existing_data['enrichment_mission']
+                if 'cached' not in metadata['data_sources']:
+                    metadata['data_sources'].append('cached')
+                logger.debug(f"✅ Added mission from parquet")
+            
+            if existing_data.get('enrichment_logo'):
+                metadata['logo_url'] = existing_data['enrichment_logo']
+                if 'cached' not in metadata['data_sources']:
+                    metadata['data_sources'].append('cached')
+                logger.debug(f"✅ Added logo from parquet: {existing_data['enrichment_logo']}")
+            
+            # Add API enrichment if requested (enrich=true)
+            if enrichment:
+                if enrichment.get('website') and not metadata.get('website'):
+                    metadata['website'] = enrichment['website']
+                if enrichment.get('logo_url'):
+                    metadata['logo_url'] = enrichment['logo_url']
+                if enrichment.get('profile_url'):
+                    metadata['profile_url'] = enrichment['profile_url']
+                if enrichment.get('causes'):
+                    metadata['causes'] = enrichment['causes']
+                # Add API data sources
+                for source in enrichment.get('data_sources', []):
+                    if source not in metadata['data_sources']:
+                        metadata['data_sources'].append(source)
             
             results.append(SearchResult(
                 result_type="organization",
                 title=org_name if org_name else "Unknown",
                 subtitle=f"{city}, {state_code}" + (f" - NTEE: {ntee}" if ntee else ""),
                 description=description,
-                url=f"/nonprofits?state={state_code}&keyword={org_name}&ein={ein}",
+                url=f"/search?types=organizations&state={state_code}&ein={ein}",
                 score=score,
                 metadata=metadata
             ))
@@ -922,20 +1007,24 @@ def search_causes(query: str, limit: int = 10) -> List[SearchResult]:
 
 def search_jurisdictions(query: str, state: Optional[str] = None, city: Optional[str] = None, limit: int = 10, offset: int = 0) -> List[SearchResult]:
     """Search cities, counties, townships, and school districts using DuckDB"""
-    results = []
+    all_results = []
     
     try:
         conn = duckdb.connect()
         
-        # Define jurisdiction files
+        # Define jurisdiction files with priority scores
         jurisdiction_files = {
-            'city': f"{GOLD_DIR}/reference/jurisdictions_cities.parquet",
-            'county': f"{GOLD_DIR}/reference/jurisdictions_counties.parquet",
-            'township': f"{GOLD_DIR}/reference/jurisdictions_townships.parquet",
-            'school district': f"{GOLD_DIR}/reference/jurisdictions_school_districts.parquet"
+            'county': (f"{GOLD_DIR}/reference/jurisdictions_counties.parquet", 1.3),  # Boost counties
+            'city': (f"{GOLD_DIR}/reference/jurisdictions_cities.parquet", 1.0),
+            'school district': (f"{GOLD_DIR}/reference/jurisdictions_school_districts.parquet", 1.1),  # Boost school districts
+            'township': (f"{GOLD_DIR}/reference/jurisdictions_townships.parquet", 0.9)
         }
         
-        for jtype, file_path in jurisdiction_files.items():
+        # Fetch enough results from each type to ensure diversity
+        # Even with small limits, we want representation from each type
+        per_type_limit = max(limit, 15)
+        
+        for jtype, (file_path, type_score) in jurisdiction_files.items():
             file_path_obj = Path(file_path)
             if not file_path_obj.exists():
                 continue
@@ -960,28 +1049,40 @@ def search_jurisdictions(query: str, state: Optional[str] = None, city: Optional
                 
                 where_clause = " AND ".join(where_clauses) if where_clauses else "1=1"
                 
+                # Calculate name match score if query provided
+                score_expr = f"{type_score}"
+                if query:
+                    score_expr = f"""CASE 
+                        WHEN LOWER(NAME) = LOWER('{query}') THEN {type_score} * 2.0
+                        WHEN LOWER(NAME) LIKE LOWER('{query}%') THEN {type_score} * 1.5
+                        ELSE {type_score}
+                    END"""
+                
                 sql = f"""
                     SELECT 
                         NAME as name,
                         state,
                         GEOID as geoid,
                         jurisdiction_type,
-                        1.0 as score
+                        {score_expr} as score
                     FROM read_parquet(?)
                     WHERE {where_clause}
-                    LIMIT ? OFFSET ?
+                    ORDER BY score DESC, NAME ASC
+                    LIMIT ?
                 """
                 
-                query_params = [str(file_path_obj)] + params + [limit, offset]
+                query_params = [str(file_path_obj)] + params + [per_type_limit]
                 df = conn.execute(sql, query_params).fetchdf()
                 
                 for _, row in df.iterrows():
-                    results.append(SearchResult(
-                        title=f"{row['name']}",
-                        snippet=f"{row['jurisdiction_type'].title()}, {row['state']}",
-                        url=f"/jurisdictions/{row['geoid']}",
+                    jurisdiction_label = row['jurisdiction_type'].replace('_', ' ').title()
+                    all_results.append(SearchResult(
                         result_type='jurisdiction',
-                        score=row['score'],
+                        title=f"{row['name']}",
+                        subtitle=f"{jurisdiction_label}",
+                        description=f"{jurisdiction_label} in {row['state']}",
+                        url=f"/jurisdictions/{row['geoid']}",
+                        score=float(row['score']),
                         metadata={
                             'state': row['state'],
                             'geoid': row['geoid'],
@@ -996,8 +1097,9 @@ def search_jurisdictions(query: str, state: Optional[str] = None, city: Optional
     except Exception as e:
         logger.error(f"Jurisdiction search error: {e}")
     
-    results.sort(key=lambda x: x.score, reverse=True)
-    return results[:limit]
+    # Sort all results by score, then apply pagination
+    all_results.sort(key=lambda x: (x.score, x.title), reverse=True)
+    return all_results[offset:offset + limit]
 
 
 @router.get("/api/search")
@@ -1007,6 +1109,7 @@ async def unified_search(
     state: Optional[str] = Query(None, description="Filter by state (2-letter code)"),
     city: Optional[str] = Query(None, description="Filter by city name"),
     ntee_code: Optional[str] = Query(None, description="Filter organizations by NTEE code"),
+    ein: Optional[str] = Query(None, description="Filter organizations by exact EIN (for direct organization links)"),
     limit: int = Query(20, ge=1, le=100, description="Maximum results per type"),
     offset: int = Query(0, ge=0, description="Number of results to skip (for pagination)"),
     page: int = Query(1, ge=1, description="Page number (alternative to offset)"),
@@ -1067,7 +1170,7 @@ async def unified_search(
             all_results.extend(meeting_results)
         
         if 'organizations' in requested_types:
-            org_results = search_organizations(q or "", state, ntee_code, limit=search_limit, offset=search_offset, enrich=enrich, sort=sort)
+            org_results = search_organizations(q or "", state, ntee_code, limit=search_limit, offset=search_offset, enrich=enrich, sort=sort, ein=ein)
             all_results.extend(org_results)
         
         if 'causes' in requested_types:

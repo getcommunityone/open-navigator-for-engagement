@@ -393,6 +393,8 @@ Examples:
     parser.add_argument('--export-sql', help='Export SQL query to file instead of running')
     parser.add_argument('--update-in-place', action='store_true', 
                         help='Update input file instead of creating new output file')
+    parser.add_argument('--no-officers', action='store_true',
+                        help='Skip officer/board member data from Schedule J (use if tables unavailable)')
     
     args = parser.parse_args()
     
@@ -523,7 +525,13 @@ Examples:
         
         # Enrich
         enricher = BigQueryNonprofitEnricher(project=args.project)
-        enriched = enricher.enrich_dataframe(df, ein_column=args.ein_column, years=args.years)
+        include_officers = not args.no_officers
+        enriched = enricher.enrich_dataframe(
+            df, 
+            ein_column=args.ein_column, 
+            years=args.years,
+            include_officers=include_officers
+        )
     
     # Save
     logger.info(f"💾 Saving to: {output_path}")

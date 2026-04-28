@@ -11,7 +11,11 @@ import {
   XMarkIcon,
   AdjustmentsHorizontalIcon,
   CheckIcon,
-  MapPinIcon
+  MapPinIcon,
+  ChevronDownIcon,
+  ChevronUpIcon,
+  GlobeAltIcon,
+  VideoCameraIcon
 } from '@heroicons/react/24/outline'
 
 interface SearchResult {
@@ -72,6 +76,18 @@ export default function UnifiedSearch() {
   const [showSuggestions, setShowSuggestions] = useState(false)
   const [sortBy, setSortBy] = useState(() => searchParams.get('sort') || 'relevance')
   const [nteeCategory, setNteeCategory] = useState(() => searchParams.get('ntee') || '')
+  const [jurisdictionDetails, setJurisdictionDetails] = useState<any[]>(() => {
+    const detailsParam = searchParams.get('jurisdiction_details')
+    if (detailsParam) {
+      try {
+        return JSON.parse(decodeURIComponent(detailsParam))
+      } catch (e) {
+        return []
+      }
+    }
+    return []
+  })
+  const [expandedJurisdictions, setExpandedJurisdictions] = useState<Set<number>>(new Set())
   
   const searchInputRef = useRef<HTMLInputElement>(null)
 
@@ -83,6 +99,7 @@ export default function UnifiedSearch() {
     const pageParam = searchParams.get('page')
     const sortParam = searchParams.get('sort')
     const nteeParam = searchParams.get('ntee')
+    const jurisdictionDetailsParam = searchParams.get('jurisdiction_details')
     
     if (queryParam) {
       setQuery(queryParam)
@@ -108,7 +125,19 @@ export default function UnifiedSearch() {
     if (nteeParam) {
       setNteeCategory(nteeParam)
     }
+    if (jurisdictionDetailsParam) {
+      try {
+        setJurisdictionDetails(JSON.parse(decodeURIComponent(jurisdictionDetailsParam)))
+      } catch (e) {
+        setJurisdictionDetails([])
+      }
+    }
   }, [searchParams])
+
+  // Auto-focus search input on mount (e.g., when returning from jurisdiction selection)
+  useEffect(() => {
+    searchInputRef.current?.focus()
+  }, [])
 
   // Live search preview (type-ahead with actual results)
   const { data: previewResults } = useQuery<SearchResponse>({
@@ -247,6 +276,18 @@ export default function UnifiedSearch() {
     if (sortBy && sortBy !== 'relevance') params.sort = sortBy
     if (nteeCategory) params.ntee = nteeCategory
     setSearchParams(params)
+  }
+
+  const toggleJurisdictionExpansion = (index: number) => {
+    setExpandedJurisdictions(prev => {
+      const newSet = new Set(prev)
+      if (newSet.has(index)) {
+        newSet.delete(index)
+      } else {
+        newSet.add(index)
+      }
+      return newSet
+    })
   }
 
   const getTypeIcon = (type: string) => {
@@ -581,7 +622,7 @@ export default function UnifiedSearch() {
           </div>
 
           {/* Active Filters Display */}
-          {(selectedState || sortBy !== 'relevance' || nteeCategory) && (
+          {(selectedState || sortBy !== 'relevance' || nteeCategory || jurisdictionDetails.length > 0) && (
             <div className="mt-3 flex items-center gap-2 flex-wrap">
               <span className="text-sm text-gray-600">Active filters:</span>
               {selectedState && (
@@ -593,6 +634,23 @@ export default function UnifiedSearch() {
                       setTimeout(() => handleSearch(), 0)
                     }}
                     className="hover:bg-blue-200 rounded-full p-0.5"
+                  >
+                    <XMarkIcon className="h-3 w-3" />
+                  </button>
+                </span>
+              )}
+              {jurisdictionDetails.length > 0 && (
+                <span className="inline-flex items-center gap-1 px-3 py-1 bg-teal-100 text-teal-800 rounded-full text-sm">
+                  <MapPinIcon className="h-3 w-3" />
+                  {jurisdictionDetails.length} Jurisdictions
+                  <button
+                    onClick={() => {
+                      setJurisdictionDetails([])
+                      const params = new URLSearchParams(window.location.search)
+                      params.delete('jurisdiction_details')
+                      setSearchParams(params)
+                    }}
+                    className="hover:bg-teal-200 rounded-full p-0.5"
                   >
                     <XMarkIcon className="h-3 w-3" />
                   </button>
@@ -799,6 +857,143 @@ export default function UnifiedSearch() {
                     </p>
                   )}
                 </div>
+
+                {/* Jurisdiction Details Breakdown */}
+                {jurisdictionDetails.length > 0 && (
+                  <div className="mb-6 p-6 bg-gradient-to-br from-teal-50 to-blue-50 rounded-xl border border-teal-200">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                      <MapPinIcon className="h-6 w-6 text-teal-600" />
+                      Your Jurisdictions
+                    </h3>
+                    <p className="text-sm text-gray-600 mb-4">
+                      When you select a city, you're connected to {jurisdictionDetails.length} levels of government:
+                    </p>
+                    <div className="space-y-3">
+                      {jurisdictionDetails.map((item: any, index: number) => {
+                        const isExpanded = expandedJurisdictions.has(index)
+                        return (
+                          <div
+                            key={index}
+                            className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden transition-all duration-200 hover:shadow-md"
+                          >
+                            {/* Collapsed Header - Always Visible */}
+                            <button
+                              onClick={() => toggleJurisdictionExpansion(index)}
+                              className="w-full flex items-center justify-between p-4 text-left hover:bg-gray-50 transition-colors"
+                            >
+                              <div className="flex-1">
+                                <div className="flex items-center gap-2">
+                                  <span className="font-semibold text-gray-900">{item.type}</span>
+                                  <span className="text-gray-400">•</span>
+                                  <span className="text-gray-700">{item.name}</span>
+                                </div>
+                                {!isExpanded && (
+                                  <div className="text-sm text-gray-500 mt-1">
+                                    Click to view details and discover data sources
+                                  </div>
+                                )}
+                              </div>
+                              <div className="flex items-center gap-3">
+                                <CheckIcon className="h-5 w-5 text-green-600 flex-shrink-0" />
+                                {isExpanded ? (
+                                  <ChevronUpIcon className="h-5 w-5 text-gray-400 flex-shrink-0" />
+                                ) : (
+                                  <ChevronDownIcon className="h-5 w-5 text-gray-400 flex-shrink-0" />
+                                )}
+                              </div>
+                            </button>
+
+                            {/* Expanded Details */}
+                            {isExpanded && (
+                              <div className="px-4 pb-4 border-t border-gray-100 bg-gray-50">
+                                <div className="mt-4 space-y-3">
+                                  {/* Jurisdiction Info */}
+                                  <div className="grid grid-cols-2 gap-4">
+                                    <div>
+                                      <div className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">Type</div>
+                                      <div className="text-sm text-gray-900">{item.type}</div>
+                                    </div>
+                                    <div>
+                                      <div className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">Name</div>
+                                      <div className="text-sm text-gray-900">{item.name}</div>
+                                    </div>
+                                    {item.count !== undefined && (
+                                      <div>
+                                        <div className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">Count</div>
+                                        <div className="text-sm text-gray-900">{item.count.toLocaleString()}</div>
+                                      </div>
+                                    )}
+                                  </div>
+
+                                  {/* Discover Data Sources Button */}
+                                  <div className="pt-3 border-t border-gray-200">
+                                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                                      <div className="flex items-start gap-3">
+                                        <div className="flex-shrink-0">
+                                          <GlobeAltIcon className="h-5 w-5 text-blue-600" />
+                                        </div>
+                                        <div className="flex-1">
+                                          <h4 className="text-sm font-semibold text-blue-900 mb-1">
+                                            Automated Data Discovery
+                                          </h4>
+                                          <p className="text-xs text-blue-700 mb-3">
+                                            Automatically find official websites, meeting agendas, YouTube channels, and social media for this jurisdiction.
+                                          </p>
+                                          <button
+                                            onClick={(e) => {
+                                              e.stopPropagation()
+                                              // Navigate to discovery page
+                                              const searchQuery = `${item.name} ${item.type}`
+                                              navigate(`/discovery?q=${encodeURIComponent(searchQuery)}&jurisdiction=${encodeURIComponent(item.name)}`)
+                                            }}
+                                            className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
+                                          >
+                                            <MagnifyingGlassIcon className="h-4 w-4" />
+                                            Discover Data Sources
+                                          </button>
+                                        </div>
+                                      </div>
+                                    </div>
+                                  </div>
+
+                                  {/* What We'll Find */}
+                                  <div className="pt-3 border-t border-gray-200">
+                                    <div className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">
+                                      What We'll Discover
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-2 text-sm">
+                                      <div className="flex items-center gap-2 text-gray-700">
+                                        <GlobeAltIcon className="h-4 w-4 text-gray-400" />
+                                        Official Website
+                                      </div>
+                                      <div className="flex items-center gap-2 text-gray-700">
+                                        <CalendarIcon className="h-4 w-4 text-gray-400" />
+                                        Meeting Agendas
+                                      </div>
+                                      <div className="flex items-center gap-2 text-gray-700">
+                                        <VideoCameraIcon className="h-4 w-4 text-gray-400" />
+                                        YouTube Channels
+                                      </div>
+                                      <div className="flex items-center gap-2 text-gray-700">
+                                        <BuildingOfficeIcon className="h-4 w-4 text-gray-400" />
+                                        Social Media
+                                      </div>
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        )
+                      })}
+                    </div>
+                    <div className="mt-4 p-4 bg-blue-100 rounded-lg">
+                      <p className="text-sm text-blue-900">
+                        <strong>💡 Why this matters:</strong> Each jurisdiction has its own meetings, budgets, and leaders that affect your daily life. Track all of them in one place.
+                      </p>
+                    </div>
+                  </div>
+                )}
 
                 {/* Results by Type */}
                 {selectedTypes.includes('contacts') && searchResults.results.contacts.length > 0 && (

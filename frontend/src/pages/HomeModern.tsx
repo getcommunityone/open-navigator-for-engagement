@@ -128,6 +128,15 @@ export default function HomeModern() {
     }
   }, [searchParams])
 
+  // Handle scope parameter from URL (when navigating from jurisdiction cards)
+  useEffect(() => {
+    const scopeParam = searchParams.get('scope')
+    if (scopeParam && ['city', 'county', 'state', 'community', 'national'].includes(scopeParam)) {
+      setSearchScope(scopeParam)
+      setSelectedTab(0) // Switch to search tab
+    }
+  }, [searchParams])
+
   // When location is set, default to city search
   useEffect(() => {
     if (location && searchScope === 'community') {
@@ -395,7 +404,32 @@ export default function HomeModern() {
 
           <p className="text-xl md:text-2xl text-gray-600 mb-12 max-w-3xl mx-auto animate-[slideUp_0.8s_ease-out_0.4s_both]">
             Follow leaders, charities, and causes in your community.<br />
-            {statsData ? (
+            {/* Show search-filtered counts when actively searching, otherwise show location stats */}
+            {keyword.length >= 2 && previewResults && previewResults.total_results > 0 ? (
+              <>
+                <span className="font-semibold text-[#52796F]">
+                  {previewResults.total_results.toLocaleString()} result{previewResults.total_results !== 1 ? 's' : ''}
+                </span>
+                {' matching "'}
+                <span className="font-bold text-[#354F52]">{keyword}</span>
+                {'"'}
+                {location && (
+                  <>
+                    {' in '}
+                    <span className="font-semibold text-[#52796F]">
+                      {location.city || location.county || location.state}
+                    </span>
+                  </>
+                )}
+              </>
+            ) : keyword.length >= 2 && previewResults && previewResults.total_results === 0 ? (
+              <>
+                <span className="text-gray-500">
+                  No results found for "{keyword}"
+                  {location && ` in ${location.city || location.county || location.state}`}
+                </span>
+              </>
+            ) : statsData ? (
               statsData.level === 'state' ? (
                 <>
                   <Link 
@@ -429,12 +463,12 @@ export default function HomeModern() {
                 </>
               ) : statsData.level === 'city' && statsData.jurisdictions_breakdown ? (
                 <>
-                  <button
-                    onClick={() => setShowJurisdictionsModal(true)}
-                    className="font-semibold text-[#52796F] hover:text-[#354F52] no-underline hover:underline hover:decoration-2 transition-all duration-200 cursor-pointer bg-transparent border-none"
+                  <Link
+                    to={`/search?types=jurisdictions&state=${statsData.state}&jurisdiction_details=${encodeURIComponent(JSON.stringify(statsData.jurisdictions_breakdown))}`}
+                    className="font-semibold text-[#52796F] hover:text-[#354F52] no-underline hover:underline hover:decoration-2 transition-all duration-200"
                   >
                     {statsData.jurisdictions_display} jurisdictions
-                  </button>
+                  </Link>
                   {' • '}
                   <Link 
                     to={`/search?types=organizations${statsData.state ? `&state=${statsData.state}` : ''}`}
@@ -1374,85 +1408,6 @@ export default function HomeModern() {
           </p>
         </div>
       </footer>
-
-      {/* Jurisdictions Breakdown Modal */}
-      <Transition appear show={showJurisdictionsModal} as={Fragment}>
-        <Dialog as="div" className="relative z-50" onClose={() => setShowJurisdictionsModal(false)}>
-          <Transition.Child
-            as={Fragment}
-            enter="ease-out duration-300"
-            enterFrom="opacity-0"
-            enterTo="opacity-100"
-            leave="ease-in duration-200"
-            leaveFrom="opacity-100"
-            leaveTo="opacity-0"
-          >
-            <div className="fixed inset-0 bg-black bg-opacity-25" />
-          </Transition.Child>
-
-          <div className="fixed inset-0 overflow-y-auto">
-            <div className="flex min-h-full items-center justify-center p-4 text-center">
-              <Transition.Child
-                as={Fragment}
-                enter="ease-out duration-300"
-                enterFrom="opacity-0 scale-95"
-                enterTo="opacity-100 scale-100"
-                leave="ease-in duration-200"
-                leaveFrom="opacity-100 scale-100"
-                leaveTo="opacity-0 scale-95"
-              >
-                <Dialog.Panel className="w-full max-w-md transform overflow-hidden rounded-2xl bg-white p-6 text-left align-middle shadow-xl transition-all">
-                  <Dialog.Title
-                    as="h3"
-                    className="text-lg font-medium leading-6 text-gray-900 mb-4 flex items-center gap-2"
-                  >
-                    <MapIcon className="h-6 w-6 text-[#52796F]" />
-                    Your Jurisdictions
-                  </Dialog.Title>
-                  
-                  {statsData && statsData.jurisdictions_breakdown ? (
-                    <div className="mt-2 space-y-3">
-                      <p className="text-sm text-gray-600 mb-4">
-                        When you select a city, you're connected to 4 levels of government:
-                      </p>
-                      {statsData.jurisdictions_breakdown.map((item: any, index: number) => (
-                        <div
-                          key={index}
-                          className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
-                        >
-                          <div>
-                            <div className="font-medium text-gray-900">{item.type}</div>
-                            <div className="text-sm text-gray-600">{item.name}</div>
-                          </div>
-                          <CheckCircleIcon className="h-5 w-5 text-green-600" />
-                        </div>
-                      ))}
-                      
-                      <div className="mt-6 p-4 bg-blue-50 rounded-lg">
-                        <p className="text-sm text-blue-900">
-                          <strong>💡 Why this matters:</strong> Each jurisdiction has its own meetings, budgets, and leaders that affect your daily life. Track all of them in one place.
-                        </p>
-                      </div>
-                    </div>
-                  ) : (
-                    <p className="text-gray-600">No jurisdiction breakdown available.</p>
-                  )}
-
-                  <div className="mt-6">
-                    <button
-                      type="button"
-                      className="w-full inline-flex justify-center rounded-lg border border-transparent bg-[#354F52] px-4 py-2 text-sm font-medium text-white hover:bg-[#52796F] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#354F52] focus-visible:ring-offset-2"
-                      onClick={() => setShowJurisdictionsModal(false)}
-                    >
-                      Got it, thanks!
-                    </button>
-                  </div>
-                </Dialog.Panel>
-              </Transition.Child>
-            </div>
-          </div>
-        </Dialog>
-      </Transition>
     </div>
   )
 }

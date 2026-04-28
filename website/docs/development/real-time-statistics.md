@@ -435,7 +435,7 @@ Real numbers for MA from live data tables
 - 📊 **Accuracy:** 0% - Completely made up
 
 ### After (Real Data, Multi-Level)
-- ⚡ **<2ms** - From cache (after first calculation)
+- ⚡ **Under 2ms** - From cache (after first calculation)
 - ⏱️ **~3s** - Initial calculation (reads all parquet files)
 - 🔄 **Refresh:** Every 1 hour
 - 📊 **Accuracy:** 100% - Real counts from actual data
@@ -579,6 +579,6 @@ npm run dev
 - ✅ **Real data** - All counts from actual parquet files
 - ✅ **Smart extrapolation** - National view projects realistic totals
 - ✅ **Contextual UI** - "Our Impact in Massachusetts" for state view
-- ✅ **Performance** - 1-hour cache per geographic level (<2ms from cache)
+- ✅ **Performance** - 1-hour cache per geographic level (under 2ms from cache)
 
 **No more made-up numbers, and stats automatically adapt to user's location!** 🚀
