@@ -41,7 +41,7 @@ const config: Config = {
       'classic',
       {
         docs: {
-          routeBasePath: '/docs/', // Serve docs at /docs/ path since we have a custom homepage
+          routeBasePath: '/', // Docs at root of baseUrl (baseUrl handles /docs/ prefix in production)
           sidebarPath: './sidebars.ts',
           // Please change this to your repo.
           // Remove this to remove the "edit this page" links.
