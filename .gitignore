@@ -50,6 +50,9 @@ auth.json
 token.json
 *_token.txt
 *-token.txt
+gcp-*.json
+bigquery-*.json
+.gcp/
 
 # Logs
 logs/
