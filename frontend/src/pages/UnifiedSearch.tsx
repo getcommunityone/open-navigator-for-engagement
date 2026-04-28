@@ -121,6 +121,7 @@ export default function UnifiedSearch() {
     return ''
   })
   const [expandedJurisdictions, setExpandedJurisdictions] = useState<Set<number>>(new Set())
+  const [expandedOrganizations, setExpandedOrganizations] = useState<Set<string>>(new Set())
   
   const searchInputRef = useRef<HTMLInputElement>(null)
   const { user, isAuthenticated, login, logout, isLoading } = useAuth()
@@ -204,7 +205,7 @@ export default function UnifiedSearch() {
   })
 
   // Main search results
-  const { data: searchResults, isLoading, error } = useQuery<SearchResponse>({
+  const { data: searchResults, isLoading: isSearching, error } = useQuery<SearchResponse>({
     queryKey: ['unified-search', activeQuery, selectedTypes, selectedState, currentPage, sortBy, nteeCategory],
     queryFn: async () => {
       // Allow searching with query OR with filters (browse mode)
@@ -335,6 +336,18 @@ export default function UnifiedSearch() {
     })
   }
 
+  const toggleOrganizationExpansion = (ein: string) => {
+    setExpandedOrganizations(prev => {
+      const newSet = new Set(prev)
+      if (newSet.has(ein)) {
+        newSet.delete(ein)
+      } else {
+        newSet.add(ein)
+      }
+      return newSet
+    })
+  }
+
   const getTypeIcon = (type: string) => {
     switch (type) {
       case 'contact':
@@ -369,21 +382,8 @@ export default function UnifiedSearch() {
     }
   }
 
-  const formatCurrency = (amount: number): string => {
-    if (!amount || amount === 0) return '$0'
-    
-    const absAmount = Math.abs(amount)
-    
-    if (absAmount >= 1_000_000_000) {
-      return `$${(amount / 1_000_000_000).toFixed(1)}B`
-    } else if (absAmount >= 1_000_000) {
-      return `$${(amount / 1_000_000).toFixed(1)}M`
-    } else if (absAmount >= 1_000) {
-      return `$${(amount / 1_000).toFixed(1)}K`
-    } else {
-      return `$${amount.toFixed(0)}`
-    }
-  }
+  // Use imported formatCurrency
+  const formatCurrency = formatCurrencyUtil
 
   const ResultCard = ({ result }: { result: SearchResult }) => (
     <div
@@ -435,6 +435,16 @@ export default function UnifiedSearch() {
           
           <p className="text-sm text-gray-500 line-clamp-2 mb-2">{result.description}</p>
           
+          {/* Mission statement for organizations */}
+          {result.type === 'organization' && result.metadata?.mission && (
+            <div className="mt-2 mb-2 p-3 bg-blue-50 border-l-4 border-blue-400 rounded">
+              <p className="text-sm text-gray-700 italic">
+                <span className="font-semibold text-blue-900">Mission: </span>
+                {result.metadata.mission}
+              </p>
+            </div>
+          )}
+          
           {/* Website link for organizations */}
           {result.type === 'organization' && result.metadata?.website && (
             <a
@@ -472,6 +482,80 @@ export default function UnifiedSearch() {
                 <span className="px-2 py-1 bg-purple-100 text-purple-700 rounded">
                   🏷️ {result.metadata.causes.slice(0, 3).join(', ')}
                 </span>
+              )}
+            </div>
+          )}
+          
+          {/* Expandable details for organizations */}
+          {result.type === 'organization' && result.metadata?.ein && (
+            <div className="mt-3">
+              <button
+                onClick={(e) => {
+                  e.stopPropagation()
+                  toggleOrganizationExpansion(result.metadata.ein)
+                }}
+                className="flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900 font-medium"
+              >
+                {expandedOrganizations.has(result.metadata.ein) ? (
+                  <ChevronUpIcon className="h-4 w-4" />
+                ) : (
+                  <ChevronDownIcon className="h-4 w-4" />
+                )}
+                {expandedOrganizations.has(result.metadata.ein) ? 'Hide' : 'Show'} Details
+              </button>
+              
+              {expandedOrganizations.has(result.metadata.ein) && (
+                <div className="mt-3 space-y-3 border-t pt-3">
+                  {/* Financials Section */}
+                  <div>
+                    <h4 className="text-sm font-semibold text-gray-700 mb-2 flex items-center gap-1">
+                      💰 Financial Information
+                      {result.metadata.tax_year && (
+                        <span className="text-xs text-gray-500 font-normal">(Tax Year {result.metadata.tax_year})</span>
+                      )}
+                    </h4>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
+                      <div className="bg-green-50 p-3 rounded border border-green-200">
+                        <div className="text-xs text-green-700 font-medium mb-1">Total Revenue</div>
+                        <div className="text-lg font-bold text-green-900">
+                          {result.metadata.revenue ? formatCurrency(result.metadata.revenue) : 'N/A'}
+                        </div>
+                      </div>
+                      <div className="bg-blue-50 p-3 rounded border border-blue-200">
+                        <div className="text-xs text-blue-700 font-medium mb-1">Total Assets</div>
+                        <div className="text-lg font-bold text-blue-900">
+                          {result.metadata.assets ? formatCurrency(result.metadata.assets) : 'N/A'}
+                        </div>
+                      </div>
+                      <div className="bg-purple-50 p-3 rounded border border-purple-200">
+                        <div className="text-xs text-purple-700 font-medium mb-1">Net Income</div>
+                        <div className="text-lg font-bold text-purple-900">
+                          {result.metadata.income ? formatCurrency(result.metadata.income) : 'N/A'}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  {/* Board Members Section - Placeholder */}
+                  <div>
+                    <h4 className="text-sm font-semibold text-gray-700 mb-2 flex items-center gap-1">
+                      👥 Board Members
+                    </h4>
+                    <div className="bg-gray-50 p-3 rounded border border-gray-200 text-sm text-gray-600">
+                      Board member information coming soon
+                    </div>
+                  </div>
+                  
+                  {/* Grants Section - Placeholder */}
+                  <div>
+                    <h4 className="text-sm font-semibold text-gray-700 mb-2 flex items-center gap-1">
+                      📜 Recent Grants
+                    </h4>
+                    <div className="bg-gray-50 p-3 rounded border border-gray-200 text-sm text-gray-600">
+                      Grant information coming soon
+                    </div>
+                  </div>
+                </div>
               )}
             </div>
           )}
@@ -994,7 +1078,7 @@ export default function UnifiedSearch() {
         {/* Search Results */}
         {(activeQuery || selectedState || searchResults) && (
           <div>
-            {isLoading && (
+            {isSearching && (
               <div className="text-center py-12">
                 <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
                 <p className="mt-4 text-gray-600">Searching...</p>

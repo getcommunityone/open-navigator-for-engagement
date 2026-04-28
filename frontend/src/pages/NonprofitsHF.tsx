@@ -120,15 +120,7 @@ export default function Nonprofits() {
     staleTime: 5 * 60 * 1000, // Cache for 5 minutes
   })
 
-  const formatCurrency = (amount?: number) => {
-    if (!amount || amount === 0) return 'N/A'
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0
-    }).format(amount)
-  }
+  // formatCurrency imported from utils/formatters
 
   const formatSubsection = (code?: string) => {
     const subsections: Record<string, string> = {

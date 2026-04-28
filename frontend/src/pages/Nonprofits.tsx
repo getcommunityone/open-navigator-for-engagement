@@ -62,15 +62,7 @@ export default function Nonprofits() {
     searchNonprofits()
   }, [])
 
-  const formatCurrency = (amount?: number) => {
-    if (!amount) return 'N/A'
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0
-    }).format(amount)
-  }
+  // formatCurrency imported from utils/formatters
 
   return (
     <div className="min-h-screen p-8" style={{ backgroundColor: '#F1F5F9' }}>

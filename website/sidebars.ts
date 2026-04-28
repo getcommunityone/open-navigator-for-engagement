@@ -11,7 +11,7 @@ const sidebars: SidebarsConfig = {
       collapsed: false,
       items: [
         'intro',
-        'dashboard',
+        'open-navigator',
       ],
     },
     {
@@ -49,8 +49,8 @@ const sidebars: SidebarsConfig = {
         },
         {
           type: 'doc',
-          id: 'dashboard',
-          label: 'Getting Started with Dashboard',
+          id: 'open-navigator',
+          label: 'Getting Started with Open Navigator',
         },
         {
           type: 'doc',
@@ -217,7 +217,7 @@ const sidebars: SidebarsConfig = {
       collapsed: false,
       items: [
         'intro',
-        'dashboard',
+        'open-navigator',
       ],
     },
     {
@@ -242,8 +242,8 @@ const sidebars: SidebarsConfig = {
         },
         {
           type: 'doc',
-          id: 'dashboard',
-          label: 'Getting Started with Dashboard',
+          id: 'open-navigator',
+          label: 'Getting Started with Open Navigator',
         },
         {
           type: 'doc',
