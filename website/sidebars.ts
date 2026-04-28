@@ -19,6 +19,11 @@ const sidebars: SidebarsConfig = {
       id: 'data-sources/citations',
       label: 'Citations & Data Sources',
     },
+    {
+      type: 'doc',
+      id: 'legal-compliance',
+      label: 'Legal & Compliance',
+    },
   ],
 
   // ========================================
@@ -51,6 +56,11 @@ const sidebars: SidebarsConfig = {
           type: 'doc',
           id: 'data-sources/citations',
           label: 'Citations & Data Sources',
+        },
+        {
+          type: 'doc',
+          id: 'legal-compliance',
+          label: 'Legal & Compliance',
         },
       ],
     },
@@ -130,6 +140,11 @@ const sidebars: SidebarsConfig = {
               type: 'doc',
               id: 'data-sources/citations',
               label: 'Citations & Data Sources',
+            },
+            {
+              type: 'doc',
+              id: 'legal-compliance',
+              label: 'Legal & Compliance',
             },
             'data-sources/data-model-erd',
             'data-sources/jurisdiction-discovery',
@@ -308,6 +323,11 @@ const sidebars: SidebarsConfig = {
               id: 'data-sources/citations',
               label: 'Citations & Data Sources',
             },
+            {
+              type: 'doc',
+              id: 'legal-compliance',
+              label: 'Legal & Compliance',
+            },
             'data-sources/data-model-erd',
             'data-sources/jurisdiction-discovery',
             'data-sources/census-data',
@@ -376,6 +396,11 @@ const sidebars: SidebarsConfig = {
       type: 'doc',
       id: 'data-sources/citations',
       label: 'Citations & Data Sources',
+    },
+    {
+      type: 'doc',
+      id: 'legal-compliance',
+      label: 'Legal & Compliance',
     },
   ],
 };
