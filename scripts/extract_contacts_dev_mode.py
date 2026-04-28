@@ -70,7 +70,11 @@ def consolidate_dev_meetings():
     
     # Create meeting_id if it doesn't exist
     if 'meeting_id' not in combined_df.columns:
-        combined_df['meeting_id'] = combined_df['video_id'].astype(str)
+        if 'vid_id' in combined_df.columns:
+            combined_df['meeting_id'] = combined_df['vid_id'].astype(str)
+        else:
+            # Fallback: create sequential IDs
+            combined_df['meeting_id'] = [f"meeting_{i}" for i in range(len(combined_df))]
     
     # Rename columns
     for old_col, new_col in column_mapping.items():
