@@ -27,15 +27,16 @@ export default function Analytics() {
   const [selectedState, setSelectedState] = useState<string>('all')
   const [fiscalYear, setFiscalYear] = useState<string>('2024')
 
-  const { data, isLoading } = useQuery<BudgetData[]>({
-    queryKey: ['budget-analytics', selectedState, fiscalYear],
-    queryFn: async () => {
-      const response = await axios.get('/api/budgets', {
-        params: { state: selectedState, year: fiscalYear },
-      })
-      return response.data.budgets || []
-    },
-  })
+  // Commented out for now - will be implemented when API is ready
+  // const { data, isLoading } = useQuery<BudgetData[]>({
+  //   queryKey: ['budget-analytics', selectedState, fiscalYear],
+  //   queryFn: async () => {
+  //     const response = await axios.get('/api/budgets', {
+  //       params: { state: selectedState, year: fiscalYear },
+  //     })
+  //     return response.data.budgets || []
+  //   },
+  // })
 
   return (
     <div className="min-h-screen p-8" style={{ backgroundColor: '#F1F5F9' }}>

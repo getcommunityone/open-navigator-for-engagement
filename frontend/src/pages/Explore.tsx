@@ -188,9 +188,70 @@ export default function Explore() {
         </div>
       </div>
 
-      {/* Policy Makers Section */}
+      {/* Families & Individuals Section - FIRST */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="mb-8">
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">For Families & Individuals</h2>
+          <p className="text-gray-600">Events, training, services, voter registration, and ways to engage with your community.</p>
+        </div>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
+          {familyOptions.map((option) => {
+            const Icon = option.icon;
+            return (
+              <Link
+                key={option.path}
+                to={option.path}
+                className="group bg-white rounded-xl shadow-md hover:shadow-xl transition-all duration-300 overflow-hidden border border-gray-100 hover:border-gray-200"
+              >
+                <div className="p-6">
+                  {/* Icon */}
+                  <div
+                    className="w-14 h-14 rounded-lg flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300"
+                    style={{ backgroundColor: `${option.color}15` }}
+                  >
+                    <div style={{ color: option.color }}>
+                      <Icon className="h-7 w-7" />
+                    </div>
+                  </div>
+
+                  {/* Title and Stats */}
+                  <div className="mb-3">
+                    <h3 className="text-xl font-bold text-gray-900 mb-1 group-hover:text-[#354F52] transition-colors">
+                      {option.title}
+                    </h3>
+                    {option.stats && (
+                      <p className="text-sm font-medium" style={{ color: option.color }}>
+                        {option.stats}
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Description */}
+                  <p className="text-gray-600 text-sm leading-relaxed">
+                    {option.description}
+                  </p>
+
+                  {/* Arrow indicator */}
+                  <div className="mt-4 flex items-center text-sm font-medium" style={{ color: option.color }}>
+                    <span className="group-hover:translate-x-1 transition-transform duration-300">
+                      Explore →
+                    </span>
+                  </div>
+                </div>
+
+                {/* Hover effect bar */}
+                <div
+                  className="h-1 w-full transform scale-x-0 group-hover:scale-x-100 transition-transform duration-300 origin-left"
+                  style={{ backgroundColor: option.color }}
+                />
+              </Link>
+            );
+          })}
+        </div>
+
+        {/* Policy Makers Section */}
+        <div className="mb-8 mt-16">
           <h2 className="text-2xl font-bold text-gray-900 mb-2">For Policy Makers & Government</h2>
           <p className="text-gray-600">Track decisions, budgets, officials, and demographic data across 90,000+ jurisdictions.</p>
         </div>
@@ -251,74 +312,13 @@ export default function Explore() {
         </div>
 
         {/* Advocates Section */}
-        <div className="mb-8">
+        <div className="mb-8 mt-16">
           <h2 className="text-2xl font-bold text-gray-900 mb-2">For Advocates & Community Members</h2>
           <p className="text-gray-600">Find nonprofits, advocacy topics, funding, and fact-checked information.</p>
         </div>
         
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {advocateOptions.map((option) => {
-            const Icon = option.icon;
-            return (
-              <Link
-                key={option.path}
-                to={option.path}
-                className="group bg-white rounded-xl shadow-md hover:shadow-xl transition-all duration-300 overflow-hidden border border-gray-100 hover:border-gray-200"
-              >
-                <div className="p-6">
-                  {/* Icon */}
-                  <div
-                    className="w-14 h-14 rounded-lg flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300"
-                    style={{ backgroundColor: `${option.color}15` }}
-                  >
-                    <div style={{ color: option.color }}>
-                      <Icon className="h-7 w-7" />
-                    </div>
-                  </div>
-
-                  {/* Title and Stats */}
-                  <div className="mb-3">
-                    <h3 className="text-xl font-bold text-gray-900 mb-1 group-hover:text-[#354F52] transition-colors">
-                      {option.title}
-                    </h3>
-                    {option.stats && (
-                      <p className="text-sm font-medium" style={{ color: option.color }}>
-                        {option.stats}
-                      </p>
-                    )}
-                  </div>
-
-                  {/* Description */}
-                  <p className="text-gray-600 text-sm leading-relaxed">
-                    {option.description}
-                  </p>
-
-                  {/* Arrow indicator */}
-                  <div className="mt-4 flex items-center text-sm font-medium" style={{ color: option.color }}>
-                    <span className="group-hover:translate-x-1 transition-transform duration-300">
-                      Explore →
-                    </span>
-                  </div>
-                </div>
-
-                {/* Hover effect bar */}
-                <div
-                  className="h-1 w-full transform scale-x-0 group-hover:scale-x-100 transition-transform duration-300 origin-left"
-                  style={{ backgroundColor: option.color }}
-                />
-              </Link>
-            );
-          })}
-        </div>
-
-        {/* Families & Individuals Section */}
-        <div className="mb-8 mt-16">
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">For Families & Individuals</h2>
-          <p className="text-gray-600">Events, training, services, voter registration, and ways to engage with your community.</p>
-        </div>
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
-          {familyOptions.map((option) => {
             const Icon = option.icon;
             return (
               <Link
