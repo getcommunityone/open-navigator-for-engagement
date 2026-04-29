@@ -582,7 +582,13 @@ export default function HomeModern() {
               )
             ) : (
               <>
-                925 jurisdictions • {' '}
+                <Link 
+                  to="/jurisdictions"
+                  className="font-semibold text-[#52796F] hover:text-[#354F52] no-underline hover:underline hover:decoration-2 transition-all duration-200"
+                >
+                  925 jurisdictions
+                </Link>
+                {' • '}
                 <Link 
                   to="/search?types=organizations"
                   className="font-semibold text-[#52796F] hover:text-[#354F52] no-underline hover:underline hover:decoration-2 transition-all duration-200"
@@ -1070,17 +1076,20 @@ export default function HomeModern() {
                 <p className="text-gray-600 mb-4">
                   "{jurisdictionSearch}" discovery data is being processed.
                 </p>
-                <p className="text-sm text-gray-500 mb-4">
-                  Don't see your jurisdiction? Request it as a priority for our next data collection cycle.
-                </p>
-                <a 
-                  href="https://docs.google.com/forms/d/e/1FAIpQLSdCustomFormID/viewform?entry.jurisdiction={encodeURIComponent(jurisdictionSearch)}&entry.state={selectedStateFilter || ''}"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
-                >
-                  Request Priority Coverage
-                </a>
+                <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                  <Link
+                    to="/jurisdictions"
+                    className="inline-flex items-center justify-center px-4 py-2 bg-[#52796F] text-white rounded-md hover:bg-[#354F52] transition-colors"
+                  >
+                    Browse All Jurisdictions
+                  </Link>
+                  <a 
+                    href="#contact"
+                    className="inline-flex items-center justify-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+                  >
+                    Request Priority Coverage
+                  </a>
+                </div>
               </div>
             )}
 
@@ -1544,6 +1553,7 @@ export default function HomeModern() {
                     <option value="feedback" className="text-gray-900 bg-white">General Feedback</option>
                     <option value="bug" className="text-gray-900 bg-white">Bug Report</option>
                     <option value="feature" className="text-gray-900 bg-white">Feature Request</option>
+                    <option value="jurisdiction-request" className="text-gray-900 bg-white">Request Jurisdiction Coverage</option>
                     <option value="question" className="text-gray-900 bg-white">Question</option>
                   </select>
                 </div>

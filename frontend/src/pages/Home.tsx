@@ -191,7 +191,9 @@ export default function Home() {
           <p className="text-xl mb-12 max-w-3xl mx-auto" style={{ color: '#354F52' }}>
             Track what local governments and charities say, spend—and block.
             <br />
-            Find leaders by name. Discover causes. 925 jurisdictions. 43,726 nonprofits. All free.
+            Find leaders by name. Discover causes.{' '}
+            <Link to="/jurisdictions" className="font-semibold hover:underline">925 jurisdictions</Link>.{' '}
+            <Link to="/search?types=organizations" className="font-semibold hover:underline">43,726 nonprofits</Link>. All free.
           </p>
 
           {/* Tabbed Interface */}

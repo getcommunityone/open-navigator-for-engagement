@@ -462,10 +462,18 @@ export default function Layout() {
           <div className="text-sm text-gray-600">
             <div className="font-medium mb-1">Open Data Sources</div>
             <div className="text-xs">
-              • 925 Jurisdictions<br />
-              • 43,726 Nonprofits<br />
+              • <Link to="/jurisdictions" className="hover:text-primary-600 hover:underline">925 Jurisdictions</Link><br />
+              • <Link to="/search?types=organizations" className="hover:text-primary-600 hover:underline">43,726 Nonprofits</Link><br />
               • 6,913 Meeting Pages<br />
-              • 362 Officials
+              • <Link to="/search?types=contacts" className="hover:text-primary-600 hover:underline">362 Officials</Link>
+            </div>
+            <div className="mt-3 pt-3 border-t border-gray-100">
+              <Link 
+                to="/#contact" 
+                className="text-xs text-primary-600 hover:text-primary-700 hover:underline font-medium"
+              >
+                📍 Request Jurisdiction Coverage
+              </Link>
             </div>
           </div>
         </div>
