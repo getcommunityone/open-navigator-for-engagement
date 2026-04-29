@@ -26,7 +26,7 @@ This page documents all data sources, standards, and research contributions used
   </a>
   <a href="#government-data" className="card" style={{textDecoration: 'none', padding: '15px', borderLeft: '4px solid #4CAF50'}}>
     <strong>🏛️ Government Data</strong><br/>
-    <span style={{fontSize: '0.9em', color: '#666'}}>U.S. Census, IRS, Open States</span>
+    <span style={{fontSize: '0.9em', color: '#666'}}>U.S. Census, IRS, Open States, LegiScan</span>
   </a>
   <a href="#data-sharing-standards" className="card" style={{textDecoration: 'none', padding: '15px', borderLeft: '4px solid #FF9800'}}>
     <strong>🌐 Data Sharing Standards</strong><br/>
@@ -372,6 +372,7 @@ This is separate from the word-finding API and has different pricing.
 - [U.S. Census Bureau](#us-census-bureau)
 - [IRS Tax-Exempt Organization Search (TEOS)](#irs-tax-exempt-organization-search-teos)
 - [Open States API](#open-states-api)
+- [LegiScan](#legiscan-)
 
 ### U.S. Census Bureau
 
@@ -522,6 +523,94 @@ python scripts/bulk_legislative_download.py --postgres --month 2026-04
     note = {Comprehensive state legislative data for all 50 U.S. states}
 }
 ```
+
+### LegiScan ⭐
+
+**Organization:** LegiScan  
+**What we use:** Comprehensive state legislative tracking with bill text, votes, people, and datasets for all 50 states.
+
+- **Website:** https://legiscan.com/
+- **API Documentation:** https://legiscan.com/legiscan
+- **Dataset Downloads:** https://legiscan.com/datasets
+- **People Database:** https://legiscan.com/legiscan/people
+- **Bill Search:** https://legiscan.com/
+
+**Coverage:**
+- **All 50 states** + DC + U.S. Congress
+- **Current and historical legislation** back to 2011
+- **Bill text, sponsors, votes, amendments** with full tracking
+- **370,000+ legislators** (current and historical)
+- **Roll call votes** with individual legislator positions
+- **Committee assignments** and hearing schedules
+- **Fiscal notes** and impact statements
+
+**Available Datasets:**
+1. **National Dataset:** Complete legislative data for all states
+   - All bills, resolutions, and legislative documents
+   - Updated daily during legislative sessions
+   - Includes bill text, sponsors, status tracking
+2. **State-Specific Datasets:** Per-state downloads
+   - Session-specific or multi-year data
+   - Optimized for state-level analysis
+3. **People Dataset:** Legislator information
+   - Contact details, committee assignments
+   - District information and party affiliation
+   - Historical legislator records
+4. **Roll Call Dataset:** Voting records
+   - Individual votes on bills and amendments
+   - Voting patterns and trends
+   - Committee and floor votes
+
+**API Access:**
+- **Free Tier:** 30,000 requests per month
+- **API Key:** Required (free registration)
+- **Bulk Downloads:** Available for subscribers
+- **Real-time Updates:** Daily synchronization during sessions
+
+**Data Format:**
+- **JSON API** for programmatic access
+- **CSV/Excel** exports for datasets
+- **SQL dumps** available for subscribers
+- **RSS feeds** for bill monitoring
+
+**What We Use:**
+- Bill text and status for legislative tracking (see `scripts/legislative_tracker.py`)
+- Legislator contact information for advocacy features
+- Roll call votes for voting pattern analysis
+- Dataset downloads for bulk legislative analysis
+
+**Comparison with Open States:**
+- **LegiScan:** More detailed bill tracking, commercial support, datasets for download
+- **Open States:** Free bulk PostgreSQL dumps, open source scrapers, community-driven
+
+Both are complementary - we use Open States for bulk data and LegiScan for detailed bill tracking and datasets.
+
+**License:** 
+- API data: Terms of Service apply (https://legiscan.com/legiscan)
+- Datasets: Subscription required for bulk downloads
+- API Key: Free tier available
+
+**Use Cases:**
+- Track legislation by keyword (e.g., "fluoridation", "oral health")
+- Monitor bill progress across multiple states
+- Analyze legislator voting patterns
+- Build advocacy alerts and notifications
+- Research legislative trends over time
+
+**BibTeX:**
+```bibtex
+@misc{legiscan,
+    title = {LegiScan: State and Federal Legislative Tracking},
+    author = {{LegiScan}},
+    year = {2024},
+    url = {https://legiscan.com/},
+    note = {Comprehensive legislative data for all 50 U.S. states and Congress}
+}
+```
+
+**Documentation:** https://legiscan.com/legiscan  
+**Support:** support@legiscan.com  
+**Terms:** https://legiscan.com/legiscan
 
 ---
 
