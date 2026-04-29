@@ -1070,12 +1070,17 @@ export default function HomeModern() {
                 <p className="text-gray-600 mb-4">
                   "{jurisdictionSearch}" discovery data is being processed.
                 </p>
-                <p className="text-sm text-gray-500">
-                  Run the comprehensive discovery pipeline to add more jurisdictions:<br />
-                  <code className="bg-gray-100 px-2 py-1 rounded text-xs">
-                    python discovery/comprehensive_discovery_pipeline.py --state {selectedStateFilter || 'ALL'}
-                  </code>
+                <p className="text-sm text-gray-500 mb-4">
+                  Don't see your jurisdiction? Request it as a priority for our next data collection cycle.
                 </p>
+                <a 
+                  href="https://docs.google.com/forms/d/e/1FAIpQLSdCustomFormID/viewform?entry.jurisdiction={encodeURIComponent(jurisdictionSearch)}&entry.state={selectedStateFilter || ''}"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+                >
+                  Request Priority Coverage
+                </a>
               </div>
             )}
 

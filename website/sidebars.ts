@@ -155,6 +155,9 @@ const sidebars: SidebarsConfig = {
             'data-sources/youtube-discovery',
             'data-sources/video-channels',
             'data-sources/open-source-repositories',
+            'data-sources/ballot-election-sources',
+            'data-sources/polling-survey-sources',
+            'data-sources/factcheck-sources',
           ],
         },
         {
