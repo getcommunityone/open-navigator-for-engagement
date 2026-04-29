@@ -37,29 +37,17 @@ api.interceptors.request.use(
     }
     
     // BULLETPROOF HTTPS ENFORCEMENT: Never allow HTTP requests in production
-    // This catches ANY case where HTTP might sneak in (cached URLs, env vars, etc.)
-    if (import.meta.env.PROD && typeof window !== 'undefined') {
-      // Force HTTPS on the final request URL
+    // Only upgrade if we see absolute http:// URLs (relative paths are fine)
+    if (import.meta.env.PROD) {
+      // Force HTTPS on absolute URLs only
       if (config.url && config.url.startsWith('http://')) {
         config.url = config.url.replace('http://', 'https://')
         console.warn('🔒 [API] FORCED HTTP→HTTPS upgrade on URL:', config.url)
       }
       
-      // Force HTTPS on baseURL if it somehow got set to HTTP
       if (config.baseURL && config.baseURL.startsWith('http://')) {
         config.baseURL = config.baseURL.replace('http://', 'https://')
         console.warn('🔒 [API] FORCED HTTP→HTTPS upgrade on baseURL:', config.baseURL)
-      }
-      
-      // If page is HTTPS and we're making a relative request, ensure it stays HTTPS
-      if (window.location.protocol === 'https:') {
-        // Build the absolute URL to check
-        const absoluteURL = new URL(config.url || '', config.baseURL || window.location.origin)
-        if (absoluteURL.protocol === 'http:') {
-          absoluteURL.protocol = 'https:'
-          config.url = absoluteURL.href
-          console.warn('🔒 [API] FORCED HTTP→HTTPS upgrade on final URL:', config.url)
-        }
       }
     }
     
