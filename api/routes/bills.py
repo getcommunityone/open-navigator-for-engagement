@@ -7,10 +7,35 @@ import duckdb
 from pathlib import Path
 from loguru import logger
 import re
+import os
 
 router = APIRouter(prefix="/api/bills", tags=["bills"])
 
 GOLD_DIR = Path("data/gold")
+IS_HF_SPACES = os.getenv("HF_SPACES") == "1"
+HF_ORGANIZATION = "CommunityOne"
+
+def get_hf_dataset_url(dataset_name: str) -> str:
+    """Convert dataset name to HuggingFace parquet URL."""
+    return f"https://huggingface.co/datasets/{HF_ORGANIZATION}/{dataset_name}/resolve/main/data.parquet"
+
+def get_data_source(file_path: Path, use_remote: bool = False) -> str:
+    """Get data source (local path or remote URL) based on environment."""
+    if not IS_HF_SPACES and not use_remote:
+        return str(file_path)
+    
+    # Convert local path to HuggingFace dataset name
+    parts = file_path.parts
+    
+    if 'states' in parts:
+        state_idx = parts.index('states')
+        state = parts[state_idx + 1].lower()
+        filename = parts[-1].replace('.parquet', '').replace('_', '-')
+        dataset_name = f"states-{state}-{filename}"
+        return get_hf_dataset_url(dataset_name)
+    
+    # Fallback to local
+    return str(file_path)
 
 
 def classify_bill_type(title: str, classification: list, topic: Optional[str] = None) -> str:
@@ -201,11 +226,8 @@ async def search_bills(
         # Build file path
         bills_file = GOLD_DIR / "states" / state / "bills_bills.parquet"
         
-        if not bills_file.exists():
-            raise HTTPException(
-                status_code=404, 
-                detail=f"No bills data found for state: {state}"
-            )
+        # Get data source (local or remote HuggingFace URL)
+        data_source = get_data_source(bills_file, use_remote=IS_HF_SPACES)
         
         # Connect to DuckDB
         conn = duckdb.connect()
@@ -231,7 +253,7 @@ async def search_bills(
             FROM read_parquet(?)
             WHERE {where_clause}
         """
-        count_params = [str(bills_file)] + params
+        count_params = [data_source] + params
         total = conn.execute(count_sql, count_params).fetchone()[0]
         
         # Fetch bills
@@ -253,7 +275,7 @@ async def search_bills(
             LIMIT ? OFFSET ?
         """
         
-        query_params = [str(bills_file)] + params + [limit, offset]
+        query_params = [data_source] + params + [limit, offset]
         rows = conn.execute(sql, query_params).fetchall()
         
         bills = []
@@ -366,99 +388,112 @@ async def get_bill_map_data(
     - `/api/bills/map?topic=health&session=2024rs` - Map 2024 health bills
     """
     try:
-        # Aggregate data across all available states
-        states_dir = GOLD_DIR / "states"
+        # List of all US state codes to check
+        ALL_STATES = [
+            "AL", "AK", "AZ", "AR", "CA", "CO", "CT", "DE", "FL", "GA",
+            "HI", "ID", "IL", "IN", "IA", "KS", "KY", "LA", "ME", "MD",
+            "MA", "MI", "MN", "MS", "MO", "MT", "NE", "NV", "NH", "NJ",
+            "NM", "NY", "NC", "ND", "OH", "OK", "OR", "PA", "RI", "SC",
+            "SD", "TN", "TX", "UT", "VT", "VA", "WA", "WV", "WI", "WY"
+        ]
         
-        if not states_dir.exists():
-            raise HTTPException(status_code=404, detail="No bills data found")
+        # In local environment, check available directories
+        # In HF Spaces, try all states (will skip missing datasets)
+        states_to_check = ALL_STATES
+        if not IS_HF_SPACES:
+            states_dir = GOLD_DIR / "states"
+            if states_dir.exists():
+                states_to_check = [d.name for d in states_dir.iterdir() if d.is_dir()]
         
         state_data = {}
         
-        # Iterate through available state directories
-        for state_dir in states_dir.iterdir():
-            if not state_dir.is_dir():
+        # Iterate through states
+        for state_code in states_to_check:
+            try:
+                bills_file = GOLD_DIR / "states" / state_code / "bills_bills.parquet"
+                
+                # Get data source (local or remote HuggingFace URL)
+                data_source = get_data_source(bills_file, use_remote=IS_HF_SPACES)
+                
+                # Connect to DuckDB
+                conn = duckdb.connect()
+                
+                # Build query
+                where_clauses = ["1=1"]
+                params = [data_source]
+                
+                if topic:
+                    where_clauses.append("LOWER(title) LIKE LOWER(?)")
+                    params.append(f'%{topic}%')
+                
+                if session:
+                    where_clauses.append("session = ?")
+                    params.append(session)
+                
+                where_clause = " AND ".join(where_clauses)
+                
+                sql = f"""
+                    SELECT 
+                        title,
+                        classification,
+                        latest_action_description
+                    FROM read_parquet(?)
+                    WHERE {where_clause}
+                """
+                
+                rows = conn.execute(sql, params).fetchall()
+                conn.close()
+                
+                if not rows:
+                    continue
+                
+                # Get topic-aware categories
+                legend_categories = get_legend_for_topic(topic)
+                
+                # Initialize type_counts with all possible categories for this topic
+                type_counts = {cat: 0 for cat in legend_categories.keys()}
+                status_counts = {'enacted': 0, 'failed': 0, 'pending': 0}
+                type_status_counts = {}
+                
+                for row in rows:
+                    title = row[0]
+                    classification = row[1] if row[1] else []
+                    latest_action = row[2] if row[2] else ''
+                    
+                    bill_type = classify_bill_type(title, classification, topic)
+                    bill_status = determine_bill_status(latest_action, '')
+                    
+                    # Ensure bill_type exists in type_counts (fallback to 'other')
+                    if bill_type not in type_counts:
+                        bill_type = 'other'
+                    
+                    type_counts[bill_type] += 1
+                    status_counts[bill_status] += 1
+                    
+                    # Track type+status combinations
+                    key = f"{bill_type}_{bill_status}"
+                    type_status_counts[key] = type_status_counts.get(key, 0) + 1
+                
+                # Determine primary legislation type and status for map visualization
+                primary_type = max(type_counts, key=type_counts.get)
+                primary_status = max(status_counts, key=status_counts.get)
+                
+                state_data[state_code] = {
+                    "state": state_code,
+                    "total_bills": len(rows),
+                    "type_counts": type_counts,
+                    "status_counts": status_counts,
+                    "type_status_counts": type_status_counts,
+                    "primary_type": primary_type,
+                    "primary_status": primary_status,
+                    # For map visualization
+                    "map_category": f"{primary_type}_{primary_status}" if type_counts[primary_type] > 0 else "none"
+                }
+                
+            except Exception as e:
+                # Skip states with missing or inaccessible data
+                logger.debug(f"Skipping state {state_code}: {str(e)}")
                 continue
-            
-            state_code = state_dir.name
-            bills_file = state_dir / "bills_bills.parquet"
-            
-            if not bills_file.exists():
-                continue
-            
-            # Connect to DuckDB
-            conn = duckdb.connect()
-            
-            # Build query
-            where_clauses = ["1=1"]
-            params = [str(bills_file)]
-            
-            if topic:
-                where_clauses.append("LOWER(title) LIKE LOWER(?)")
-                params.append(f'%{topic}%')
-            
-            if session:
-                where_clauses.append("session = ?")
-                params.append(session)
-            
-            where_clause = " AND ".join(where_clauses)
-            
-            sql = f"""
-                SELECT 
-                    title,
-                    classification,
-                    latest_action_description
-                FROM read_parquet(?)
-                WHERE {where_clause}
-            """
-            
-            rows = conn.execute(sql, params).fetchall()
-            conn.close()
-            
-            if not rows:
-                continue
-            
-            # Get topic-aware categories
-            legend_categories = get_legend_for_topic(topic)
-            
-            # Initialize type_counts with all possible categories for this topic
-            type_counts = {cat: 0 for cat in legend_categories.keys()}
-            status_counts = {'enacted': 0, 'failed': 0, 'pending': 0}
-            type_status_counts = {}
-            
-            for row in rows:
-                title = row[0]
-                classification = row[1] if row[1] else []
-                latest_action = row[2] if row[2] else ''
-                
-                bill_type = classify_bill_type(title, classification, topic)
-                bill_status = determine_bill_status(latest_action, '')
-                
-                # Ensure bill_type exists in type_counts (fallback to 'other')
-                if bill_type not in type_counts:
-                    bill_type = 'other'
-                
-                type_counts[bill_type] += 1
-                status_counts[bill_status] += 1
-                
-                # Track type+status combinations
-                key = f"{bill_type}_{bill_status}"
-                type_status_counts[key] = type_status_counts.get(key, 0) + 1
-            
-            # Determine primary legislation type and status for map visualization
-            primary_type = max(type_counts, key=type_counts.get)
-            primary_status = max(status_counts, key=status_counts.get)
-            
-            state_data[state_code] = {
-                "state": state_code,
-                "total_bills": len(rows),
-                "type_counts": type_counts,
-                "status_counts": status_counts,
-                "type_status_counts": type_status_counts,
-                "primary_type": primary_type,
-                "primary_status": primary_status,
-                # For map visualization
-                "map_category": f"{primary_type}_{primary_status}" if type_counts[primary_type] > 0 else "none"
-            }
         
         return {
             "topic": topic,
