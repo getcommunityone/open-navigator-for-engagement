@@ -1,7 +1,8 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import api from '../lib/api'
-import { MagnifyingGlassIcon, FunnelIcon } from '@heroicons/react/24/outline'
+import { MagnifyingGlassIcon, FunnelIcon, MapIcon as MapIconOutline, ListBulletIcon } from '@heroicons/react/24/outline'
+import USMap from '../components/USMap'
 
 interface Bill {
   bill_id: string
@@ -24,12 +25,53 @@ interface Session {
   bill_count: number
 }
 
+interface StateData {
+  state: string
+  total_bills: number
+  type_counts: {
+    ban: number
+    restriction: number
+    protection: number
+    other: number
+  }
+  status_counts: {
+    enacted: number
+    failed: number
+    pending: number
+  }
+  primary_type: string
+  primary_status: string
+  map_category: string
+}
+
 export default function PolicyMap() {
+  const [viewMode, setViewMode] = useState<'map' | 'list'>('map')
   const [selectedState, setSelectedState] = useState('AL')
   const [selectedSession, setSelectedSession] = useState<string>('')
   const [searchQuery, setSearchQuery] = useState('')
   const [page, setPage] = useState(1)
   const limit = 20
+
+  // Fetch map aggregation data
+  const { data: mapData, isLoading: mapLoading, error: mapError } = useQuery<{
+    states: Record<string, StateData>
+    topic: string | null
+    session: string | null
+    legend: any
+  }>({
+    queryKey: ['billsMap', searchQuery, selectedSession],
+    queryFn: async () => {
+      const params = new URLSearchParams()
+      if (searchQuery) params.append('topic', searchQuery)
+      if (selectedSession) params.append('session', selectedSession)
+      
+      const response = await api.get(`/bills/map?${params}`)
+      return response.data
+    },
+    enabled: viewMode === 'map',
+    retry: 2,
+    retryDelay: 1000,
+  })
 
   // Fetch sessions
   const { data: sessionsData } = useQuery({
@@ -38,10 +80,13 @@ export default function PolicyMap() {
       const response = await api.get(`/bills/sessions?state=${selectedState}`)
       return response.data
     },
+    enabled: viewMode === 'list', // Only fetch sessions in list view
+    retry: 2,
+    retryDelay: 1000,
   })
 
   // Fetch bills
-  const { data: billsData, isLoading } = useQuery<{
+  const { data: billsData, isLoading, error: billsError } = useQuery<{
     total: number
     bills: Bill[]
     pagination: { limit: number; offset: number; has_more: boolean }
@@ -59,6 +104,9 @@ export default function PolicyMap() {
       const response = await api.get(`/bills?${params}`)
       return response.data
     },
+    enabled: viewMode === 'list',
+    retry: 2,
+    retryDelay: 1000,
   })
 
   const totalPages = Math.ceil((billsData?.total || 0) / limit)
@@ -67,6 +115,14 @@ export default function PolicyMap() {
     e.preventDefault()
     setPage(1) // Reset to first page on new search
   }
+
+  const handleStateClick = (stateCode: string) => {
+    setSelectedState(stateCode)
+    setViewMode('list')
+  }
+
+  const totalStatesWithLegislation = mapData ? Object.values(mapData.states).filter(s => s.total_bills > 0).length : 0
+  const totalBillsAcrossStates = mapData ? Object.values(mapData.states).reduce((sum, s) => sum + s.total_bills, 0) : 0
 
   return (
     <div className="min-h-screen bg-gray-50 py-8">
@@ -77,12 +133,78 @@ export default function PolicyMap() {
             📜 Legislative Policy Map
           </h1>
           <p className="text-lg text-gray-600">
-            Track state legislation, bills, and resolutions with full search and filtering
+            Track state legislation initiatives compared across the country
           </p>
+          
+          {/* View Mode Toggle */}
+          <div className="mt-4 flex items-center gap-2">
+            <button
+              onClick={() => setViewMode('map')}
+              className={`flex items-center gap-2 px-4 py-2 rounded-md font-medium transition-colors ${
+                viewMode === 'map'
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+              }`}
+            >
+              <MapIconOutline className="h-5 w-5" />
+              Map View
+            </button>
+            <button
+              onClick={() => setViewMode('list')}
+              className={`flex items-center gap-2 px-4 py-2 rounded-md font-medium transition-colors ${
+                viewMode === 'list'
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+              }`}
+            >
+              <ListBulletIcon className="h-5 w-5" />
+              List View
+            </button>
+          </div>
         </div>
 
         {/* Stats Summary */}
-        {billsData && (
+        {viewMode === 'map' && mapData && (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+            <div className="bg-white rounded-lg shadow-sm p-6 border-l-4 border-blue-500">
+              <div className="text-sm font-medium text-gray-600 uppercase tracking-wide">
+                States with Legislation
+              </div>
+              <div className="mt-2 text-3xl font-bold text-gray-900">
+                {totalStatesWithLegislation}
+              </div>
+              <div className="text-sm text-gray-500 mt-1">
+                {searchQuery ? `matching "${searchQuery}"` : 'all topics'}
+              </div>
+            </div>
+
+            <div className="bg-white rounded-lg shadow-sm p-6 border-l-4 border-green-500">
+              <div className="text-sm font-medium text-gray-600 uppercase tracking-wide">
+                Total Bills
+              </div>
+              <div className="mt-2 text-3xl font-bold text-gray-900">
+                {totalBillsAcrossStates.toLocaleString()}
+              </div>
+              <div className="text-sm text-gray-500 mt-1">
+                across all states
+              </div>
+            </div>
+
+            <div className="bg-white rounded-lg shadow-sm p-6 border-l-4 border-purple-500">
+              <div className="text-sm font-medium text-gray-600 uppercase tracking-wide">
+                Filter Topic
+              </div>
+              <div className="mt-2 text-xl font-bold text-gray-900">
+                {searchQuery || 'All Topics'}
+              </div>
+              <div className="text-sm text-gray-500 mt-1">
+                Click map to drill down
+              </div>
+            </div>
+          </div>
+        )}
+        
+        {viewMode === 'list' && billsData && (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
             <div className="bg-white rounded-lg shadow-sm p-6 border-l-4 border-blue-500">
               <div className="text-sm font-medium text-gray-600 uppercase tracking-wide">
@@ -126,56 +248,62 @@ export default function PolicyMap() {
         <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
           <div className="flex items-center gap-2 mb-4">
             <FunnelIcon className="h-5 w-5 text-gray-500" />
-            <h2 className="text-lg font-semibold text-gray-900">Filters</h2>
+            <h2 className="text-lg font-semibold text-gray-900">
+              {viewMode === 'map' ? 'Map Filters' : 'Search Filters'}
+            </h2>
           </div>
 
           <form onSubmit={handleSearch} className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {/* State Filter */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  State
-                </label>
-                <select
-                  className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                  value={selectedState}
-                  onChange={(e) => {
-                    setSelectedState(e.target.value)
-                    setPage(1)
-                  }}
-                >
-                  <option value="AL">Alabama</option>
-                  <option value="GA">Georgia</option>
-                  <option value="MA">Massachusetts</option>
-                </select>
-              </div>
+              {/* State Filter - only show in list view */}
+              {viewMode === 'list' && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    State
+                  </label>
+                  <select
+                    className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                    value={selectedState}
+                    onChange={(e) => {
+                      setSelectedState(e.target.value)
+                      setPage(1)
+                    }}
+                  >
+                    <option value="AL">Alabama</option>
+                    <option value="GA">Georgia</option>
+                    <option value="MA">Massachusetts</option>
+                  </select>
+                </div>
+              )}
 
-              {/* Session Filter */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Legislative Session
-                </label>
-                <select
-                  className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                  value={selectedSession}
-                  onChange={(e) => {
-                    setSelectedSession(e.target.value)
-                    setPage(1)
-                  }}
-                >
-                  <option value="">All Sessions</option>
-                  {sessionsData?.sessions?.map((session: Session) => (
-                    <option key={session.session} value={session.session}>
-                      {session.session_name} ({session.bill_count.toLocaleString()} bills)
-                    </option>
-                  ))}
-                </select>
-              </div>
+              {/* Session Filter - only show in list view */}
+              {viewMode === 'list' && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Legislative Session
+                  </label>
+                  <select
+                    className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                    value={selectedSession}
+                    onChange={(e) => {
+                      setSelectedSession(e.target.value)
+                      setPage(1)
+                    }}
+                  >
+                    <option value="">All Sessions</option>
+                    {sessionsData?.sessions?.map((session: Session) => (
+                      <option key={session.session} value={session.session}>
+                        {session.session_name} ({session.bill_count.toLocaleString()} bills)
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
 
-              {/* Search */}
-              <div>
+              {/* Search - show in both views */}
+              <div className={viewMode === 'map' ? 'md:col-span-3' : ''}>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Search Bills
+                  {viewMode === 'map' ? 'Filter by Topic' : 'Search Bills'}
                 </label>
                 <div className="relative">
                   <input
@@ -214,14 +342,90 @@ export default function PolicyMap() {
           </form>
         </div>
 
-        {/* Bills List */}
-        {isLoading ? (
-          <div className="text-center py-12">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-            <p className="mt-4 text-gray-600">Loading bills...</p>
-          </div>
-        ) : (
+        {/* Map Visualization */}
+        {viewMode === 'map' && (
           <>
+            {mapError ? (
+              <div className="bg-red-50 border border-red-200 rounded-lg p-8 text-center">
+                <div className="text-red-600 text-5xl mb-4">⚠️</div>
+                <h3 className="text-xl font-semibold text-red-900 mb-2">
+                  Unable to Load Map Data
+                </h3>
+                <p className="text-red-700 mb-4">
+                  {mapError instanceof Error 
+                    ? mapError.message 
+                    : 'There was an error connecting to the API server. Please check that the server is running.'}
+                </p>
+                <div className="flex gap-3 justify-center">
+                  <button
+                    onClick={() => window.location.reload()}
+                    className="px-6 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors font-medium"
+                  >
+                    Retry
+                  </button>
+                  <button
+                    onClick={() => setViewMode('list')}
+                    className="px-6 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition-colors font-medium"
+                  >
+                    Switch to List View
+                  </button>
+                </div>
+              </div>
+            ) : mapLoading ? (
+              <div className="bg-white rounded-lg shadow-sm p-12 text-center">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+                <p className="mt-4 text-gray-600">Loading map data...</p>
+              </div>
+            ) : mapData ? (
+              <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
+                <h2 className="text-xl font-semibold text-gray-900 mb-4">
+                  United States Legislative Activity Map
+                </h2>
+                <p className="text-sm text-gray-600 mb-6">
+                  Click on any state to view detailed bill list. Colors show primary legislation type, patterns show status.
+                </p>
+                <USMap stateData={mapData.states} onStateClick={handleStateClick} />
+              </div>
+            ) : null}
+          </>
+        )}
+
+        {/* Bills List */}
+        {viewMode === 'list' && (
+          <>
+            {billsError ? (
+              <div className="bg-red-50 border border-red-200 rounded-lg p-8 text-center">
+                <div className="text-red-600 text-5xl mb-4">⚠️</div>
+                <h3 className="text-xl font-semibold text-red-900 mb-2">
+                  Unable to Load Bills
+                </h3>
+                <p className="text-red-700 mb-4">
+                  {billsError instanceof Error 
+                    ? billsError.message 
+                    : 'There was an error fetching bills data. The API server may be unavailable.'}
+                </p>
+                <div className="flex gap-3 justify-center">
+                  <button
+                    onClick={() => window.location.reload()}
+                    className="px-6 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors font-medium"
+                  >
+                    Retry
+                  </button>
+                  <button
+                    onClick={() => setViewMode('map')}
+                    className="px-6 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition-colors font-medium"
+                  >
+                    Switch to Map View
+                  </button>
+                </div>
+              </div>
+            ) : isLoading ? (
+              <div className="text-center py-12">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+                <p className="mt-4 text-gray-600">Loading bills...</p>
+              </div>
+            ) : (
+              <>
             <div className="space-y-4 mb-6">
               {billsData?.bills.map((bill) => (
                 <div
@@ -290,24 +494,26 @@ export default function PolicyMap() {
                 </div>
               </div>
             )}
-          </>
-        )}
 
-        {/* No Results */}
-        {!isLoading && billsData && billsData.bills.length === 0 && (
-          <div className="bg-white rounded-lg shadow-sm p-12 text-center">
-            <p className="text-gray-600 text-lg">No bills found matching your filters.</p>
-            <button
-              onClick={() => {
-                setSearchQuery('')
-                setSelectedSession('')
-                setPage(1)
-              }}
-              className="mt-4 px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
-            >
-              Clear Filters
-            </button>
-          </div>
+            {/* No Results */}
+            {!isLoading && !billsError && billsData && billsData.bills.length === 0 && (
+              <div className="bg-white rounded-lg shadow-sm p-12 text-center">
+                <p className="text-gray-600 text-lg">No bills found matching your filters.</p>
+                <button
+                  onClick={() => {
+                    setSearchQuery('')
+                    setSelectedSession('')
+                    setPage(1)
+                  }}
+                  className="mt-4 px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+                >
+                  Clear Filters
+                </button>
+              </div>
+            )}
+          </>
+            )}
+          </>
         )}
       </div>
     </div>

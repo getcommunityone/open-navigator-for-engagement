@@ -43,7 +43,7 @@ const navigation = [
       { name: 'Policy Decisions', href: '/documents', icon: DocumentTextIcon },
       { name: 'Budget Analysis', href: '/analytics', icon: ChartBarIcon },
       { name: 'Elected Officials', href: '/people', icon: UserGroupIcon },
-      { name: 'Demographics', href: '/heatmap', icon: MapIcon },
+      { name: 'Policy Map', href: '/policy-map', icon: MapIcon },
     ]
   },
   { 

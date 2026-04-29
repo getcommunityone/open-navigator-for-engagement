@@ -243,3 +243,133 @@ async def get_sessions(
     except Exception as e:
         logger.error(f"Sessions fetch error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/map")
+async def get_bill_map_data(
+    topic: Optional[str] = Query(None, description="Topic to filter (e.g., dental, health, education)"),
+    session: Optional[str] = Query(None, description="Legislative session")
+):
+    """
+    Get aggregated bill data for choropleth map visualization.
+    
+    Returns counts of bills by type (ban, restriction, protection) and status (enacted, failed, pending)
+    for each state.
+    
+    **Examples:**
+    - `/api/bills/map?topic=dental` - Map dental legislation across all states
+    - `/api/bills/map?topic=health&session=2024rs` - Map 2024 health bills
+    """
+    try:
+        # Aggregate data across all available states
+        states_dir = GOLD_DIR / "states"
+        
+        if not states_dir.exists():
+            raise HTTPException(status_code=404, detail="No bills data found")
+        
+        state_data = {}
+        
+        # Iterate through available state directories
+        for state_dir in states_dir.iterdir():
+            if not state_dir.is_dir():
+                continue
+            
+            state_code = state_dir.name
+            bills_file = state_dir / "bills_bills.parquet"
+            
+            if not bills_file.exists():
+                continue
+            
+            # Connect to DuckDB
+            conn = duckdb.connect()
+            
+            # Build query
+            where_clauses = ["1=1"]
+            params = [str(bills_file)]
+            
+            if topic:
+                where_clauses.append("LOWER(title) LIKE LOWER(?)")
+                params.append(f'%{topic}%')
+            
+            if session:
+                where_clauses.append("session = ?")
+                params.append(session)
+            
+            where_clause = " AND ".join(where_clauses)
+            
+            sql = f"""
+                SELECT 
+                    title,
+                    classification,
+                    latest_action_description
+                FROM read_parquet(?)
+                WHERE {where_clause}
+            """
+            
+            rows = conn.execute(sql, params).fetchall()
+            conn.close()
+            
+            if not rows:
+                continue
+            
+            # Classify bills
+            type_counts = {'ban': 0, 'restriction': 0, 'protection': 0, 'other': 0}
+            status_counts = {'enacted': 0, 'failed': 0, 'pending': 0}
+            type_status_counts = {}
+            
+            for row in rows:
+                title = row[0]
+                classification = row[1] if row[1] else []
+                latest_action = row[2] if row[2] else ''
+                
+                bill_type = classify_bill_type(title, classification)
+                bill_status = determine_bill_status(latest_action, '')
+                
+                type_counts[bill_type] += 1
+                status_counts[bill_status] += 1
+                
+                # Track type+status combinations
+                key = f"{bill_type}_{bill_status}"
+                type_status_counts[key] = type_status_counts.get(key, 0) + 1
+            
+            # Determine primary legislation type and status for map visualization
+            primary_type = max(type_counts, key=type_counts.get)
+            primary_status = max(status_counts, key=status_counts.get)
+            
+            state_data[state_code] = {
+                "state": state_code,
+                "total_bills": len(rows),
+                "type_counts": type_counts,
+                "status_counts": status_counts,
+                "type_status_counts": type_status_counts,
+                "primary_type": primary_type,
+                "primary_status": primary_status,
+                # For map visualization
+                "map_category": f"{primary_type}_{primary_status}" if type_counts[primary_type] > 0 else "none"
+            }
+        
+        return {
+            "topic": topic,
+            "session": session,
+            "states": state_data,
+            "total_states": len(state_data),
+            "legend": {
+                "types": {
+                    "ban": "Outright Ban",
+                    "restriction": "Restriction",
+                    "protection": "Protection",
+                    "other": "Other Legislation"
+                },
+                "statuses": {
+                    "enacted": "Enacted",
+                    "failed": "Failed",
+                    "pending": "Pending"
+                }
+            }
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Map data error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
