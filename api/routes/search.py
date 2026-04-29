@@ -4,6 +4,7 @@ LinkedIn-style search across contacts, meetings, organizations, and causes
 Uses hybrid approach: HuggingFace Search API (fast) + DuckDB (fallback)
 """
 from fastapi import APIRouter, Query, HTTPException
+from fastapi.responses import JSONResponse
 from typing import Optional, List, Dict, Any
 from pathlib import Path
 import pandas as pd
@@ -11,9 +12,14 @@ import duckdb
 from loguru import logger
 import re
 import os
+import sys
 import requests
 from functools import lru_cache
 from datetime import datetime, timedelta
+
+# Add api directory to path for imports
+sys.path.insert(0, str(Path(__file__).parent.parent))
+from models.errors import ErrorDetail, parse_error
 
 # Import HuggingFace Search helpers
 from api.routes.hf_search import (
@@ -45,11 +51,14 @@ def get_hf_dataset_url(dataset_name: str) -> str:
     """
     Convert dataset name to HuggingFace parquet URL.
     
+    HuggingFace Datasets library stores parquet files in the standard format:
+    data/train-00000-of-00001.parquet
+    
     Examples:
         states-ma-contacts-local-officials -> 
-            https://huggingface.co/datasets/CommunityOne/states-ma-contacts-local-officials/resolve/main/data.parquet
+            https://huggingface.co/datasets/CommunityOne/states-ma-contacts-local-officials/resolve/main/data/train-00000-of-00001.parquet
     """
-    return f"https://huggingface.co/datasets/{HF_ORGANIZATION}/{dataset_name}/resolve/main/data.parquet"
+    return f"https://huggingface.co/datasets/{HF_ORGANIZATION}/{dataset_name}/resolve/main/data/train-00000-of-00001.parquet"
 
 
 def get_data_source(file_path: Path, use_remote: bool = False) -> str:
@@ -1511,7 +1520,19 @@ async def unified_search(
             }
         }
         
-        logger.info(f"✅ Search complete - returning {total_results} total results, {len(paginated_results)} on this page")
+        
+        # Parse error into structured response
+        error_detail = parse_error(e, context={
+            "query": q,
+            "state": state,
+            "types": types,
+            "data_type": "search"
+        })
+        
+        return JSONResponse(
+            status_code=500,
+            content=error_detail.model_dump()
+        _results} total results, {len(paginated_results)} on this page")
         return response_data
     
     except Exception as e:
@@ -1540,6 +1561,16 @@ async def search_suggestions(
             "police", "fire department", "mental health", "food assistance",
             "senior services", "youth programs", "employment", "job training"
         ]
+        
+        # Parse error into structured response
+        error_detail = parse_error(e, context={
+            "query": q,
+            "data_type": "suggestions"
+        })
+        
+        return JSONResponse(
+            status_code=500,
+            content=error_detail.model_dump()
         
         # Filter suggestions
         q_lower = q.lower()

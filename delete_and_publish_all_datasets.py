@@ -107,6 +107,11 @@ def publish_dataset(file_path: Path, api: HfApi, private: bool = False) -> dict:
         # Reset index to avoid Arrow serialization issues
         df = df.reset_index(drop=True)
         
+        # Convert categorical columns to string (Arrow doesn't support category dtype)
+        for col in df.select_dtypes(include=['category']).columns:
+            df[col] = df[col].astype(str)
+            logger.debug(f"   Converted {col} from category to string")
+        
         # Create HuggingFace dataset
         dataset = Dataset.from_pandas(df, preserve_index=False)
         
@@ -142,8 +147,12 @@ def publish_dataset(file_path: Path, api: HfApi, private: bool = False) -> dict:
         }
         
     except Exception as e:
-        logger.error(f"   ❌ Failed: {e}")
-        return {"error": str(e), "file": str(file_path)}
+        import traceback
+        error_msg = str(e) if str(e) else f"{type(e).__name__} (no message)"
+        error_trace = traceback.format_exc()
+        logger.error(f"   ❌ Failed: {error_msg}")
+        logger.debug(f"   Traceback:\n{error_trace}")
+        return {"error": error_msg, "traceback": error_trace, "file": str(file_path)}
 
 
 def main():

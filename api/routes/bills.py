@@ -2,12 +2,18 @@
 Bills API Routes - Legislative bill data from OpenStates
 """
 from fastapi import APIRouter, Query, HTTPException
+from fastapi.responses import JSONResponse
 from typing import Optional, List, Dict
 import duckdb
 from pathlib import Path
 from loguru import logger
 import re
 import os
+import sys
+
+# Add api directory to path for imports
+sys.path.insert(0, str(Path(__file__).parent.parent))
+from models.errors import ErrorDetail, parse_error
 
 router = APIRouter(prefix="/api/bills", tags=["bills"])
 
@@ -16,8 +22,19 @@ IS_HF_SPACES = os.getenv("HF_SPACES") == "1"
 HF_ORGANIZATION = "CommunityOne"
 
 def get_hf_dataset_url(dataset_name: str) -> str:
-    """Convert dataset name to HuggingFace parquet URL."""
-    return f"https://huggingface.co/datasets/{HF_ORGANIZATION}/{dataset_name}/resolve/main/data.parquet"
+    """
+    Convert dataset name to HuggingFace parquet URL.
+    
+    HuggingFace Datasets library stores parquet files in the standard format:
+    data/train-00000-of-00001.parquet
+    
+    Args:
+        dataset_name: Dataset name (e.g., 'states-ma-bills-bills')
+    
+    Returns:
+        Full URL to the parquet file
+    """
+    return f"https://huggingface.co/datasets/{HF_ORGANIZATION}/{dataset_name}/resolve/main/data/train-00000-of-00001.parquet"
 
 def get_data_source(file_path: Path, use_remote: bool = False) -> str:
     """Get data source (local path or remote URL) based on environment."""
@@ -307,8 +324,21 @@ async def search_bills(
                 "state": state,
                 "query": q,
                 "session": session
-            }
-        }
+            } for state={state}: {e}")
+        
+        # Parse error into structured response
+        error_detail = parse_error(e, context={
+            "state": state,
+            "data_type": "bills",
+            "query": q,
+            "session": session
+        })
+        
+        # Return structured error response
+        return JSONResponse(
+            status_code=500,
+            content=error_detail.model_dump()
+        
         
     except HTTPException:
         raise
@@ -355,8 +385,18 @@ async def get_sessions(
                 "start_date": row[2],
                 "end_date": row[3],
                 "bill_count": row[4]
-            })
+        logger.error(f"Sessions query error for state={state}: {e}")
         
+        # Parse error into structured response
+        error_detail = parse_error(e, context={
+            "state": state,
+            "data_type": "sessions"
+        })
+        
+        return JSONResponse(
+            status_code=500,
+            content=error_detail.model_dump()
+        )
         conn.close()
         
         return {
@@ -514,4 +554,15 @@ async def get_bill_map_data(
         raise
     except Exception as e:
         logger.error(f"Map data error: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        
+        # Parse error into structured response
+        error_detail = parse_error(e, context={
+            "data_type": "bill map",
+            "topic": topic,
+            "session": session
+        })
+        
+        return JSONResponse(
+            status_code=500,
+            content=error_detail.model_dump()
+        )

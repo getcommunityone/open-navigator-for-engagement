@@ -10,7 +10,10 @@ Provides REST API endpoints for:
 """
 from typing import List, Dict, Any, Optional
 from datetime import datetime, date
-from fastapi import FastAPI, HTTPException, Query, BackgroundTasks
+import sys
+import time
+from pathlib import Path
+from fastapi import FastAPI, HTTPException, Query, BackgroundTasks, Request
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -28,6 +31,26 @@ from agents.advocacy import AdvocacyWriterAgent
 from pipeline.delta_lake import DeltaLakePipeline
 from visualization.heatmap import AdvocacyHeatmap
 from config import settings
+
+# Configure logging with rotation and retention
+# Output to both file (with rotation) and stderr (for HuggingFace container logs)
+logger.remove()  # Remove default handler
+
+# Add console output (shows in HuggingFace container logs)
+logger.add(
+    sys.stderr,
+    format="<green>{time:YYYY-MM-DD HH:mm:ss}</green> | <level>{level: <8}</level> | <cyan>{name}</cyan>:<cyan>{function}</cyan> - <level>{message}</level>",
+    level=settings.log_level
+)
+
+# Add file output with rotation and retention
+logger.add(
+    settings.log_file,
+    rotation="500 MB",      # Create new file when size exceeds 500MB
+    retention="10 days",    # Delete logs older than 10 days
+    level=settings.log_level,
+    format="{time:YYYY-MM-DD HH:mm:ss} | {level: <8} | {name}:{function} - {message}"
+)
 
 # Initialize FastAPI app
 app = FastAPI(
@@ -89,6 +112,60 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Request logging middleware
+@app.middleware("http")
+async def log_requests(request: Request, call_next):
+    """Log all API requests with timing and response info"""
+    start_time = time.time()
+    
+    # Get client info
+    client_host = request.client.host if request.client else "unknown"
+    
+    # Log incoming request
+    logger.info(f"➡️  {request.method} {request.url.path} - Client: {client_host}")
+    
+    # Process request
+    try:
+        response = await call_next(request)
+        
+        # Calculate duration
+        duration_ms = (time.time() - start_time) * 1000
+        
+        # Get response size if available
+        response_size = response.headers.get("content-length", "unknown")
+        
+        # Log response with appropriate emoji based on status
+        if response.status_code < 400:
+            logger.info(
+                f"✅ {request.method} {request.url.path} - "
+                f"Status: {response.status_code} - "
+                f"Duration: {duration_ms:.2f}ms - "
+                f"Size: {response_size} bytes"
+            )
+        elif response.status_code < 500:
+            logger.warning(
+                f"⚠️  {request.method} {request.url.path} - "
+                f"Status: {response.status_code} - "
+                f"Duration: {duration_ms:.2f}ms"
+            )
+        else:
+            logger.error(
+                f"❌ {request.method} {request.url.path} - "
+                f"Status: {response.status_code} - "
+                f"Duration: {duration_ms:.2f}ms"
+            )
+        
+        return response
+        
+    except Exception as e:
+        duration_ms = (time.time() - start_time) * 1000
+        logger.error(
+            f"💥 {request.method} {request.url.path} - "
+            f"Error: {str(e)} - "
+            f"Duration: {duration_ms:.2f}ms"
+        )
+        raise
 
 # Mount static files for logo
 static_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "frontend", "public")
@@ -1061,9 +1138,87 @@ async def grade_decisions_batch(
 
 @app.on_event("startup")
 async def startup_event():
-    """Initialize system on startup."""
-    logger.info("Starting Oral Health Policy Pulse API")
+    """Initialize system on startup with data validation."""
+    logger.info("="*80)
+    logger.info("🚀 STARTING OPEN NAVIGATOR FOR ENGAGEMENT API")
+    logger.info("="*80)
     logger.info(f"Configuration: {settings.catalog_name}.{settings.schema_name}")
+    logger.info(f"Log Level: {settings.log_level}")
+    logger.info(f"Log File: {settings.log_file}")
+    
+    # Validate critical data files
+    logger.info("")
+    logger.info("📊 VALIDATING DATA AVAILABILITY...")
+    logger.info("-" * 80)
+    
+    data_dir = Path("data/gold")
+    critical_files = []
+    optional_files = []
+    
+    # Check reference data (critical)
+    reference_checks = [
+        "reference/jurisdictions_cities.parquet",
+        "reference/jurisdictions_counties.parquet",
+        "reference/causes_ntee_codes.parquet",
+    ]
+    
+    for file_pattern in reference_checks:
+        file_path = data_dir / file_pattern
+        if file_path.exists():
+            size_mb = file_path.stat().st_size / (1024 * 1024)
+            try:
+                import pandas as pd
+                df = pd.read_parquet(file_path)
+                logger.info(f"  ✅ {file_pattern}: {len(df):,} records ({size_mb:.2f} MB)")
+                critical_files.append(file_pattern)
+            except Exception as e:
+                logger.error(f"  ❌ {file_pattern}: ERROR - {e}")
+        else:
+            logger.warning(f"  ⚠️  {file_pattern}: NOT FOUND")
+    
+    # Check state data (optional - shows what's available)
+    logger.info("")
+    logger.info("📍 STATE DATA AVAILABILITY:")
+    
+    states_dir = data_dir / "states"
+    if states_dir.exists():
+        state_dirs = sorted([d for d in states_dir.iterdir() if d.is_dir()])
+        states_with_data = []
+        
+        for state_dir in state_dirs[:10]:  # Show first 10 states
+            state = state_dir.name
+            files_found = []
+            
+            # Check for key files
+            key_files = [
+                "nonprofits_organizations.parquet",
+                "contacts_officials.parquet",
+                "events.parquet",
+            ]
+            
+            for filename in key_files:
+                file_path = state_dir / filename
+                if file_path.exists():
+                    files_found.append(filename.split('.')[0].split('_')[-1])
+            
+            if files_found:
+                logger.info(f"  ✅ {state}: {', '.join(files_found)}")
+                states_with_data.append(state)
+        
+        total_states = len(state_dirs)
+        if total_states > 10:
+            logger.info(f"  ... and {total_states - 10} more states")
+        
+        logger.info(f"")
+        logger.info(f"  📊 Total states with data: {total_states}")
+    else:
+        logger.warning("  ⚠️  No state data directory found")
+    
+    logger.info("")
+    logger.info("="*80)
+    logger.info(f"✅ API READY - {len(critical_files)}/{len(reference_checks)} critical files available")
+    logger.info("="*80)
+    logger.info("")
 
 
 # Shutdown event
