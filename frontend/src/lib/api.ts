@@ -38,36 +38,55 @@ const api = axios.create({
 // Add request interceptor for auth token and HTTPS enforcement
 api.interceptors.request.use(
   (config) => {
+    // DIAGNOSTIC LOGGING - See exactly what axios is doing
+    console.log('🔍 [INTERCEPTOR] Raw config.url:', config.url)
+    console.log('🔍 [INTERCEPTOR] Raw config.baseURL:', config.baseURL)
+    
     // Add auth token if available
     const token = localStorage.getItem('auth_token')
     if (token) {
       config.headers.Authorization = `Bearer ${token}`
     }
     
-    // NUCLEAR OPTION: Block ALL absolute HTTP URLs in production
+    // AGGRESSIVE FIX: Check if baseURL got expanded to absolute URL
+    if (config.baseURL && typeof config.baseURL === 'string') {
+      // If baseURL became absolute, force it back to relative
+      if (config.baseURL.includes('://')) {
+        const urlObj = new URL(config.baseURL)
+        config.baseURL = urlObj.pathname
+        console.warn('⚠️ [INTERCEPTOR] baseURL was absolute, forced to relative:', config.baseURL)
+      }
+    }
+    
+    // Check the final combined URL that axios will use
+    const finalUrl = config.url ? (config.baseURL || '') + config.url : config.baseURL
+    console.log('🔍 [INTERCEPTOR] Final combined URL:', finalUrl)
+    
+    // NUCLEAR OPTION: Block ALL HTTP in production
     if (import.meta.env.PROD) {
       // Check config.url (the specific endpoint being called)
       if (config.url && config.url.startsWith('http://')) {
-        console.error('❌ [API] BLOCKED HTTP request in production:', config.url)
-        // Force upgrade to HTTPS
+        console.error('❌ [INTERCEPTOR] BLOCKED HTTP in config.url:', config.url)
         config.url = config.url.replace('http://', 'https://')
-        console.warn('🔒 [API] FORCED HTTP→HTTPS upgrade on URL:', config.url)
+        console.warn('🔒 [INTERCEPTOR] FORCED HTTP→HTTPS on config.url:', config.url)
       }
       
       // Check config.baseURL (should be /api but double-check)
       if (config.baseURL && config.baseURL.startsWith('http://')) {
-        console.error('❌ [API] BLOCKED HTTP baseURL in production:', config.baseURL)
-        // Force upgrade to HTTPS
+        console.error('❌ [INTERCEPTOR] BLOCKED HTTP in config.baseURL:', config.baseURL)
         config.baseURL = config.baseURL.replace('http://', 'https://')
-        console.warn('🔒 [API] FORCED HTTP→HTTPS upgrade on baseURL:', config.baseURL)
+        console.warn('🔒 [INTERCEPTOR] FORCED HTTP→HTTPS on config.baseURL:', config.baseURL)
       }
       
       // Final check: If baseURL is somehow not relative, force it
       if (config.baseURL && !config.baseURL.startsWith('/') && !config.baseURL.startsWith('https://')) {
-        console.error('❌ [API] Invalid baseURL in production, forcing /api:', config.baseURL)
+        console.error('❌ [INTERCEPTOR] Invalid baseURL, forcing /api:', config.baseURL)
         config.baseURL = '/api'
       }
     }
+    
+    console.log('✅ [INTERCEPTOR] Final config.url:', config.url)
+    console.log('✅ [INTERCEPTOR] Final config.baseURL:', config.baseURL)
     
     return config
   },
