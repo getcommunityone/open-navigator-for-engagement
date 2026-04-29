@@ -550,11 +550,15 @@ def search_meetings(query: str, state: Optional[str] = None, limit: int = 10) ->
     results = []
     
     try:
-        # Search state meeting files
+        # Search state event/meeting files (try new naming first, fallback to old)
         if state:
-            meeting_files = list(GOLD_DIR.glob(f"states/{state}/meetings.parquet"))
+            meeting_files = list(GOLD_DIR.glob(f"states/{state}/events_events.parquet"))
+            if not meeting_files:
+                meeting_files = list(GOLD_DIR.glob(f"states/{state}/meetings.parquet"))
         else:
-            meeting_files = list(GOLD_DIR.glob("states/*/meetings.parquet"))
+            meeting_files = list(GOLD_DIR.glob("states/*/events_events.parquet"))
+            if not meeting_files:
+                meeting_files = list(GOLD_DIR.glob("states/*/meetings.parquet"))
         
         for file_path in meeting_files[:5]:  # Limit for performance
             try:
@@ -565,8 +569,8 @@ def search_meetings(query: str, state: Optional[str] = None, limit: int = 10) ->
                 columns = set(df.columns)
                 
                 # Map column names (handle LocalView vs CityScrapers vs other formats)
-                title_col = 'vid_title' if 'vid_title' in columns else 'title'
-                body_col = 'caption_text_clean' if 'caption_text_clean' in columns else ('caption_text' if 'caption_text' in columns else 'body')
+                title_col = 'vid_title' if 'vid_title' in columns else ('event_title' if 'event_title' in columns else 'title')
+                body_col = 'caption_text_clean' if 'caption_text_clean' in columns else ('caption_text' if 'caption_text' in columns else ('full_text' if 'full_text' in columns else 'body'))
                 jurisdiction_col = 'place_name' if 'place_name' in columns else ('jurisdiction_name' if 'jurisdiction_name' in columns else 'jurisdiction')
                 date_col = 'meeting_date' if 'meeting_date' in columns else 'date'
                 id_col = 'vid_id' if 'vid_id' in columns else ('meeting_id' if 'meeting_id' in columns else 'id')

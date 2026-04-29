@@ -86,30 +86,49 @@ def fix_and_publish_jurisdictions():
             logger.error(f"   ❌ Failed: {e}\n")
 
 
-def check_corrupted_meetings():
-    """Check if we need the corrupted meetings.parquet file."""
+def check_old_meeting_files():
+    """Check if we have old meetings.parquet files that should be replaced."""
     
-    logger.info("🔍 Checking national/meetings.parquet...")
+    logger.info("🔍 Checking for old meeting file naming...")
     
-    meetings_calendar = Path('data/gold/national/meetings_calendar.parquet')
-    meetings = Path('data/gold/national/meetings.parquet')
+    events_events = Path('data/gold/national/events_events.parquet')
+    old_meetings_calendar = Path('data/gold/national/meetings_calendar.parquet')
+    old_meetings = Path('data/gold/national/meetings.parquet')
     
-    if meetings_calendar.exists():
+    if events_events.exists():
         try:
-            df = pd.read_parquet(meetings_calendar)
-            logger.success(f"✅ We already have national-meetings-calendar with {len(df):,} records")
-            logger.info("   This contains the same data, so corrupted meetings.parquet can be deleted\n")
-        except:
-            pass
+            df = pd.read_parquet(events_events)
+            logger.success(f"✅ Found events_events.parquet with {len(df):,} records (new naming)")
+            
+            if old_meetings_calendar.exists() or old_meetings.exists():
+                logger.warning("⚠️  Old meeting files still exist - these can be deleted:")
+                if old_meetings_calendar.exists():
+                    logger.info(f"   - meetings_calendar.parquet")
+                if old_meetings.exists():
+                    logger.info(f"   - meetings.parquet")
+                logger.info("   Run migration to rename old files to events_* naming\n")
+        except Exception as e:
+            logger.error(f"❌ events_events.parquet error: {e}")
+    else:
+        logger.warning("⚠️  events_events.parquet not found - run pipeline to generate")
+        
+    # Check if old files exist
+    if old_meetings_calendar.exists():
+        try:
+            df = pd.read_parquet(old_meetings_calendar)
+            logger.info(f"📋 Old meetings_calendar.parquet has {len(df):,} records")
+        except Exception as e:
+            logger.error(f"❌ meetings_calendar.parquet is corrupted: {e}")
     
-    # Try to check file
-    try:
-        df = pd.read_parquet(meetings)
-        logger.warning(f"⚠️  meetings.parquet is actually readable! {len(df):,} records")
-    except Exception as e:
-        logger.error(f"❌ meetings.parquet is corrupted: {e}")
-        logger.info(f"   File size: {meetings.stat().st_size / 1024 / 1024:.2f} MB")
-        logger.info("   Recommend: Delete this file or regenerate it\n")
+    if old_meetings.exists():
+        try:
+            df = pd.read_parquet(old_meetings)
+            logger.info(f"📋 Old meetings.parquet has {len(df):,} records")
+        except Exception as e:
+            logger.error(f"❌ meetings.parquet is corrupted: {e}")
+            logger.info(f"   File size: {old_meetings.stat().st_size / 1024 / 1024:.2f} MB")
+    
+    logger.info("")
 
 
 def main():
@@ -124,8 +143,8 @@ def main():
     logger.info("=" * 80)
     print()
     
-    # Check the corrupted file
-    check_corrupted_meetings()
+    # Check for old meeting file naming
+    check_old_meeting_files()
     
     # Fix and publish jurisdiction files
     logger.info("📋 Publishing 4 jurisdiction reference datasets...")

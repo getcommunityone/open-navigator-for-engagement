@@ -65,6 +65,7 @@ logs/
 
 # Data files
 data/
+.migration_backup/
 *.csv
 *.parquet
 *.delta

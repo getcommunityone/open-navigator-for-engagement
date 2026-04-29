@@ -137,23 +137,33 @@ def calculate_stats(state: Optional[str] = None,
     else:
         nonprofits = count_parquet_records('states/*/nonprofits_organizations.parquet')
     
-    # Count meetings
+    # Count events/meetings (try new naming first, fallback to old)
     if state:
-        meeting_pattern = f'states/{state}/meetings.parquet'
-        meeting_file = Path(f'data/gold/{meeting_pattern}')
+        # Try new naming first
+        event_pattern = f'states/{state}/events_events.parquet'
+        event_file = Path(f'data/gold/{event_pattern}')
         
-        if city and meeting_file.exists():
+        if not event_file.exists():
+            # Fallback to old naming
+            event_pattern = f'states/{state}/meetings.parquet'
+            event_file = Path(f'data/gold/{event_pattern}')
+        
+        if city and event_file.exists():
             # Filter by city
-            df = pd.read_parquet(meeting_file)
-            place_col = 'place_name' if 'place_name' in df.columns else 'jurisdiction_name'
+            df = pd.read_parquet(event_file)
+            place_col = 'place_name' if 'place_name' in df.columns else ('jurisdiction_name' if 'jurisdiction_name' in df.columns else 'jurisdiction')
             if place_col in df.columns:
                 # Match city name (case-insensitive)
                 df = df[df[place_col].str.contains(city, case=False, na=False)]
             meetings = len(df)
         else:
-            meetings = count_parquet_records(meeting_pattern)
+            meetings = count_parquet_records(event_pattern)
     else:
-        meetings = count_parquet_records('states/*/meetings.parquet')
+        # Try new naming first for all states
+        meetings = count_parquet_records('states/*/events_events.parquet')
+        if meetings == 0:
+            # Fallback to old naming
+            meetings = count_parquet_records('states/*/meetings.parquet')
     
     # Count contacts
     if state:

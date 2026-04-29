@@ -21,9 +21,9 @@ HF_ORGANIZATION = os.getenv('HF_ORGANIZATION', 'CommunityOne')
 # Paths
 GOLD_DIR = Path("data/gold")
 
-# Old datasets to delete
+# Old datasets to delete (deprecated naming conventions)
 OLD_DATASETS = [
-    "CommunityOne/one-meetings-calendar",
+    "CommunityOne/one-meetings-calendar",  # Replaced by events_events
     "CommunityOne/one-nonprofits-financials",
     "CommunityOne/one-nonprofits-locations",
     "CommunityOne/one-nonprofits-organizations",
@@ -54,14 +54,14 @@ def get_dataset_name(file_path: Path, gold_dir: Path) -> str:
     """Generate HuggingFace dataset name from file path.
     
     Examples:
-        data/gold/national/meetings.parquet -> national-meetings
+        data/gold/national/events_events.parquet -> national-events-events
         data/gold/reference/causes_ntee_codes.parquet -> reference-causes-ntee-codes
-        data/gold/states/AL/meetings.parquet -> states-al-meetings
+        data/gold/states/AL/events_events.parquet -> states-al-events-events
     """
     # Get relative path from gold directory
     rel_path = file_path.relative_to(gold_dir)
     
-    # Get parts: ['national', 'meetings.parquet'] or ['states', 'AL', 'meetings.parquet']
+    # Get parts: ['national', 'events_events.parquet'] or ['states', 'AL', 'events_events.parquet']
     parts = list(rel_path.parts)
     
     # Remove .parquet extension from filename
@@ -69,14 +69,14 @@ def get_dataset_name(file_path: Path, gold_dir: Path) -> str:
     
     # Build name based on structure
     if parts[0] == 'national':
-        # national/meetings.parquet -> national-meetings
+        # national/events_events.parquet -> national-events-events
         name = f"national-{filename}"
     elif parts[0] == 'reference':
         # reference/causes_ntee_codes.parquet -> reference-causes-ntee-codes
         # Replace underscores with dashes for consistency
         name = f"reference-{filename.replace('_', '-')}"
     elif parts[0] == 'states':
-        # states/AL/meetings.parquet -> states-al-meetings
+        # states/AL/events_events.parquet -> states-al-events-events
         state_code = parts[1].lower()
         name = f"states-{state_code}-{filename.replace('_', '-')}"
     else:
