@@ -3,8 +3,16 @@ import axios from 'axios'
 // Environment-aware API base URL
 // In development: API on localhost:8000/api
 // In production (HF Spaces): Served via nginx at /api/
-const API_BASE_URL = import.meta.env.VITE_API_URL || 
+let API_BASE_URL = import.meta.env.VITE_API_URL || 
   (import.meta.env.DEV ? 'http://localhost:8000/api' : '/api')
+
+// Fix mixed content: Force HTTPS if page is HTTPS and URL starts with http://
+if (typeof window !== 'undefined' && window.location.protocol === 'https:') {
+  if (API_BASE_URL.startsWith('http://')) {
+    API_BASE_URL = API_BASE_URL.replace('http://', 'https://')
+    console.log('🔒 [API] Upgraded HTTP to HTTPS for mixed content security:', API_BASE_URL)
+  }
+}
 
 // Create axios instance with base URL
 const api = axios.create({

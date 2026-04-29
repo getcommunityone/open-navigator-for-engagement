@@ -43,10 +43,20 @@ export default function HomeModern() {
   // Environment-aware URLs for docs and API
   // In development: Docusaurus on localhost:3000/docs, API on localhost:8000
   // In production (HF Spaces): Served via nginx at /docs/ and /api/
-  const docsBaseUrl = import.meta.env.VITE_DOCS_URL || 
+  let docsBaseUrl = import.meta.env.VITE_DOCS_URL || 
     (import.meta.env.DEV ? 'http://localhost:3000/docs' : '/docs')
-  const apiBaseUrl = import.meta.env.VITE_API_URL || 
+  let apiBaseUrl = import.meta.env.VITE_API_URL || 
     (import.meta.env.DEV ? 'http://localhost:8000' : '')
+
+  // Fix mixed content: Force HTTPS if page is HTTPS and URLs start with http://
+  if (typeof window !== 'undefined' && window.location.protocol === 'https:') {
+    if (docsBaseUrl.startsWith('http://')) {
+      docsBaseUrl = docsBaseUrl.replace('http://', 'https://')
+    }
+    if (apiBaseUrl.startsWith('http://')) {
+      apiBaseUrl = apiBaseUrl.replace('http://', 'https://')
+    }
+  }
 
   // Fetch real stats from API - updates based on selected location and scope
   const { data: statsData } = useQuery({
