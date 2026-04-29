@@ -311,7 +311,6 @@ def search_contacts_duckdb(query: str, state: Optional[str] = None, limit: int =
             data_source = get_data_source(file_path, use_remote=IS_HF_SPACES)
             
             try:
-            try:
                 # SQL query with relevance scoring across name, title, jurisdiction
                 sql = """
                     SELECT 
