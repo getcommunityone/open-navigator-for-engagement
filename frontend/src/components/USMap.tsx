@@ -56,7 +56,6 @@ const TYPE_COLOR_PALETTE: Record<string, string> = {
   // Fluoridation categories
   'mandate': '#4CAF50',      // Green - Mandate
   'removal': '#F44336',      // Red - Removal
-  'funding': '#2196F3',      // Blue - Funding
   'study': '#9C27B0',        // Purple - Study
   
   // Dental/Oral Health categories  
