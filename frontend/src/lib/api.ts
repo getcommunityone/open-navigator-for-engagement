@@ -7,10 +7,17 @@ let API_BASE_URL: string
 
 // Determine the correct API base URL
 if (import.meta.env.PROD) {
-  // Production: ALWAYS use relative path - IGNORE all environment variables
-  // This prevents HuggingFace Spaces build secrets from injecting HTTP URLs
-  API_BASE_URL = '/api'
-  console.log('🌐 [API] Production mode: HARDCODED relative path:', API_BASE_URL)
+  // FINAL FIX: Use absolute HTTPS URL in production
+  // Relative paths are being converted to HTTP by axios somehow
+  if (typeof window !== 'undefined') {
+    const origin = window.location.origin.replace('http://', 'https://')
+    API_BASE_URL = `${origin}/api`
+    console.log('🌐 [API] Production mode: ABSOLUTE HTTPS URL:', API_BASE_URL)
+  } else {
+    // Fallback if window not available
+    API_BASE_URL = 'https://www.communityone.com/api'
+    console.log('🌐 [API] Production mode: FALLBACK HTTPS URL:', API_BASE_URL)
+  }
 } else {
   // Development: Use environment variable or default to localhost
   const envUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000/api'
