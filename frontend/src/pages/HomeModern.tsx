@@ -107,16 +107,25 @@ export default function HomeModern() {
       }
       
       console.log('📤 [HomeModern] API Request:', url, params);
-      const response = await api.get(url, { params });
-      console.log('📥 [HomeModern] API Response:', response.data);
-      console.log('📊 [HomeModern] Total results:', response.data.total_results);
-      console.log('🎯 [HomeModern] Causes:', response.data.results.causes.length);
-      console.log('👥 [HomeModern] Contacts:', response.data.results.contacts.length);
-      console.log('🏢 [HomeModern] Organizations:', response.data.results.organizations.length);
-      return response.data;
+      try {
+        const response = await api.get(url, { params });
+        console.log('📥 [HomeModern] API Response:', response.data);
+        console.log('📊 [HomeModern] Total results:', response.data.total_results);
+        console.log('🎯 [HomeModern] Causes:', response.data.results.causes.length);
+        console.log('👥 [HomeModern] Contacts:', response.data.results.contacts.length);
+        console.log('🏢 [HomeModern] Organizations:', response.data.results.organizations.length);
+        return response.data;
+      } catch (error: any) {
+        console.error('❌ [HomeModern] API Error:', error);
+        console.error('❌ [HomeModern] Error message:', error.message);
+        console.error('❌ [HomeModern] Error response:', error.response?.data);
+        console.error('❌ [HomeModern] Error status:', error.response?.status);
+        throw error;
+      }
     },
     enabled: keyword.length >= 2 && showSuggestions,
-    staleTime: 1000 // Cache for 1 second to avoid excessive requests
+    staleTime: 1000, // Cache for 1 second to avoid excessive requests
+    retry: false // Don't retry failed requests to see errors immediately
   });
 
   // Log when preview results change
