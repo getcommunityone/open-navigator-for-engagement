@@ -22,7 +22,7 @@ This page documents all data sources, standards, and research contributions used
 <div style={{display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '15px', margin: '20px 0'}}>
   <a href="#-academic-research" className="card" style={{textDecoration: 'none', padding: '15px', borderLeft: '4px solid #2196F3'}}>
     <strong>🎓 Academic Research</strong><br/>
-    <span style={{fontSize: '0.9em', color: '#666'}}>MeetingBank, LocalView, Roper Center, CDP, City Scrapers</span>
+    <span style={{fontSize: '0.9em', color: '#666'}}>MeetingBank, LocalView, CivicSearch, Datamuse API, Roper Center, CDP, City Scrapers</span>
   </a>
   <a href="#government-data" className="card" style={{textDecoration: 'none', padding: '15px', borderLeft: '4px solid #4CAF50'}}>
     <strong>🏛️ Government Data</strong><br/>
@@ -69,6 +69,8 @@ This page documents all data sources, standards, and research contributions used
 - [City Scrapers / Documenters.org](#city-scrapers--documentersorg)
 - [Roper Center for Public Opinion Research](#roper-center-for-public-opinion-research)
 - [Harvard Dataverse](#harvard-dataverse)
+- [CivicSearch (School Board Meeting Platform)](#civicsearch-school-board-meeting-platform)
+- [Datamuse API (Word-Finding Engine)](#datamuse-api-word-finding-engine)
 
 ### MeetingBank Dataset
 
@@ -215,6 +217,152 @@ This page documents all data sources, standards, and research contributions used
 - **Source:** https://dataverse.harvard.edu/
 - **License:** Varies by dataset
 - **Coverage:** Academic research datasets on local government, public meetings, civic participation
+
+---
+
+### CivicSearch (School Board Meeting Platform)
+
+**Organization:** Datamuse, Inc.  
+**What we use:** Aggregated school board meeting transcripts, agendas, and videos for tracking education policy and local governance.
+
+- **Website:** https://schools.civicsearch.org/
+- **Platform:** Datamuse-powered civic search interface
+- **Coverage:** School districts nationwide with meeting transcripts and videos
+- **Data Included:**
+  - School board meeting transcripts (AI-indexed)
+  - Meeting agendas and minutes
+  - Video recordings (when available)
+  - Searchable text across multiple districts
+  - Meeting dates and attendance
+- **Example:** [Tuscaloosa City Schools](https://schools.civicsearch.org/tuscaloosa-city-alabama)
+- **License:** Free public access for search; bulk/API access requires case-by-case approval
+- **Use Case:** Education policy tracking, school board decision analysis, parent/community engagement
+
+**Access Tiers:**
+- **Public Search:** Free access via web interface
+- **Bulk Data/API:** Contact Datamuse for research or civic organization partnerships
+- **Commercial Use:** Licensing required for commercial applications
+
+**Data Privacy:**
+- Public meeting transcripts are public record
+- Datamuse indexing and presentation subject to their site terms
+- No user-uploaded data sold to third parties
+
+**Attribution Requirements:**
+```
+Data source: CivicSearch (Datamuse, Inc.)
+https://schools.civicsearch.org/
+School board meeting transcripts and agendas
+```
+
+**Terms of Service:**
+- ❌ **No automated scraping** - Use official API when available
+- ✅ **Attribution required** - Link back to CivicSearch for data used
+- ✅ **Public record data** - Meeting transcripts are generally public domain
+- ⚠️ **Bulk access** - Requires partnership agreement for large-scale data extraction
+
+**BibTeX:**
+```bibtex
+@misc{civicsearch_datamuse,
+  author = {{Datamuse, Inc.}},
+  title = {CivicSearch: School Board Meeting Platform},
+  year = {2026},
+  url = {https://schools.civicsearch.org/},
+  note = {AI-indexed school board meeting transcripts and agendas}
+}
+```
+
+**Contact for Data Partnerships:**
+For bulk data access, API integration, or civic tech collaborations, reach out to Datamuse directly as a "civic technologist" or research organization. There is no standard commercial checkout - partnerships are handled case-by-case.
+
+---
+
+### Datamuse API (Word-Finding Engine)
+
+**Organization:** Datamuse, Inc.  
+**What we use:** Natural language processing tools for text analysis, word associations, rhyme detection, and semantic search in meeting transcripts and policy documents.
+
+- **API Documentation:** https://www.datamuse.com/api/
+- **Developer Site:** https://www.datamuse.com/
+- **Use Cases:** Dictionary apps, RhymeZone, word associations, semantic search
+- **Coverage:** English language word relationships, definitions, pronunciations, usage frequency
+- **License:** Free tier for most applications; paid tier for high-volume commercial use
+
+**API Endpoints:**
+- `/words` - Word finding based on constraints (rhymes, similar meaning, etc.)
+- `/sug` - Word suggestions for autocomplete
+- Query parameters for semantic relationships, phonetic matching, vocabulary
+
+**Pricing Tiers:**
+
+| Tier | Cost | Limits | Use Case |
+|------|------|--------|----------|
+| **Free** | $0 | 100,000 requests/day | Non-commercial, small commercial apps |
+| **Professional** | Contact for pricing | Unlimited + support | High-volume commercial applications |
+
+**Free Tier Details:**
+- ✅ **100,000 requests per day** - Generous limit for most applications
+- ✅ **Commercial use allowed** - Can use in commercial apps under daily limit
+- ✅ **No API key required** - Simple HTTP GET requests
+- ✅ **Fast response times** - Optimized for real-time applications
+
+**Paid Tier (High-Volume):**
+- Exceeding 100,000 requests/day requires paid tier
+- Contact Datamuse for custom pricing and SLA
+- Dedicated support and guaranteed uptime
+
+**Attribution Requirements:**
+- ✅ **Link to Datamuse:** Required (or strongly requested) for free tier users
+- ✅ **Credit in documentation:** Mention "Powered by Datamuse API"
+- Example: `<a href="https://www.datamuse.com/">Powered by Datamuse API</a>`
+
+**Restrictions:**
+- ❌ **No scraping of web interfaces** - Use official API, not web scraping
+- ❌ **Rate limiting enforced** - Exceeding 100K/day will be throttled
+- ✅ **Caching allowed** - Can cache results to reduce API calls
+
+**Terms of Service:**
+- Free tier subject to daily quota
+- No sale of user-uploaded data
+- Commercial use allowed within free tier limits
+- Bulk/enterprise usage requires paid license
+
+**Example API Call:**
+```bash
+# Find words that mean "government" and sound like "regime"
+curl "https://api.datamuse.com/words?ml=government&sl=regime"
+
+# Find words that rhyme with "policy"
+curl "https://api.datamuse.com/words?rel_rhy=policy"
+
+# Word associations for "civic engagement"
+curl "https://api.datamuse.com/words?ml=civic+engagement&max=10"
+```
+
+**BibTeX:**
+```bibtex
+@misc{datamuse_api,
+  author = {{Datamuse, Inc.}},
+  title = {Datamuse API: Word-Finding Query Engine},
+  year = {2026},
+  url = {https://www.datamuse.com/api/},
+  note = {Free tier: 100,000 requests/day. Commercial use allowed.}
+}
+```
+
+**Integration Use Cases:**
+- **Meeting Transcript Analysis:** Identify policy-related terms and semantic relationships
+- **Search Enhancement:** Improve search with synonym expansion and related terms
+- **Topic Modeling:** Extract key themes from public comments and testimony
+- **Accessibility:** Provide word suggestions for users with cognitive disabilities
+- **Multilingual Support:** Word associations for translation assistance
+
+**Datamuse.ai (Separate Product):**
+Note: Datamuse.ai is a distinct SaaS product for natural language exploration:
+- **Starter:** ~$29/month (100 queries/month)
+- **Professional:** ~$99/month (unlimited queries + API access)
+- **Free Trial:** Available for testing
+This is separate from the word-finding API and has different pricing.
 
 ---
 

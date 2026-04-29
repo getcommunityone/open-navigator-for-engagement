@@ -754,9 +754,126 @@ iPoll Databank. https://ropercenter.cornell.edu/ipoll/
 
 ---
 
+### 27. Datamuse API (Word-Finding Engine)
+
+**Organization:** Datamuse, Inc.  
+**API Documentation:** [Datamuse API](https://www.datamuse.com/api/)  
+**Website:** [Datamuse.com](https://www.datamuse.com/)  
+**License:** Free tier for most applications; paid tier for high-volume commercial use
+
+**Free Tier:**
+- ✅ **100,000 requests per day** - Generous limit for most applications
+- ✅ **Commercial use allowed** - Can use in commercial apps under daily limit
+- ✅ **No API key required** - Simple HTTP GET requests
+- ✅ **Fast response times** - Optimized for real-time applications
+
+**Paid Tier (High-Volume):**
+- Exceeding 100,000 requests/day requires paid tier
+- Contact Datamuse for custom pricing and SLA
+- Dedicated support and guaranteed uptime
+
+**Attribution Requirements:**
+- ✅ **Link to Datamuse required** (or strongly requested) for free tier users
+- ✅ **Credit in documentation:** "Powered by Datamuse API"
+- Example: `<a href="https://www.datamuse.com/">Powered by Datamuse API</a>`
+
+**CRITICAL Restrictions:**
+- ❌ **NO automated scraping of web interfaces** - Use official API only
+- ❌ **Rate limiting enforced** - Exceeding 100K/day will be throttled
+- ✅ **Caching allowed** - Can cache results to reduce API calls
+
+**Terms of Service Key Points:**
+1. **Free API Usage:** Up to 100,000 requests per day for commercial and non-commercial use
+2. **Attribution:** Link back to Datamuse.com required for free tier
+3. **No Scraping:** Prohibited - use the official API endpoints
+4. **Data Privacy:** No sale of user-uploaded data to third parties
+5. **Commercial Solicitation:** Not applicable (API provides word data, not personal information)
+
+**Attribution (Required for Free Tier):**
+```
+Powered by Datamuse API
+https://www.datamuse.com/api/
+```
+
+**Contact:**
+For high-volume commercial licensing or API partnerships, contact Datamuse directly.
+
+**Note:** Datamuse.ai is a separate SaaS product with different pricing:
+- Starter: ~$29/month (100 queries/month)
+- Professional: ~$99/month (unlimited queries + API access)
+- Free Trial available
+
+---
+
+### 28. CivicSearch (School Board Meeting Platform)
+
+**Organization:** Datamuse, Inc.  
+**Website:** [schools.civicsearch.org](https://schools.civicsearch.org/)  
+**Platform:** Datamuse-powered civic search interface for school board meetings  
+**License:** Free public access for search; bulk/API access requires partnership agreement
+
+**Free Access:**
+- ✅ **Public search interface** - Free for all users
+- ✅ **Public record data** - Meeting transcripts are generally public domain
+- ✅ **Search functionality** - AI-indexed transcripts across school districts
+- ✅ **Video access** - When available, embedded meeting videos
+
+**Bulk Data / API Access:**
+- ⚠️ **No standard commercial checkout** - Handled case-by-case
+- ⚠️ **Researcher access** - Contact Datamuse for academic partnerships
+- ⚠️ **Civic organization partnerships** - Available for civic tech collaborators
+- ⚠️ **Commercial licensing** - Required for commercial applications
+
+**Attribution Requirements:**
+- ✅ **Link to CivicSearch** - Required when using data from the platform
+- ✅ **Source citation:** "Data from CivicSearch (Datamuse, Inc.)"
+- ✅ **Attribution for public record data** - While transcripts are public record, Datamuse's indexing and presentation are proprietary
+
+**CRITICAL Restrictions:**
+- ❌ **NO automated scraping** - Prohibited by terms of service
+- ❌ **NO bulk download without permission** - Requires partnership agreement
+- ❌ **NO redistribution** - Cannot redistribute CivicSearch data without license
+- ✅ **Use official API when available** - Preferred method for data access
+
+**Terms of Service Key Points:**
+1. **Public Search:** Free access via web interface for public use
+2. **Attribution:** Link back to CivicSearch required for data used in projects
+3. **No Scraping:** Automated scraping prohibited - request API access
+4. **Bulk Access:** Requires partnership agreement for large-scale data extraction
+5. **Data Privacy:** No user-uploaded data sold to third parties
+6. **Public Records:** Meeting transcripts are public record, but indexing/presentation is proprietary
+7. **Commercial Use:** Requires licensing agreement for commercial applications
+
+**Usage Rights:**
+- ✅ Public record data (transcripts) generally public domain
+- ❌ Datamuse indexing, search, and presentation technology proprietary
+- ⚠️ Must not claim data as original work
+
+**Attribution (Required):**
+```
+Data source: CivicSearch (Datamuse, Inc.)
+https://schools.civicsearch.org/
+School board meeting transcripts and agendas
+```
+
+**Contact for Partnerships:**
+For bulk data access, API integration, or civic tech collaborations:
+- Identify as "civic technologist" or research organization
+- Outline use case and data requirements
+- Request case-by-case partnership evaluation
+- No standard commercial checkout - custom agreements only
+
+**Example Use Cases:**
+- Academic research on education policy
+- Civic tech platforms tracking school board decisions
+- Parent/community engagement applications
+- Policy analysis and advocacy tools
+
+---
+
 ## 🗳️ Election Data Sources
 
-### 27. MIT Election Data + Science Lab
+### 29. MIT Election Data + Science Lab
 
 **Organization:** Massachusetts Institute of Technology  
 **Repository:** [GitHub - MEDSL](https://github.com/MEDSL/official-returns)  
@@ -775,7 +892,7 @@ https://electionlab.mit.edu/data
 
 ---
 
-### 28. OpenElections
+### 30. OpenElections
 
 **Organization:** OpenElections Project  
 **GitHub:** [OpenElections](https://github.com/openelections)  
@@ -797,7 +914,7 @@ https://openelections.net/
 
 ## 💰 Paid/Commercial Services (NOT USED)
 
-### 29. Ballotpedia API v3.0
+### 31. Ballotpedia API v3.0
 
 **Organization:** Lucy Burns Institute  
 **API Documentation:** [Ballotpedia API](https://ballotpedia.org/API_documentation)  
