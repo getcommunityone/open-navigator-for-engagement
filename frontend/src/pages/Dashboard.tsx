@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
-import axios from 'axios'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts'
+import api from '../lib/api'
 
 const COLORS = ['#0ea5e9', '#f59e0b', '#10b981', '#ef4444', '#8b5cf6']
 
@@ -22,7 +22,7 @@ export default function Dashboard() {
   const { data, isLoading } = useQuery<DashboardStats>({
     queryKey: ['dashboard'],
     queryFn: async () => {
-      const response = await axios.get('/api/dashboard')
+      const response = await api.get('/dashboard')
       return response.data
     },
   })

@@ -395,7 +395,6 @@ export default function Home() {
                                 <option value="county">My County ({location.county || 'County'})</option>
                                 <option value="state">My State ({location.state})</option>
                                 <option value="community">School Board ({location.city})</option>
-                                <option value="national">Nationwide</option>
                               </select>
                               <button
                                 type="button"
