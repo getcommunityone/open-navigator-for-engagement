@@ -1,123 +1,101 @@
 ---
-title: Open Navigator for Engagement
+title: CommunityOne - Open Navigator for Engagement
 emoji: 🏛️
 colorFrom: blue
 colorTo: green
 sdk: docker
-pinned: true
-license: mit
 app_port: 7860
-short_description: The open path to everything local
+pinned: false
+license: apache-2.0
+tags:
+  - civic-engagement
+  - policy-tracking
+  - government-transparency
+  - nonprofit-discovery
+  - open-data
 ---
 
-# 🏛️ Open Navigator for Engagement
+# 🏛️ CommunityOne - Open Navigator for Engagement
 
-**CommunityOne: The open path to everything local**
+**Track 90,000+ jurisdictions. Monitor 3M+ nonprofits. Amplify your voice.**
 
-Open Navigator for Engagement is a comprehensive platform for discovering, analyzing, and tracking local government activities, nonprofit organizations, and civic engagement opportunities across the United States.
+CommunityOne is a civic engagement platform that helps you discover advocacy opportunities, track policy changes, and connect with organizations working on the causes you care about.
 
-## 🎯 What's Included
+## ✨ Features
 
-This Space runs **three integrated applications**:
+- **🔍 Unified Search**: Find contacts, meetings, organizations, and causes across the entire United States
+- **📊 Real-time Stats**: Track policy activity across 90,000+ cities, counties, and states
+- **🏢 Nonprofit Discovery**: Explore 3M+ organizations from IRS data enriched with Every.org
+- **📅 Meeting Minutes**: Search 250,000+ government meeting transcripts and agendas
+- **🎯 Geographic Filtering**: Browse by state, county, or city to find local opportunities
+- **🔐 OAuth Login**: Sign in with HuggingFace, GitHub, or Google to save your preferences
 
-### 📊 **Documentation** → [/docs](/docs)
-Complete platform documentation including:
-- Getting started guides
-- Data source explanations
-- API reference
-- Technical architecture
+## 🚀 Three Services Architecture
 
-### 🚀 **Main Application** → [/](/​)
-Interactive dashboard with:
-- 925 jurisdictions tracked (cities, counties, states)
-- 43,726 nonprofit organizations (5 states with full IRS BMF data)
-- 6,913 meeting minutes analyzed
-- Budget tracking
-- Video transcript search
+This deployment runs three integrated services:
 
-### 🔌 **API Backend** → [/api/docs](/api/docs)
-RESTful API providing:
-- Search endpoints
-- Data retrieval
-- Classification services
-- Sentiment analysis
+1. **📚 Documentation** (Docusaurus) - `/docs/`
+2. **🖥️ Main Application** (React + Vite) - `/`
+3. **⚡ API Backend** (FastAPI) - `/api/`
 
-## 📈 Platform Scale
+All services are reverse-proxied through nginx on port 7860.
 
-| Data Type | Coverage |
-|-----------|----------|
-| **Jurisdictions** | 925 (cities, counties, states) |
-| **School Districts** | 306 districts |
-| **Nonprofits** | 43,726 tax-exempt organizations |
-| **Meeting Minutes** | 6,913 government meetings |
-| **Elected Officials** | 362 tracked officials |
-| **Churches** | 4,372 congregations |
-| **States with IRS Data** | 5 states |
+## 📖 Quick Start
 
-## 🎓 Who It's For
+### Browse Without Login
+- Click "Browse All" to explore data by state
+- Use the search bar to find organizations, contacts, or causes
+- Filter by location using the state/county/city selectors
 
-### Policy Makers & Advocates
-- Track oral health policy mentions across jurisdictions
-- Analyze budget allocations and funding trends
-- Find advocacy opportunities in upcoming meetings
-- Monitor nonprofit activities in specific areas
+### Sign In for Personalization
+- Click "Login" in the top right
+- Choose your OAuth provider (HuggingFace, GitHub, or Google)
+- Follow organizations, leaders, and causes you care about
+- Get personalized recommendations
 
-### Researchers & Journalists
-- Access structured government data at scale
-- Analyze policy patterns across jurisdictions
-- Track issue evolution over time
-- Export data for analysis
+### Explore the API
+- Visit `/redoc` for interactive API documentation
+- Try the search endpoints with state filters
+- Export data in JSON format for your own projects
 
-### Developers & Data Scientists
-- RESTful API access to all data
-- Python SDK for analysis
-- Delta Lake storage for large-scale queries
-- Open source codebase for customization
+## 🛠️ Technology Stack
 
-## 🚀 Quick Links
+- **Frontend**: React 18 + TypeScript + Vite + TailwindCSS + shadcn/ui
+- **Backend**: Python 3.11 + FastAPI + Pydantic
+- **Data**: Delta Lake + Parquet (90GB+ of civic data)
+- **Docs**: Docusaurus v3
+- **Infrastructure**: nginx + supervisor + Docker
 
-- **[View Documentation](/docs/intro)** - Learn about data sources and features
-- **[Launch Application](/)** - Start exploring the platform
-- **[API Documentation](/api/docs)** - Integrate with your tools
-- **[GitHub Repository](https://github.com/getcommunityone/open-navigator-for-engagement)** - Source code and setup
+## 📊 Data Sources
 
-## 🔧 Technology Stack
+- **IRS BMF**: 3M+ tax-exempt organizations
+- **Every.org**: Nonprofit enrichment (logos, causes, revenue)
+- **Open States**: State legislators and bills (7,300+ officials)
+- **Census**: Jurisdictions and boundaries (90,000+)
+- **CityScrapers**: Local government meetings
+- **OpenCivicData**: Standardized government data
 
-- **Frontend**: React + Vite + TypeScript
-- **Documentation**: Docusaurus 3
-- **Backend**: FastAPI + Python 3.11
-- **Data**: Delta Lake (Bronze/Silver/Gold layers)
-- **AI/ML**: OpenAI GPT-4, Claude, HuggingFace models
-- **Search**: Qdrant vector database
-- **Deployment**: Docker with nginx reverse proxy
+## 🔗 Links
 
-## 📊 Example Use Cases
-
-1. **Oral Health Advocacy**: Search meeting minutes for "dental", "fluoride", "oral health" mentions
-2. **Budget Analysis**: Track health department funding across similar-sized cities
-3. **Nonprofit Discovery**: Find organizations working on specific health issues
-4. **Policy Research**: Analyze policy adoption patterns across states
-5. **Community Engagement**: Identify upcoming meetings to attend
-
-## 🔒 Privacy & Data
-
-All data is sourced from:
-- ✅ Public government records
-- ✅ IRS Form 990 public filings
-- ✅ Open data portals
-- ✅ Public meeting recordings
-- ✅ .gov domains and official sources
-
-No personal information or private data is collected or stored.
+- **Repository**: [github.com/getcommunityone/open-navigator-for-engagement](https://github.com/getcommunityone/open-navigator-for-engagement)
+- **Documentation**: Click "📚 Browse Documentation" on the homepage
+- **API Docs**: `/redoc` endpoint
+- **Website**: [www.communityone.com](https://www.communityone.com)
 
 ## 📝 License
 
-MIT License - Free for commercial and non-commercial use
+Apache 2.0 - See LICENSE file for details
 
 ## 🤝 Contributing
 
-This is an open source project! Visit our [GitHub repository](https://github.com/getcommunityone/open-navigator-for-engagement) to contribute.
+We welcome contributions! See CONTRIBUTING.md in the repository for guidelines.
+
+## 💬 Support
+
+- **Issues**: [GitHub Issues](https://github.com/getcommunityone/open-navigator-for-engagement/issues)
+- **Discussions**: [GitHub Discussions](https://github.com/getcommunityone/open-navigator-for-engagement/discussions)
+- **Email**: hello@communityone.com
 
 ---
 
-**Built with ❤️ for civic engagement and public health advocacy**
+Built with ❤️ for civic engagement and government transparency.
