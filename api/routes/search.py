@@ -1,6 +1,7 @@
 """
 Unified Search API
 LinkedIn-style search across contacts, meetings, organizations, and causes
+Uses hybrid approach: HuggingFace Search API (fast) + DuckDB (fallback)
 """
 from fastapi import APIRouter, Query, HTTPException
 from typing import Optional, List, Dict, Any
@@ -14,10 +15,22 @@ import requests
 from functools import lru_cache
 from datetime import datetime, timedelta
 
+# Import HuggingFace Search helpers
+from api.routes.hf_search import (
+    search_contacts_hf,
+    search_organizations_hf,
+    search_jurisdictions_hf,
+    is_dataset_indexed
+)
+
 router = APIRouter(tags=["search"])
 
 # Paths to gold datasets
 GOLD_DIR = Path("data/gold")
+
+# Detect deployment environment
+IS_HF_SPACES = os.getenv("HF_SPACES") == "1"
+HF_ORGANIZATION = os.getenv('HF_ORGANIZATION', 'CommunityOne')
 
 # Cache for count queries (TTL: 1 hour)
 _count_cache = {}
@@ -26,6 +39,53 @@ _count_cache_ttl = {}
 # Every.org API config (fallback only)
 EVERYORG_API_KEY = os.getenv('EVERYORG_API_KEY', '')
 EVERYORG_API_BASE = "https://partners.every.org/v0.2"
+
+
+def get_hf_dataset_url(dataset_name: str) -> str:
+    """
+    Convert dataset name to HuggingFace parquet URL.
+    
+    Examples:
+        states-ma-contacts-local-officials -> 
+            https://huggingface.co/datasets/CommunityOne/states-ma-contacts-local-officials/resolve/main/data.parquet
+    """
+    return f"https://huggingface.co/datasets/{HF_ORGANIZATION}/{dataset_name}/resolve/main/data.parquet"
+
+
+def get_data_source(file_path: Path, use_remote: bool = False) -> str:
+    """
+    Get data source (local path or remote URL) based on environment.
+    
+    Args:
+        file_path: Local file path (e.g., data/gold/states/MA/contacts_local_officials.parquet)
+        use_remote: Force remote URL even in local environment
+    
+    Returns:
+        File path string (local) or HuggingFace URL (remote)
+    """
+    if not IS_HF_SPACES and not use_remote:
+        return str(file_path)
+    
+    # Convert local path to HuggingFace dataset name
+    # data/gold/states/MA/contacts_local_officials.parquet -> states-ma-contacts-local-officials
+    parts = file_path.parts
+    
+    if 'states' in parts:
+        state_idx = parts.index('states')
+        state = parts[state_idx + 1].lower()
+        filename = parts[-1].replace('.parquet', '').replace('_', '-')
+        dataset_name = f"states-{state}-{filename}"
+    elif 'national' in parts:
+        filename = parts[-1].replace('.parquet', '').replace('_', '-')
+        dataset_name = f"national-{filename}"
+    elif 'reference' in parts:
+        filename = parts[-1].replace('.parquet', '').replace('_', '-')
+        dataset_name = f"reference-{filename}"
+    else:
+        # Fallback to local
+        return str(file_path)
+    
+    return get_hf_dataset_url(dataset_name)
 
 
 @lru_cache(maxsize=5000)
@@ -226,8 +286,11 @@ def calculate_relevance_score(text: str, query: str) -> float:
     return matches / len(query_words) if query_words else 0.0
 
 
-def search_contacts(query: str, state: Optional[str] = None, limit: int = 10) -> List[SearchResult]:
-    """Search local officials AND nonprofit officers using DuckDB for fast Parquet queries"""
+def search_contacts_duckdb(query: str, state: Optional[str] = None, limit: int = 10) -> List[SearchResult]:
+    """
+    Search contacts using DuckDB (supports local files or remote HTTP parquet).
+    This is the fallback when HF Search API is unavailable.
+    """
     results = []
     
     try:
@@ -236,18 +299,18 @@ def search_contacts(query: str, state: Optional[str] = None, limit: int = 10) ->
         
         # Search 1: Local Officials
         if state:
-            local_file_pattern = f"{GOLD_DIR}/states/{state}/contacts_local_officials.parquet"
-            local_file_paths = [Path(local_file_pattern)]
+            local_file_path = GOLD_DIR / "states" / state / "contacts_local_officials.parquet"
+            local_file_paths = [local_file_path]
         else:
-            local_file_pattern = f"{GOLD_DIR}/states/*/contacts_local_officials.parquet"
             local_file_paths = list(GOLD_DIR.glob("states/*/contacts_local_officials.parquet"))[:5]
         
         logger.info(f"Searching {len(local_file_paths)} local official contact files")
         
         for file_path in local_file_paths:
-            if not file_path.exists():
-                continue
+            # Get data source (local or remote URL)
+            data_source = get_data_source(file_path, use_remote=IS_HF_SPACES)
             
+            try:
             try:
                 # SQL query with relevance scoring across name, title, jurisdiction
                 sql = """
@@ -288,7 +351,7 @@ def search_contacts(query: str, state: Optional[str] = None, limit: int = 10) ->
                     query_start, query_pattern,  # name scoring
                     query_start, query_pattern,  # title scoring
                     query_start, query_pattern,  # jurisdiction scoring
-                    str(file_path),              # file path
+                    data_source,                 # file path or URL
                     query_pattern, query_pattern, query_pattern,  # WHERE clause
                     limit
                 ]).fetchall()
@@ -322,23 +385,19 @@ def search_contacts(query: str, state: Optional[str] = None, limit: int = 10) ->
         # If state specified, search that state's directory
         if state:
             state_nonprofit_file = GOLD_DIR / "states" / state / "contacts_nonprofit_officers.parquet"
-            if state_nonprofit_file.exists():
-                nonprofit_files.append(state_nonprofit_file)
+            nonprofit_files.append(state_nonprofit_file)
         else:
             # Search all state directories
             for state_dir in (GOLD_DIR / "states").glob("*/"):
                 state_file = state_dir / "contacts_nonprofit_officers.parquet"
-                if state_file.exists():
-                    nonprofit_files.append(state_file)
-        
-        # Also check legacy root location for backward compatibility
-        legacy_file = GOLD_DIR / "contacts_nonprofit_officers.parquet"
-        if legacy_file.exists():
-            nonprofit_files.append(legacy_file)
+                nonprofit_files.append(state_file)
         
         for nonprofit_file in nonprofit_files:
+            # Get data source (local or remote URL)
+            nonprofit_source = get_data_source(nonprofit_file, use_remote=IS_HF_SPACES)
+            
             try:
-                logger.info(f"Searching nonprofit officers: {nonprofit_file}")
+                logger.info(f"Searching nonprofit officers: {nonprofit_source}")
                 
                 officer_sql = """
                     SELECT 
@@ -377,7 +436,7 @@ def search_contacts(query: str, state: Optional[str] = None, limit: int = 10) ->
                     query_start, query_pattern,  # name scoring
                     query_start, query_pattern,  # title scoring  
                     query_start, query_pattern,  # organization scoring
-                    str(nonprofit_file),
+                    nonprofit_source,            # file path or URL
                     query_pattern, query_pattern, query_pattern  # WHERE clause
                 ]
                 
@@ -428,6 +487,63 @@ def search_contacts(query: str, state: Optional[str] = None, limit: int = 10) ->
     except Exception as e:
         logger.error(f"Contact search error: {e}")
         return results
+
+
+def search_contacts(query: str, state: Optional[str] = None, limit: int = 10) -> List[SearchResult]:
+    """
+    HYBRID SEARCH: Search local officials AND nonprofit officers.
+    
+    Strategy:
+    1. Try HuggingFace Search API first (fast, server-side indexed) - HF Spaces only
+    2. Fall back to DuckDB (local files or remote HTTP parquet)
+    
+    Args:
+        query: Search text (name, title, organization, etc.)
+        state: Optional 2-letter state code filter
+        limit: Maximum results to return
+    
+    Returns:
+        List of SearchResult objects sorted by relevance
+    """
+    # STRATEGY 1: Try HuggingFace Search API (fast text search)
+    if query and IS_HF_SPACES:
+        logger.info(f"🔍 Trying HF Search API for '{query}' (state={state})")
+        try:
+            hf_results = search_contacts_hf(query, state, limit=limit)
+            
+            if hf_results:
+                logger.info(f"✅ HF Search API returned {len(hf_results)} results")
+                # Convert HF results to SearchResult objects
+                results = []
+                for row in hf_results:
+                    source_type = row.get('source', 'contact')
+                    name = row.get('name', 'Unknown')
+                    title = row.get('title', '')
+                    jurisdiction = row.get('jurisdiction', row.get('organization_name', ''))
+                    state_code = row.get('state', state or '')
+                    
+                    results.append(SearchResult(
+                        result_type="contact",
+                        title=name,
+                        subtitle=f"{title} - {jurisdiction}, {state_code}",
+                        description=f"{'Local official' if source_type == 'local_officials' else 'Nonprofit officer'} in {jurisdiction}",
+                        url=f"/people/{name.replace(' ', '-')}",
+                        score=1.0,
+                        metadata={
+                            "title": title,
+                            "jurisdiction": jurisdiction,
+                            "state": state_code,
+                            "name": name,
+                            "source": source_type
+                        }
+                    ))
+                return results[:limit]
+        except Exception as e:
+            logger.warning(f"HF Search API failed, falling back to DuckDB: {e}")
+    
+    # STRATEGY 2: Fall back to DuckDB (works with local or remote parquet)
+    logger.info(f"🔍 Using DuckDB {'remote' if IS_HF_SPACES else 'local'} search for '{query}'")
+    return search_contacts_duckdb(query, state, limit)
 
 
 def search_meetings(query: str, state: Optional[str] = None, limit: int = 10) -> List[SearchResult]:

@@ -24,7 +24,7 @@ import { useAuth } from '../contexts/AuthContext'
 import { formatCurrency } from '../utils/formatters'
 
 interface SearchResult {
-  type: 'contact' | 'meeting' | 'organization' | 'cause' | 'jurisdiction'
+  type: 'contact' | 'meeting' | 'organization' | 'cause'
   title: string
   subtitle: string
   description: string
@@ -41,7 +41,6 @@ interface SearchResponse {
     meetings: SearchResult[]
     organizations: SearchResult[]
     causes: SearchResult[]
-    jurisdictions: SearchResult[]
   }
   pagination: {
     page: number
@@ -69,11 +68,11 @@ export default function UnifiedSearch() {
     const typesParam = searchParams.get('types')
     if (typesParam) {
       const types = typesParam.split(',').filter(t => 
-        ['contacts', 'organizations', 'causes', 'jurisdictions', 'meetings'].includes(t.trim())
+        ['contacts', 'organizations', 'causes', 'meetings'].includes(t.trim())
       )
-      return types.length > 0 ? types : ['contacts', 'organizations', 'causes', 'jurisdictions']
+      return types.length > 0 ? types : ['contacts', 'organizations', 'causes']
     }
-    return ['contacts', 'organizations', 'causes', 'jurisdictions']
+    return ['contacts', 'organizations', 'causes']
   })
   const [selectedState, setSelectedState] = useState(() => searchParams.get('state') || '')
   const [currentPage, setCurrentPage] = useState(() => parseInt(searchParams.get('page') || '1'))
@@ -173,7 +172,7 @@ export default function UnifiedSearch() {
     }
     if (typesParam) {
       const types = typesParam.split(',').filter(t => 
-        ['contacts', 'meetings', 'organizations', 'causes', 'jurisdictions'].includes(t.trim())
+        ['contacts', 'meetings', 'organizations', 'causes'].includes(t.trim())
       )
       if (types.length > 0) {
         setSelectedTypes(types)
@@ -359,8 +358,6 @@ export default function UnifiedSearch() {
         return <BuildingOfficeIcon className="h-5 w-5" />
       case 'cause':
         return <HeartIcon className="h-5 w-5" />
-      case 'jurisdiction':
-        return <MapPinIcon className="h-5 w-5" />
       default:
         return null
     }
@@ -376,8 +373,6 @@ export default function UnifiedSearch() {
         return 'bg-purple-100 text-purple-700 border-purple-200'
       case 'cause':
         return 'bg-pink-100 text-pink-700 border-pink-200'
-      case 'jurisdiction':
-        return 'bg-orange-100 text-orange-700 border-orange-200'
       default:
         return 'bg-gray-100 text-gray-700 border-gray-200'
     }
@@ -896,7 +891,7 @@ export default function UnifiedSearch() {
             </button>
 
             {/* Quick Type Filters - Meetings pill on far right */}
-            {(['contacts', 'organizations', 'causes', 'jurisdictions', 'meetings'] as const).map((type) => (
+            {(['contacts', 'organizations', 'causes', 'meetings'] as const).map((type) => (
               <button
                 key={type}
                 onClick={() => toggleType(type)}

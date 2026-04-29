@@ -142,7 +142,7 @@ const config: Config = {
         },
         {
           to: 'data-sources/citations',
-          label: 'Citations',
+          label: 'Data and Terms',
           position: 'left',
         },
         {to: 'blog', label: 'Blog', position: 'left'},

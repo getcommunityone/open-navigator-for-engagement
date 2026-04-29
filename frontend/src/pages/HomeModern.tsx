@@ -433,7 +433,7 @@ export default function HomeModern() {
               statsData.level === 'state' ? (
                 <>
                   <Link 
-                    to={`/search?types=jurisdictions&state=${statsData.state}`}
+                    to={`/jurisdictions?state=${statsData.state}`}
                     className="font-semibold text-[#52796F] hover:text-[#354F52] no-underline hover:underline hover:decoration-2 transition-all duration-200"
                   >
                     {statsData.jurisdictions_display} jurisdictions
@@ -464,7 +464,7 @@ export default function HomeModern() {
               ) : statsData.level === 'city' && statsData.jurisdictions_breakdown ? (
                 <>
                   <Link
-                    to={`/search?types=jurisdictions&state=${statsData.state}&jurisdiction_details=${encodeURIComponent(JSON.stringify(statsData.jurisdictions_breakdown))}`}
+                    to={`/jurisdictions?state=${statsData.state}&jurisdiction_details=${encodeURIComponent(JSON.stringify(statsData.jurisdictions_breakdown))}`}
                     className="font-semibold text-[#52796F] hover:text-[#354F52] no-underline hover:underline hover:decoration-2 transition-all duration-200"
                   >
                     {statsData.jurisdictions_display} jurisdictions
@@ -495,7 +495,7 @@ export default function HomeModern() {
               ) : (
                 <>
                   <Link 
-                    to={`/search?types=jurisdictions${statsData.state ? `&state=${statsData.state}` : ''}`}
+                    to={`/jurisdictions${statsData.state ? `?state=${statsData.state}` : ''}`}
                     className="font-semibold text-[#52796F] hover:text-[#354F52] no-underline hover:underline hover:decoration-2 transition-all duration-200"
                   >
                     {statsData.jurisdictions_display} jurisdictions

@@ -1,5 +1,6 @@
 ---
 sidebar_position: 10
+sidebar: citationsSidebar
 ---
 
 # ✅ LEGAL DOCUMENTATION COMPLETE

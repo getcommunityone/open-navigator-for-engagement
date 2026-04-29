@@ -1,9 +1,10 @@
 ---
 sidebar_position: 1
-sidebar_label: Legal Overview
+sidebar_label: Terms and Privacy
+sidebar: citationsSidebar
 ---
 
-# Legal & Compliance Overview
+# Terms and Privacy
 
 :::info[Purpose]
 This section contains all legal policies, terms of service, and compliance documentation for Open Navigator for Engagement. Please review these documents carefully before using the Service.
@@ -172,20 +173,93 @@ When using Open Navigator for Engagement, you agree to:
 
 ## 📊 Data Sources Quick Reference
 
-| Source | Public Domain? | API Key? | Rate Limit | Attribution Required |
-|--------|---------------|----------|------------|---------------------|
-| **IRS** | Yes | No | None | Recommended |
-| **Census** | Yes | No* | 500/day | Recommended |
-| **Google Civic** | No | Yes | 25k/day | **YES** |
-| **Charity Navigator** | No | Yes | **1k/day** | **YES** (strict) |
-| **ProPublica** | Mixed | Varies | 5k/day | **YES** |
-| **Open States** | No | Yes | 50k/month | **YES** |
-| **Wikidata** | Yes (CC0) | No | ~1/sec | No |
-| **DBpedia** | CC BY-SA | No | ~1-2/sec | **YES** |
+### 🏛️ Government Data Sources (1-6)
 
-*Census: API key recommended for higher limits
+| # | Abbrev | Source | Public Domain? | API Key? | Rate Limit | Attribution |
+|---|--------|--------|---------------|----------|------------|-------------|
+| 1 | IRSB | **IRS EO-BMF** | Yes | No | None | Recommended |
+| 2 | CENS | **Census Bureau** | Yes | No* | 500 req/IP/day* | Recommended |
+| 3 | NCES | **NCES (Schools)** | Yes | No | None | Recommended |
+| 4 | FECP | **FEC / OpenFEC** | Yes | Yes | 1,000 req/hour | **REQUIRED** |
+| 5 | GRNT | **Grants.gov** | Yes | No | None | Recommended |
+| 6 | GSAD | **GSA Domains** | Yes | No | None | No |
 
-**Full details:** [Data Provider Terms](./data-provider-terms.md)
+### 🎬 Media & Social Platforms (7)
+
+| # | Abbrev | Source | Public Domain? | API Key? | Rate Limit | Attribution |
+|---|--------|--------|---------------|----------|------------|-------------|
+| 7 | YOUT | **YouTube Data API** | No | Yes | 10,000 units/day | **REQUIRED** |
+
+### 💼 Google Services (8-10)
+
+| # | Abbrev | Source | Public Domain? | API Key? | Rate Limit | Attribution |
+|---|--------|--------|---------------|----------|------------|-------------|
+| 8 | GBQR | **Google BigQuery** | Mixed | Yes | 1 TB/month free | **REQUIRED** |
+| 9 | GCIV | **Google Civic API** | No | Yes | 25,000 req/day | **REQUIRED** |
+| 10 | GDCM | **Google Data Commons** | Yes | No | None | **REQUIRED** |
+
+### 🏢 Nonprofit Data Providers (11-18)
+
+| # | Abbrev | Source | Public Domain? | API Key? | Rate Limit | Attribution |
+|---|--------|--------|---------------|----------|------------|-------------|
+| 11 | CHNV | **Charity Navigator** | No | Yes | **1,000 req/day** | **REQUIRED** (strict) |
+| 12 | PPNP | **ProPublica Nonprofit** | Mixed | No | None | **REQUIRED** |
+| 13 | PPCG | **ProPublica Congress** | Mixed | Yes | 5,000 req/day | **REQUIRED** |
+| 14 | PPCF | **ProPublica Campaign $** | Mixed | Yes | 5,000 req/day | **REQUIRED** |
+| 15 | PPVS | **ProPublica Vital Signs** | Mixed | Yes | 5,000 req/day | **REQUIRED** |
+| 16 | EVRY | **Every.org** | No | Yes | Custom | **REQUIRED** |
+| 17 | LOGO | **Logo.dev** | No | Yes | 1,000 req/month | Recommended |
+| 18 | GT90 | **GivingTuesday 990** | Yes | No | AWS egress | **REQUIRED** |
+
+### 🗳️ Civic & Open Data (19-21)
+
+| # | Abbrev | Source | Public Domain? | API Key? | Rate Limit | Attribution |
+|---|--------|--------|---------------|----------|------------|-------------|
+| 19 | OPST | **Open States** | No | Yes | 50,000 req/month | **REQUIRED** |
+| 20 | WKDT | **Wikidata** | Yes (CC0) | No | ~1 req/sec | No |
+| 21 | DBPD | **DBpedia** | CC BY-SA | No | ~1-2 req/sec | **REQUIRED** |
+
+### 🎓 Academic & Research (22-26)
+
+| # | Abbrev | Source | Public Domain? | API Key? | Rate Limit | Attribution |
+|---|--------|--------|---------------|----------|------------|-------------|
+| 22 | MTBK | **MeetingBank** | Academic | No | None | **REQUIRED** (citation) |
+| 23 | LCLV | **LocalView (Dataverse)** | Academic | Yes | Varies | **REQUIRED** |
+| 24 | CDPR | **Council Data Project** | MIT License | No | None | **REQUIRED** |
+| 25 | CTSC | **City Scrapers / Documenters** | MIT License | No | None | **REQUIRED** |
+| 26 | ROPR | **Roper Center (iPoll)** | Academic | No** | N/A | **REQUIRED** |
+
+### 🗳️ Election Data (27-28)
+
+| # | Abbrev | Source | Public Domain? | API Key? | Rate Limit | Attribution |
+|---|--------|--------|---------------|----------|------------|-------------|
+| 27 | MITE | **MIT Election Lab** | Open Data | No | None | **REQUIRED** |
+| 28 | OPEL | **OpenElections** | Varies | No | None | **REQUIRED** |
+
+### 💰 Paid Services - NOT USED (29)
+
+| # | Abbrev | Source | Public Domain? | API Key? | Rate Limit | Attribution |
+|---|--------|--------|---------------|----------|------------|-------------|
+| 29 | BLTP | **Ballotpedia** | No | Yes | **PAID** | **REQUIRED** |
+
+### 🌐 Scraped Meeting Platforms (30-34)
+
+These platforms are accessed via web scraping (no API):
+
+| # | Abbrev | Platform | Jurisdictions | Public Data? | robots.txt | Attribution |
+|---|--------|----------|--------------|--------------|------------|-------------|
+| 30 | LEGI | **Legistar** | 3,000+ cities | Yes | Check each | Jurisdiction |
+| 31 | GRAN | **Granicus** | 2,500+ cities | Yes | Check each | Jurisdiction |
+| 32 | CVPL | **CivicPlus** | 2,000+ cities | Yes | Check each | Jurisdiction |
+| 33 | MUNI | **Municode** | 1,500+ cities | Yes | Check each | Jurisdiction |
+| 34 | YTMT | **YouTube (Meetings)** | Varies | Yes | API only | **REQUIRED** |
+
+**Notes:**
+- *Census: Without API key = 500 requests/IP/day. With free API key = much higher limits
+- **Roper: Full data requires institutional membership; metadata is free
+
+**📖 Full Terms:** [Data Provider Terms](./data-provider-terms.md)  
+**📞 Provider Contacts:** [Contact Information](./data-provider-terms.md#-contact-information-for-providers)
 
 ---
 

@@ -28,6 +28,8 @@ import { useLocation as useLocationContext } from '../contexts/LocationContext'
 const navigation = [
   { name: 'Home', href: '/', icon: HomeIcon },
   { name: 'Explore Data', href: '/explore', icon: MagnifyingGlassIcon },
+  { name: 'Search', href: '/search', icon: MagnifyingGlassIcon },
+  { name: 'Jurisdictions', href: '/jurisdictions', icon: MapPinIcon },
   { 
     section: 'Families & Individuals',
     items: [

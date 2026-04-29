@@ -1,6 +1,7 @@
 ---
 sidebar_position: 2
 sidebar_label: Data Provider Terms
+sidebar: citationsSidebar
 ---
 
 # Data Provider Terms of Service
@@ -17,7 +18,7 @@ Open Navigator for Engagement aggregates data from multiple sources. Each source
 
 ## 🏛️ U.S. Government Data Sources (Public Domain)
 
-### IRS (Exempt Organizations Business Master File & Form 990)
+### 1. IRS (Exempt Organizations Business Master File & Form 990)
 
 **Data Type:** Tax-exempt organization records, Form 990 filings  
 **License:** Public Domain (U.S. Government Work)  
@@ -42,7 +43,7 @@ https://www.irs.gov/charities-non-profits/exempt-organizations-business-master-f
 
 ---
 
-### U.S. Census Bureau
+### 2. U.S. Census Bureau
 
 **Data Type:** Geographic boundaries, demographics, government entities  
 **License:** Public Domain (U.S. Government Work)  
@@ -59,8 +60,9 @@ https://www.irs.gov/charities-non-profits/exempt-organizations-business-master-f
 - ❌ Must not claim U.S. Census Bureau endorsement
 
 **Rate Limits:**
-- Without API key: 500 requests/IP per day
-- With API key: Higher limits available
+- **Without API key:** 500 requests per IP address per day
+- **With free API key:** Higher limits (no specific quota published, typically 500 requests per second burst)
+- **Best practice:** Get a free API key from [api.census.gov/data/key_signup.html](https://api.census.gov/data/key_signup.html)
 
 **Attribution (Recommended):**
 ```
@@ -70,7 +72,7 @@ https://www.census.gov/
 
 ---
 
-### National Center for Education Statistics (NCES)
+### 3. National Center for Education Statistics (NCES)
 
 **Data Type:** School district boundaries, demographics, enrollment  
 **License:** Public Domain (U.S. Government Work)  
@@ -95,7 +97,7 @@ https://nces.ed.gov/
 
 ---
 
-### FEC / OpenFEC API
+### 4. FEC / OpenFEC API
 
 **Data Type:** Campaign finance, political contributions  
 **License:** Public Domain (U.S. Government Work)  
@@ -125,7 +127,7 @@ https://www.fec.gov/
 
 ---
 
-### Grants.gov API
+### 5. Grants.gov API
 
 **Data Type:** Federal grant opportunities  
 **License:** Public Domain (U.S. Government Work)  
@@ -151,7 +153,7 @@ https://www.grants.gov/
 
 ## 💼 Google Services
 
-### Google BigQuery IRS 990 Public Dataset
+### 8. Google BigQuery IRS 990 Public Dataset
 
 **Data Type:** IRS Form 990 filings  
 **License:** IRS data is Public Domain; BigQuery access subject to Google Cloud Terms  
@@ -182,7 +184,7 @@ https://console.cloud.google.com/marketplace/product/internal-revenue-service/ir
 
 ---
 
-### Google Civic Information API
+### 9. Google Civic Information API
 
 **Data Type:** Elected officials, polling locations, election information  
 **License:** [Google APIs Terms of Service](https://developers.google.com/terms)  
@@ -213,7 +215,7 @@ https://developers.google.com/civic-information
 
 ---
 
-### Google Data Commons
+### 10. Google Data Commons
 
 **Data Type:** Demographics, economics, health statistics  
 **License:** [Data Commons Terms](https://datacommons.org/about)  
@@ -238,7 +240,7 @@ https://datacommons.org/
 
 ## 🏢 Nonprofit Data Providers
 
-### Charity Navigator
+### 11. Charity Navigator
 
 **Organization:** Charity Navigator, Inc.  
 **Principal Office:** 299 Market Street, Suite 250, Saddle Brook, NJ 07663  
@@ -295,7 +297,7 @@ https://datacommons.org/
 
 ---
 
-### ProPublica Nonprofit Explorer API
+### 12. ProPublica Nonprofit Explorer API
 
 **Organization:** ProPublica, Inc.  
 **API Documentation:** [Nonprofit Explorer API](https://projects.propublica.org/nonprofits/api)  
@@ -323,7 +325,7 @@ https://projects.propublica.org/nonprofits/
 
 ---
 
-### ProPublica Congress API
+### 13. ProPublica Congress API
 
 **Organization:** ProPublica, Inc.  
 **API Documentation:** [Congress API](https://projects.propublica.org/api-docs/congress-api/)  
@@ -345,7 +347,7 @@ https://projects.propublica.org/api-docs/congress-api/
 
 ---
 
-### ProPublica Campaign Finance API
+### 14. ProPublica Campaign Finance API
 
 **Organization:** ProPublica, Inc.  
 **API Documentation:** [Campaign Finance API](https://projects.propublica.org/api-docs/campaign-finance/)  
@@ -373,7 +375,7 @@ https://projects.propublica.org/api-docs/campaign-finance/
 
 ---
 
-### ProPublica Vital Signs API
+### 15. ProPublica Vital Signs API
 
 **Organization:** ProPublica, Inc.  
 **API Documentation:** [Vital Signs API](https://projects.propublica.org/api-docs/vital-signs/)  
@@ -395,7 +397,7 @@ https://projects.propublica.org/vital-signs/
 
 ---
 
-### Every.org Charity API
+### 16. Every.org Charity API
 
 **Organization:** Every.org (Public Benefit Corporation)  
 **API Documentation:** [Every.org Nonprofit API](https://www.every.org/nonprofit-api)  
@@ -415,7 +417,35 @@ https://www.every.org/
 
 ---
 
-### GivingTuesday 990 Data Lake
+### 17. Logo.dev API
+
+**Organization:** Logo.dev  
+**Website:** [Logo.dev](https://www.logo.dev/)  
+**API Documentation:** [Logo.dev API Docs](https://docs.logo.dev/)
+
+**Free Tier:**
+- 1,000 requests per month
+
+**Requirements:**
+- ✅ API key required (free tier available)
+- ✅ Must comply with Logo.dev Terms of Service
+
+**Usage:**
+- Fetches high-quality organization logos based on domain names
+- Multiple size options (32px, 128px, 200px, 400px)
+- Automatic format optimization (WebP, PNG, SVG)
+
+**Attribution (Recommended):**
+```
+Logos provided by Logo.dev
+https://www.logo.dev/
+```
+
+**API Key:** Sign up at [Logo.dev](https://www.logo.dev/)
+
+---
+
+### 18. GivingTuesday 990 Data Lake
 
 **Organization:** GivingTuesday  
 **Source:** [GivingTuesday 990 Data Infrastructure](https://990data.givingtuesday.org/)  
@@ -443,9 +473,73 @@ https://990data.givingtuesday.org/
 
 ---
 
+### 6. GSA .gov Domains List
+
+**Organization:** U.S. General Services Administration (GSA)  
+**Data Source:** [.gov Domain Data](https://github.com/cisagov/dotgov-data)  
+**License:** Public Domain (U.S. Government Work)  
+**Format:** CSV published weekly on GitHub
+
+**Usage Rights:**
+- ✅ Public domain government data
+- ✅ No API key required
+- ✅ Free download and redistribution
+- ✅ Updated weekly
+
+**Requirements:**
+- ✅ Attribution appreciated (not required)
+
+**Attribution (Recommended):**
+```
+Data source: U.S. General Services Administration (GSA)
+.gov Internet Domain Data
+https://github.com/cisagov/dotgov-data
+```
+
+---
+
+## 🎬 Media & Social Platforms
+
+### 7. YouTube Data API v3
+
+**Organization:** Google LLC  
+**API Documentation:** [YouTube Data API](https://developers.google.com/youtube/v3)  
+**Terms of Service:** [YouTube API Terms of Service](https://developers.google.com/youtube/terms/api-services-terms-of-service)
+
+**Quota:**
+- **10,000 units per day** (free tier)
+- Different operations cost different units (e.g., search = 100 units, list = 1 unit)
+
+**Requirements:**
+- ✅ **API key required** (free from Google Cloud Console)
+- ✅ **MUST comply with YouTube API Terms of Service**
+- ✅ **MUST display attribution:** "Powered by YouTube Data API"
+- ✅ **MUST NOT cache video metadata longer than allowed**
+
+**Restrictions:**
+- ❌ Cannot create competing video platform
+- ❌ Must respect quota limits (10,000 units/day)
+- ❌ Must comply with YouTube Community Guidelines
+- ❌ Subject to Google API Terms of Service
+
+**Attribution (Required):**
+```
+Video data provided by YouTube Data API
+https://www.youtube.com/
+```
+
+**API Key:** Free from [Google Cloud Console](https://console.cloud.google.com/)
+
+**Cost Calculation:**
+- Search operation: 100 units
+- List videos: 1 unit  
+- 10,000 units = ~100 searches or 10,000 video metadata requests per day
+
+---
+
 ## 🗳️ Civic & Government APIs
 
-### Open States API
+### 19. Open States API
 
 **Organization:** Open States Foundation (part of Plural)  
 **API Documentation:** [Open States API v3](https://docs.openstates.org/api-v3/)  
@@ -477,7 +571,7 @@ https://openstates.org/
 
 ## 🌐 Linked Open Data Sources
 
-### Wikidata
+### 20. Wikidata
 
 **Organization:** Wikimedia Foundation  
 **SPARQL Endpoint:** [Wikidata Query Service](https://query.wikidata.org/)  
@@ -508,7 +602,7 @@ License: CC0 Public Domain
 
 ---
 
-### DBpedia
+### 21. DBpedia
 
 **Organization:** DBpedia Association  
 **Lookup API:** [DBpedia Lookup Service](https://lookup.dbpedia.org/)  
@@ -539,7 +633,7 @@ License: CC BY-SA 3.0 and GFDL
 
 ## 🎓 Academic & Research Datasets
 
-### MeetingBank Dataset
+### 22. MeetingBank Dataset
 
 **Organization:** Association for Computational Linguistics (ACL)  
 **Dataset:** [MeetingBank on HuggingFace](https://huggingface.co/datasets/huuuyeah/meetingbank)  
@@ -569,7 +663,7 @@ https://arxiv.org/abs/2305.17529
 
 ---
 
-### LocalView Dataset (Harvard Dataverse)
+### 23. LocalView Dataset (Harvard Dataverse)
 
 **Organization:** Harvard University Mellon Urbanism Lab  
 **Dataverse:** [Harvard Dataverse](https://dataverse.harvard.edu/dataset.xhtml?persistentId=doi:10.7910/DVN/NJTBEM)  
@@ -603,7 +697,7 @@ https://www.localview.net/
 
 ---
 
-### Council Data Project (CDP)
+### 24. Council Data Project (CDP)
 
 **Organization:** Open-source civic tech collaboration  
 **GitHub:** [CouncilDataProject](https://github.com/CouncilDataProject)  
@@ -623,7 +717,7 @@ License: MIT
 
 ---
 
-### City Scrapers / Documenters.org
+### 25. City Scrapers / Documenters.org
 
 **Organization:** Documenters Network (civic journalism collaboration)  
 **GitHub:** [City-Bureau](https://github.com/City-Bureau)  
@@ -643,7 +737,7 @@ License: MIT
 
 ---
 
-### Roper Center for Public Opinion Research
+### 26. Roper Center for Public Opinion Research
 
 **Organization:** Cornell University  
 **Database:** [iPoll Database](https://ropercenter.cornell.edu/ipoll/)  
@@ -663,7 +757,7 @@ iPoll Databank. https://ropercenter.cornell.edu/ipoll/
 
 ## 🗳️ Election Data Sources
 
-### MIT Election Data + Science Lab
+### 27. MIT Election Data + Science Lab
 
 **Organization:** Massachusetts Institute of Technology  
 **Repository:** [GitHub - MEDSL](https://github.com/MEDSL/official-returns)  
@@ -682,7 +776,7 @@ https://electionlab.mit.edu/data
 
 ---
 
-### OpenElections
+### 28. OpenElections
 
 **Organization:** OpenElections Project  
 **GitHub:** [OpenElections](https://github.com/openelections)  
@@ -704,7 +798,7 @@ https://openelections.net/
 
 ## 💰 Paid/Commercial Services (NOT USED)
 
-### Ballotpedia API v3.0
+### 29. Ballotpedia API v3.0
 
 **Organization:** Lucy Burns Institute  
 **API Documentation:** [Ballotpedia API](https://ballotpedia.org/API_documentation)  
@@ -731,20 +825,35 @@ https://openelections.net/
 
 | Provider | API Key | Rate Limit | Attribution Required | Share-Alike | Commercial Use |
 |----------|---------|------------|---------------------|-------------|----------------|
-| **IRS** | No | None | Recommended | No | Yes |
-| **Census** | No* | 500/day | Recommended | No | Yes |
-| **NCES** | No | None | Recommended | No | Yes |
-| **FEC/OpenFEC** | Yes | 1k/hour | Yes | No | Yes** |
-| **Google BigQuery** | Yes | 1TB/mo free | Yes | No | Yes |
-| **Google Civic** | Yes | 25k/day | **YES** | No | Yes |
-| **Google Data Commons** | No | None | **YES** | No | Yes |
-| **Charity Navigator** | Yes | **1k/day** | **YES*** | No | Yes |
-| **ProPublica (all)** | Varies | 5k/day | **YES** | No | Yes |
-| **Open States** | Yes | 50k/mo | **YES** | No | Yes |
-| **Wikidata** | No | ~1/sec | No | No | Yes |
-| **DBpedia** | No | ~1-2/sec | **YES** | **YES** | Yes |
-| **MeetingBank** | No | N/A | **YES** | No | Research |
-| **LocalView** | No | N/A | **YES** | No | Research |
+| **1. IRS EO-BMF** | No | None | Recommended | No | Yes |
+| **2. Census** | No* | 500 req/IP/day | Recommended | No | Yes |
+| **3. NCES** | No | None | Recommended | No | Yes |
+| **4. FEC/OpenFEC** | Yes | 1k req/hour | Yes | No | Yes** |
+| **5. Grants.gov** | No | None | Recommended | No | Yes |
+| **6. GSA Domains** | No | None | No | No | Yes |
+| **7. YouTube** | Yes | 10k units/day | **YES** | No | Yes |
+| **8. Google BigQuery** | Yes | 1TB/mo free | Yes | No | Yes |
+| **9. Google Civic** | Yes | 25k req/day | **YES** | No | Yes |
+| **10. Google Data Commons** | No | None | **YES** | No | Yes |
+| **11. Charity Navigator** | Yes | **1k req/day** | **YES*** | No | Yes |
+| **12. ProPublica Nonprofit** | No | None | **YES** | No | Yes |
+| **13. ProPublica Congress** | Yes | 5k req/day | **YES** | No | Yes |
+| **14. ProPublica Campaign** | Yes | 5k req/day | **YES** | No | Yes** |
+| **15. ProPublica Vital Signs** | Yes | 5k req/day | **YES** | No | Yes |
+| **16. Every.org** | Yes | Custom | **YES** | No | Yes |
+| **17. Logo.dev** | Yes | **1k req/month** | Recommended | No | Yes |
+| **18. GivingTuesday** | No | AWS egress | **YES** | No | Yes |
+| **19. Open States** | Yes | 50k req/month | **YES** | No | Yes |
+| **20. Wikidata** | No | ~1 req/sec | No | No | Yes |
+| **21. DBpedia** | No | ~1-2 req/sec | **YES** | **YES** | Yes |
+| **22. MeetingBank** | No | N/A | **YES** | No | Research |
+| **23. LocalView** | Yes | Varies | **YES** | No | Research |
+| **24. Council Data** | No | N/A | **YES** | No | Yes |
+| **25. City Scrapers** | No | N/A | **YES** | No | Yes |
+| **26. Roper Center** | No | N/A | **YES** | No | Research |
+| **27. MIT Election Lab** | No | N/A | **YES** | No | Yes |
+| **28. OpenElections** | No | N/A | **YES** | Varies | Yes |
+| **29. Ballotpedia** | Yes | **PAID** | **YES** | No | No |
 
 **Notes:**
 - *Census: API key recommended for higher limits
@@ -755,24 +864,42 @@ https://openelections.net/
 
 ## 📞 Contact Information for Providers
 
-### Government Agencies
-- **IRS:** https://www.irs.gov/charities-non-profits
-- **Census Bureau:** https://www.census.gov/data/developers.html
-- **FEC:** https://www.fec.gov/
-- **NCES:** https://nces.ed.gov/
+### U.S. Government Agencies
+- **1. IRS:** https://www.irs.gov/charities-non-profits
+- **2. Census Bureau:** https://www.census.gov/data/developers.html
+- **3. NCES:** https://nces.ed.gov/
+- **4. FEC:** https://www.fec.gov/
+- **5. Grants.gov:** https://www.grants.gov/support
+- **6. GSA:** https://github.com/cisagov/dotgov-data
 
-### Nonprofit Data
-- **Charity Navigator:** https://www.charitynavigator.org/about-us/contact/
-- **ProPublica:** data@propublica.org
-- **GivingTuesday:** https://990data.givingtuesday.org/
+### Media & Social Platforms
+- **7. YouTube Data API:** https://developers.google.com/youtube
 
-### Civic APIs
-- **Open States:** https://openstates.org/tos/
-- **Google Civic:** https://developers.google.com/civic-information
+### Google Services
+- **8-10. Google Cloud:** https://cloud.google.com/support
+
+### Nonprofit Data Providers
+- **11. Charity Navigator:** https://www.charitynavigator.org/about-us/contact/
+- **12-15. ProPublica:** data@propublica.org
+- **16. Every.org:** https://www.every.org/nonprofit-api
+- **17. Logo.dev:** https://www.logo.dev/
+- **18. GivingTuesday:** https://990data.givingtuesday.org/
+
+### Civic & Open Data
+- **19. Open States:** https://openstates.org/tos/
+- **20. Wikidata:** https://www.wikidata.org/
+- **21. DBpedia:** https://www.dbpedia.org/
 
 ### Academic Datasets
-- **Harvard Dataverse:** https://dataverse.harvard.edu/
-- **MIT Election Lab:** https://electionlab.mit.edu/
+- **22. MeetingBank:** https://huggingface.co/datasets/huuuyeah/meetingbank
+- **23. LocalView:** https://dataverse.harvard.edu/
+- **24. Council Data Project:** https://councildataproject.org/
+- **25. Documenters:** https://www.documenters.org/
+- **26. Roper Center:** https://ropercenter.cornell.edu/
+
+### Election Data
+- **27. MIT Election Lab:** https://electionlab.mit.edu/
+- **28. OpenElections:** https://openelections.net/
 
 ---
 

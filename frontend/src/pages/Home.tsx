@@ -36,7 +36,7 @@ export default function Home() {
   const [showSuggestions, setShowSuggestions] = useState(false)
   const { location, setLocation } = useLocationContext()
 
-  const DOCS_URL = import.meta.env.PROD ? '/docs' : 'http://localhost:3000/docs'
+  const DOCS_URL = import.meta.env.PROD ? '/docs/intro' : 'http://localhost:3000/docs/intro'
 
   // Live search preview (type-ahead with actual results from API)
   const { data: previewResults, isLoading: previewLoading, error: previewError } = useQuery({

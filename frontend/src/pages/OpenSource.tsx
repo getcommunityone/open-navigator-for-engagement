@@ -19,7 +19,7 @@ export default function OpenSource() {
       icon: DocumentTextIcon,
       title: 'Comprehensive Documentation',
       description: 'Detailed documentation for developers, including API docs, data models, deployment guides, and contribution guidelines.',
-      link: '/docs',
+      link: import.meta.env.PROD ? '/docs/intro' : 'http://localhost:3000/docs/intro',
     },
     {
       icon: UserGroupIcon,
