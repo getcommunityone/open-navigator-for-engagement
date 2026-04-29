@@ -48,19 +48,23 @@ export default function HomeModern() {
   const apiBaseUrl = import.meta.env.VITE_API_URL || 
     (import.meta.env.DEV ? 'http://localhost:8000' : '')
 
-  // Fetch real stats from API - updates based on selected location
+  // Fetch real stats from API - updates based on selected location and scope
   const { data: statsData } = useQuery({
-    queryKey: ['platform-stats', location?.state, location?.county, location?.city],
+    queryKey: ['platform-stats', searchScope, location?.state, location?.county, location?.city],
     queryFn: async () => {
       const params: any = {};
-      if (location && location.state) {
-        params.state = location.state;
-      }
-      if (location && location.county) {
-        params.county = location.county;
-      }
-      if (location && location.city) {
-        params.city = location.city;
+      if (location) {
+        // Only send location params relevant to the selected scope
+        if (searchScope === 'state' && location.state) {
+          params.state = location.state;
+        } else if (searchScope === 'county' && location.state && location.county) {
+          params.state = location.state;
+          params.county = location.county;
+        } else if ((searchScope === 'city' || searchScope === 'community') && location.state) {
+          params.state = location.state;
+          if (location.county) params.county = location.county;
+          if (location.city) params.city = location.city;
+        }
       }
       const response = await axios.get('/api/stats', { params });
       return response.data.data;
