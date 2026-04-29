@@ -60,8 +60,9 @@ COPY --from=docs-builder /build/build /app/static/docs
 # Set production environment variables for Vite
 ENV VITE_CANONICAL_DOMAIN=www.communityone.com
 ENV VITE_API_URL=/api
-# Cache bust: 2026-04-29
-RUN cd /app/frontend && npm run build
+# Cache bust: 2026-04-29-remove-axios
+ARG CACHE_BUST_FRONTEND=2026-04-29-remove-axios
+RUN cd /app/frontend && echo "Frontend build cache bust: $CACHE_BUST_FRONTEND" && npm run build
 
 # Frontend is already built to /app/api/static/ via vite.config.ts
 # Create frontend directory in /app/static for nginx
