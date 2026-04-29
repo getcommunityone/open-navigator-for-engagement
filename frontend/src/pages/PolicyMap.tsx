@@ -49,6 +49,7 @@ export default function PolicyMap() {
   const [selectedState, setSelectedState] = useState('AL')
   const [selectedSession, setSelectedSession] = useState<string>('')
   const [searchQuery, setSearchQuery] = useState('')
+  const [selectedTopic, setSelectedTopic] = useState('')
   const [page, setPage] = useState(1)
   const limit = 20
 
@@ -59,10 +60,10 @@ export default function PolicyMap() {
     session: string | null
     legend: any
   }>({
-    queryKey: ['billsMap', searchQuery, selectedSession],
+    queryKey: ['billsMap', selectedTopic, selectedSession],
     queryFn: async () => {
       const params = new URLSearchParams()
-      if (searchQuery) params.append('topic', searchQuery)
+      if (selectedTopic) params.append('topic', selectedTopic)
       if (selectedSession) params.append('session', selectedSession)
       
       const response = await api.get(`/bills/map?${params}`)
@@ -127,43 +128,181 @@ export default function PolicyMap() {
   return (
     <div className="min-h-screen bg-gray-50 py-8">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-4xl font-bold text-gray-900 mb-2">
-            📜 Legislative Policy Map
-          </h1>
-          <p className="text-lg text-gray-600">
-            Track state legislation initiatives compared across the country
-          </p>
-          
-          {/* View Mode Toggle */}
-          <div className="mt-4 flex items-center gap-2">
-            <button
-              onClick={() => setViewMode('map')}
-              className={`flex items-center gap-2 px-4 py-2 rounded-md font-medium transition-colors ${
-                viewMode === 'map'
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-              }`}
-            >
-              <MapIconOutline className="h-5 w-5" />
-              Map View
-            </button>
-            <button
-              onClick={() => setViewMode('list')}
-              className={`flex items-center gap-2 px-4 py-2 rounded-md font-medium transition-colors ${
-                viewMode === 'list'
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-              }`}
-            >
-              <ListBulletIcon className="h-5 w-5" />
-              List View
-            </button>
+        {/* Header with Compact Controls */}
+        <div className="mb-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900 mb-1">
+                📜 Legislative Policy Map
+              </h1>
+              <p className="text-gray-600">
+                Track state legislation initiatives compared across the country
+              </p>
+            </div>
+            
+            {/* View Mode Toggle */}
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setViewMode('map')}
+                className={`flex items-center gap-2 px-4 py-2 rounded-md font-medium transition-colors ${
+                  viewMode === 'map'
+                    ? 'bg-blue-600 text-white'
+                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                }`}
+              >
+                <MapIconOutline className="h-5 w-5" />
+                Map View
+              </button>
+              <button
+                onClick={() => setViewMode('list')}
+                className={`flex items-center gap-2 px-4 py-2 rounded-md font-medium transition-colors ${
+                  viewMode === 'list'
+                    ? 'bg-blue-600 text-white'
+                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                }`}
+              >
+                <ListBulletIcon className="h-5 w-5" />
+                List View
+              </button>
+            </div>
           </div>
         </div>
 
-        {/* Stats Summary */}
+        {/* Compact Filters - Always visible at top */}
+        <div className="bg-white rounded-lg shadow-sm p-4 mb-4">
+          <div className="flex flex-wrap items-end gap-4">
+            {/* Topic Filter */}
+            {viewMode === 'map' && (
+              <div className="flex-1 min-w-[200px]">
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Filter by Topic
+                </label>
+                <select
+                  className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm"
+                  value={selectedTopic}
+                  onChange={(e) => setSelectedTopic(e.target.value)}
+                >
+                  <option value="">All Topics</option>
+                  <option value="dental">Dental Health</option>
+                  <option value="fluorid">Fluoridation</option>
+                  <option value="oral health">Oral Health</option>
+                  <option value="medicaid">Medicaid</option>
+                  <option value="education">Education</option>
+                  <option value="health">Health</option>
+                </select>
+              </div>
+            )}
+
+            {/* State Filter - list view */}
+            {viewMode === 'list' && (
+              <div className="flex-1 min-w-[150px]">
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  State
+                </label>
+                <select
+                  className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm"
+                  value={selectedState}
+                  onChange={(e) => {
+                    setSelectedState(e.target.value)
+                    setPage(1)
+                  }}
+                >
+                  <option value="AL">Alabama</option>
+                  <option value="GA">Georgia</option>
+                  <option value="IN">Indiana</option>
+                  <option value="MA">Massachusetts</option>
+                  <option value="WA">Washington</option>
+                  <option value="WI">Wisconsin</option>
+                </select>
+              </div>
+            )}
+
+            {/* Session Filter - list view */}
+            {viewMode === 'list' && (
+              <div className="flex-1 min-w-[200px]">
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Legislative Session
+                </label>
+                <select
+                  className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm"
+                  value={selectedSession}
+                  onChange={(e) => {
+                    setSelectedSession(e.target.value)
+                    setPage(1)
+                  }}
+                >
+                  <option value="">All Sessions</option>
+                  {sessionsData?.sessions?.map((session: Session) => (
+                    <option key={session.session} value={session.session}>
+                      {session.session_name} ({session.bill_count.toLocaleString()} bills)
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+
+            {/* Search */}
+            <div className="flex-1 min-w-[250px]">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                {viewMode === 'map' ? 'Search Keywords' : 'Search Bills'}
+              </label>
+              <div className="relative">
+                <input
+                  type="text"
+                  className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 pl-10 text-sm"
+                  placeholder="dental, health, education..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onKeyPress={(e) => e.key === 'Enter' && setPage(1)}
+                />
+                <MagnifyingGlassIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+              </div>
+            </div>
+
+            {/* Clear button */}
+            {(searchQuery || selectedSession || selectedTopic) && (
+              <button
+                type="button"
+                onClick={() => {
+                  setSearchQuery('')
+                  setSelectedSession('')
+                  setSelectedTopic('')
+                  setPage(1)
+                }}
+                className="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition-colors text-sm font-medium"
+              >
+                Clear
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Map Visualization - Visible on Page Load */}
+        {viewMode === 'map' && (
+          <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
+            {mapError ? (
+              <div className="bg-red-50 border border-red-200 rounded-lg p-8 text-center">
+                <div className="text-red-600 text-5xl mb-4">⚠️</div>
+                <h3 className="text-lg font-semibold text-red-900 mb-2">Failed to load map data</h3>
+                <p className="text-red-700">{String(mapError)}</p>
+              </div>
+            ) : mapLoading ? (
+              <div className="flex justify-center items-center h-96">
+                <div className="text-center">
+                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+                  <p className="text-gray-600">Loading map...</p>
+                </div>
+              </div>
+            ) : (
+              <USMap
+                data={mapData?.states || {}}
+                onStateClick={handleStateClick}
+              />
+            )}
+          </div>
+        )}
+
+        {/* Stats Summary - Below Map */}
         {viewMode === 'map' && mapData && (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
             <div className="bg-white rounded-lg shadow-sm p-6 border-l-4 border-blue-500">
@@ -174,7 +313,7 @@ export default function PolicyMap() {
                 {totalStatesWithLegislation}
               </div>
               <div className="text-sm text-gray-500 mt-1">
-                {searchQuery ? `matching "${searchQuery}"` : 'all topics'}
+                {selectedTopic ? `matching "${selectedTopic}"` : 'all topics'}
               </div>
             </div>
 
@@ -195,7 +334,7 @@ export default function PolicyMap() {
                 Filter Topic
               </div>
               <div className="mt-2 text-xl font-bold text-gray-900">
-                {searchQuery || 'All Topics'}
+                {selectedTopic || 'All Topics'}
               </div>
               <div className="text-sm text-gray-500 mt-1">
                 Click map to drill down
@@ -242,152 +381,6 @@ export default function PolicyMap() {
               </div>
             </div>
           </div>
-        )}
-
-        {/* Filters */}
-        <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
-          <div className="flex items-center gap-2 mb-4">
-            <FunnelIcon className="h-5 w-5 text-gray-500" />
-            <h2 className="text-lg font-semibold text-gray-900">
-              {viewMode === 'map' ? 'Map Filters' : 'Search Filters'}
-            </h2>
-          </div>
-
-          <form onSubmit={handleSearch} className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {/* State Filter - only show in list view */}
-              {viewMode === 'list' && (
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    State
-                  </label>
-                  <select
-                    className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                    value={selectedState}
-                    onChange={(e) => {
-                      setSelectedState(e.target.value)
-                      setPage(1)
-                    }}
-                  >
-                    <option value="AL">Alabama</option>
-                    <option value="GA">Georgia</option>
-                    <option value="MA">Massachusetts</option>
-                  </select>
-                </div>
-              )}
-
-              {/* Session Filter - only show in list view */}
-              {viewMode === 'list' && (
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Legislative Session
-                  </label>
-                  <select
-                    className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                    value={selectedSession}
-                    onChange={(e) => {
-                      setSelectedSession(e.target.value)
-                      setPage(1)
-                    }}
-                  >
-                    <option value="">All Sessions</option>
-                    {sessionsData?.sessions?.map((session: Session) => (
-                      <option key={session.session} value={session.session}>
-                        {session.session_name} ({session.bill_count.toLocaleString()} bills)
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              )}
-
-              {/* Search - show in both views */}
-              <div className={viewMode === 'map' ? 'md:col-span-3' : ''}>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  {viewMode === 'map' ? 'Filter by Topic' : 'Search Bills'}
-                </label>
-                <div className="relative">
-                  <input
-                    type="text"
-                    className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 pl-10"
-                    placeholder="dental, health, education..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                  />
-                  <MagnifyingGlassIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
-                </div>
-              </div>
-            </div>
-
-            <div className="flex gap-3">
-              <button
-                type="submit"
-                className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors font-medium"
-              >
-                Apply Filters
-              </button>
-              {(searchQuery || selectedSession) && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setSearchQuery('')
-                    setSelectedSession('')
-                    setPage(1)
-                  }}
-                  className="px-6 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition-colors font-medium"
-                >
-                  Clear Filters
-                </button>
-              )}
-            </div>
-          </form>
-        </div>
-
-        {/* Map Visualization */}
-        {viewMode === 'map' && (
-          <>
-            {mapError ? (
-              <div className="bg-red-50 border border-red-200 rounded-lg p-8 text-center">
-                <div className="text-red-600 text-5xl mb-4">⚠️</div>
-                <h3 className="text-xl font-semibold text-red-900 mb-2">
-                  Unable to Load Map Data
-                </h3>
-                <p className="text-red-700 mb-4">
-                  {mapError instanceof Error 
-                    ? mapError.message 
-                    : 'There was an error connecting to the API server. Please check that the server is running.'}
-                </p>
-                <div className="flex gap-3 justify-center">
-                  <button
-                    onClick={() => window.location.reload()}
-                    className="px-6 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors font-medium"
-                  >
-                    Retry
-                  </button>
-                  <button
-                    onClick={() => setViewMode('list')}
-                    className="px-6 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition-colors font-medium"
-                  >
-                    Switch to List View
-                  </button>
-                </div>
-              </div>
-            ) : mapLoading ? (
-              <div className="bg-white rounded-lg shadow-sm p-12 text-center">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-                <p className="mt-4 text-gray-600">Loading map data...</p>
-              </div>
-            ) : mapData ? (
-              <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
-                <h2 className="text-xl font-semibold text-gray-900 mb-4">
-                  United States Legislative Activity Map
-                </h2>
-                <p className="text-sm text-gray-600 mb-6">
-                  Click on any state to view detailed bill list. Colors show primary legislation type, patterns show status.
-                </p>
-                <USMap stateData={mapData.states} onStateClick={handleStateClick} />
-              </div>
-            ) : null}
-          </>
         )}
 
         {/* Bills List */}

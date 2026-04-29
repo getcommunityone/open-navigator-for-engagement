@@ -13,6 +13,10 @@ interface Opportunity {
   urgency: string
   confidence: number
   meeting_date: string
+  title?: string
+  bill_id?: string
+  session?: string
+  latest_action?: string
 }
 
 const urgencyColors: Record<string, string> = {
@@ -56,10 +60,12 @@ export default function Heatmap() {
             onChange={(e) => setSelectedState(e.target.value || null)}
           >
             <option value="">All States</option>
-            <option value="CA">California</option>
-            <option value="TX">Texas</option>
-            <option value="NY">New York</option>
-            <option value="FL">Florida</option>
+            <option value="AL">Alabama</option>
+            <option value="GA">Georgia</option>
+            <option value="IN">Indiana</option>
+            <option value="MA">Massachusetts</option>
+            <option value="WA">Washington</option>
+            <option value="WI">Wisconsin</option>
           </select>
         </div>
 
@@ -90,7 +96,7 @@ export default function Heatmap() {
                 className="w-4 h-4 rounded-full"
                 style={{ backgroundColor: color }}
               />
-              <span className="text-sm capitalize">{level}</span>
+              <span className="text-sm capitalize text-gray-700">{level}</span>
             </div>
           ))}
         </div>
@@ -121,20 +127,32 @@ export default function Heatmap() {
               }}
             >
               <Popup>
-                <div className="p-2">
-                  <h4 className="font-bold">{opp.municipality}, {opp.state}</h4>
-                  <p className="text-sm mt-1">
+                <div className="p-2 min-w-[250px]">
+                  <h4 className="font-bold text-gray-900">{opp.municipality}, {opp.state}</h4>
+                  {opp.title && (
+                    <p className="text-sm mt-2 text-gray-800">
+                      <strong>Bill:</strong> {opp.bill_id} - {opp.title.substring(0, 100)}
+                      {opp.title.length > 100 ? '...' : ''}
+                    </p>
+                  )}
+                  <p className="text-sm mt-1 text-gray-700">
                     <strong>Topic:</strong> {opp.topic.replace(/_/g, ' ')}
                   </p>
-                  <p className="text-sm">
+                  <p className="text-sm text-gray-700">
                     <strong>Urgency:</strong> {opp.urgency}
                   </p>
-                  <p className="text-sm">
+                  <p className="text-sm text-gray-700">
                     <strong>Confidence:</strong> {(opp.confidence * 100).toFixed(0)}%
                   </p>
-                  <p className="text-sm">
-                    <strong>Meeting Date:</strong> {new Date(opp.meeting_date).toLocaleDateString()}
+                  <p className="text-sm text-gray-700">
+                    <strong>Last Updated:</strong> {new Date(opp.meeting_date).toLocaleDateString()}
                   </p>
+                  {opp.latest_action && (
+                    <p className="text-sm mt-1 text-gray-700">
+                      <strong>Status:</strong> {opp.latest_action.substring(0, 80)}
+                      {opp.latest_action.length > 80 ? '...' : ''}
+                    </p>
+                  )}
                 </div>
               </Popup>
             </CircleMarker>

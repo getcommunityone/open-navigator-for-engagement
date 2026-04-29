@@ -410,12 +410,97 @@ async def get_api_opportunities(
     urgency: Optional[str] = Query(None),
     limit: int = Query(100)
 ):
-    """API endpoint for React frontend opportunities page."""
+    """API endpoint for React frontend opportunities page - returns fluoridation bills as advocacy opportunities."""
     try:
-        opportunities = pipeline.query_opportunities_by_state(state, urgency)
+        import duckdb
+        from pathlib import Path
+        import random
         
-        if topic:
-            opportunities = [o for o in opportunities if o.get("topic") == topic]
+        # State center coordinates for mapping
+        STATE_COORDS = {
+            'AL': (32.806671, -86.791130),
+            'GA': (33.040619, -83.643074),
+            'IN': (39.849426, -86.258278),
+            'MA': (42.230171, -71.530106),
+            'WA': (47.400902, -121.490494),
+            'WI': (44.268543, -89.616508)
+        }
+        
+        # Build query for fluoridation-related bills
+        states = [state] if state else list(STATE_COORDS.keys())
+        opportunities = []
+        
+        for st in states:
+            parquet_path = Path(f"data/gold/states/{st}/bills_bills.parquet")
+            if not parquet_path.exists():
+                continue
+            
+            # Query for fluoridation-related bills
+            query = f"""
+                SELECT 
+                    '{st}' as state,
+                    title,
+                    identifier,
+                    session,
+                    latest_action,
+                    created_at,
+                    updated_at
+                FROM read_parquet('{parquet_path}')
+                WHERE LOWER(title) LIKE '%fluorid%' 
+                   OR LOWER(title) LIKE '%dental%'
+                   OR LOWER(title) LIKE '%oral health%'
+                   OR LOWER(title) LIKE '%water treat%'
+                LIMIT {limit}
+            """
+            
+            result = duckdb.query(query).fetchall()
+            
+            # Convert to opportunities format
+            for row in result:
+                state_code, title, identifier, session, latest_action, created_at, updated_at = row
+                
+                # Determine urgency based on keywords
+                title_lower = title.lower() if title else ""
+                if 'fluorid' in title_lower or 'water' in title_lower:
+                    urgency_level = 'critical'
+                    confidence = 0.9
+                    topic_type = 'water_fluoridation'
+                elif 'dental' in title_lower:
+                    urgency_level = 'high'
+                    confidence = 0.75
+                    topic_type = 'school_dental_screening'
+                else:
+                    urgency_level = 'medium'
+                    confidence = 0.6
+                    topic_type = 'medicaid_dental_expansion'
+                
+                # Filter by topic if specified
+                if topic and topic_type != topic:
+                    continue
+                
+                # Filter by urgency if specified
+                if urgency and urgency_level != urgency:
+                    continue
+                
+                # Get state coordinates with slight random offset for multiple bills
+                base_lat, base_lon = STATE_COORDS[state_code]
+                lat_offset = random.uniform(-0.5, 0.5)
+                lon_offset = random.uniform(-0.5, 0.5)
+                
+                opportunities.append({
+                    'state': state_code,
+                    'municipality': f'{state_code} Legislature',
+                    'latitude': base_lat + lat_offset,
+                    'longitude': base_lon + lon_offset,
+                    'topic': topic_type,
+                    'urgency': urgency_level,
+                    'confidence': confidence,
+                    'meeting_date': updated_at.isoformat() if updated_at else created_at.isoformat(),
+                    'title': title,
+                    'bill_id': identifier,
+                    'session': session,
+                    'latest_action': latest_action
+                })
         
         return {"opportunities": opportunities[:limit]}
     except Exception as e:
