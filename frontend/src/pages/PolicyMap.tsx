@@ -50,6 +50,7 @@ export default function PolicyMap() {
   const [selectedSession, setSelectedSession] = useState<string>('')
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedTopic, setSelectedTopic] = useState('')
+  const [showTopicSelector, setShowTopicSelector] = useState(true)
   const [page, setPage] = useState(1)
   const limit = 20
 
@@ -72,7 +73,7 @@ export default function PolicyMap() {
       const response = await api.get(`/bills/map?${params}`)
       return response.data
     },
-    enabled: viewMode === 'map',
+    enabled: viewMode === 'map' && !showTopicSelector && selectedTopic !== '',
     retry: 2,
     retryDelay: 1000,
   })
@@ -118,6 +119,17 @@ export default function PolicyMap() {
   const handleStateClick = (stateCode: string) => {
     setSelectedState(stateCode)
     setViewMode('list')
+  }
+
+  const handleTopicSelect = (topic: string) => {
+    setSelectedTopic(topic)
+    setShowTopicSelector(false)
+    setViewMode('map')
+  }
+
+  const handleBackToTopics = () => {
+    setShowTopicSelector(true)
+    setSelectedTopic('')
   }
 
   const totalStatesWithLegislation = mapData ? Object.values(mapData.states).filter(s => s.total_bills > 0).length : 0
