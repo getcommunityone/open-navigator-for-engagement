@@ -922,6 +922,16 @@ async def health_check():
     }
 
 
+@app.get("/api/health")
+async def api_health_check():
+    """Health check endpoint for monitoring (API path)."""
+    return {
+        "status": "healthy",
+        "timestamp": datetime.utcnow().isoformat(),
+        "version": "1.0.0"
+    }
+
+
 @app.post("/admin/initialize")
 async def initialize_system():
     """Initialize Delta Lake tables and system components."""
