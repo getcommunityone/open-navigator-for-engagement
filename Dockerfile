@@ -46,18 +46,22 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy application code
+# OPTIMIZATION: Copy frontend package files first for better caching
+COPY frontend/package*.json /app/frontend/
+RUN cd /app/frontend && npm ci
+
+# Copy application code (now npm ci layer is cached)
 COPY . .
 
 # Copy built static files from docs stage
 COPY --from=docs-builder /build/build /app/static/docs
 
-# Build frontend inline (vite.config.ts outputs to ../api/static/)
+# Build frontend (npm_modules already cached from above)
 # Set production environment variables for Vite
 ENV VITE_CANONICAL_DOMAIN=www.communityone.com
 ENV VITE_API_URL=/api
-# Cache bust: 2026-04-26-v2
-RUN cd /app/frontend && npm ci && npm run build
+# Cache bust: 2026-04-29
+RUN cd /app/frontend && npm run build
 
 # Frontend is already built to /app/api/static/ via vite.config.ts
 # Create frontend directory in /app/static for nginx
