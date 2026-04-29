@@ -33,13 +33,31 @@ const api = axios.create({
   },
 })
 
-// Add request interceptor for auth token if needed
+// Add request interceptor for auth token and HTTPS enforcement
 api.interceptors.request.use(
   (config) => {
+    // Add auth token if available
     const token = localStorage.getItem('auth_token')
     if (token) {
       config.headers.Authorization = `Bearer ${token}`
     }
+    
+    // CRITICAL FIX: Force HTTPS in production to prevent mixed content errors
+    // Axios converts relative paths to absolute URLs using current protocol
+    // We must intercept and force HTTPS if page is loaded over HTTPS
+    if (typeof window !== 'undefined' && window.location.protocol === 'https:' && config.url) {
+      // If axios has converted to absolute URL with http://, upgrade to https://
+      if (config.url.startsWith('http://')) {
+        config.url = config.url.replace('http://', 'https://')
+        console.log('🔒 [API] Upgraded request to HTTPS:', config.url)
+      }
+      // If baseURL was converted to http://, upgrade it too
+      if (config.baseURL && config.baseURL.startsWith('http://')) {
+        config.baseURL = config.baseURL.replace('http://', 'https://')
+        console.log('🔒 [API] Upgraded baseURL to HTTPS:', config.baseURL)
+      }
+    }
+    
     return config
   },
   (error) => Promise.reject(error)
