@@ -155,8 +155,6 @@ const getPatternForState = (stateCode: string, stateData: Record<string, StateDa
 }
 
 export default function USMap({ stateData, onStateClick, legend }: USMapProps) {
-
-export default function USMap({ stateData, onStateClick, legend }: USMapProps) {
   const [hoveredState, setHoveredState] = useState<string | null>(null)
   const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 })
   

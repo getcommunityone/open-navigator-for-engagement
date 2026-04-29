@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import api from '../lib/api'
-import { MagnifyingGlassIcon, FunnelIcon, MapIcon as MapIconOutline, ListBulletIcon } from '@heroicons/react/24/outline'
+import { MagnifyingGlassIcon, MapIcon as MapIconOutline, ListBulletIcon } from '@heroicons/react/24/outline'
 import USMap from '../components/USMap'
 
 interface Bill {
