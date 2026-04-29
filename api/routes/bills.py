@@ -13,46 +13,151 @@ router = APIRouter(prefix="/api/bills", tags=["bills"])
 GOLD_DIR = Path("data/gold")
 
 
-def classify_bill_type(title: str, classification: list) -> str:
+def classify_bill_type(title: str, classification: list, topic: Optional[str] = None) -> str:
     """
-    Classify bill into ban, restriction, protection, or other.
+    Classify bill based on topic-specific categories.
     
-    Uses keyword matching on title and classification.
+    Different topics use different classification schemes:
+    - Fluoridation: mandate, removal, funding, study
+    - Dental/Oral Health: coverage_expansion, screening, provider_access, funding
+    - Medicaid: expansion, coverage, reimbursement, eligibility
+    - Health (general): protection, restriction, funding, reform
+    - Education: requirement, funding, curriculum, reform
+    - Default: support, oppose, regulate, other
     """
     title_lower = title.lower()
+    topic_lower = topic.lower() if topic else ""
     
-    # Ban keywords
-    ban_keywords = [
-        'prohibit', 'ban', 'forbid', 'unlawful', 'illegal', 
-        'criminalize', 'outlaw', 'prevent', 'bar from'
-    ]
+    # Fluoridation-specific classifications
+    if 'fluorid' in topic_lower or 'fluorid' in title_lower:
+        if any(word in title_lower for word in ['mandate', 'require', 'shall add', 'must fluoridate']):
+            return 'mandate'
+        elif any(word in title_lower for word in ['remove', 'discontinue', 'cease', 'eliminate', 'prohibit fluorid', 'ban fluorid']):
+            return 'removal'
+        elif any(word in title_lower for word in ['fund', 'appropriation', 'grant', 'reimburse', 'subsidy']):
+            return 'funding'
+        elif any(word in title_lower for word in ['study', 'research', 'analysis', 'assess', 'evaluate']):
+            return 'study'
+        else:
+            return 'other'
     
-    # Restriction keywords
-    restriction_keywords = [
-        'restrict', 'limit', 'regulate', 'require', 'mandate',
-        'control', 'impose', 'condition', 'constraint'
-    ]
+    # Dental/Oral Health-specific classifications
+    elif 'dental' in topic_lower or 'oral health' in topic_lower or 'dental' in title_lower:
+        if any(word in title_lower for word in ['expand', 'increase coverage', 'extend coverage', 'add coverage']):
+            return 'coverage_expansion'
+        elif any(word in title_lower for word in ['screen', 'examination', 'checkup', 'assessment']):
+            return 'screening'
+        elif any(word in title_lower for word in ['provider', 'dentist', 'hygienist', 'workforce', 'professional']):
+            return 'provider_access'
+        elif any(word in title_lower for word in ['fund', 'appropriation', 'grant', 'budget', 'reimburse']):
+            return 'funding'
+        else:
+            return 'other'
     
-    # Protection keywords
-    protection_keywords = [
-        'protect', 'preserve', 'safeguard', 'ensure', 'guarantee',
-        'expand', 'increase', 'enhance', 'support', 'fund'
-    ]
+    # Medicaid-specific classifications
+    elif 'medicaid' in topic_lower or 'medicaid' in title_lower:
+        if any(word in title_lower for word in ['expand', 'expansion', 'extend', 'broaden']):
+            return 'expansion'
+        elif any(word in title_lower for word in ['coverage', 'benefit', 'service']):
+            return 'coverage'
+        elif any(word in title_lower for word in ['reimburse', 'payment', 'rate', 'compensation']):
+            return 'reimbursement'
+        elif any(word in title_lower for word in ['eligib', 'qualify', 'enroll']):
+            return 'eligibility'
+        else:
+            return 'other'
     
-    # Check for bans first (strongest signal)
-    if any(keyword in title_lower for keyword in ban_keywords):
-        return 'ban'
+    # Education-specific classifications
+    elif 'education' in topic_lower or 'school' in topic_lower:
+        if any(word in title_lower for word in ['require', 'mandate', 'shall provide', 'must offer']):
+            return 'requirement'
+        elif any(word in title_lower for word in ['fund', 'appropriation', 'grant', 'budget']):
+            return 'funding'
+        elif any(word in title_lower for word in ['curriculum', 'course', 'instruction', 'program']):
+            return 'curriculum'
+        elif any(word in title_lower for word in ['reform', 'restructure', 'modernize', 'improve']):
+            return 'reform'
+        else:
+            return 'other'
     
-    # Check for protections
-    if any(keyword in title_lower for keyword in protection_keywords):
-        return 'protection'
+    # General health classifications
+    elif 'health' in topic_lower or 'health' in title_lower:
+        if any(word in title_lower for word in ['protect', 'preserve', 'safeguard', 'ensure', 'guarantee', 'expand', 'increase', 'enhance', 'support']):
+            return 'protection'
+        elif any(word in title_lower for word in ['restrict', 'limit', 'regulate', 'control', 'impose', 'prohibit', 'ban']):
+            return 'restriction'
+        elif any(word in title_lower for word in ['fund', 'appropriation', 'grant', 'budget']):
+            return 'funding'
+        elif any(word in title_lower for word in ['reform', 'restructure', 'modernize', 'improve']):
+            return 'reform'
+        else:
+            return 'other'
     
-    # Check for restrictions
-    if any(keyword in title_lower for keyword in restriction_keywords):
-        return 'restriction'
+    # Default general classifications
+    else:
+        if any(word in title_lower for word in ['support', 'promote', 'encourage', 'expand', 'increase', 'enhance', 'fund']):
+            return 'support'
+        elif any(word in title_lower for word in ['oppose', 'prohibit', 'ban', 'restrict', 'limit', 'prevent']):
+            return 'oppose'
+        elif any(word in title_lower for word in ['regulate', 'oversee', 'control', 'require', 'mandate']):
+            return 'regulate'
+        else:
+            return 'other'
+
+
+def get_legend_for_topic(topic: Optional[str]) -> dict:
+    """
+    Get appropriate legend labels based on topic.
+    """
+    topic_lower = topic.lower() if topic else ""
     
-    # Default
-    return 'other'
+    if 'fluorid' in topic_lower:
+        return {
+            "mandate": "Mandate Fluoridation",
+            "removal": "Remove Fluoridation",
+            "funding": "Funding/Grants",
+            "study": "Study/Research",
+            "other": "Other"
+        }
+    elif 'dental' in topic_lower or 'oral health' in topic_lower:
+        return {
+            "coverage_expansion": "Coverage Expansion",
+            "screening": "Screening Programs",
+            "provider_access": "Provider Access",
+            "funding": "Funding/Grants",
+            "other": "Other"
+        }
+    elif 'medicaid' in topic_lower:
+        return {
+            "expansion": "Program Expansion",
+            "coverage": "Coverage/Benefits",
+            "reimbursement": "Reimbursement",
+            "eligibility": "Eligibility",
+            "other": "Other"
+        }
+    elif 'education' in topic_lower or 'school' in topic_lower:
+        return {
+            "requirement": "Requirements",
+            "funding": "Funding",
+            "curriculum": "Curriculum",
+            "reform": "Reform",
+            "other": "Other"
+        }
+    elif 'health' in topic_lower:
+        return {
+            "protection": "Protection/Expansion",
+            "restriction": "Restriction",
+            "funding": "Funding",
+            "reform": "Reform",
+            "other": "Other"
+        }
+    else:
+        return {
+            "support": "Support/Promote",
+            "oppose": "Oppose/Restrict",
+            "regulate": "Regulate",
+            "other": "Other"
+        }
 
 
 def determine_bill_status(latest_action: str, latest_date: str) -> str:
@@ -312,8 +417,11 @@ async def get_bill_map_data(
             if not rows:
                 continue
             
-            # Classify bills
-            type_counts = {'ban': 0, 'restriction': 0, 'protection': 0, 'other': 0}
+            # Get topic-aware categories
+            legend_categories = get_legend_for_topic(topic)
+            
+            # Initialize type_counts with all possible categories for this topic
+            type_counts = {cat: 0 for cat in legend_categories.keys()}
             status_counts = {'enacted': 0, 'failed': 0, 'pending': 0}
             type_status_counts = {}
             
@@ -322,8 +430,12 @@ async def get_bill_map_data(
                 classification = row[1] if row[1] else []
                 latest_action = row[2] if row[2] else ''
                 
-                bill_type = classify_bill_type(title, classification)
+                bill_type = classify_bill_type(title, classification, topic)
                 bill_status = determine_bill_status(latest_action, '')
+                
+                # Ensure bill_type exists in type_counts (fallback to 'other')
+                if bill_type not in type_counts:
+                    bill_type = 'other'
                 
                 type_counts[bill_type] += 1
                 status_counts[bill_status] += 1
@@ -354,12 +466,7 @@ async def get_bill_map_data(
             "states": state_data,
             "total_states": len(state_data),
             "legend": {
-                "types": {
-                    "ban": "Outright Ban",
-                    "restriction": "Restriction",
-                    "protection": "Protection",
-                    "other": "Other Legislation"
-                },
+                "types": get_legend_for_topic(topic),
                 "statuses": {
                     "enacted": "Enacted",
                     "failed": "Failed",

@@ -58,7 +58,10 @@ export default function PolicyMap() {
     states: Record<string, StateData>
     topic: string | null
     session: string | null
-    legend: any
+    legend: {
+      types: Record<string, string>
+      statuses: Record<string, string>
+    }
   }>({
     queryKey: ['billsMap', selectedTopic, selectedSession],
     queryFn: async () => {
@@ -178,7 +181,7 @@ export default function PolicyMap() {
                   Filter by Topic
                 </label>
                 <select
-                  className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm"
+                  className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm text-gray-900 py-2"
                   value={selectedTopic}
                   onChange={(e) => setSelectedTopic(e.target.value)}
                 >
@@ -200,7 +203,7 @@ export default function PolicyMap() {
                   State
                 </label>
                 <select
-                  className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm"
+                  className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm text-gray-900 py-2"
                   value={selectedState}
                   onChange={(e) => {
                     setSelectedState(e.target.value)
@@ -224,7 +227,7 @@ export default function PolicyMap() {
                   Legislative Session
                 </label>
                 <select
-                  className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm"
+                  className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm text-gray-900 py-2"
                   value={selectedSession}
                   onChange={(e) => {
                     setSelectedSession(e.target.value)
@@ -249,7 +252,7 @@ export default function PolicyMap() {
               <div className="relative">
                 <input
                   type="text"
-                  className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 pl-10 text-sm"
+                  className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 pl-10 text-sm text-gray-900 py-2"
                   placeholder="dental, health, education..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
@@ -280,6 +283,39 @@ export default function PolicyMap() {
         {/* Map Visualization - Visible on Page Load */}
         {viewMode === 'map' && (
           <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
+            {/* Clear Explanatory Title */}
+            <div className="mb-6 border-b border-gray-200 pb-4">
+              <h2 className="text-2xl font-bold text-gray-900 mb-2">
+                {selectedTopic ? (
+                  <>
+                    {selectedTopic.charAt(0).toUpperCase() + selectedTopic.slice(1)} Legislation Across the US
+                  </>
+                ) : (
+                  <>State-by-State Legislative Policy Overview</>
+                )}
+              </h2>
+              <p className="text-base text-gray-600">
+                {selectedTopic === 'fluorid' && (
+                  <>See which states mandate water fluoridation, which have removed it, and where funding or studies are underway. Each state's color shows the primary type of legislation, while darker/lighter shades indicate whether bills have been enacted, are pending, or have failed.</>
+                )}
+                {selectedTopic === 'dental' && (
+                  <>Track dental health policies including coverage expansion, screening programs, provider access initiatives, and funding. Colors show the main focus of legislation in each state, with shading indicating current status.</>
+                )}
+                {selectedTopic === 'medicaid' && (
+                  <>Monitor Medicaid program changes across states, including expansions, coverage modifications, reimbursement adjustments, and eligibility requirements. The map shows what type of Medicaid legislation is most active in each state.</>
+                )}
+                {selectedTopic === 'health' && (
+                  <>View health-related legislation including protections, restrictions, funding initiatives, and healthcare reforms. Each state's color indicates the dominant type of health policy being considered or enacted.</>
+                )}
+                {selectedTopic === 'education' && (
+                  <>Explore educational policy across states, from new requirements and curriculum changes to funding initiatives and system reforms. Colors represent the primary focus of education legislation in each state.</>
+                )}
+                {!selectedTopic && (
+                  <>This interactive map shows legislative activity across all 50 states. Click any state to drill down into specific bills, or use the topic filter above to focus on a particular policy area. Colors indicate the primary type of legislation, while shading shows whether bills have been enacted (darker), are pending (normal), or failed (lighter).</>
+                )}
+              </p>
+            </div>
+
             {mapError ? (
               <div className="bg-red-50 border border-red-200 rounded-lg p-8 text-center">
                 <div className="text-red-600 text-5xl mb-4">⚠️</div>
@@ -295,8 +331,9 @@ export default function PolicyMap() {
               </div>
             ) : (
               <USMap
-                data={mapData?.states || {}}
+                stateData={mapData?.states || {}}
                 onStateClick={handleStateClick}
+                legend={mapData?.legend}
               />
             )}
           </div>

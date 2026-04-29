@@ -1,4 +1,5 @@
 // @ts-nocheck
+import { useState } from 'react'
 import { ComposableMap, Geographies, Geography } from 'react-simple-maps'
 
 const geoUrl = 'https://cdn.jsdelivr.net/npm/us-atlas@3/states-10m.json'
@@ -25,6 +26,10 @@ interface StateData {
 interface USMapProps {
   stateData: Record<string, StateData>
   onStateClick?: (stateCode: string) => void
+  legend?: {
+    types: Record<string, string>
+    statuses: Record<string, string>
+  }
 }
 
 // State code to FIPS mapping
@@ -46,6 +51,49 @@ const FIPS_STATE: Record<string, string> = Object.fromEntries(
   Object.entries(STATE_FIPS).map(([k, v]) => [v, k])
 )
 
+// Flexible color palette for different legislation types
+const TYPE_COLOR_PALETTE: Record<string, string> = {
+  // Fluoridation categories
+  'mandate': '#4CAF50',      // Green - Mandate
+  'removal': '#F44336',      // Red - Removal
+  'funding': '#2196F3',      // Blue - Funding
+  'study': '#9C27B0',        // Purple - Study
+  
+  // Dental/Oral Health categories  
+  'coverage_expansion': '#4CAF50',  // Green - Expansion
+  'screening': '#FF9800',          // Orange - Screening
+  'provider_access': '#2196F3',    // Blue - Provider Access
+  
+  // Medicaid categories
+  'expansion': '#4CAF50',     // Green - Expansion
+  'coverage': '#2196F3',      // Blue - Coverage
+  'reimbursement': '#FF9800', // Orange - Reimbursement
+  'eligibility': '#9C27B0',   // Purple - Eligibility
+  
+  // Education categories
+  'requirement': '#FF9800',   // Orange - Requirement
+  'curriculum': '#2196F3',    // Blue - Curriculum
+  'reform': '#9C27B0',        // Purple - Reform
+  
+  // Health/General categories
+  'protection': '#4CAF50',    // Green - Protection
+  'restriction': '#F44336',   // Red - Restriction
+  
+  // Generic categories
+  'support': '#4CAF50',       // Green - Support
+  'oppose': '#F44336',        // Red - Oppose
+  'regulate': '#FF9800',      // Orange - Regulate
+  
+  // Shared
+  'funding': '#2196F3',       // Blue - Funding (appears in multiple)
+  'other': '#9E9E9E',         // Gray - Other
+}
+
+// Get color for any category with fallback
+const getColorForCategory = (category: string): string => {
+  return TYPE_COLOR_PALETTE[category] || '#9E9E9E' // Default to gray
+}
+
 // Color scheme based on the user's description
 const getStateColor = (stateCode: string, stateData: Record<string, StateData>): string => {
   const data = stateData[stateCode]
@@ -56,31 +104,36 @@ const getStateColor = (stateCode: string, stateData: Record<string, StateData>):
   
   const { primary_type, primary_status } = data
   
-  // Base colors by type
-  let baseColor = '#E3F2FD' // default light blue
-  
-  if (primary_type === 'ban') {
-    baseColor = '#FF9800' // Orange - Outright Ban
-  } else if (primary_type === 'restriction') {
-    baseColor = '#FFD54F' // Yellow - Restriction
-  } else if (primary_type === 'protection') {
-    baseColor = '#1976D2' // Dark Blue - Protection
-  }
+  // Get base color for this type
+  let baseColor = getColorForCategory(primary_type)
   
   // Adjust shade based on status
   if (primary_status === 'enacted') {
-    // Darker shade for enacted
-    if (primary_type === 'ban') return '#F57C00'
-    if (primary_type === 'restriction') return '#FBC02D'
-    if (primary_type === 'protection') return '#1565C0'
+    // Slightly darker for enacted (reduce lightness)
+    return adjustColorBrightness(baseColor, -20)
   } else if (primary_status === 'failed') {
-    // Lighter shade for failed
-    if (primary_type === 'ban') return '#FFB74D'
-    if (primary_type === 'restriction') return '#FFF176'
-    if (primary_type === 'protection') return '#42A5F5'
+    // Lighter for failed (increase lightness)
+    return adjustColorBrightness(baseColor, 40)
   }
   
   return baseColor
+}
+
+// Helper to adjust color brightness
+const adjustColorBrightness = (hex: string, percent: number): string => {
+  // Simple brightness adjustment
+  const num = parseInt(hex.replace('#', ''), 16)
+  const amt = Math.round(2.55 * percent)
+  const R = (num >> 16) + amt
+  const G = (num >> 8 & 0x00FF) + amt
+  const B = (num & 0x0000FF) + amt
+  
+  return '#' + (
+    0x1000000 +
+    (R < 255 ? (R < 1 ? 0 : R) : 255) * 0x10000 +
+    (G < 255 ? (G < 1 ? 0 : G) : 255) * 0x100 +
+    (B < 255 ? (B < 1 ? 0 : B) : 255)
+  ).toString(16).slice(1).toUpperCase()
 }
 
 const getPatternForState = (stateCode: string, stateData: Record<string, StateData>): string | null => {
@@ -101,7 +154,33 @@ const getPatternForState = (stateCode: string, stateData: Record<string, StateDa
   return null
 }
 
-export default function USMap({ stateData, onStateClick }: USMapProps) {
+export default function USMap({ stateData, onStateClick, legend }: USMapProps) {
+  const [hoveredState, setHoveredState] = useState<string | null>(null)
+  const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 })
+  
+  // Get unique types from actual state data if legend not provided
+  const legislationTypes = legend?.types || {}
+  const legislationStatuses = legend?.statuses || {
+    'enacted': 'Enacted',
+    'failed': 'Failed', 
+    'pending': 'Pending'
+  }
+  
+  const handleMouseEnter = (event: any, stateCode: string) => {
+    setHoveredState(stateCode)
+    const bounds = event.target.getBoundingClientRect()
+    setTooltipPosition({
+      x: bounds.left + bounds.width / 2,
+      y: bounds.top
+    })
+  }
+  
+  const handleMouseLeave = () => {
+    setHoveredState(null)
+  }
+  
+  const hoveredData = hoveredState ? stateData[hoveredState] : null
+  
   return (
     <div className="relative">
       {/* SVG Patterns for overlays */}
@@ -140,11 +219,8 @@ export default function USMap({ stateData, onStateClick }: USMapProps) {
                   key={geo.rsmKey}
                   geography={geo}
                   fill={pattern ? `url(#${pattern})` : getStateColor(stateCode, stateData)}
-                  stroke="#FFFFFF"
-                  strokeWidth={0.5}
-                  style={{
-                    default: {
-                      fill: getStateColor(stateCode, stateData),
+                  stroke="#FFFFFFevent) => handleMouseEnter(event, stateCode)}
+                  onMouseLeave={handleMouseLeave   fill: getStateColor(stateCode, stateData),
                       outline: 'none',
                     },
                     hover: {
@@ -171,47 +247,106 @@ export default function USMap({ stateData, onStateClick }: USMapProps) {
       </ComposableMap>
       
       {/* Legend */}
-      <div className="absolute bottom-4 right-4 bg-white/95 rounded-lg shadow-lg p-4 border border-gray-200">
+      <div className="absolute bottom-4 right-4 bg-white/95 rounded-lg shadow-lg p-4 border border-gray-200 max-w-xs">
         <div className="text-sm font-semibold text-gray-800 mb-3">Legend</div>
-        
-        {/* Type of Legislation */}
-        <div className="mb-3">
-          <div className="text-xs font-medium text-gray-600 mb-2">Type of Legislation</div>
-          <div className="space-y-1">
-            <div className="flex items-center gap-2">
-              <div className="w-4 h-4 rounded" style={{ backgroundColor: '#FF9800' }} />
-              <span className="text-xs text-gray-700">Outright Ban</span>
+        Tooltip */}
+      {hoveredState && hoveredData && (
+        <div 
+          className="fixed z-50 pointer-events-none"
+          style={{
+            left: `${tooltipPosition.x}px`,
+            top: `${tooltipPosition.y - 10}px`,
+            transform: 'translate(-50%, -100%)'
+          }}
+        >
+          <div className="bg-gray-900 text-white px-4 py-3 rounded-lg shadow-xl max-w-xs">
+            <div className="font-bold text-base mb-2">{hoveredState}</div>
+            <div className="space-y-1 text-sm">
+              <div className="flex justify-between gap-4">
+                <span className="text-gray-300">Total Bills:</span>
+                <span className="font-semibold">{hoveredData.total_bills.toLocaleString()}</span>
+              </div>
+              
+              {hoveredData.total_bills > 0 && (
+                <>
+                  <div className="border-t border-gray-700 my-2 pt-2">
+                    <div className="text-gray-300 text-xs mb-1">Primary Type:</div>
+                    <div className="font-semibold">
+                      {legislationTypes[hoveredData.primary_type] || hoveredData.primary_type}
+                    </div>
+                  </div>
+                  
+                  <div className="flex justify-between gap-4">
+                    <span className="text-gray-300">Status:</span>
+                    <span className="font-semibold capitalize">{hoveredData.primary_status}</span>
+                  </div>
+                  
+                  <div className="border-t border-gray-700 my-2 pt-2">
+                    <div className="text-gray-300 text-xs mb-1">Breakdown:</div>
+                    <div className="grid grid-cols-2 gap-1 text-xs">
+                      <div>✓ Enacted: {hoveredData.status_counts.enacted}</div>
+                      <div>⏳ Pending: {hoveredData.status_counts.pending}</div>
+                      <div className="col-span-2">✗ Failed: {hoveredData.status_counts.failed}</div>
+                    </div>
+                  </div>
+                </>
+              )}
+              
+              {hoveredData.total_bills === 0 && (
+                <div className="text-gray-400 text-xs italic">No legislation found</div>
+              )}
             </div>
-            <div className="flex items-center gap-2">
-              <div className="w-4 h-4 rounded" style={{ backgroundColor: '#FFD54F' }} />
-              <span className="text-xs text-gray-700">Restriction</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-4 h-4 rounded" style={{ backgroundColor: '#1976D2' }} />
-              <span className="text-xs text-gray-700">Protection</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-4 h-4 rounded" style={{ backgroundColor: '#E3F2FD' }} />
-              <span className="text-xs text-gray-700">No Legislation</span>
-            </div>
+            
+            {/* Tooltip arrow */}
+            <div 
+              className="absolute left-1/2 bottom-0 transform -translate-x-1/2 translate-y-full"
+              style={{
+                width: 0,
+                height: 0,
+                borderLeft: '8px solid transparent',
+                borderRight: '8px solid transparent',
+                borderTop: '8px solid rgb(17, 24, 39)'
+              }}
+            />
           </div>
         </div>
+      )}
+      
+      {/* 
+        {/* Type of Legislation - Dynamic based on topic */}
+        {Object.keys(legislationTypes).length > 0 && (
+          <div className="mb-3">
+            <div className="text-xs font-medium text-gray-600 mb-2">Type of Legislation</div>
+            <div className="space-y-1">
+              {Object.entries(legislationTypes).map(([key, label]) => (
+                <div key={key} className="flex items-center gap-2">
+                  <div className="w-4 h-4 rounded flex-shrink-0" style={{ backgroundColor: getColorForCategory(key) }} />
+                  <span className="text-xs text-gray-700">{label}</span>
+                </div>
+              ))}
+              <div className="flex items-center gap-2">
+                <div className="w-4 h-4 rounded flex-shrink-0" style={{ backgroundColor: '#E3F2FD' }} />
+                <span className="text-xs text-gray-700">No Legislation</span>
+              </div>
+            </div>
+          </div>
+        )}
         
         {/* Status of Legislation */}
         <div>
           <div className="text-xs font-medium text-gray-600 mb-2">Status</div>
           <div className="space-y-1">
             <div className="flex items-center gap-2">
-              <div className="w-4 h-4 rounded border border-gray-300" style={{ background: 'url(#diagonal)' }} />
-              <span className="text-xs text-gray-700">Enacted</span>
+              <div className="w-4 h-4 rounded border border-gray-300 flex-shrink-0" style={{ backgroundColor: '#666' }} />
+              <span className="text-xs text-gray-700">Enacted (darker)</span>
             </div>
             <div className="flex items-center gap-2">
-              <div className="w-4 h-4 rounded border border-gray-300" style={{ background: 'url(#crosshatch)' }} />
-              <span className="text-xs text-gray-700">Failed</span>
+              <div className="w-4 h-4 rounded border border-gray-300 flex-shrink-0 bg-white" />
+              <span className="text-xs text-gray-700">Pending (normal)</span>
             </div>
             <div className="flex items-center gap-2">
-              <div className="w-4 h-4 rounded border border-gray-300 bg-white" />
-              <span className="text-xs text-gray-700">Pending</span>
+              <div className="w-4 h-4 rounded border border-gray-300 flex-shrink-0" style={{ backgroundColor: '#ddd' }} />
+              <span className="text-xs text-gray-700">Failed (lighter)</span>
             </div>
           </div>
         </div>
