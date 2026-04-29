@@ -23,7 +23,9 @@ import {
   Bars3Icon,
   XMarkIcon,
   BuildingOfficeIcon,
-  UserIcon
+  UserIcon,
+  EnvelopeIcon,
+  PaperAirplaneIcon
 } from '@heroicons/react/24/outline'
 import { useLocation as useLocationContext } from '../contexts/LocationContext'
 import AddressLookup from '../components/AddressLookup'
@@ -42,6 +44,18 @@ export default function HomeModern() {
   const [selectedStateFilter, setSelectedStateFilter] = useState('')
   const [showJurisdictionsModal, setShowJurisdictionsModal] = useState(false)
   const { location, setLocation} = useLocationContext()
+
+  // Contact form state
+  const [contactForm, setContactForm] = useState({
+    name: '',
+    email: '',
+    subject: '',
+    message: '',
+    category: 'feedback'
+  })
+  const [contactSubmitting, setContactSubmitting] = useState(false)
+  const [contactSuccess, setContactSuccess] = useState(false)
+  const [contactError, setContactError] = useState<string | null>(null)
 
   // Environment-aware URLs for docs and API
   // In development: Docusaurus on localhost:3000/docs, API on localhost:8000
@@ -238,6 +252,47 @@ export default function HomeModern() {
       latitude: locationData.latitude,
       longitude: locationData.longitude,
     })
+  }
+
+  const handleContactSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setContactSubmitting(true)
+    setContactError(null)
+    setContactSuccess(false)
+
+    try {
+      const response = await axios.post(`${apiBaseUrl}/api/contact/submit`, contactForm)
+      
+      if (response.data.success) {
+        setContactSuccess(true)
+        // Reset form
+        setContactForm({
+          name: '',
+          email: '',
+          subject: '',
+          message: '',
+          category: 'feedback'
+        })
+        // Scroll to success message
+        setTimeout(() => {
+          const contactSection = document.getElementById('contact')
+          if (contactSection) {
+            contactSection.scrollIntoView({ behavior: 'smooth' })
+          }
+        }, 100)
+      }
+    } catch (error: any) {
+      setContactError(
+        error.response?.data?.detail || 
+        'Failed to submit your message. Please try again or contact us directly on GitHub.'
+      )
+    } finally {
+      setContactSubmitting(false)
+    }
+  }
+
+  const handleContactInputChange = (field: string, value: string) => {
+    setContactForm(prev => ({ ...prev, [field]: value }))
   }
 
   const navLinks = [
@@ -589,7 +644,7 @@ export default function HomeModern() {
                     <form onSubmit={handleSearch}>
                       <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-end">
                         <div className="lg:col-span-7">
-                          <label className="block text-left text-sm font-medium text-gray-700 mb-2">
+                          <label className="block text-left text-sm font-medium text-gray-900 mb-2">
                             Search for topics, people, organizations, or causes
                           </label>
                           <div className="relative">
@@ -604,7 +659,7 @@ export default function HomeModern() {
                                   setShowSuggestions(true)
                                 }
                               }}
-                              className="w-full px-4 py-3 text-lg border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#354F52] focus:border-transparent text-gray-900"
+                              className="w-full px-4 py-3 text-lg border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#354F52] focus:border-transparent bg-white text-gray-900"
                             />
                             
                             {/* Error Message */}
@@ -770,7 +825,7 @@ export default function HomeModern() {
                         </div>
 
                         <div className="lg:col-span-3">
-                          <label className="block text-left text-sm font-medium text-gray-700 mb-2">
+                          <label className="block text-left text-sm font-medium text-gray-900 mb-2">
                             Search In
                           </label>
                           {location ? (
@@ -780,11 +835,10 @@ export default function HomeModern() {
                                 onChange={(e) => setSearchScope(e.target.value)}
                                 className="w-full px-4 py-3 text-lg border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#354F52] focus:border-transparent bg-white text-gray-900"
                               >
-                                <option value="city">My City ({location.city})</option>
-                                <option value="county">My County ({location.county || 'County'})</option>
-                                <option value="state">My State ({location.state})</option>
-                                <option value="community">School Board ({location.city})</option>
-                                <option value="national">Nationwide</option>
+                                <option value="city" className="text-gray-900 bg-white">My City ({location.city})</option>
+                                <option value="county" className="text-gray-900 bg-white">My County ({location.county || 'County'})</option>
+                                <option value="state" className="text-gray-900 bg-white">My State ({location.state})</option>
+                                <option value="community" className="text-gray-900 bg-white">School Board ({location.city})</option>
                               </select>
                               <button
                                 type="button"
@@ -808,7 +862,7 @@ export default function HomeModern() {
                         </div>
 
                         <div className="lg:col-span-2">
-                          <label className="block text-left text-sm font-medium text-gray-700 mb-2 invisible">
+                          <label className="block text-left text-sm font-medium text-gray-900 mb-2 invisible">
                             Search
                           </label>
                           <button
@@ -905,7 +959,7 @@ export default function HomeModern() {
                     value={jurisdictionSearch}
                     onChange={(e) => setJurisdictionSearch(e.target.value)}
                     placeholder="Search jurisdictions... (e.g., Fishers, Indiana)"
-                    className="w-full px-6 py-4 rounded-lg border-2 border-gray-300 focus:border-[#52796F] focus:outline-none text-lg"
+                    className="w-full px-6 py-4 rounded-lg border-2 border-gray-300 focus:border-[#52796F] focus:outline-none text-lg bg-white text-gray-900"
                   />
                 </div>
                 
@@ -914,15 +968,15 @@ export default function HomeModern() {
                   <select
                     value={selectedStateFilter}
                     onChange={(e) => setSelectedStateFilter(e.target.value)}
-                    className="w-full px-4 py-4 rounded-lg border-2 border-gray-300 focus:border-[#52796F] focus:outline-none text-lg bg-white"
+                    className="w-full px-4 py-4 rounded-lg border-2 border-gray-300 focus:border-[#52796F] focus:outline-none text-lg bg-white text-gray-900"
                   >
-                    <option value="">All States</option>
-                    <option value="AL">Alabama</option>
-                    <option value="GA">Georgia</option>
-                    <option value="IN">Indiana</option>
-                    <option value="MA">Massachusetts</option>
-                    <option value="WA">Washington</option>
-                    <option value="WI">Wisconsin</option>
+                    <option value="" className="text-gray-900 bg-white">All States</option>
+                    <option value="AL" className="text-gray-900 bg-white">Alabama</option>
+                    <option value="GA" className="text-gray-900 bg-white">Georgia</option>
+                    <option value="IN" className="text-gray-900 bg-white">Indiana</option>
+                    <option value="MA" className="text-gray-900 bg-white">Massachusetts</option>
+                    <option value="WA" className="text-gray-900 bg-white">Washington</option>
+                    <option value="WI" className="text-gray-900 bg-white">Wisconsin</option>
                   </select>
                 </div>
               </div>
@@ -1223,7 +1277,7 @@ export default function HomeModern() {
                 },
                 { 
                   value: statsData?.states_with_data ? `${statsData.states_with_data} State${statsData.states_with_data !== 1 ? 's' : ''}` : '5 States', 
-                  label: 'Nationwide Coverage', 
+                  label: 'State Coverage', 
                   description: 'Including territories and tribal nations', 
                   color: '#2E8B57' 
                 },
