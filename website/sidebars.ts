@@ -165,6 +165,7 @@ const sidebars: SidebarsConfig = {
           label: 'How-To Guides',
           items: [
             'guides/jurisdiction-setup',
+            'guides/legislative-tracking-maps',
             'guides/huggingface-publishing',
             'guides/huggingface-quickstart',
             'guides/huggingface-features',

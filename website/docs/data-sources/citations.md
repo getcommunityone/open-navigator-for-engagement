@@ -456,9 +456,28 @@ This is separate from the word-finding API and has different pricing.
 **What we use:** State and local legislative information, bill tracking.
 
 - **Source:** https://openstates.org/
+- **Parent Organization:** Plural (https://open.pluralpolicy.com/)
+- **Bulk Downloads:** https://open.pluralpolicy.com/data/ ⭐ **Recommended**
 - **Coverage:** 100,000+ state bills, 7,300+ state legislators
-- **License:** Varies by state
-- **API Key:** Required for access
+- **License:** Public Domain (bulk data) / Varies by state (some content)
+- **API Key:** Required for API access (free, 50K requests/month)
+
+**Bulk Data Options:**
+- **CSV:** Complete legislative sessions per state (https://data.openstates.org/session/csv/)
+- **JSON:** Bills with full text (https://data.openstates.org/session/json/)
+- **PostgreSQL:** Monthly database dumps (https://data.openstates.org/postgres/monthly/)
+- **No rate limits** - Bulk downloads encouraged for analysis
+
+**BibTeX:**
+```bibtex
+@misc{plural_openstates_2024,
+  author = {{Plural Policy}},
+  title = {Open States: Legislative Data for All 50 States},
+  year = {2024},
+  url = {https://open.pluralpolicy.com/},
+  note = {Bulk data downloads available at https://open.pluralpolicy.com/data/}
+}
+```
 
 ---
 

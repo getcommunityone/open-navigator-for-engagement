@@ -538,11 +538,39 @@ https://www.youtube.com/
 
 ## 🗳️ Civic & Government APIs
 
-### 19. Open States API
+### 19. Open States API & Bulk Data
 
 **Organization:** Open States Foundation (part of Plural)  
 **API Documentation:** [Open States API v3](https://docs.openstates.org/api-v3/)  
+**Bulk Data:** [Plural Policy Bulk Downloads](https://open.pluralpolicy.com/data/) ⭐ **Recommended**  
 **Terms of Service:** [Open States ToS](https://openstates.org/tos/)
+
+**Bulk Download Options (No API Key Required):**
+
+1. **CSV Files** - Complete legislative sessions
+   - URL: https://data.openstates.org/session/csv/{state}/{session_id}.csv
+   - License: **Public Domain** (encouraged for bulk analysis)
+   - No rate limits, no API key required
+   - Attribution appreciated but not required
+
+2. **JSON Files** - Bills with full text
+   - URL: https://data.openstates.org/session/json/{state}/{session_id}.json.zip
+   - License: **Public Domain**
+   - Includes complete bill text and metadata
+
+3. **PostgreSQL Dumps** - Complete database
+   - URL: https://data.openstates.org/postgres/monthly/YYYY-MM-public.pgdump
+   - Monthly snapshots, ~5GB compressed
+   - License: **Public Domain**
+
+**Bulk Data Terms:**
+- ✅ **Free to download and redistribute**
+- ✅ **No API key required**
+- ✅ **No rate limits**
+- ✅ **Attribution appreciated:** "Data from Open States"
+- ✅ **Encouraged for research and analysis**
+
+**API Access (Real-time updates):**
 
 **Free Tier:**
 - 50,000 requests per month
@@ -556,15 +584,26 @@ https://www.youtube.com/
 - ❌ Data licenses vary by state jurisdiction
 - ❌ Must respect 50,000 requests/month limit on free tier
 
-**Attribution (Required):**
+**Attribution (API Usage):**
 ```
 Powered by Open States
 https://openstates.org/
 ```
 
+**Attribution (Bulk Data Usage - Recommended):**
+```
+Data source: Open States (Plural Policy)
+https://open.pluralpolicy.com/data/
+```
+
 **Data Licensing:**
-- Legislative data licenses vary by state
-- Check specific state terms for redistribution rights
+- Bulk downloads: **Public Domain** (no restrictions)
+- API data: Licenses vary by state jurisdiction
+- Check specific state terms for commercial use
+
+**Recommendation:**  
+Use **bulk downloads** for analysis and map generation (faster, no limits).  
+Use **API** for real-time bill tracking and search.
 
 ---
 
