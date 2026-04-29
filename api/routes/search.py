@@ -17,9 +17,7 @@ import requests
 from functools import lru_cache
 from datetime import datetime, timedelta
 
-# Add api directory to path for imports
-sys.path.insert(0, str(Path(__file__).parent.parent))
-from models.errors import ErrorDetail, parse_error
+from api.errors import ErrorDetail, parse_error
 
 # Import HuggingFace Search helpers
 from api.routes.hf_search import (
@@ -1520,6 +1518,12 @@ async def unified_search(
             }
         }
         
+        logger.info(f"✅ Search complete - returning {total_results} total results, {len(paginated_results)} on this page")
+        return response_data
+    
+    except Exception as e:
+        logger.error(f"❌ Search error: {type(e).__name__}: {e}")
+        logger.exception("Full traceback:")
         
         # Parse error into structured response
         error_detail = parse_error(e, context={
@@ -1532,13 +1536,7 @@ async def unified_search(
         return JSONResponse(
             status_code=500,
             content=error_detail.model_dump()
-        _results} total results, {len(paginated_results)} on this page")
-        return response_data
-    
-    except Exception as e:
-        logger.error(f"❌ Search error: {type(e).__name__}: {e}")
-        logger.exception("Full traceback:")
-        raise HTTPException(status_code=500, detail=str(e))
+        )
 
 
 @router.get("/api/search/suggest")
@@ -1562,16 +1560,6 @@ async def search_suggestions(
             "senior services", "youth programs", "employment", "job training"
         ]
         
-        # Parse error into structured response
-        error_detail = parse_error(e, context={
-            "query": q,
-            "data_type": "suggestions"
-        })
-        
-        return JSONResponse(
-            status_code=500,
-            content=error_detail.model_dump()
-        
         # Filter suggestions
         q_lower = q.lower()
         suggestions = [term for term in common_terms if q_lower in term.lower()]
@@ -1583,4 +1571,14 @@ async def search_suggestions(
     
     except Exception as e:
         logger.error(f"Suggestion error: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        
+        # Parse error into structured response
+        error_detail = parse_error(e, context={
+            "query": q,
+            "data_type": "suggestions"
+        })
+        
+        return JSONResponse(
+            status_code=500,
+            content=error_detail.model_dump()
+        )

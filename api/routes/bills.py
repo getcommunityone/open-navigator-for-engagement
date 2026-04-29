@@ -11,9 +11,7 @@ import re
 import os
 import sys
 
-# Add api directory to path for imports
-sys.path.insert(0, str(Path(__file__).parent.parent))
-from models.errors import ErrorDetail, parse_error
+from api.errors import ErrorDetail, parse_error
 
 router = APIRouter(prefix="/api/bills", tags=["bills"])
 
@@ -324,7 +322,13 @@ async def search_bills(
                 "state": state,
                 "query": q,
                 "session": session
-            } for state={state}: {e}")
+            }
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Bills search error for state={state}: {e}")
         
         # Parse error into structured response
         error_detail = parse_error(e, context={
@@ -338,13 +342,7 @@ async def search_bills(
         return JSONResponse(
             status_code=500,
             content=error_detail.model_dump()
-        
-        
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"Bills search error: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        )
 
 
 @router.get("/sessions")
@@ -385,6 +383,19 @@ async def get_sessions(
                 "start_date": row[2],
                 "end_date": row[3],
                 "bill_count": row[4]
+            })
+        
+        conn.close()
+        
+        return {
+            "state": state,
+            "sessions": sessions,
+            "total_sessions": len(sessions)
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
         logger.error(f"Sessions query error for state={state}: {e}")
         
         # Parse error into structured response
@@ -397,19 +408,6 @@ async def get_sessions(
             status_code=500,
             content=error_detail.model_dump()
         )
-        conn.close()
-        
-        return {
-            "state": state,
-            "sessions": sessions,
-            "total_sessions": len(sessions)
-        }
-        
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"Sessions fetch error: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.get("/map")
