@@ -138,158 +138,297 @@ export default function PolicyMap() {
   return (
     <div className="min-h-screen bg-gray-50 py-8">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Header with Compact Controls */}
-        <div className="mb-6">
+        {/* Header */}
+        <div className="mb-8">
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-3xl font-bold text-gray-900 mb-1">
                 📜 Legislative Policy Map
               </h1>
               <p className="text-gray-600">
-                Track state legislation initiatives compared across the country
+                {showTopicSelector 
+                  ? 'Choose a topic to explore state-by-state legislation' 
+                  : 'Track state legislation initiatives compared across the country'
+                }
               </p>
             </div>
             
-            {/* View Mode Toggle */}
-            <div className="flex items-center gap-2">
+            {/* Back to Topics button */}
+            {!showTopicSelector && (
               <button
-                onClick={() => setViewMode('map')}
-                className={`flex items-center gap-2 px-4 py-2 rounded-md font-medium transition-colors ${
-                  viewMode === 'map'
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                }`}
+                onClick={handleBackToTopics}
+                className="flex items-center gap-2 px-4 py-2 rounded-md font-medium bg-gray-200 text-gray-700 hover:bg-gray-300 transition-colors"
               >
-                <MapIconOutline className="h-5 w-5" />
-                Map View
+                ← Back to Topics
               </button>
-              <button
-                onClick={() => setViewMode('list')}
-                className={`flex items-center gap-2 px-4 py-2 rounded-md font-medium transition-colors ${
-                  viewMode === 'list'
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                }`}
-              >
-                <ListBulletIcon className="h-5 w-5" />
-                List View
-              </button>
-            </div>
+            )}
+
+            {/* View Mode Toggle - only show when topic is selected */}
+            {!showTopicSelector && (
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setViewMode('map')}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-md font-medium transition-colors ${
+                    viewMode === 'map'
+                      ? 'bg-blue-600 text-white'
+                      : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                  }`}
+                >
+                  <MapIconOutline className="h-5 w-5" />
+                  Map View
+                </button>
+                <button
+                  onClick={() => setViewMode('list')}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-md font-medium transition-colors ${
+                    viewMode === 'list'
+                      ? 'bg-blue-600 text-white'
+                      : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                  }`}
+                >
+                  <ListBulletIcon className="h-5 w-5" />
+                  List View
+                </button>
+              </div>
+            )}
           </div>
         </div>
 
-        {/* Compact Filters - Always visible at top */}
-        <div className="bg-white rounded-lg shadow-sm p-4 mb-4">
-          <div className="flex flex-wrap items-end gap-4">
-            {/* Topic Filter */}
+        {/* Topic Selection View */}
+        {showTopicSelector && (
+          <div className="space-y-8">
+            <div className="text-center max-w-3xl mx-auto">
+              <h2 className="text-2xl font-bold text-gray-900 mb-3">
+                Select a Policy Topic
+              </h2>
+              <p className="text-gray-600">
+                Choose a topic below to see how states across the country are addressing it through legislation
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {/* Fluoridation Card */}
+              <button
+                onClick={() => handleTopicSelect('fluorid')}
+                className="bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition-all hover:scale-105 text-left border-2 border-transparent hover:border-blue-500"
+              >
+                <div className="text-5xl mb-4">💧</div>
+                <h3 className="text-xl font-bold text-gray-900 mb-2">
+                  Water Fluoridation
+                </h3>
+                <p className="text-gray-600 text-sm mb-4">
+                  Track mandates, removals, funding initiatives, and studies on community water fluoridation programs
+                </p>
+                <div className="text-blue-600 font-medium text-sm">
+                  View Legislation →
+                </div>
+              </button>
+
+              {/* Dental Health Card */}
+              <button
+                onClick={() => handleTopicSelect('dental')}
+                className="bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition-all hover:scale-105 text-left border-2 border-transparent hover:border-blue-500"
+              >
+                <div className="text-5xl mb-4">🦷</div>
+                <h3 className="text-xl font-bold text-gray-900 mb-2">
+                  Dental Health
+                </h3>
+                <p className="text-gray-600 text-sm mb-4">
+                  Monitor coverage expansions, screening programs, provider access, and funding for dental health services
+                </p>
+                <div className="text-blue-600 font-medium text-sm">
+                  View Legislation →
+                </div>
+              </button>
+
+              {/* Oral Health Card */}
+              <button
+                onClick={() => handleTopicSelect('oral health')}
+                className="bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition-all hover:scale-105 text-left border-2 border-transparent hover:border-blue-500"
+              >
+                <div className="text-5xl mb-4">😁</div>
+                <h3 className="text-xl font-bold text-gray-900 mb-2">
+                  Oral Health (General)
+                </h3>
+                <p className="text-gray-600 text-sm mb-4">
+                  Explore comprehensive oral health policies including prevention, treatment, and public health initiatives
+                </p>
+                <div className="text-blue-600 font-medium text-sm">
+                  View Legislation →
+                </div>
+              </button>
+
+              {/* Medicaid Card */}
+              <button
+                onClick={() => handleTopicSelect('medicaid')}
+                className="bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition-all hover:scale-105 text-left border-2 border-transparent hover:border-blue-500"
+              >
+                <div className="text-5xl mb-4">🏥</div>
+                <h3 className="text-xl font-bold text-gray-900 mb-2">
+                  Medicaid
+                </h3>
+                <p className="text-gray-600 text-sm mb-4">
+                  Follow Medicaid expansions, coverage changes, reimbursement rates, and eligibility requirements
+                </p>
+                <div className="text-blue-600 font-medium text-sm">
+                  View Legislation →
+                </div>
+              </button>
+
+              {/* Education Card */}
+              <button
+                onClick={() => handleTopicSelect('education')}
+                className="bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition-all hover:scale-105 text-left border-2 border-transparent hover:border-blue-500"
+              >
+                <div className="text-5xl mb-4">🎓</div>
+                <h3 className="text-xl font-bold text-gray-900 mb-2">
+                  Education
+                </h3>
+                <p className="text-gray-600 text-sm mb-4">
+                  View educational requirements, curriculum changes, funding initiatives, and school health programs
+                </p>
+                <div className="text-blue-600 font-medium text-sm">
+                  View Legislation →
+                </div>
+              </button>
+
+              {/* General Health Card */}
+              <button
+                onClick={() => handleTopicSelect('health')}
+                className="bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition-all hover:scale-105 text-left border-2 border-transparent hover:border-blue-500"
+              >
+                <div className="text-5xl mb-4">🏨</div>
+                <h3 className="text-xl font-bold text-gray-900 mb-2">
+                  Health (General)
+                </h3>
+                <p className="text-gray-600 text-sm mb-4">
+                  Examine broader health policies including protections, restrictions, funding, and healthcare reforms
+                </p>
+                <div className="text-blue-600 font-medium text-sm">
+                  View Legislation →
+                </div>
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Map and List View - only show when topic is selected */}
+        {!showTopicSelector && (
+          <>
+            {/* Selected Topic Badge */}
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <span className="text-2xl">
+                    {selectedTopic === 'fluorid' && '💧'}
+                    {selectedTopic === 'dental' && '🦷'}
+                    {selectedTopic === 'oral health' && '😁'}
+                    {selectedTopic === 'medicaid' && '🏥'}
+                    {selectedTopic === 'education' && '🎓'}
+                    {selectedTopic === 'health' && '🏨'}
+                  </span>
+                  <div>
+                    <div className="text-sm text-gray-600">Viewing legislation for:</div>
+                    <div className="text-lg font-bold text-gray-900 capitalize">
+                      {selectedTopic === 'fluorid' ? 'Water Fluoridation' :
+                       selectedTopic === 'dental' ? 'Dental Health' :
+                       selectedTopic === 'oral health' ? 'Oral Health' :
+                       selectedTopic === 'medicaid' ? 'Medicaid' :
+                       selectedTopic === 'education' ? 'Education' :
+                       'Health'}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Compact Filters */}
+            <div className="bg-white rounded-lg shadow-sm p-4 mb-4">
+              <div className="flex flex-wrap items-end gap-4">
+                {/* State Filter - list view only */}
+                {viewMode === 'list' && (
+                  <div className="flex-1 min-w-[150px]">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      State
+                    </label>
+                    <select
+                      className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm text-gray-900 py-2"
+                      value={selectedState}
+                      onChange={(e) => {
+                        setSelectedState(e.target.value)
+                        setPage(1)
+                      }}
+                    >
+                      <option value="AL">Alabama</option>
+                      <option value="GA">Georgia</option>
+                      <option value="IN">Indiana</option>
+                      <option value="MA">Massachusetts</option>
+                      <option value="WA">Washington</option>
+                      <option value="WI">Wisconsin</option>
+                    </select>
+                  </div>
+                )}
+                {/* Session Filter - list view only */}
+                {viewMode === 'list' && (
+                  <div className="flex-1 min-w-[200px]">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Legislative Session
+                    </label>
+                    <select
+                      className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm text-gray-900 py-2"
+                      value={selectedSession}
+                      onChange={(e) => {
+                        setSelectedSession(e.target.value)
+                        setPage(1)
+                      }}
+                    >
+                      <option value="">All Sessions</option>
+                      {sessionsData?.sessions?.map((session: Session) => (
+                        <option key={session.session} value={session.session}>
+                          {session.session_name} ({session.bill_count.toLocaleString()} bills)
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+
+                {/* Search */}
+                <div className="flex-1 min-w-[250px]">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    {viewMode === 'map' ? 'Search Keywords' : 'Search Bills'}
+                  </label>
+                  <div className="relative">
+                    <input
+                      type="text"
+                      className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 pl-10 text-sm text-gray-900 py-2"
+                      placeholder="Search within results..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      onKeyPress={(e) => e.key === 'Enter' && setPage(1)}
+                    />
+                    <MagnifyingGlassIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  </div>
+                </div>
+
+                {/* Clear button */}
+                {(searchQuery || selectedSession) && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSearchQuery('')
+                      setSelectedSession('')
+                      setPage(1)
+                    }}
+                    className="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition-colors text-sm font-medium"
+                  >
+                    Clear
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* Map Visualization */}
             {viewMode === 'map' && (
-              <div className="flex-1 min-w-[200px]">
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Filter by Topic
-                </label>
-                <select
-                  className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm text-gray-900 py-2"
-                  value={selectedTopic}
-                  onChange={(e) => setSelectedTopic(e.target.value)}
-                >
-                  <option value="">All Topics</option>
-                  <option value="dental">Dental Health</option>
-                  <option value="fluorid">Fluoridation</option>
-                  <option value="oral health">Oral Health</option>
-                  <option value="medicaid">Medicaid</option>
-                  <option value="education">Education</option>
-                  <option value="health">Health</option>
-                </select>
-              </div>
-            )}
-
-            {/* State Filter - list view */}
-            {viewMode === 'list' && (
-              <div className="flex-1 min-w-[150px]">
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  State
-                </label>
-                <select
-                  className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm text-gray-900 py-2"
-                  value={selectedState}
-                  onChange={(e) => {
-                    setSelectedState(e.target.value)
-                    setPage(1)
-                  }}
-                >
-                  <option value="AL">Alabama</option>
-                  <option value="GA">Georgia</option>
-                  <option value="IN">Indiana</option>
-                  <option value="MA">Massachusetts</option>
-                  <option value="WA">Washington</option>
-                  <option value="WI">Wisconsin</option>
-                </select>
-              </div>
-            )}
-
-            {/* Session Filter - list view */}
-            {viewMode === 'list' && (
-              <div className="flex-1 min-w-[200px]">
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Legislative Session
-                </label>
-                <select
-                  className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm text-gray-900 py-2"
-                  value={selectedSession}
-                  onChange={(e) => {
-                    setSelectedSession(e.target.value)
-                    setPage(1)
-                  }}
-                >
-                  <option value="">All Sessions</option>
-                  {sessionsData?.sessions?.map((session: Session) => (
-                    <option key={session.session} value={session.session}>
-                      {session.session_name} ({session.bill_count.toLocaleString()} bills)
-                    </option>
-                  ))}
-                </select>
-              </div>
-            )}
-
-            {/* Search */}
-            <div className="flex-1 min-w-[250px]">
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                {viewMode === 'map' ? 'Search Keywords' : 'Search Bills'}
-              </label>
-              <div className="relative">
-                <input
-                  type="text"
-                  className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 pl-10 text-sm text-gray-900 py-2"
-                  placeholder="dental, health, education..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  onKeyPress={(e) => e.key === 'Enter' && setPage(1)}
-                />
-                <MagnifyingGlassIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-              </div>
-            </div>
-
-            {/* Clear button */}
-            {(searchQuery || selectedSession || selectedTopic) && (
-              <button
-                type="button"
-                onClick={() => {
-                  setSearchQuery('')
-                  setSelectedSession('')
-                  setSelectedTopic('')
-                  setPage(1)
-                }}
-                className="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition-colors text-sm font-medium"
-              >
-                Clear
-              </button>
-            )}
-          </div>
-        </div>
-
-        {/* Map Visualization - Visible on Page Load */}
-        {viewMode === 'map' && (
-          <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
+              <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
             {/* Clear Explanatory Title */}
             <div className="mb-6 border-b border-gray-200 pb-4">
               <h2 className="text-2xl font-bold text-gray-900 mb-2">
@@ -387,168 +526,171 @@ export default function PolicyMap() {
           </div>
         )}
         
-        {viewMode === 'list' && billsData && (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-            <div className="bg-white rounded-lg shadow-sm p-6 border-l-4 border-blue-500">
-              <div className="text-sm font-medium text-gray-600 uppercase tracking-wide">
-                Total Bills
-              </div>
-              <div className="mt-2 text-3xl font-bold text-gray-900">
-                {billsData.total.toLocaleString()}
-              </div>
-              <div className="text-sm text-gray-500 mt-1">
-                {selectedSession ? `in ${selectedSession}` : 'all sessions'}
-              </div>
-            </div>
-
-            <div className="bg-white rounded-lg shadow-sm p-6 border-l-4 border-green-500">
-              <div className="text-sm font-medium text-gray-600 uppercase tracking-wide">
-                Sessions Available
-              </div>
-              <div className="mt-2 text-3xl font-bold text-gray-900">
-                {sessionsData?.total_sessions || 0}
-              </div>
-              <div className="text-sm text-gray-500 mt-1">
-                {sessionsData?.sessions?.[0]?.session} - {sessionsData?.sessions?.[sessionsData.sessions.length - 1]?.session}
-              </div>
-            </div>
-
-            <div className="bg-white rounded-lg shadow-sm p-6 border-l-4 border-purple-500">
-              <div className="text-sm font-medium text-gray-600 uppercase tracking-wide">
-                Showing
-              </div>
-              <div className="mt-2 text-3xl font-bold text-gray-900">
-                {billsData.bills.length}
-              </div>
-              <div className="text-sm text-gray-500 mt-1">
-                Page {page} of {totalPages}
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Bills List */}
-        {viewMode === 'list' && (
-          <>
-            {billsError ? (
-              <div className="bg-red-50 border border-red-200 rounded-lg p-8 text-center">
-                <div className="text-red-600 text-5xl mb-4">⚠️</div>
-                <h3 className="text-xl font-semibold text-red-900 mb-2">
-                  Unable to Load Bills
-                </h3>
-                <p className="text-red-700 mb-4">
-                  {billsError instanceof Error 
-                    ? billsError.message 
-                    : 'There was an error fetching bills data. The API server may be unavailable.'}
-                </p>
-                <div className="flex gap-3 justify-center">
-                  <button
-                    onClick={() => window.location.reload()}
-                    className="px-6 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors font-medium"
-                  >
-                    Retry
-                  </button>
-                  <button
-                    onClick={() => setViewMode('map')}
-                    className="px-6 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition-colors font-medium"
-                  >
-                    Switch to Map View
-                  </button>
-                </div>
-              </div>
-            ) : isLoading ? (
-              <div className="text-center py-12">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-                <p className="mt-4 text-gray-600">Loading bills...</p>
-              </div>
-            ) : (
-              <>
-            <div className="space-y-4 mb-6">
-              {billsData?.bills.map((bill) => (
-                <div
-                  key={bill.bill_id}
-                  className="bg-white rounded-lg shadow-sm p-6 hover:shadow-md transition-shadow border-l-4 border-blue-500"
-                >
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-3 mb-2">
-                        <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
-                          {bill.bill_number}
-                        </span>
-                        <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-gray-100 text-gray-800">
-                          {bill.classification.join(', ')}
-                        </span>
-                        <span className="text-sm text-gray-500">
-                          {bill.session_name}
-                        </span>
-                      </div>
-                      <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                        {bill.title}
-                      </h3>
-                      <div className="flex items-center gap-4 text-sm text-gray-600">
-                        <span>
-                          <strong>Latest Action:</strong> {bill.latest_action}
-                        </span>
-                        {bill.latest_action_date && (
-                          <span>
-                            <strong>Date:</strong>{' '}
-                            {new Date(bill.latest_action_date).toLocaleDateString()}
-                          </span>
-                        )}
-                      </div>
-                    </div>
+            {/* List View */}
+            {viewMode === 'list' && billsData && (
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+                <div className="bg-white rounded-lg shadow-sm p-6 border-l-4 border-blue-500">
+                  <div className="text-sm font-medium text-gray-600 uppercase tracking-wide">
+                    Total Bills
+                  </div>
+                  <div className="mt-2 text-3xl font-bold text-gray-900">
+                    {billsData.total.toLocaleString()}
+                  </div>
+                  <div className="text-sm text-gray-500 mt-1">
+                    {selectedSession ? `in ${selectedSession}` : 'all sessions'}
                   </div>
                 </div>
-              ))}
-            </div>
 
-            {/* Pagination */}
-            {totalPages > 1 && (
-              <div className="flex items-center justify-between bg-white rounded-lg shadow-sm p-4">
-                <div className="text-sm text-gray-600">
-                  Showing {(page - 1) * limit + 1} to{' '}
-                  {Math.min(page * limit, billsData?.total || 0)} of{' '}
-                  {billsData?.total.toLocaleString()} bills
+                <div className="bg-white rounded-lg shadow-sm p-6 border-l-4 border-green-500">
+                  <div className="text-sm font-medium text-gray-600 uppercase tracking-wide">
+                    Sessions Available
+                  </div>
+                  <div className="mt-2 text-3xl font-bold text-gray-900">
+                    {sessionsData?.total_sessions || 0}
+                  </div>
+                  <div className="text-sm text-gray-500 mt-1">
+                    {sessionsData?.sessions?.[0]?.session} - {sessionsData?.sessions?.[sessionsData.sessions.length - 1]?.session}
+                  </div>
                 </div>
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => setPage((p) => Math.max(1, p - 1))}
-                    disabled={page === 1}
-                    className="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                  >
-                    Previous
-                  </button>
-                  <span className="px-4 py-2 text-gray-700">
+
+                <div className="bg-white rounded-lg shadow-sm p-6 border-l-4 border-purple-500">
+                  <div className="text-sm font-medium text-gray-600 uppercase tracking-wide">
+                    Showing
+                  </div>
+                  <div className="mt-2 text-3xl font-bold text-gray-900">
+                    {billsData.bills.length}
+                  </div>
+                  <div className="text-sm text-gray-500 mt-1">
                     Page {page} of {totalPages}
-                  </span>
-                  <button
-                    onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                    disabled={page === totalPages}
-                    className="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                  >
-                    Next
-                  </button>
+                  </div>
                 </div>
               </div>
             )}
 
-            {/* No Results */}
-            {!isLoading && !billsError && billsData && billsData.bills.length === 0 && (
-              <div className="bg-white rounded-lg shadow-sm p-12 text-center">
-                <p className="text-gray-600 text-lg">No bills found matching your filters.</p>
-                <button
-                  onClick={() => {
-                    setSearchQuery('')
-                    setSelectedSession('')
-                    setPage(1)
-                  }}
-                  className="mt-4 px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
-                >
-                  Clear Filters
-                </button>
-              </div>
-            )}
-          </>
+            {/* Bills List */}
+            {viewMode === 'list' && (
+              <>
+                {billsError ? (
+                  <div className="bg-red-50 border border-red-200 rounded-lg p-8 text-center">
+                    <div className="text-red-600 text-5xl mb-4">⚠️</div>
+                    <h3 className="text-xl font-semibold text-red-900 mb-2">
+                      Unable to Load Bills
+                    </h3>
+                    <p className="text-red-700 mb-4">
+                      {billsError instanceof Error 
+                        ? billsError.message 
+                        : 'There was an error fetching bills data. The API server may be unavailable.'}
+                    </p>
+                    <div className="flex gap-3 justify-center">
+                      <button
+                        onClick={() => window.location.reload()}
+                        className="px-6 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors font-medium"
+                      >
+                        Retry
+                      </button>
+                      <button
+                        onClick={() => setViewMode('map')}
+                        className="px-6 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition-colors font-medium"
+                      >
+                        Switch to Map View
+                      </button>
+                    </div>
+                  </div>
+                ) : isLoading ? (
+                  <div className="text-center py-12">
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+                    <p className="mt-4 text-gray-600">Loading bills...</p>
+                  </div>
+                ) : (
+                  <>
+                    <div className="space-y-4 mb-6">
+                      {billsData?.bills.map((bill) => (
+                        <div
+                          key={bill.bill_id}
+                          className="bg-white rounded-lg shadow-sm p-6 hover:shadow-md transition-shadow border-l-4 border-blue-500"
+                        >
+                          <div className="flex items-start justify-between">
+                            <div className="flex-1">
+                              <div className="flex items-center gap-3 mb-2">
+                                <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
+                                  {bill.bill_number}
+                                </span>
+                                <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-gray-100 text-gray-800">
+                                  {bill.classification.join(', ')}
+                                </span>
+                                <span className="text-sm text-gray-500">
+                                  {bill.session_name}
+                                </span>
+                              </div>
+                              <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                                {bill.title}
+                              </h3>
+                              <div className="flex items-center gap-4 text-sm text-gray-600">
+                                <span>
+                                  <strong>Latest Action:</strong> {bill.latest_action}
+                                </span>
+                                {bill.latest_action_date && (
+                                  <span>
+                                    <strong>Date:</strong>{' '}
+                                    {new Date(bill.latest_action_date).toLocaleDateString()}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Pagination */}
+                    {totalPages > 1 && (
+                      <div className="flex items-center justify-between bg-white rounded-lg shadow-sm p-4">
+                        <div className="text-sm text-gray-600">
+                          Showing {(page - 1) * limit + 1} to{' '}
+                          {Math.min(page * limit, billsData?.total || 0)} of{' '}
+                          {billsData?.total.toLocaleString()} bills
+                        </div>
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => setPage((p) => Math.max(1, p - 1))}
+                            disabled={page === 1}
+                            className="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                          >
+                            Previous
+                          </button>
+                          <span className="px-4 py-2 text-gray-700">
+                            Page {page} of {totalPages}
+                          </span>
+                          <button
+                            onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                            disabled={page === totalPages}
+                            className="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                          >
+                            Next
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* No Results */}
+                    {!isLoading && !billsError && billsData && billsData.bills.length === 0 && (
+                      <div className="bg-white rounded-lg shadow-sm p-12 text-center">
+                        <p className="text-gray-600 text-lg">No bills found matching your filters.</p>
+                        <button
+                          onClick={() => {
+                            setSearchQuery('')
+                            setSelectedSession('')
+                            setPage(1)
+                          }}
+                          className="mt-4 px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+                        >
+                          Clear Filters
+                        </button>
+                      </div>
+                    )}
+                  </>
+                )}
+              </>
             )}
           </>
         )}
