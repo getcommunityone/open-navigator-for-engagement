@@ -638,6 +638,8 @@ def search_contacts(query: str, state: Optional[str] = None, limit: int = 10) ->
     Returns:
         List of SearchResult objects sorted by relevance
     """
+    logger.info(f"🔎 search_contacts() called - query={query!r}, state={state!r}, limit={limit}, IS_HF_SPACES={IS_HF_SPACES}")
+    
     # STRATEGY 1: Try HuggingFace Search API (fast text search)
     if query and IS_HF_SPACES:
         logger.info(f"🔍 Trying HF Search API for '{query}' (state={state})")
