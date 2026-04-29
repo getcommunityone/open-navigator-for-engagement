@@ -115,11 +115,6 @@ export default function PolicyMap() {
 
   const totalPages = Math.ceil((billsData?.total || 0) / limit)
 
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault()
-    setPage(1) // Reset to first page on new search
-  }
-
   const handleStateClick = (stateCode: string) => {
     setSelectedState(stateCode)
     setViewMode('list')
