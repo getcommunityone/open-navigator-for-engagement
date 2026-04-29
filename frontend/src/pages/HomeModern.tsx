@@ -301,6 +301,7 @@ export default function HomeModern() {
     { id: 'how-it-works', label: 'How It Works' },
     { id: 'stats', label: 'Impact' },
     { id: 'get-started', label: 'Documentation' },
+    { id: 'contact', label: 'Contact' },
   ]
 
   const features = [
@@ -1445,6 +1446,166 @@ export default function HomeModern() {
             >
               Explore Charities →
             </Link>
+          </div>
+        </div>
+      </section>
+
+      {/* Contact Us Section */}
+      <section id="contact" className="py-20 px-4 bg-gradient-to-br from-gray-50 to-blue-50">
+        <div className="max-w-4xl mx-auto">
+          <div className="text-center mb-12">
+            <div className="inline-flex items-center gap-2 px-4 py-2 bg-white rounded-full shadow-sm mb-6">
+              <EnvelopeIcon className="h-5 w-5" style={{ color: '#354F52' }} />
+              <span className="text-sm font-medium" style={{ color: '#354F52' }}>
+                We'd Love to Hear From You
+              </span>
+            </div>
+            <h2 className="text-4xl md:text-5xl font-bold mb-4" style={{ color: '#354F52' }}>
+              Contact Us
+            </h2>
+            <p className="text-xl text-gray-600">
+              Questions, feedback, or ideas? Send us a message and we'll get back to you soon.
+            </p>
+          </div>
+
+          <div className="bg-white rounded-2xl shadow-xl p-8 md:p-12">
+            {contactSuccess ? (
+              <div className="text-center py-12">
+                <CheckCircleIcon className="h-16 w-16 text-green-500 mx-auto mb-4" />
+                <h3 className="text-2xl font-bold text-gray-900 mb-2">
+                  Thank You!
+                </h3>
+                <p className="text-gray-600 mb-6">
+                  We've received your message and will get back to you soon.
+                </p>
+                <button
+                  onClick={() => setContactSuccess(false)}
+                  className="px-6 py-3 rounded-lg font-semibold hover:shadow-lg transition-all"
+                  style={{ backgroundColor: '#354F52', color: 'white' }}
+                >
+                  Send Another Message
+                </button>
+              </div>
+            ) : (
+              <form onSubmit={handleContactSubmit} className="space-y-6">
+                {contactError && (
+                  <div className="p-4 bg-red-50 border-2 border-red-200 rounded-lg">
+                    <p className="text-red-800">{contactError}</p>
+                  </div>
+                )}
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <label htmlFor="contact-name" className="block text-sm font-medium text-gray-900 mb-2">
+                      Your Name *
+                    </label>
+                    <input
+                      id="contact-name"
+                      type="text"
+                      required
+                      value={contactForm.name}
+                      onChange={(e) => handleContactInputChange('name', e.target.value)}
+                      className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-[#52796F] focus:outline-none bg-white text-gray-900"
+                      placeholder="John Doe"
+                    />
+                  </div>
+
+                  <div>
+                    <label htmlFor="contact-email" className="block text-sm font-medium text-gray-900 mb-2">
+                      Email Address *
+                    </label>
+                    <input
+                      id="contact-email"
+                      type="email"
+                      required
+                      value={contactForm.email}
+                      onChange={(e) => handleContactInputChange('email', e.target.value)}
+                      className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-[#52796F] focus:outline-none bg-white text-gray-900"
+                      placeholder="john@example.com"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label htmlFor="contact-category" className="block text-sm font-medium text-gray-900 mb-2">
+                    Category
+                  </label>
+                  <select
+                    id="contact-category"
+                    value={contactForm.category}
+                    onChange={(e) => handleContactInputChange('category', e.target.value)}
+                    className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-[#52796F] focus:outline-none bg-white text-gray-900"
+                  >
+                    <option value="feedback" className="text-gray-900 bg-white">General Feedback</option>
+                    <option value="bug" className="text-gray-900 bg-white">Bug Report</option>
+                    <option value="feature" className="text-gray-900 bg-white">Feature Request</option>
+                    <option value="question" className="text-gray-900 bg-white">Question</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label htmlFor="contact-subject" className="block text-sm font-medium text-gray-900 mb-2">
+                    Subject *
+                  </label>
+                  <input
+                    id="contact-subject"
+                    type="text"
+                    required
+                    value={contactForm.subject}
+                    onChange={(e) => handleContactInputChange('subject', e.target.value)}
+                    className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-[#52796F] focus:outline-none bg-white text-gray-900"
+                    placeholder="Brief description of your message"
+                  />
+                </div>
+
+                <div>
+                  <label htmlFor="contact-message" className="block text-sm font-medium text-gray-900 mb-2">
+                    Message *
+                  </label>
+                  <textarea
+                    id="contact-message"
+                    required
+                    rows={6}
+                    value={contactForm.message}
+                    onChange={(e) => handleContactInputChange('message', e.target.value)}
+                    className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-[#52796F] focus:outline-none bg-white text-gray-900 resize-none"
+                    placeholder="Tell us more about your feedback, question, or idea..."
+                  />
+                </div>
+
+                <div className="flex flex-col sm:flex-row gap-4 items-center justify-between">
+                  <p className="text-sm text-gray-600">
+                    Your message will be submitted as an issue on{' '}
+                    <a
+                      href="https://github.com/getcommunityone/open-navigator-for-engagement/issues"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-[#52796F] hover:text-[#354F52] font-medium underline"
+                    >
+                      our GitHub repository
+                    </a>
+                  </p>
+                  <button
+                    type="submit"
+                    disabled={contactSubmitting}
+                    className="px-8 py-3 rounded-lg font-semibold hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                    style={{ backgroundColor: '#354F52', color: 'white' }}
+                  >
+                    {contactSubmitting ? (
+                      <>
+                        <div className="animate-spin h-5 w-5 border-2 border-white border-t-transparent rounded-full"></div>
+                        Sending...
+                      </>
+                    ) : (
+                      <>
+                        <PaperAirplaneIcon className="h-5 w-5" />
+                        Send Message
+                      </>
+                    )}
+                  </button>
+                </div>
+              </form>
+            )}
           </div>
         </div>
       </section>
