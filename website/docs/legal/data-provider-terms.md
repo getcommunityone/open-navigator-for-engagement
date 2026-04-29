@@ -1,7 +1,6 @@
 ---
 sidebar_position: 2
 sidebar_label: Data Provider Terms
-sidebar: citationsSidebar
 ---
 
 # Data Provider Terms of Service

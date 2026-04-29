@@ -416,7 +416,7 @@ MIT License - see [LICENSE](LICENSE) file for details.
 ## Support
 
 - GitHub Issues: [github.com/getcommunityone/open-navigator-for-engagement/issues](https://github.com/getcommunityone/open-navigator-for-engagement/issues)
-- Email: support@communityone.com
+- Email: john.bowyer@communityone.com
 
 ---
 

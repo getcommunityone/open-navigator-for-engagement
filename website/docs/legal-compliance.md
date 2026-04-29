@@ -1,7 +1,6 @@
 ---
 sidebar_position: 100
 sidebar_label: Legal & Compliance
-sidebar: citationsSidebar
 ---
 
 # Legal Compliance & Data Use Policies

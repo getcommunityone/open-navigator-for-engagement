@@ -1,7 +1,6 @@
 ---
 sidebar_position: 1
 sidebar_label: Terms of Service
-sidebar: citationsSidebar
 ---
 
 # Terms of Service

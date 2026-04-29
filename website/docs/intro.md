@@ -257,7 +257,7 @@ For production deployment options, see:
 <div className="card" style={{padding: '20px'}}>
   <h3>Citations</h3>
   <p>View complete citations, licenses, and data source attribution.</p>
-  <p><strong><a href="/data-sources/citations">View Citations →</a></strong></p>
+  <p><strong><a href="/docs/data-sources/citations">View Citations →</a></strong></p>
 </div>
 
 </div>

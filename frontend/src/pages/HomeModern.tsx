@@ -29,7 +29,6 @@ import {
 } from '@heroicons/react/24/outline'
 import { useLocation as useLocationContext } from '../contexts/LocationContext'
 import AddressLookup from '../components/AddressLookup'
-import JurisdictionDiscovery from '../components/JurisdictionDiscovery'
 
 export default function HomeModern() {
   const navigate = useNavigate()
@@ -40,22 +39,8 @@ export default function HomeModern() {
   const [searchScope, setSearchScope] = useState('city')
   const [showSuggestions, setShowSuggestions] = useState(false)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
-  const [jurisdictionSearch, setJurisdictionSearch] = useState('')
-  const [selectedStateFilter, setSelectedStateFilter] = useState('')
   const [showJurisdictionsModal, setShowJurisdictionsModal] = useState(false)
   const { location, setLocation} = useLocationContext()
-
-  // Contact form state
-  const [contactForm, setContactForm] = useState({
-    name: '',
-    email: '',
-    subject: '',
-    message: '',
-    category: 'feedback'
-  })
-  const [contactSubmitting, setContactSubmitting] = useState(false)
-  const [contactSuccess, setContactSuccess] = useState(false)
-  const [contactError, setContactError] = useState<string | null>(null)
 
   // Environment-aware URLs for docs and API
   // In development: Docusaurus on localhost:3000/docs, API on localhost:8000
@@ -252,47 +237,6 @@ export default function HomeModern() {
       latitude: locationData.latitude,
       longitude: locationData.longitude,
     })
-  }
-
-  const handleContactSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setContactSubmitting(true)
-    setContactError(null)
-    setContactSuccess(false)
-
-    try {
-      const response = await axios.post(`${apiBaseUrl}/api/contact/submit`, contactForm)
-      
-      if (response.data.success) {
-        setContactSuccess(true)
-        // Reset form
-        setContactForm({
-          name: '',
-          email: '',
-          subject: '',
-          message: '',
-          category: 'feedback'
-        })
-        // Scroll to success message
-        setTimeout(() => {
-          const contactSection = document.getElementById('contact')
-          if (contactSection) {
-            contactSection.scrollIntoView({ behavior: 'smooth' })
-          }
-        }, 100)
-      }
-    } catch (error: any) {
-      setContactError(
-        error.response?.data?.detail || 
-        'Failed to submit your message. Please try again or contact us directly on GitHub.'
-      )
-    } finally {
-      setContactSubmitting(false)
-    }
-  }
-
-  const handleContactInputChange = (field: string, value: string) => {
-    setContactForm(prev => ({ ...prev, [field]: value }))
   }
 
   const navLinks = [
@@ -945,182 +889,34 @@ export default function HomeModern() {
         </div>
       </section>
 
-      {/* Jurisdiction Discovery Section */}
+      {/* Jurisdiction Discovery CTA */}
       <section id="jurisdictions" className="py-20 px-4 bg-gradient-to-br from-gray-50 to-blue-50">
-        <div className="max-w-7xl mx-auto">
-          <div className="text-center mb-12">
+        <div className="max-w-4xl mx-auto">
+          <div className="bg-white rounded-2xl shadow-xl p-12 text-center">
+            <MapIcon className="h-16 w-16 mx-auto mb-6" style={{ color: '#354F52' }} />
             <h2 className="text-4xl md:text-5xl font-bold mb-4" style={{ color: '#354F52' }}>
               Explore Jurisdictions
             </h2>
             <p className="text-xl text-gray-600 mb-8">
-              Search 32,000+ cities, counties, and school districts across all 50 states
+              Search and filter through 32,000+ cities, counties, and school districts across all 50 states.
+              View meeting schedules, discovery status, and available data sources.
             </p>
-            
-            {/* Search and Filter Controls */}
-            <div className="max-w-4xl mx-auto mb-8">
-              <div className="flex flex-col md:flex-row gap-4">
-                {/* Search Input */}
-                <div className="flex-1">
-                  <input
-                    type="text"
-                    value={jurisdictionSearch}
-                    onChange={(e) => setJurisdictionSearch(e.target.value)}
-                    placeholder="Search jurisdictions... (e.g., Fishers, Indiana)"
-                    className="w-full px-6 py-4 rounded-lg border-2 border-gray-300 focus:border-[#52796F] focus:outline-none text-lg bg-white text-gray-900"
-                  />
-                </div>
-                
-                {/* State Filter */}
-                <div className="md:w-48">
-                  <select
-                    value={selectedStateFilter}
-                    onChange={(e) => setSelectedStateFilter(e.target.value)}
-                    className="w-full px-4 py-4 rounded-lg border-2 border-gray-300 focus:border-[#52796F] focus:outline-none text-lg bg-white text-gray-900"
-                  >
-                    <option value="" className="text-gray-900 bg-white">All States</option>
-                    <option value="AL" className="text-gray-900 bg-white">Alabama</option>
-                    <option value="GA" className="text-gray-900 bg-white">Georgia</option>
-                    <option value="IN" className="text-gray-900 bg-white">Indiana</option>
-                    <option value="MA" className="text-gray-900 bg-white">Massachusetts</option>
-                    <option value="WA" className="text-gray-900 bg-white">Washington</option>
-                    <option value="WI" className="text-gray-900 bg-white">Wisconsin</option>
-                  </select>
-                </div>
-              </div>
-            </div>
-
-            {/* Stats Summary */}
-            {selectedStateFilter && statsData && (
-              <div className="max-w-2xl mx-auto mb-8 p-6 bg-white rounded-lg shadow-sm border border-gray-200">
-                <div className="flex items-center justify-center gap-2 text-lg">
-                  <MapIcon className="h-6 w-6 text-[#52796F]" />
-                  <span className="font-semibold text-gray-900">
-                    {selectedStateFilter}:
-                  </span>
-                  <span className="text-gray-700">
-                    {statsData.jurisdictions_display || '0'} jurisdictions •{' '}
-                    {statsData.nonprofits_display || '0'} nonprofits •{' '}
-                    {statsData.contacts_display || '0'} leaders •{' '}
-                    {statsData.causes_display || '0'} causes
-                  </span>
-                  <span className="text-green-600 font-semibold">• 100% free</span>
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Discovery Results */}
-          <div className="space-y-4">
-            {/* Example: Fishers, Indiana */}
-            {(!jurisdictionSearch || 'fishers indiana'.includes(jurisdictionSearch.toLowerCase())) && 
-             (!selectedStateFilter || selectedStateFilter === 'IN') && (
-              <JurisdictionDiscovery
-                jurisdiction={{
-                  name: 'Fishers',
-                  state: 'Indiana',
-                  website: 'https://fishersin.gov',
-                  youtube_channels: ['CityOfFishers', 'CityFishers'],
-                  facebook: 'facebook.com/fishers.indiana',
-                  twitter: 'twitter.com/fishersin',
-                  agenda_portal: 'https://fishersin.gov/agenda-center/',
-                  meeting_platform: 'Custom agenda system (built into city website)',
-                  completeness: 75
-                }}
-              />
-            )}
-
-            {/* Example: Mobile, Alabama */}
-            {(!jurisdictionSearch || 'mobile alabama'.includes(jurisdictionSearch.toLowerCase())) && 
-             (!selectedStateFilter || selectedStateFilter === 'AL') && (
-              <JurisdictionDiscovery
-                jurisdiction={{
-                  name: 'Mobile',
-                  state: 'Alabama',
-                  website: 'https://cityofmobile.org',
-                  youtube_channels: ['CityofMobileAL'],
-                  facebook: 'facebook.com/cityofmobile',
-                  twitter: 'twitter.com/cityofmobile',
-                  agenda_portal: 'https://cityofmobile.org/council/agendas',
-                  meeting_platform: 'YouTube Live (670 meetings archived)',
-                  completeness: 80
-                }}
-              />
-            )}
-
-            {/* Example: Boston, Massachusetts */}
-            {(!jurisdictionSearch || 'boston massachusetts'.includes(jurisdictionSearch.toLowerCase())) && 
-             (!selectedStateFilter || selectedStateFilter === 'MA') && (
-              <JurisdictionDiscovery
-                jurisdiction={{
-                  name: 'Boston',
-                  state: 'Massachusetts',
-                  website: 'https://boston.gov',
-                  youtube_channels: ['CityofBoston'],
-                  facebook: 'facebook.com/CityofBoston',
-                  twitter: 'twitter.com/CityOfBoston',
-                  agenda_portal: 'https://boston.gov/departments/city-clerk/agendas-and-minutes',
-                  meeting_platform: 'Legistar (city council meetings)',
-                  completeness: 85
-                }}
-              />
-            )}
-
-            {/* Placeholder for no results */}
-            {jurisdictionSearch && jurisdictionSearch.length > 2 && 
-             !['fishers', 'mobile', 'boston'].some(city => jurisdictionSearch.toLowerCase().includes(city)) && (
-              <div className="text-center py-12 bg-white rounded-lg border border-gray-200">
-                <MapIcon className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-                <h3 className="text-xl font-semibold text-gray-900 mb-2">
-                  Discovery in Progress
-                </h3>
-                <p className="text-gray-600 mb-4">
-                  "{jurisdictionSearch}" discovery data is being processed.
-                </p>
-                <div className="flex flex-col sm:flex-row gap-3 justify-center">
-                  <Link
-                    to="/jurisdictions"
-                    className="inline-flex items-center justify-center px-4 py-2 bg-[#52796F] text-white rounded-md hover:bg-[#354F52] transition-colors"
-                  >
-                    Browse All Jurisdictions
-                  </Link>
-                  <a 
-                    href="#contact"
-                    className="inline-flex items-center justify-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
-                  >
-                    Request Priority Coverage
-                  </a>
-                </div>
-              </div>
-            )}
-
-            {!jurisdictionSearch && !selectedStateFilter && (
-              <div className="text-center py-8 text-gray-600">
-                <p className="text-lg mb-2">
-                  Search for a jurisdiction above to see its discovery status
-                </p>
-                <p className="text-sm">
-                  Try: "Fishers, Indiana" or "Mobile, Alabama" or "Boston, Massachusetts"
-                </p>
-              </div>
-            )}
-          </div>
-
-          {/* Call to Action */}
-          <div className="mt-12 text-center">
-            <div className="inline-flex flex-col md:flex-row gap-4">
-              <button
-                onClick={() => navigate('/search')}
-                className="px-8 py-4 rounded-lg text-white font-semibold transition-all hover:shadow-lg"
+            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+              <Link
+                to="/jurisdictions"
+                className="inline-flex items-center justify-center px-8 py-4 rounded-lg text-white font-semibold transition-all hover:shadow-lg"
                 style={{ backgroundColor: '#354F52' }}
               >
-                Search All Data
-              </button>
-              <button
-                onClick={() => window.open('https://github.com/getcommunityone/open-navigator-for-engagement', '_blank')}
-                className="px-8 py-4 rounded-lg bg-white border-2 border-[#354F52] text-[#354F52] font-semibold transition-all hover:bg-gray-50"
+                <MagnifyingGlassIcon className="h-5 w-5 mr-2" />
+                Browse Jurisdictions
+              </Link>
+              <a
+                href="#contact"
+                className="inline-flex items-center justify-center px-8 py-4 rounded-lg bg-white border-2 text-[#354F52] font-semibold transition-all hover:bg-gray-50"
+                style={{ borderColor: '#354F52' }}
               >
-                View on GitHub
-              </button>
+                Request Coverage
+              </a>
             </div>
           </div>
         </div>
@@ -1464,163 +1260,40 @@ export default function HomeModern() {
         </div>
       </section>
 
-      {/* Contact Us Section */}
+      {/* Contact Us CTA */}
       <section id="contact" className="py-20 px-4 bg-gradient-to-br from-gray-50 to-blue-50">
         <div className="max-w-4xl mx-auto">
-          <div className="text-center mb-12">
-            <div className="inline-flex items-center gap-2 px-4 py-2 bg-white rounded-full shadow-sm mb-6">
-              <EnvelopeIcon className="h-5 w-5" style={{ color: '#354F52' }} />
-              <span className="text-sm font-medium" style={{ color: '#354F52' }}>
-                We'd Love to Hear From You
-              </span>
-            </div>
+          <div className="bg-white rounded-2xl shadow-xl p-12 text-center">
+            <EnvelopeIcon className="h-16 w-16 mx-auto mb-6" style={{ color: '#354F52' }} />
             <h2 className="text-4xl md:text-5xl font-bold mb-4" style={{ color: '#354F52' }}>
-              Contact Us
+              Get in Touch
             </h2>
-            <p className="text-xl text-gray-600">
-              Questions, feedback, or ideas? Send us a message and we'll get back to you soon.
+            <p className="text-xl text-gray-600 mb-8">
+              Questions, feedback, or ideas? We'd love to hear from you.
+              Report bugs, request features, or ask questions about jurisdiction coverage.
             </p>
-          </div>
-
-          <div className="bg-white rounded-2xl shadow-xl p-8 md:p-12">
-            {contactSuccess ? (
-              <div className="text-center py-12">
-                <CheckCircleIcon className="h-16 w-16 text-green-500 mx-auto mb-4" />
-                <h3 className="text-2xl font-bold text-gray-900 mb-2">
-                  Thank You!
-                </h3>
-                <p className="text-gray-600 mb-6">
-                  We've received your message and will get back to you soon.
-                </p>
-                <button
-                  onClick={() => setContactSuccess(false)}
-                  className="px-6 py-3 rounded-lg font-semibold hover:shadow-lg transition-all"
-                  style={{ backgroundColor: '#354F52', color: 'white' }}
-                >
-                  Send Another Message
-                </button>
-              </div>
-            ) : (
-              <form onSubmit={handleContactSubmit} className="space-y-6">
-                {contactError && (
-                  <div className="p-4 bg-red-50 border-2 border-red-200 rounded-lg">
-                    <p className="text-red-800">{contactError}</p>
-                  </div>
-                )}
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div>
-                    <label htmlFor="contact-name" className="block text-sm font-medium text-gray-900 mb-2">
-                      Your Name *
-                    </label>
-                    <input
-                      id="contact-name"
-                      type="text"
-                      required
-                      value={contactForm.name}
-                      onChange={(e) => handleContactInputChange('name', e.target.value)}
-                      className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-[#52796F] focus:outline-none bg-white text-gray-900"
-                      placeholder="John Doe"
-                    />
-                  </div>
-
-                  <div>
-                    <label htmlFor="contact-email" className="block text-sm font-medium text-gray-900 mb-2">
-                      Email Address *
-                    </label>
-                    <input
-                      id="contact-email"
-                      type="email"
-                      required
-                      value={contactForm.email}
-                      onChange={(e) => handleContactInputChange('email', e.target.value)}
-                      className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-[#52796F] focus:outline-none bg-white text-gray-900"
-                      placeholder="john@example.com"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label htmlFor="contact-category" className="block text-sm font-medium text-gray-900 mb-2">
-                    Category
-                  </label>
-                  <select
-                    id="contact-category"
-                    value={contactForm.category}
-                    onChange={(e) => handleContactInputChange('category', e.target.value)}
-                    className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-[#52796F] focus:outline-none bg-white text-gray-900"
-                  >
-                    <option value="feedback" className="text-gray-900 bg-white">General Feedback</option>
-                    <option value="bug" className="text-gray-900 bg-white">Bug Report</option>
-                    <option value="feature" className="text-gray-900 bg-white">Feature Request</option>
-                    <option value="jurisdiction-request" className="text-gray-900 bg-white">Request Jurisdiction Coverage</option>
-                    <option value="question" className="text-gray-900 bg-white">Question</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label htmlFor="contact-subject" className="block text-sm font-medium text-gray-900 mb-2">
-                    Subject *
-                  </label>
-                  <input
-                    id="contact-subject"
-                    type="text"
-                    required
-                    value={contactForm.subject}
-                    onChange={(e) => handleContactInputChange('subject', e.target.value)}
-                    className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-[#52796F] focus:outline-none bg-white text-gray-900"
-                    placeholder="Brief description of your message"
-                  />
-                </div>
-
-                <div>
-                  <label htmlFor="contact-message" className="block text-sm font-medium text-gray-900 mb-2">
-                    Message *
-                  </label>
-                  <textarea
-                    id="contact-message"
-                    required
-                    rows={6}
-                    value={contactForm.message}
-                    onChange={(e) => handleContactInputChange('message', e.target.value)}
-                    className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-[#52796F] focus:outline-none bg-white text-gray-900 resize-none"
-                    placeholder="Tell us more about your feedback, question, or idea..."
-                  />
-                </div>
-
-                <div className="flex flex-col sm:flex-row gap-4 items-center justify-between">
-                  <p className="text-sm text-gray-600">
-                    Your message will be submitted as an issue on{' '}
-                    <a
-                      href="https://github.com/getcommunityone/open-navigator-for-engagement/issues"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-[#52796F] hover:text-[#354F52] font-medium underline"
-                    >
-                      our GitHub repository
-                    </a>
-                  </p>
-                  <button
-                    type="submit"
-                    disabled={contactSubmitting}
-                    className="px-8 py-3 rounded-lg font-semibold hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-                    style={{ backgroundColor: '#354F52', color: 'white' }}
-                  >
-                    {contactSubmitting ? (
-                      <>
-                        <div className="animate-spin h-5 w-5 border-2 border-white border-t-transparent rounded-full"></div>
-                        Sending...
-                      </>
-                    ) : (
-                      <>
-                        <PaperAirplaneIcon className="h-5 w-5" />
-                        Send Message
-                      </>
-                    )}
-                  </button>
-                </div>
-              </form>
-            )}
+            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+              <a
+                href="https://github.com/getcommunityone/open-navigator-for-engagement/issues/new"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center justify-center px-8 py-4 rounded-lg text-white font-semibold transition-all hover:shadow-lg"
+                style={{ backgroundColor: '#354F52' }}
+              >
+                <EnvelopeIcon className="h-5 w-5 mr-2" />
+                Contact Us on GitHub
+              </a>
+              <a
+                href="mailto:john.bowyer@communityone.com"
+                className="inline-flex items-center justify-center px-8 py-4 rounded-lg bg-white border-2 text-[#354F52] font-semibold transition-all hover:bg-gray-50"
+                style={{ borderColor: '#354F52' }}
+              >
+                Email Us Directly
+              </a>
+            </div>
+            <p className="text-sm text-gray-500 mt-6">
+              Your feedback helps us improve the platform for everyone.
+            </p>
           </div>
         </div>
       </section>

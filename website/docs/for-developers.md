@@ -438,4 +438,4 @@ Adjust rate limits in `config/settings.py`.
 - **GitHub Issues**: [Report bugs or request features](https://github.com/getcommunityone/open-navigator-for-engagement/issues)
 - **Documentation**: Browse the sidebar
 - **API Docs**: http://localhost:8000/docs
-- **Email**: support@communityone.com
+- **Email**: john.bowyer@communityone.com

@@ -1,7 +1,6 @@
 ---
 sidebar_position: 1
 sidebar_label: Terms and Privacy
-sidebar: citationsSidebar
 ---
 
 # Terms and Privacy

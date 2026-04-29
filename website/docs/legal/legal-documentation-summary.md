@@ -1,6 +1,5 @@
 ---
 sidebar_position: 11
-sidebar: citationsSidebar
 ---
 
 # Legal Documentation Summary

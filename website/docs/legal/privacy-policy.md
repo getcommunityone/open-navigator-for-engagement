@@ -1,7 +1,6 @@
 ---
 sidebar_position: 3
 sidebar_label: Privacy Policy
-sidebar: citationsSidebar
 ---
 
 # Privacy Policy
