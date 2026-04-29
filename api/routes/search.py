@@ -1392,6 +1392,9 @@ async def unified_search(
     - `/api/search?q=education&types=organizations,causes` - Search orgs and causes
     - `/api/search?q=health&state=MA&page=2&limit=20` - Page 2 of MA health results
     """
+    # 🔍 DEBUG LOGGING - Log all incoming request parameters
+    logger.info(f"🔍 SEARCH REQUEST: q={q!r}, types={types!r}, state={state!r}, city={city!r}, ntee_code={ntee_code!r}, ein={ein!r}, limit={limit}, offset={offset}, page={page}, enrich={enrich}, sort={sort!r}")
+    
     try:
         # Calculate offset from page if offset not explicitly provided
         if offset == 0 and page > 1:
@@ -1402,6 +1405,8 @@ async def unified_search(
             requested_types = [t.strip() for t in types.split(',')]
         else:
             requested_types = ['contacts', 'meetings', 'organizations', 'causes', 'jurisdictions']
+        
+        logger.info(f"📋 Requested types: {requested_types}, calculated offset: {offset}")
         
         all_results = []
         
@@ -1420,22 +1425,27 @@ async def unified_search(
         
         if 'contacts' in requested_types:
             contact_results = search_contacts(q or "", state, limit=search_limit)
+            logger.info(f"👤 Contacts search returned {len(contact_results)} results")
             all_results.extend(contact_results)
         
         if 'meetings' in requested_types:
             meeting_results = search_meetings(q or "", state, limit=search_limit)
+            logger.info(f"📅 Meetings search returned {len(meeting_results)} results")
             all_results.extend(meeting_results)
         
         if 'organizations' in requested_types:
             org_results = search_organizations(q or "", state, ntee_code, limit=search_limit, offset=search_offset, enrich=enrich, sort=sort, ein=ein)
+            logger.info(f"🏢 Organizations search returned {len(org_results)} results")
             all_results.extend(org_results)
         
         if 'causes' in requested_types:
             cause_results = search_causes(q or "", limit=search_limit)
+            logger.info(f"🎯 Causes search returned {len(cause_results)} results")
             all_results.extend(cause_results)
         
         if 'jurisdictions' in requested_types:
             jurisdiction_results = search_jurisdictions(q or "", state, city, limit=search_limit, offset=search_offset)
+            logger.info(f"🏛️ Jurisdictions search returned {len(jurisdiction_results)} results")
             all_results.extend(jurisdiction_results)
         
         # Sort all results by score
