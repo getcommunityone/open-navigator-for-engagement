@@ -1451,6 +1451,8 @@ async def unified_search(
         # Sort all results by score
         all_results.sort(key=lambda x: x.score, reverse=True)
         
+        logger.info(f"📊 Total combined results: {len(all_results)}, applying pagination (offset={offset}, limit={limit})")
+        
         # Apply pagination
         if use_db_pagination:
             # DB already paginated - use all results
@@ -1458,6 +1460,8 @@ async def unified_search(
         else:
             # Paginate in-memory from combined results
             paginated_results = all_results[offset:offset + limit]
+        
+        logger.info(f"✂️ Paginated results: {len(paginated_results)} items")
         
         # Group by type for response
         grouped_results = {
@@ -1467,6 +1471,8 @@ async def unified_search(
             'causes': [r.to_dict() for r in paginated_results if r.result_type == 'cause'],
             'jurisdictions': [r.to_dict() for r in paginated_results if r.result_type == 'jurisdiction'],
         }
+        
+        logger.info(f"📦 Grouped results - contacts:{len(grouped_results['contacts'])}, meetings:{len(grouped_results['meetings'])}, organizations:{len(grouped_results['organizations'])}, causes:{len(grouped_results['causes'])}, jurisdictions:{len(grouped_results['jurisdictions'])}")
         
         # Calculate total results
         # For single-type browse mode, get accurate count from database
@@ -1483,7 +1489,7 @@ async def unified_search(
         
         total_pages = (total_results + limit - 1) // limit  # Ceiling division
         
-        return {
+        response_data = {
             "query": q or "",
             "total_results": total_results,
             "results": grouped_results,
@@ -1502,9 +1508,13 @@ async def unified_search(
                 "sort": sort
             }
         }
+        
+        logger.info(f"✅ Search complete - returning {total_results} total results, {len(paginated_results)} on this page")
+        return response_data
     
     except Exception as e:
-        logger.error(f"Search error: {e}")
+        logger.error(f"❌ Search error: {type(e).__name__}: {e}")
+        logger.exception("Full traceback:")
         raise HTTPException(status_code=500, detail=str(e))
 
 
