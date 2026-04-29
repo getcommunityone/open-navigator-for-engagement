@@ -17,6 +17,13 @@ if (import.meta.env.PROD) {
 console.log('📡 [API] Final base URL:', API_BASE_URL)
 console.log('🔒 [API] Page protocol:', typeof window !== 'undefined' ? window.location.protocol : 'N/A')
 
+// Response type that matches axios structure
+interface APIResponse<T> {
+  data: T
+  status: number
+  statusText: string
+}
+
 // Fetch wrapper that mimics axios interface
 class APIClient {
   private baseURL: string
@@ -28,7 +35,7 @@ class APIClient {
   private async request<T>(
     url: string,
     options: RequestInit = {}
-  ): Promise<{ data: T; status: number; statusText: string }> {
+  ): Promise<APIResponse<T>> {
     // Build full URL
     const fullUrl = url.startsWith('http') ? url : `${this.baseURL}${url}`
     
@@ -37,13 +44,13 @@ class APIClient {
     
     // Add auth token if available
     const token = localStorage.getItem('auth_token')
-    const headers: HeadersInit = {
+    const headers: Record<string, string> = {
       'Content-Type': 'application/json',
-      ...options.headers,
+      ...(options.headers as Record<string, string>),
     }
     
     if (token) {
-      headers.Authorization = `Bearer ${token}`
+      headers['Authorization'] = `Bearer ${token}`
     }
 
     try {
@@ -89,7 +96,7 @@ class APIClient {
     }
   }
 
-  async get<T>(url: string, config?: { params?: Record<string, any> }) {
+  async get<T = any>(url: string, config?: { params?: Record<string, any> }): Promise<APIResponse<T>> {
     // Build query string
     let fullUrl = url
     if (config?.params) {
@@ -108,25 +115,25 @@ class APIClient {
     return this.request<T>(fullUrl, { method: 'GET' })
   }
 
-  async post<T>(url: string, data?: any) {
+  async post<T = any>(url: string, data?: any): Promise<APIResponse<T>> {
     return this.request<T>(url, {
       method: 'POST',
       body: data ? JSON.stringify(data) : undefined,
     })
   }
 
-  async put<T>(url: string, data?: any) {
+  async put<T = any>(url: string, data?: any): Promise<APIResponse<T>> {
     return this.request<T>(url, {
       method: 'PUT',
       body: data ? JSON.stringify(data) : undefined,
     })
   }
 
-  async delete<T>(url: string) {
+  async delete<T = any>(url: string): Promise<APIResponse<T>> {
     return this.request<T>(url, { method: 'DELETE' })
   }
 
-  async patch<T>(url: string, data?: any) {
+  async patch<T = any>(url: string, data?: any): Promise<APIResponse<T>> {
     return this.request<T>(url, {
       method: 'PATCH',
       body: data ? JSON.stringify(data) : undefined,
