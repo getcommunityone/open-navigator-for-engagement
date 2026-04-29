@@ -7,16 +7,10 @@ let API_BASE_URL: string
 
 // Determine the correct API base URL
 if (import.meta.env.PROD) {
-  // Production: Use protocol-relative or HTTPS-forced URL
-  if (typeof window !== 'undefined') {
-    // Force HTTPS in production
-    API_BASE_URL = `${window.location.protocol}//${window.location.host}/api`
-    console.log('🌐 [API] Production mode: Using same-origin HTTPS URL:', API_BASE_URL)
-  } else {
-    // SSR fallback
-    API_BASE_URL = '/api'
-    console.log('🌐 [API] Production mode (SSR): Using relative path /api')
-  }
+  // Production: ALWAYS use relative path to inherit protocol from page
+  // This prevents mixed content errors - if page is HTTPS, API calls will be HTTPS
+  API_BASE_URL = '/api'
+  console.log('🌐 [API] Production mode: Using relative path (inherits protocol from page):', API_BASE_URL)
 } else {
   // Development: Use environment variable or default to localhost
   API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api'
@@ -42,19 +36,30 @@ api.interceptors.request.use(
       config.headers.Authorization = `Bearer ${token}`
     }
     
-    // CRITICAL FIX: Force HTTPS in production to prevent mixed content errors
-    // Axios converts relative paths to absolute URLs using current protocol
-    // We must intercept and force HTTPS if page is loaded over HTTPS
-    if (typeof window !== 'undefined' && window.location.protocol === 'https:' && config.url) {
-      // If axios has converted to absolute URL with http://, upgrade to https://
-      if (config.url.startsWith('http://')) {
+    // BULLETPROOF HTTPS ENFORCEMENT: Never allow HTTP requests in production
+    // This catches ANY case where HTTP might sneak in (cached URLs, env vars, etc.)
+    if (import.meta.env.PROD && typeof window !== 'undefined') {
+      // Force HTTPS on the final request URL
+      if (config.url && config.url.startsWith('http://')) {
         config.url = config.url.replace('http://', 'https://')
-        console.log('🔒 [API] Upgraded request to HTTPS:', config.url)
+        console.warn('🔒 [API] FORCED HTTP→HTTPS upgrade on URL:', config.url)
       }
-      // If baseURL was converted to http://, upgrade it too
+      
+      // Force HTTPS on baseURL if it somehow got set to HTTP
       if (config.baseURL && config.baseURL.startsWith('http://')) {
         config.baseURL = config.baseURL.replace('http://', 'https://')
-        console.log('🔒 [API] Upgraded baseURL to HTTPS:', config.baseURL)
+        console.warn('🔒 [API] FORCED HTTP→HTTPS upgrade on baseURL:', config.baseURL)
+      }
+      
+      // If page is HTTPS and we're making a relative request, ensure it stays HTTPS
+      if (window.location.protocol === 'https:') {
+        // Build the absolute URL to check
+        const absoluteURL = new URL(config.url || '', config.baseURL || window.location.origin)
+        if (absoluteURL.protocol === 'http:') {
+          absoluteURL.protocol = 'https:'
+          config.url = absoluteURL.href
+          console.warn('🔒 [API] FORCED HTTP→HTTPS upgrade on final URL:', config.url)
+        }
       }
     }
     
