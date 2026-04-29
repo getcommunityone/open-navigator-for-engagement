@@ -14,16 +14,16 @@ import {
 } from '@heroicons/react/24/outline'
 
 const datasets = [
-  { name: 'Nonprofit Organizations', records: '3.9M', url: 'https://huggingface.co/datasets/CommunityOne/one-nonprofits-organizations', icon: BuildingLibraryIcon },
-  { name: 'Nonprofit Financials', records: '3.9M', url: 'https://huggingface.co/datasets/CommunityOne/one-nonprofits-financials', icon: ChartBarIcon },
-  { name: 'Nonprofit Programs', records: '3.9M', url: 'https://huggingface.co/datasets/CommunityOne/one-nonprofits-programs', icon: DocumentTextIcon },
-  { name: 'Nonprofit Locations', records: '1.9M', url: 'https://huggingface.co/datasets/CommunityOne/one-nonprofits-locations', icon: GlobeAltIcon },
+  { name: 'Nonprofit Organizations', records: '1.95M', url: 'https://huggingface.co/datasets/CommunityOne/one-nonprofits-organizations', icon: BuildingLibraryIcon },
+  { name: 'Nonprofit Financials', records: '1.95M', url: 'https://huggingface.co/datasets/CommunityOne/one-nonprofits-financials', icon: ChartBarIcon },
+  { name: 'Nonprofit Programs', records: '1.95M', url: 'https://huggingface.co/datasets/CommunityOne/one-nonprofits-programs', icon: DocumentTextIcon },
+  { name: 'Nonprofit Locations', records: '1.95M', url: 'https://huggingface.co/datasets/CommunityOne/one-nonprofits-locations', icon: GlobeAltIcon },
   { name: 'Public Meetings Calendar', records: '153K', url: 'https://huggingface.co/datasets/CommunityOne/one-meetings-calendar', icon: RocketLaunchIcon }
 ]
 
 const features = [
   { title: '90,000+ Jurisdictions', description: 'Cities, counties, and state governments' },
-  { title: '3.9M Nonprofits', description: 'Organizations with financial data' },
+  { title: '1.95M Nonprofits', description: 'Organizations with complete data' },
   { title: '153K+ Public Meetings', description: 'Agendas and transcripts' },
   { title: 'Open Source & Free', description: 'MIT License, accessible to all' }
 ]
@@ -189,7 +189,7 @@ function App() {
           <div className="text-center">
             <div className="inline-flex items-center px-4 py-2 bg-primary-100 text-primary-700 rounded-full text-sm font-medium mb-6 animate-[slideUp_0.6s_ease-out]">
               <CheckCircleIcon className="h-5 w-5 mr-2" />
-              Open Source • 13.8M Records • MIT License
+              Open Source • 1.95M Nonprofits • MIT License
             </div>
             <h1 className="text-5xl md:text-6xl font-bold text-gray-900 mb-6 animate-[slideUp_0.8s_ease-out_0.2s_both]">
               Making Civic Data
@@ -255,7 +255,7 @@ function App() {
           ))}
         </div>
         <div className="mt-12 bg-gradient-to-r from-primary-50 to-green-50 rounded-xl p-8 text-center border border-primary-100">
-          <h3 className="text-2xl font-bold text-gray-900 mb-3">Total: 13.8M Records</h3>
+          <h3 className="text-2xl font-bold text-gray-900 mb-3">1.95M Nonprofits, 13.8M Total Records</h3>
           <p className="text-gray-600 mb-6">All datasets are free to use under MIT License</p>
           <a
             href="https://huggingface.co/CommunityOne"
