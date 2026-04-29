@@ -1,115 +1,140 @@
-import axios from 'axios'
+// Native fetch-based API client - No axios dependency!
+// Handles relative URLs correctly without HTTP/HTTPS conversion issues
 
 // Environment-aware API base URL
-// In development: API on localhost:8000/api
-// In production (HF Spaces): Served via nginx at /api/
 let API_BASE_URL: string
 
-// Determine the correct API base URL
 if (import.meta.env.PROD) {
-  // FINAL FIX: Use absolute HTTPS URL in production
-  // Relative paths are being converted to HTTP by axios somehow
-  if (typeof window !== 'undefined') {
-    const origin = window.location.origin.replace('http://', 'https://')
-    API_BASE_URL = `${origin}/api`
-    console.log('🌐 [API] Production mode: ABSOLUTE HTTPS URL:', API_BASE_URL)
-  } else {
-    // Fallback if window not available
-    API_BASE_URL = 'https://www.communityone.com/api'
-    console.log('🌐 [API] Production mode: FALLBACK HTTPS URL:', API_BASE_URL)
-  }
+  // Production: Use relative path - fetch handles this correctly!
+  API_BASE_URL = '/api'
+  console.log('🌐 [API] Production mode: Relative path (fetch handles correctly):', API_BASE_URL)
 } else {
   // Development: Use environment variable or default to localhost
-  const envUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000/api'
-  // Even in dev, strip http:// if page is https://
-  if (typeof window !== 'undefined' && window.location.protocol === 'https:' && envUrl.startsWith('http://')) {
-    API_BASE_URL = envUrl.replace('http://', 'https://')
-    console.log('🔧 [API] Development mode (upgraded to HTTPS):', API_BASE_URL)
-  } else {
-    API_BASE_URL = envUrl
-    console.log('🔧 [API] Development mode:', API_BASE_URL)
-  }
+  API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api'
+  console.log('🔧 [API] Development mode:', API_BASE_URL)
 }
 
 console.log('📡 [API] Final base URL:', API_BASE_URL)
 console.log('🔒 [API] Page protocol:', typeof window !== 'undefined' ? window.location.protocol : 'N/A')
 
-// Create axios instance with base URL
-const api = axios.create({
-  baseURL: API_BASE_URL,
-  headers: {
-    'Content-Type': 'application/json',
-  },
-})
+// Fetch wrapper that mimics axios interface
+class APIClient {
+  private baseURL: string
 
-// Add request interceptor for auth token and HTTPS enforcement
-api.interceptors.request.use(
-  (config) => {
-    // DIAGNOSTIC LOGGING - See exactly what axios is doing
-    console.log('🔍 [INTERCEPTOR] Raw config.url:', config.url)
-    console.log('🔍 [INTERCEPTOR] Raw config.baseURL:', config.baseURL)
+  constructor(baseURL: string) {
+    this.baseURL = baseURL
+  }
+
+  private async request<T>(
+    url: string,
+    options: RequestInit = {}
+  ): Promise<{ data: T; status: number; statusText: string }> {
+    // Build full URL
+    const fullUrl = url.startsWith('http') ? url : `${this.baseURL}${url}`
+    
+    console.log('🔍 [FETCH] Request URL:', fullUrl)
+    console.log('🔍 [FETCH] Method:', options.method || 'GET')
     
     // Add auth token if available
     const token = localStorage.getItem('auth_token')
+    const headers: HeadersInit = {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    }
+    
     if (token) {
-      config.headers.Authorization = `Bearer ${token}`
+      headers.Authorization = `Bearer ${token}`
     }
-    
-    // AGGRESSIVE FIX: Check if baseURL got expanded to absolute URL
-    if (config.baseURL && typeof config.baseURL === 'string') {
-      // If baseURL became absolute, force it back to relative
-      if (config.baseURL.includes('://')) {
-        const urlObj = new URL(config.baseURL)
-        config.baseURL = urlObj.pathname
-        console.warn('⚠️ [INTERCEPTOR] baseURL was absolute, forced to relative:', config.baseURL)
-      }
-    }
-    
-    // Check the final combined URL that axios will use
-    const finalUrl = config.url ? (config.baseURL || '') + config.url : config.baseURL
-    console.log('🔍 [INTERCEPTOR] Final combined URL:', finalUrl)
-    
-    // NUCLEAR OPTION: Block ALL HTTP in production
-    if (import.meta.env.PROD) {
-      // Check config.url (the specific endpoint being called)
-      if (config.url && config.url.startsWith('http://')) {
-        console.error('❌ [INTERCEPTOR] BLOCKED HTTP in config.url:', config.url)
-        config.url = config.url.replace('http://', 'https://')
-        console.warn('🔒 [INTERCEPTOR] FORCED HTTP→HTTPS on config.url:', config.url)
-      }
-      
-      // Check config.baseURL (should be /api but double-check)
-      if (config.baseURL && config.baseURL.startsWith('http://')) {
-        console.error('❌ [INTERCEPTOR] BLOCKED HTTP in config.baseURL:', config.baseURL)
-        config.baseURL = config.baseURL.replace('http://', 'https://')
-        console.warn('🔒 [INTERCEPTOR] FORCED HTTP→HTTPS on config.baseURL:', config.baseURL)
-      }
-      
-      // Final check: If baseURL is somehow not relative, force it
-      if (config.baseURL && !config.baseURL.startsWith('/') && !config.baseURL.startsWith('https://')) {
-        console.error('❌ [INTERCEPTOR] Invalid baseURL, forcing /api:', config.baseURL)
-        config.baseURL = '/api'
-      }
-    }
-    
-    console.log('✅ [INTERCEPTOR] Final config.url:', config.url)
-    console.log('✅ [INTERCEPTOR] Final config.baseURL:', config.baseURL)
-    
-    return config
-  },
-  (error) => Promise.reject(error)
-)
 
-// Add response interceptor for error handling
-api.interceptors.response.use(
-  (response) => response,
-  (error) => {
-    if (error.response?.status === 401) {
-      // Handle unauthorized - could clear token and redirect to login
-      localStorage.removeItem('auth_token')
+    try {
+      const response = await fetch(fullUrl, {
+        ...options,
+        headers,
+      })
+
+      // Handle 401 unauthorized
+      if (response.status === 401) {
+        localStorage.removeItem('auth_token')
+      }
+
+      // Parse response
+      let data: T
+      const contentType = response.headers.get('content-type')
+      if (contentType && contentType.includes('application/json')) {
+        data = await response.json()
+      } else {
+        data = (await response.text()) as unknown as T
+      }
+
+      if (!response.ok) {
+        throw {
+          response: {
+            data,
+            status: response.status,
+            statusText: response.statusText,
+          },
+          message: `HTTP ${response.status}: ${response.statusText}`,
+        }
+      }
+
+      console.log('✅ [FETCH] Success:', response.status)
+      return {
+        data,
+        status: response.status,
+        statusText: response.statusText,
+      }
+    } catch (error) {
+      console.error('❌ [FETCH] Error:', error)
+      throw error
     }
-    return Promise.reject(error)
   }
-)
+
+  async get<T>(url: string, config?: { params?: Record<string, any> }) {
+    // Build query string
+    let fullUrl = url
+    if (config?.params) {
+      const params = new URLSearchParams()
+      Object.entries(config.params).forEach(([key, value]) => {
+        if (value !== undefined && value !== null) {
+          params.append(key, String(value))
+        }
+      })
+      const queryString = params.toString()
+      if (queryString) {
+        fullUrl = `${url}?${queryString}`
+      }
+    }
+
+    return this.request<T>(fullUrl, { method: 'GET' })
+  }
+
+  async post<T>(url: string, data?: any) {
+    return this.request<T>(url, {
+      method: 'POST',
+      body: data ? JSON.stringify(data) : undefined,
+    })
+  }
+
+  async put<T>(url: string, data?: any) {
+    return this.request<T>(url, {
+      method: 'PUT',
+      body: data ? JSON.stringify(data) : undefined,
+    })
+  }
+
+  async delete<T>(url: string) {
+    return this.request<T>(url, { method: 'DELETE' })
+  }
+
+  async patch<T>(url: string, data?: any) {
+    return this.request<T>(url, {
+      method: 'PATCH',
+      body: data ? JSON.stringify(data) : undefined,
+    })
+  }
+}
+
+// Create and export the API client instance
+const api = new APIClient(API_BASE_URL)
 
 export default api
