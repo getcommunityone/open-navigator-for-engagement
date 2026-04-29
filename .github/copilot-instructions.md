@@ -140,6 +140,19 @@ When suggesting deployment or setup:
 - Mention that secrets go in `.env` (gitignored)
 - Include verification steps to test deployment
 
+### Data Management Rules
+
+**CRITICAL - DO NOT DELETE APPLICATION CACHE:**
+- ❌ **NEVER** recommend deleting `/home/developer/projects/oral-health-policy-pulse/data/cache/`
+- ❌ **NEVER** suggest `rm -rf data/cache` or similar commands
+- This directory contains critical application data from data processing pipelines
+- Deleting it will cause data loss and require expensive reprocessing
+- If disk space cleanup is needed, suggest cleaning:
+  - Docker images/volumes: `docker system prune`
+  - System caches: `~/.cache/pip`, `~/.cache/npm`, `~/.cache/huggingface`
+  - Build artifacts: `frontend/dist`, `website/build`
+  - NOT the application data cache
+
 ## File Organization Rules
 
 ### What Goes Where

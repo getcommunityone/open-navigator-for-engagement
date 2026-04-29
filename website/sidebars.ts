@@ -11,13 +11,18 @@ const sidebars: SidebarsConfig = {
       collapsed: false,
       items: [
         'intro',
-        'dashboard',
+        'open-navigator',
       ],
     },
     {
       type: 'doc',
       id: 'data-sources/citations',
       label: 'Citations & Data Sources',
+    },
+    {
+      type: 'doc',
+      id: 'legal-compliance',
+      label: 'Legal & Compliance',
     },
   ],
 
@@ -44,13 +49,18 @@ const sidebars: SidebarsConfig = {
         },
         {
           type: 'doc',
-          id: 'dashboard',
-          label: 'Getting Started with Dashboard',
+          id: 'open-navigator',
+          label: 'Getting Started with Open Navigator',
         },
         {
           type: 'doc',
           id: 'data-sources/citations',
           label: 'Citations & Data Sources',
+        },
+        {
+          type: 'doc',
+          id: 'legal-compliance',
+          label: 'Legal & Compliance',
         },
       ],
     },
@@ -131,6 +141,11 @@ const sidebars: SidebarsConfig = {
               id: 'data-sources/citations',
               label: 'Citations & Data Sources',
             },
+            {
+              type: 'doc',
+              id: 'legal-compliance',
+              label: 'Legal & Compliance',
+            },
             'data-sources/data-model-erd',
             'data-sources/jurisdiction-discovery',
             'data-sources/census-data',
@@ -140,6 +155,9 @@ const sidebars: SidebarsConfig = {
             'data-sources/youtube-discovery',
             'data-sources/video-channels',
             'data-sources/open-source-repositories',
+            'data-sources/ballot-election-sources',
+            'data-sources/polling-survey-sources',
+            'data-sources/factcheck-sources',
           ],
         },
         {
@@ -147,6 +165,7 @@ const sidebars: SidebarsConfig = {
           label: 'How-To Guides',
           items: [
             'guides/jurisdiction-setup',
+            'guides/legislative-tracking-maps',
             'guides/huggingface-publishing',
             'guides/huggingface-quickstart',
             'guides/huggingface-features',
@@ -202,7 +221,7 @@ const sidebars: SidebarsConfig = {
       collapsed: false,
       items: [
         'intro',
-        'dashboard',
+        'open-navigator',
       ],
     },
     {
@@ -227,8 +246,8 @@ const sidebars: SidebarsConfig = {
         },
         {
           type: 'doc',
-          id: 'dashboard',
-          label: 'Getting Started with Dashboard',
+          id: 'open-navigator',
+          label: 'Getting Started with Open Navigator',
         },
         {
           type: 'doc',
@@ -308,6 +327,11 @@ const sidebars: SidebarsConfig = {
               id: 'data-sources/citations',
               label: 'Citations & Data Sources',
             },
+            {
+              type: 'doc',
+              id: 'legal-compliance',
+              label: 'Legal & Compliance',
+            },
             'data-sources/data-model-erd',
             'data-sources/jurisdiction-discovery',
             'data-sources/census-data',
@@ -369,13 +393,48 @@ const sidebars: SidebarsConfig = {
   ],
 
   // ========================================
-  // CITATIONS - Standalone Sidebar
+  // DATA AND TERMS - Standalone Sidebar
   // ========================================
   citationsSidebar: [
     {
-      type: 'doc',
-      id: 'data-sources/citations',
-      label: 'Citations & Data Sources',
+      type: 'category',
+      label: 'Data and Terms',
+      collapsed: false,
+      items: [
+        {
+          type: 'doc',
+          id: 'data-sources/citations',
+          label: 'Data and Citations',
+        },
+        {
+          type: 'doc',
+          id: 'legal/index',
+          label: 'Terms and Privacy',
+        },
+      ],
+    },
+  ],
+
+  // ========================================
+  // LEGAL - Uses same sidebar as Data and Terms
+  // ========================================
+  legalSidebar: [
+    {
+      type: 'category',
+      label: 'Data and Terms',
+      collapsed: false,
+      items: [
+        {
+          type: 'doc',
+          id: 'data-sources/citations',
+          label: 'Data and Citations',
+        },
+        {
+          type: 'doc',
+          id: 'legal/index',
+          label: 'Terms and Privacy',
+        },
+      ],
     },
   ],
 };

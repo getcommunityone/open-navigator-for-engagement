@@ -118,6 +118,12 @@ open-navigator-data/
 │   ├── election_cycles    # Election dates & periods
 │   └── election_influences # Pre/post-election decision patterns
 │
+├── campaigns/              # 💰 Political campaign finance (FEC data)
+│   ├── candidates         # Federal candidates (House, Senate, President)
+│   ├── committees         # PACs, Super PACs, campaign committees
+│   ├── contributions      # Individual political contributions $200+
+│   └── nonprofit_donors   # Nonprofit leadership political giving analysis
+│
 ├── civic/                  # 🗳️ Google Civic & Wikidata
 │   ├── civic_divisions    # OCD divisions
 │   ├── representatives    # From Google Civic API
@@ -129,8 +135,21 @@ open-navigator-data/
 │   ├── local_measures      # City/county ballot questions
 │   └── election_results    # Historical voting outcomes
 │
-├── legislation/            # 📜 Bills, ordinances, resolutions
-│   ├── state_bills         # From Open States API (52 states)
+├── legislation/            # 📜 State & Local Legislative Data (Open States/Plural Policy)
+│   ├── legislators         # 7,300+ state legislators (all 50 states + DC, PR)
+│   ├── legislator_roles    # Legislative roles (term, district, chamber, party)
+│   ├── legislator_offices  # Contact info (district/capitol offices, phone, email)
+│   ├── committees          # Legislative committees (standing, select, joint)
+│   ├── committee_memberships # Legislator committee assignments & roles
+│   ├── legislative_sessions # Session identifiers, years, special sessions
+│   ├── bills               # State bills with full text (100K+ bills from 2020+)
+│   ├── bill_sponsors       # Primary sponsors & co-sponsors per bill
+│   ├── bill_subjects       # Bill topic classification
+│   ├── bill_actions        # Bill history (introduced, committee, floor, signed)
+│   ├── bill_versions       # Different versions of bill text (as introduced, amended, enacted)
+│   ├── votes               # Roll call votes on bills & amendments
+│   ├── vote_events         # Vote metadata (date, chamber, motion, result)
+│   ├── legislator_votes    # Individual legislator positions (yes/no/abstain/absent)
 │   ├── local_ordinances    # Municipal codes & resolutions
 │   └── policy_tracking     # Bill status & outcomes
 │
@@ -225,12 +244,32 @@ nonprofits_locations.parquet
 nonprofits_irs_eobmf.parquet
 nonprofits_constituents.parquet
 nonprofits_donations.parquet
-nonprofits_campaigns.parquet
+nonprofits_campaigns.parquet        # Nonprofit fundraising campaigns (NOT political)
+campaigns_candidates.parquet        # Political candidates (FEC)
+campaigns_committees.parquet        # Political committees/PACs (FEC)
+campaigns_contributions.parquet     # Political contributions (FEC)
+campaigns_nonprofit_donors.parquet  # Nonprofit leadership political giving (FEC analysis)
 nonprofits_memberships.parquet
 nonprofits_volunteer_activities.parquet
 nonprofits_program_delivery.parquet
 nonprofits_program_outcomes.parquet
 grants_federal_grants.parquet
+legislation_legislators.parquet
+legislation_legislator_roles.parquet
+legislation_legislator_offices.parquet
+legislation_committees.parquet
+legislation_committee_memberships.parquet
+legislation_legislative_sessions.parquet
+legislation_bills.parquet
+legislation_bill_sponsors.parquet
+legislation_bill_subjects.parquet
+legislation_bill_actions.parquet
+legislation_bill_versions.parquet
+legislation_votes.parquet
+legislation_vote_events.parquet
+legislation_legislator_votes.parquet
+legislation_local_ordinances.parquet
+legislation_policy_tracking.parquet
 budgets_city_budgets.parquet
 surveys_national_polls.parquet
 surveys_roper_questions.parquet
@@ -297,14 +336,25 @@ standards-schema-org.parquet
 7. **Census Annual Survey** → State/local government finances
 8. **Municipal Securities Rulemaking Board (EMMA)** → Bond debt data
 9. **YouTube API** → Channel statistics
-10. **Open States** → Legislative data
+10. **Open States PostgreSQL Database** → Complete legislative data (~10 GB monthly dump)
+    - **7,300+ state legislators** across all 50 states + DC + Puerto Rico
+    - **100,000+ bills** with full text from 2020+
+    - **Committee assignments** for all legislators
+    - **Roll call votes** on all bills with individual legislator positions
+    - **Bill sponsorships** (primary sponsors and co-sponsors)
+    - **Bill actions** (committee referrals, amendments, floor votes, signing)
+    - **Multiple bill versions** (as introduced, committee substitute, enrolled)
+    - **Legislator offices** (district and capitol contact info)
+    - **Party affiliations** and term history
+    - Updated monthly from https://data.openstates.org/postgres/monthly/
 11. **Wikidata SPARQL** → Entity relationships
 12. **DBpedia** → Wikipedia structured data
 13. **Google Civic** → Representatives
-14. **GitHub API** → Civic tech projects, contributors, issues
-15. **Civic Tech Field Guide** → Curated project taxonomy
-16. **Code for America** → Brigade projects and hackathons
-17. **Digital Public Goods Alliance** → DPG-certified open source projects
+14. **OpenFEC API** → Political contributions, candidates, committees (campaign finance)
+15. **GitHub API** → Civic tech projects, contributors, issues
+16. **Civic Tech Field Guide** → Curated project taxonomy
+17. **Code for America** → Brigade projects and hackathons
+18. **Digital Public Goods Alliance** → DPG-certified open source projects
 
 ### Phase 3: Processing (Gold Layer)
 1. **Meeting Extraction** → Agenda/minutes text
@@ -775,6 +825,185 @@ erDiagram
         string item_description
         string vote_value
         datetime vote_date
+    }
+    
+    %% ========================================
+    %% STATE LEGISLATORS & LEGISLATIVE DATA (Open States/Plural Policy)
+    %% ========================================
+    %% Data Source: Open States PostgreSQL dump (~10 GB)
+    %% Coverage: 7,300+ state legislators across all 50 states + DC + Puerto Rico
+    %% See: https://open.pluralpolicy.com/data/ and https://github.com/openstates/people/blob/master/schema.md
+    %% Schema.org types: Person, GovernmentOfficial, Legislation, VoteAction
+    %% Popolo Project compliance: https://www.popoloproject.com/
+    
+    JURISDICTION ||--o{ LEGISLATOR : represents
+    LEGISLATOR ||--o{ LEGISLATOR_OFFICE : has
+    LEGISLATOR ||--o{ COMMITTEE_MEMBERSHIP : serves_on
+    LEGISLATOR ||--o{ BILL_SPONSOR : sponsors
+    LEGISLATOR ||--o{ LEGISLATOR_VOTE : casts
+    LEGISLATOR ||--o{ SOCIAL_MEDIA : maintains
+    LEGISLATOR {
+        string legislator_id PK "ocd-person/{uuid}"
+        string jurisdiction_id FK "ocd-division/country:us/state:al"
+        string full_name
+        string given_name "First name"
+        string family_name "Last name"
+        string middle_name
+        string suffix
+        string gender "Male/Female/Other"
+        string email "Official email"
+        string biography "Official bio text"
+        string birth_date "YYYY-MM-DD"
+        string death_date "YYYY-MM-DD"
+        string image_url "Official photo"
+        string twitter_handle "@username"
+        string youtube_handle
+        string instagram_handle
+        string facebook_handle
+        string party_name "Democratic/Republican/Independent"
+        datetime party_start_date
+        datetime party_end_date
+        string chamber "upper/lower/legislature"
+        string district "District name/number"
+        datetime term_start_date
+        datetime term_end_date
+        string end_reason "resignation/death/term_limit/defeated"
+        string website_url
+        boolean is_active
+        datetime last_updated
+    }
+    
+    LEGISLATOR_OFFICE {
+        string office_id PK
+        string legislator_id FK
+        string office_type "District Office/Capitol Office"
+        string address "Mailing address"
+        string voice "Phone number"
+        string fax "Fax number"
+        string email "Office email"
+        string city
+        string state
+        string zip_code
+        boolean is_primary
+    }
+    
+    COMMITTEE ||--o{ COMMITTEE_MEMBERSHIP : includes
+    COMMITTEE {
+        string committee_id PK "ocd-organization/{uuid}"
+        string jurisdiction_id FK
+        string name "Committee on Health and Human Services"
+        string chamber "upper/lower/legislature"
+        string classification "committee/subcommittee"
+        string parent_committee_id FK "If subcommittee"
+        datetime created_date
+        datetime abolished_date
+        boolean is_active
+    }
+    
+    COMMITTEE_MEMBERSHIP {
+        string membership_id PK
+        string committee_id FK
+        string legislator_id FK
+        string role "chair/vice_chair/ranking_member/member"
+        datetime start_date
+        datetime end_date
+        boolean is_active
+    }
+    
+    BILL ||--o{ BILL_SPONSOR : has
+    BILL ||--o{ BILL_ACTION : tracked_by
+    BILL ||--o{ BILL_VERSION : has_versions
+    BILL ||--o{ VOTE_EVENT : subject_of
+    BILL {
+        string bill_id PK "ocd-bill/{uuid}"
+        string jurisdiction_id FK
+        string session_id "2024 Regular Session"
+        string chamber "upper/lower"
+        string identifier "HB 123/SB 456"
+        string title "An Act to provide dental screenings in schools"
+        string classification "bill/resolution/concurrent_resolution"
+        string subject "Health/Education/Budget"
+        string full_text "Complete bill text"
+        string summary "Bill summary"
+        datetime introduced_date
+        datetime first_reading_date
+        datetime second_reading_date
+        datetime third_reading_date
+        datetime committee_referral_date
+        string committee_assigned
+        datetime committee_vote_date
+        string committee_outcome "favorable/unfavorable"
+        datetime floor_vote_date
+        string floor_outcome "passed/failed"
+        datetime signed_date
+        datetime effective_date
+        string status "introduced/committee/floor/passed/failed/signed/vetoed"
+        string source_url "Link to official bill text"
+        datetime last_action_date
+        string last_action_description
+        boolean is_oral_health_related
+        datetime created_at
+        datetime updated_at
+    }
+    
+    BILL_SPONSOR {
+        string sponsor_id PK
+        string bill_id FK
+        string legislator_id FK
+        string sponsor_type "primary/cosponsor"
+        int sponsor_order "1 for primary, 2+ for cosponsors"
+        datetime sponsored_date
+    }
+    
+    BILL_ACTION {
+        string action_id PK
+        string bill_id FK
+        datetime action_date
+        string action_description "Referred to Committee on Health"
+        string action_type "introduction/referral/committee/amendment/vote/signing"
+        string chamber "upper/lower"
+        int sequence_number
+    }
+    
+    BILL_VERSION {
+        string version_id PK
+        string bill_id FK
+        string version_name "As Introduced/Committee Substitute/Enrolled"
+        string full_text "Complete version text"
+        string pdf_url
+        datetime version_date
+        string note "Amendments adopted"
+    }
+    
+    VOTE_EVENT ||--o{ LEGISLATOR_VOTE : includes
+    VOTE_EVENT {
+        string vote_event_id PK "ocd-vote/{uuid}"
+        string bill_id FK
+        string jurisdiction_id FK
+        string chamber "upper/lower"
+        datetime vote_date
+        string motion_text "Passage of HB 123"
+        string motion_classification "passage/amendment/procedural"
+        string result "passed/failed"
+        int yes_count
+        int no_count
+        int abstain_count
+        int absent_count
+        int not_voting_count
+        int total_count
+        float pass_threshold "0.5 for simple majority, 0.67 for supermajority"
+        boolean passed
+        string source_url "Link to official vote record"
+    }
+    
+    LEGISLATOR_VOTE {
+        string legislator_vote_id PK
+        string vote_event_id FK
+        string legislator_id FK
+        string vote_position "yes/no/abstain/absent/not_voting/excused"
+        string voter_name "Name at time of vote"
+        string voter_party "Party at time of vote"
+        string voter_district "District at time of vote"
     }
     
     %% ========================================
@@ -1673,6 +1902,85 @@ erDiagram
         string chamber
         int vote_yes
         int vote_no
+    }
+    
+    %% ========================================
+    %% POLITICAL CAMPAIGN FINANCE (FEC DATA)
+    %% ========================================
+    %% Data Source: OpenFEC API (https://api.open.fec.gov/developers/)
+    %% Tracks individual political contributions, candidates, and committees
+    %% Links to nonprofits via employer matching and officer name matching
+    
+    JURISDICTION ||--o{ POLITICAL_CANDIDATE : represents
+    POLITICAL_CANDIDATE ||--o{ POLITICAL_CONTRIBUTION : receives
+    POLITICAL_COMMITTEE ||--o{ POLITICAL_CONTRIBUTION : receives
+    ORGANIZATION ||--o{ NONPROFIT_POLITICAL_DONOR : employs
+    POLITICAL_CONTRIBUTION ||--o{ NONPROFIT_POLITICAL_DONOR : matched_from
+    
+    POLITICAL_CANDIDATE {
+        string candidate_id PK "FEC candidate ID"
+        string state_code FK
+        string candidate_name
+        string party "DEM, REP, IND, etc"
+        string office "H=House, S=Senate, P=President"
+        string office_full "House, Senate, President"
+        string district "Congressional district (for House)"
+        string election_year
+        string incumbent_challenge "I=Incumbent, C=Challenger, O=Open"
+        string candidate_status "Active, Inactive"
+        int cycle "Election cycle year"
+        datetime created_at
+    }
+    
+    POLITICAL_COMMITTEE {
+        string committee_id PK "FEC committee ID"
+        string state_code FK
+        string committee_name
+        string committee_type "H=House, S=Senate, P=Presidential, N=PAC, Q=Super PAC"
+        string committee_type_full
+        string designation "P=Principal, A=Authorized, J=Joint"
+        string designation_full
+        string party "DEM, REP, etc"
+        string treasurer_name
+        string organization_type
+        string filing_frequency
+        datetime created_at
+    }
+    
+    POLITICAL_CONTRIBUTION {
+        string contribution_id PK "FEC sub_id"
+        string state_code FK
+        string contributor_name
+        string contributor_city
+        string contributor_state
+        string contributor_zip
+        string contributor_employer "Links to ORGANIZATION"
+        string contributor_occupation
+        float contribution_amount
+        datetime contribution_date
+        string recipient_committee_id FK
+        string recipient_committee_name
+        string candidate_id FK
+        string candidate_name
+        string election_type
+        string entity_type "Individual, Committee, etc"
+        string memo_text
+        datetime created_at
+    }
+    
+    %% Analysis table linking political contributions to nonprofit leadership
+    NONPROFIT_POLITICAL_DONOR {
+        string donor_analysis_id PK
+        string ein FK "Links to ORGANIZATION"
+        string organization_name
+        string contributor_name
+        string contributor_title "Inferred from employer or matched from officers"
+        float contribution_amount
+        datetime contribution_date
+        string recipient_name "Committee or candidate name"
+        string candidate_name
+        string match_method "Employer Name, Officer Name Match"
+        datetime created_at
     }
     
     %% ========================================

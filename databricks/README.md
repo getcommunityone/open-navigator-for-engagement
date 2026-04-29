@@ -1,6 +1,11 @@
 # Databricks Agent Bricks Implementation
 
-This directory contains the Databricks Agent Bricks (Mosaic AI Agent Framework) implementation of the Oral Health Policy Finder.
+This directory contains the Databricks Agent Bricks (Mosaic AI Agent Framework) implementation for CommunityOne - a generic civic engagement and community data platform.
+
+## Schema Files
+
+- **`communityone_schema.sql`** - Current comprehensive schema for all community data (jurisdictions, nonprofits, grants, meetings, observations)
+- **`oral_health_schema.sql`** - DEPRECATED - Legacy oral health-specific schema (use communityone_schema.sql instead)
 
 ## Architecture
 
@@ -33,6 +38,37 @@ This directory contains the Databricks Agent Bricks (Mosaic AI Agent Framework) 
         │  Clients       │
         └────────────────┘
 ```
+
+## Database Schema
+
+### CommunityOne Schema (`communityone_schema.sql`)
+
+Comprehensive data warehouse schema supporting:
+
+**Dimension Tables:**
+- `dim_jurisdiction` - Cities, counties, states, school districts
+- `dim_organization` - Nonprofits, foundations, churches (IRS EO-BMF)
+- `dim_geography` - Geographic hierarchies and FIPS codes
+- `dim_date` - Time dimension for temporal analysis
+- `dim_measure` - Community outcome indicators (health, education, economic, social)
+
+**Fact Tables:**
+- `fact_communityone_observation` - Community outcome measurements (replaces fact_oral_health_observation)
+- `fact_grant` - **NEW** Grant transactions (990 Schedule I, 990-PF, USASpending.gov)
+- `fact_nonprofit_finance` - **NEW** Annual 990 filings with revenue breakdowns
+- `fact_jurisdiction_budget` - **NEW** Government budgets and spending
+- `fact_meeting` - **NEW** Government meetings and public hearings
+
+**Bridge Tables:**
+- `bridge_grant_program_area` - **NEW** Multi-purpose grant program areas
+
+### Key Changes from oral_health_schema.sql
+
+✅ **Generic community platform** (not oral health-specific)  
+✅ **Grant tracking system** aligned with ERD documentation  
+✅ **Nonprofit-government relationships** via fact_grant  
+✅ **Foundation giving patterns** (990-PF Schedule I data)  
+✅ **Complete financial transparency** for grants and budgets  
 
 ## Components
 

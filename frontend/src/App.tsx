@@ -8,6 +8,7 @@ import Heatmap from './pages/Heatmap'
 import Documents from './pages/Documents'
 import Opportunities from './pages/Opportunities'
 import Nonprofits from './pages/Nonprofits'
+import NonprofitsHF from './pages/NonprofitsHF'
 import Settings from './pages/Settings'
 import PeopleFinder from './pages/PeopleFinder'
 import DebateFinder from './pages/DebateGrader'
@@ -20,6 +21,8 @@ import Hackathons from './pages/Hackathons'
 import OpenSource from './pages/OpenSource'
 import AdvocacyTopics from './pages/AdvocacyTopics'
 import FactChecking from './pages/FactChecking'
+import UnifiedSearch from './pages/UnifiedSearch'
+import JurisdictionsSearch from './pages/JurisdictionsSearch'
 
 function App() {
   return (
@@ -35,6 +38,8 @@ function App() {
       {/* All other pages with sidebar layout */}
       <Route path="/" element={<Layout />}>
         <Route path="explore" element={<Explore />} />
+        <Route path="search" element={<UnifiedSearch />} />
+        <Route path="jurisdictions" element={<JurisdictionsSearch />} />
         <Route path="dashboard" element={<Dashboard />} />
         <Route path="analytics" element={<Analytics />} />
         <Route path="people" element={<PeopleFinder />} />
@@ -42,6 +47,7 @@ function App() {
         <Route path="documents" element={<Documents />} />
         <Route path="opportunities" element={<Opportunities />} />
         <Route path="nonprofits" element={<Nonprofits />} />
+        <Route path="nonprofits-hf" element={<NonprofitsHF />} />
         <Route path="debate-grader" element={<DebateFinder />} />
         <Route path="profile" element={<Profile />} />
         <Route path="settings" element={<Settings />} />

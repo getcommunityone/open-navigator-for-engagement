@@ -1,15 +1,49 @@
 #!/bin/bash
+set -e
 
-echo "🚀 Starting Open Navigator for Engagement on Hugging Face Spaces"
-echo "=================================================="
-echo ""
-echo "📊 Service Status:"
-echo "  - Documentation: http://localhost:7860/docs"
-echo "  - Main App: http://localhost:7860/"
-echo "  - API: http://localhost:7860/api"
-echo ""
-echo "=================================================="
+echo "🚀 Starting CommunityOne on Hugging Face Spaces..."
+echo "📊 Three services architecture:"
+echo "  1. Documentation (Docusaurus) - Port 3000"
+echo "  2. Main Application (React + Vite) - Port 5173"
+echo "  3. API Backend (FastAPI) - Port 8000"
+echo "  4. Nginx Reverse Proxy - Port 7860 (HF Spaces public port)"
 echo ""
 
-# Start supervisor which manages nginx and FastAPI
+# Create required directories
+mkdir -p /app/logs /app/data /var/log/supervisor
+
+# Verify static files exist
+echo "📁 Verifying static files..."
+if [ -d "/app/static/docs" ]; then
+    echo "✅ Documentation static files found"
+    ls -lh /app/static/docs/ | head -5
+else
+    echo "❌ ERROR: Documentation static files missing at /app/static/docs"
+    exit 1
+fi
+
+if [ -d "/app/static/frontend" ]; then
+    echo "✅ Frontend static files found"
+    ls -lh /app/static/frontend/ | head -5
+else
+    echo "❌ ERROR: Frontend static files missing at /app/static/frontend"
+    exit 1
+fi
+
+# Install serve for static file hosting (if not already installed)
+if ! command -v serve &> /dev/null; then
+    echo "📦 Installing serve for static file hosting..."
+    npm install -g serve
+fi
+
+# Test nginx configuration
+echo "🔧 Testing nginx configuration..."
+nginx -t
+
+# Initialize database if needed
+echo "💾 Initializing database..."
+python -c "from api.database import init_db; init_db()" || echo "⚠️  Database init skipped"
+
+# Start all services with supervisor
+echo "🎬 Starting all services with supervisor..."
 exec /usr/bin/supervisord -c /etc/supervisor/conf.d/supervisord.conf

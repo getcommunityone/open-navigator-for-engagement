@@ -1,2 +1,0 @@
-Build trigger: 2026-04-27-11-00-force-rebuild
-This file forces HuggingFace to rebuild the Docker container.

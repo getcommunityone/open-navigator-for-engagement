@@ -68,11 +68,11 @@ const policyMakerOptions: ExploreCard[] = [
 const advocateOptions: ExploreCard[] = [
   {
     title: 'Nonprofits & Churches',
-    description: 'Search 3M+ nonprofits including 300K+ churches with financial data, programs, and impact metrics.',
+    description: 'Search 43,726 nonprofits including 4,372 churches with financial data from 5 states.',
     icon: BuildingOfficeIcon,
     path: '/nonprofits',
     color: '#354F52',
-    stats: '3M+ organizations',
+    stats: '43,726 organizations',
   },
   {
     title: 'Advocacy Topics',
@@ -474,13 +474,15 @@ export default function Explore() {
               >
                 🤗 View on HuggingFace
               </a>
-              <Link
-                to="/docs/data-sources/data-model-erd"
+              <a
+                href={import.meta.env.PROD ? '/docs/data-sources/data-model-erd' : 'http://localhost:3000/docs/data-sources/data-model-erd'}
+                target="_blank"
+                rel="noopener noreferrer"
                 className="px-6 py-3 rounded-lg font-semibold hover:shadow-lg transition-all border-2"
                 style={{ borderColor: '#354F52', color: '#354F52' }}
               >
                 📊 Explore Data Model
-              </Link>
+              </a>
             </div>
           </div>
         </div>

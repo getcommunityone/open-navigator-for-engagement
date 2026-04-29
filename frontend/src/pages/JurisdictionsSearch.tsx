@@ -1,0 +1,663 @@
+import { useState, useRef, useEffect, Fragment } from 'react'
+import { useSearchParams, Link } from 'react-router-dom'
+import { useQuery } from '@tanstack/react-query'
+import axios from 'axios'
+import { Menu, Transition } from '@headlessui/react'
+import { 
+  MagnifyingGlassIcon, 
+  XMarkIcon,
+  AdjustmentsHorizontalIcon,
+  CheckIcon,
+  MapPinIcon,
+  ChevronDownIcon,
+  Cog6ToothIcon,
+  ArrowRightOnRectangleIcon
+} from '@heroicons/react/24/outline'
+import { useAuth } from '../contexts/AuthContext'
+import JurisdictionDiscovery from '../components/JurisdictionDiscovery'
+
+interface JurisdictionResult {
+  type: 'jurisdiction'
+  title: string
+  subtitle: string
+  description: string
+  url: string
+  score: number
+  metadata: {
+    level?: string
+    state?: string
+    website?: string
+    youtube_channels?: string[]
+    facebook?: string
+    twitter?: string
+    agenda_portal?: string
+    meeting_platform?: string
+    completeness?: number
+  }
+}
+
+interface SearchResponse {
+  query: string
+  total_results: number
+  results: {
+    jurisdictions: JurisdictionResult[]
+  }
+  pagination: {
+    page: number
+    limit: number
+    offset: number
+    total_pages: number
+    has_next: boolean
+    has_prev: boolean
+  }
+  filters: {
+    state?: string
+    jurisdiction_levels?: string[]
+  }
+}
+
+const JURISDICTION_LEVELS = [
+  { id: 'city', label: 'Cities', icon: '🏙️' },
+  { id: 'county', label: 'Counties', icon: '🏛️' },
+  { id: 'state', label: 'States', icon: '🗺️' },
+  { id: 'school_district', label: 'School Districts', icon: '🎓' },
+  { id: 'special_district', label: 'Special Districts', icon: '⚙️' },
+  { id: 'town', label: 'Towns', icon: '🏘️' },
+  { id: 'village', label: 'Villages', icon: '🏡' },
+] as const
+
+export default function JurisdictionsSearch() {
+  const [searchParams, setSearchParams] = useSearchParams()
+  
+  // Initialize state from URL params
+  const [query, setQuery] = useState(() => searchParams.get('q') || '')
+  const [activeQuery, setActiveQuery] = useState(() => searchParams.get('q') || '')
+  const [selectedLevels, setSelectedLevels] = useState<string[]>(() => {
+    const levelsParam = searchParams.get('levels')
+    if (levelsParam) {
+      return levelsParam.split(',').filter(l => 
+        JURISDICTION_LEVELS.some(jl => jl.id === l)
+      )
+    }
+    return []
+  })
+  const [selectedState, setSelectedState] = useState(() => searchParams.get('state') || '')
+  const [currentPage, setCurrentPage] = useState(() => parseInt(searchParams.get('page') || '1'))
+  const [showFilters, setShowFilters] = useState(false)
+  
+  const searchInputRef = useRef<HTMLInputElement>(null)
+  const { user, isAuthenticated, login, logout, isLoading } = useAuth()
+
+  // Initialize from URL parameters on mount
+  useEffect(() => {
+    const queryParam = searchParams.get('q')
+    const stateParam = searchParams.get('state')
+    const levelsParam = searchParams.get('levels')
+    const pageParam = searchParams.get('page')
+    
+    if (queryParam) {
+      setQuery(queryParam)
+      setActiveQuery(queryParam)
+    }
+    if (stateParam) {
+      setSelectedState(stateParam)
+    }
+    if (levelsParam) {
+      const levels = levelsParam.split(',').filter(l => 
+        JURISDICTION_LEVELS.some(jl => jl.id === l)
+      )
+      if (levels.length > 0) {
+        setSelectedLevels(levels)
+      }
+    }
+    if (pageParam) {
+      setCurrentPage(parseInt(pageParam))
+    }
+  }, [searchParams])
+
+  // Main search results
+  const { data: searchResults, isLoading: isSearching, error } = useQuery<SearchResponse>({
+    queryKey: ['jurisdictions-search', activeQuery, selectedLevels, selectedState, currentPage],
+    queryFn: async () => {
+      // Allow searching with query OR with filters (browse mode)
+      if (!activeQuery && !selectedState && !selectedLevels.length) {
+        return null
+      }
+      
+      const params: any = {
+        types: 'jurisdictions',
+        limit: 20,
+        page: currentPage
+      }
+      
+      // Query is optional - can browse by state/level
+      if (activeQuery) {
+        params.q = activeQuery
+      }
+      
+      if (selectedState) {
+        params.state = selectedState
+      }
+      
+      if (selectedLevels.length > 0) {
+        params.jurisdiction_levels = selectedLevels.join(',')
+      }
+      
+      const response = await axios.get('/api/search/', { params })
+      return response.data
+    },
+    // Enable if we have query OR filters (browse mode)
+    enabled: (activeQuery && activeQuery.length >= 2) || selectedState !== '' || selectedLevels.length > 0
+  })
+
+  const handleSearch = (e?: React.FormEvent) => {
+    e?.preventDefault()
+    // Allow search with query OR just filters (browse mode)
+    if (query.trim().length >= 2 || selectedState || selectedLevels.length > 0) {
+      setActiveQuery(query)
+      setCurrentPage(1) // Reset to first page on new search
+      
+      // Update URL
+      const params: any = {}
+      if (query.trim()) params.q = query
+      if (selectedState) params.state = selectedState
+      if (selectedLevels.length > 0) {
+        params.levels = selectedLevels.join(',')
+      }
+      setSearchParams(params)
+    }
+  }
+
+  const handlePageChange = (newPage: number) => {
+    setCurrentPage(newPage)
+    
+    // Update URL
+    const params: any = {}
+    if (activeQuery) params.q = activeQuery
+    if (selectedState) params.state = selectedState
+    if (selectedLevels.length > 0) {
+      params.levels = selectedLevels.join(',')
+    }
+    if (newPage > 1) params.page = newPage.toString()
+    setSearchParams(params)
+    
+    // Scroll to top
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
+  const toggleLevel = (level: string) => {
+    const newLevels = selectedLevels.includes(level)
+      ? selectedLevels.filter(l => l !== level)
+      : [...selectedLevels, level]
+    
+    setSelectedLevels(newLevels)
+    setCurrentPage(1)
+    
+    // Update URL with all current filters
+    const params: any = {}
+    if (activeQuery) params.q = activeQuery
+    if (selectedState) params.state = selectedState
+    if (newLevels.length > 0) {
+      params.levels = newLevels.join(',')
+    }
+    setSearchParams(params)
+  }
+
+  const getLevelColor = (level: string) => {
+    const colors: Record<string, string> = {
+      city: 'bg-blue-100 text-blue-700 border-blue-200',
+      county: 'bg-purple-100 text-purple-700 border-purple-200',
+      state: 'bg-green-100 text-green-700 border-green-200',
+      school_district: 'bg-yellow-100 text-yellow-700 border-yellow-200',
+      special_district: 'bg-orange-100 text-orange-700 border-orange-200',
+      town: 'bg-teal-100 text-teal-700 border-teal-200',
+      village: 'bg-pink-100 text-pink-700 border-pink-200',
+    }
+    return colors[level] || 'bg-gray-100 text-gray-700 border-gray-200'
+  }
+
+  return (
+    <div className="min-h-screen bg-gray-50">
+      {/* Top Navigation Bar */}
+      <div className="bg-white border-b border-gray-200 mb-6">
+        <div className="max-w-6xl mx-auto px-6 py-3 flex items-center justify-between">
+          <Link to="/" className="flex items-center gap-2">
+            <img 
+              src="/communityone_logo.svg" 
+              alt="CommunityOne Logo" 
+              className="h-10"
+            />
+            <h1 className="text-xl font-bold" style={{ color: '#354F52' }}>
+              Open Navigator
+            </h1>
+          </Link>
+          
+          {/* Login/Avatar */}
+          <div className="flex items-center gap-4">
+            {isLoading ? (
+              <div className="px-3 py-2">
+                <div className="animate-spin h-8 w-8 border-3 border-gray-300 border-t-primary-600 rounded-full"></div>
+              </div>
+            ) : isAuthenticated && user ? (
+              <Menu as="div" className="relative">
+                <Menu.Button className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-gray-100 transition-colors">
+                  {user.avatar_url ? (
+                    <img 
+                      src={user.avatar_url} 
+                      alt={user.full_name || user.email}
+                      className="h-9 w-9 rounded-full border-2 border-primary-500 shadow-sm"
+                      onError={(e) => {
+                        e.currentTarget.style.display = 'none';
+                        const fallback = e.currentTarget.nextElementSibling as HTMLElement | null;
+                        if (fallback) fallback.style.display = 'flex';
+                      }}
+                    />
+                  ) : null}
+                  <div 
+                    className="h-9 w-9 rounded-full bg-gradient-to-br from-primary-500 to-primary-600 flex items-center justify-center text-white font-bold text-sm shadow-sm"
+                    style={{ display: user.avatar_url ? 'none' : 'flex' }}
+                  >
+                    {(user.full_name || user.username || user.email).charAt(0).toUpperCase()}
+                  </div>
+                  <span className="text-sm font-medium text-gray-700">
+                    {user.full_name || user.username || user.email.split('@')[0]}
+                  </span>
+                  <ChevronDownIcon className="h-4 w-4 text-gray-600" />
+                </Menu.Button>
+                
+                <Transition
+                  as={Fragment}
+                  enter="transition ease-out duration-100"
+                  enterFrom="transform opacity-0 scale-95"
+                  enterTo="transform opacity-100 scale-100"
+                  leave="transition ease-in duration-75"
+                  leaveFrom="transform opacity-100 scale-100"
+                  leaveTo="transform opacity-0 scale-95"
+                >
+                  <Menu.Items className="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-lg border border-gray-200 focus:outline-none z-50">
+                    <div className="px-4 py-3 border-b border-gray-200">
+                      <p className="text-sm font-medium text-gray-900">{user.full_name || user.username}</p>
+                      <p className="text-xs text-gray-500 truncate">{user.email}</p>
+                    </div>
+                    <div className="py-1">
+                      <Menu.Item>
+                        {({ active }) => (
+                          <Link
+                            to="/settings"
+                            className={`${active ? 'bg-gray-50' : ''} flex items-center gap-2 px-4 py-2 text-sm text-gray-700`}
+                          >
+                            <Cog6ToothIcon className="h-4 w-4" />
+                            Settings
+                          </Link>
+                        )}
+                      </Menu.Item>
+                      <Menu.Item>
+                        {({ active }) => (
+                          <button
+                            onClick={logout}
+                            className={`${active ? 'bg-gray-50' : ''} flex items-center gap-2 w-full px-4 py-2 text-sm text-red-600`}
+                          >
+                            <ArrowRightOnRectangleIcon className="h-4 w-4" />
+                            Sign Out
+                          </button>
+                        )}
+                      </Menu.Item>
+                    </div>
+                  </Menu.Items>
+                </Transition>
+              </Menu>
+            ) : (
+              <button
+                onClick={() => login('huggingface')}
+                className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors font-medium"
+              >
+                Login
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+      
+      <div className="max-w-6xl mx-auto px-6 pb-6">
+        {/* Search Header */}
+        <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
+          <div className="flex items-center gap-2 mb-4">
+            <MapPinIcon className="h-8 w-8 text-primary-600" />
+            <h1 className="text-3xl font-bold text-gray-900">Jurisdiction Search</h1>
+          </div>
+          <p className="text-gray-600 mb-4">
+            Search across 90,000+ cities, counties, states, and school districts
+          </p>
+          
+          {/* Search Bar */}
+          <form onSubmit={handleSearch} className="relative">
+            <div className="relative">
+              <input
+                ref={searchInputRef}
+                type="text"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Search for cities, counties, states, school districts..."
+                className="w-full px-12 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent text-lg text-gray-900"
+              />
+              <MagnifyingGlassIcon className="absolute left-4 top-3.5 h-6 w-6 text-gray-400" />
+              
+              {query && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setQuery('')
+                    setActiveQuery('')
+                    searchInputRef.current?.focus()
+                  }}
+                  className="absolute right-4 top-3.5 text-gray-400 hover:text-gray-600"
+                >
+                  <XMarkIcon className="h-6 w-6" />
+                </button>
+              )}
+            </div>
+          </form>
+
+          {/* Filter Bar */}
+          <div className="mt-4 flex items-center gap-3 flex-wrap">
+            <button
+              onClick={() => setShowFilters(!showFilters)}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg border-2 transition-colors ${
+                showFilters 
+                  ? 'border-primary-500 bg-primary-50 text-primary-700'
+                  : 'border-gray-300 text-gray-700 hover:border-gray-400 hover:bg-gray-50'
+              }`}
+            >
+              <AdjustmentsHorizontalIcon className="h-5 w-5" />
+              Filters
+              {selectedState && (
+                <span className="ml-1 px-2 py-0.5 bg-primary-600 text-white text-xs rounded-full">
+                  1
+                </span>
+              )}
+            </button>
+
+            {/* Jurisdiction Level Pills */}
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-sm text-gray-600 font-medium">Levels:</span>
+              {JURISDICTION_LEVELS.map((level) => (
+                <button
+                  key={level.id}
+                  onClick={() => toggleLevel(level.id)}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-full border-2 transition-all ${
+                    selectedLevels.includes(level.id)
+                      ? `${getLevelColor(level.id)} border-current font-medium shadow-sm`
+                      : 'border-gray-300 bg-white text-gray-600 hover:border-gray-400 hover:bg-gray-50'
+                  }`}
+                >
+                  {selectedLevels.includes(level.id) && (
+                    <CheckIcon className="h-4 w-4 flex-shrink-0" />
+                  )}
+                  <span>{level.icon}</span>
+                  <span>{level.label}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Active Filters Display */}
+          {(selectedState || selectedLevels.length > 0) && (
+            <div className="mt-3 flex items-center gap-2 flex-wrap">
+              <span className="text-sm text-gray-600">Active filters:</span>
+              {selectedState && (
+                <span className="inline-flex items-center gap-1 px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm">
+                  State: {selectedState}
+                  <button
+                    onClick={() => {
+                      setSelectedState('')
+                      setTimeout(() => handleSearch(), 0)
+                    }}
+                    className="hover:bg-blue-200 rounded-full p-0.5"
+                  >
+                    <XMarkIcon className="h-3 w-3" />
+                  </button>
+                </span>
+              )}
+              {selectedLevels.length > 0 && (
+                <span className="inline-flex items-center gap-1 px-3 py-1 bg-purple-100 text-purple-800 rounded-full text-sm">
+                  {selectedLevels.length} Level{selectedLevels.length > 1 ? 's' : ''}
+                  <button
+                    onClick={() => {
+                      setSelectedLevels([])
+                      setTimeout(() => handleSearch(), 0)
+                    }}
+                    className="hover:bg-purple-200 rounded-full p-0.5"
+                  >
+                    <XMarkIcon className="h-3 w-3" />
+                  </button>
+                </span>
+              )}
+            </div>
+          )}
+
+          {/* Advanced Filters Panel */}
+          {showFilters && (
+            <div className="mt-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* State Filter */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    State
+                  </label>
+                  <select
+                    value={selectedState}
+                    onChange={(e) => {
+                      setSelectedState(e.target.value)
+                      setCurrentPage(1)
+                      setTimeout(() => handleSearch(), 0)
+                    }}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-gray-900 bg-white"
+                  >
+                    <option value="" className="text-gray-900">All States</option>
+                    <option value="AL" className="text-gray-900">Alabama</option>
+                    <option value="AK" className="text-gray-900">Alaska</option>
+                    <option value="AZ" className="text-gray-900">Arizona</option>
+                    <option value="AR" className="text-gray-900">Arkansas</option>
+                    <option value="CA" className="text-gray-900">California</option>
+                    <option value="CO" className="text-gray-900">Colorado</option>
+                    <option value="CT" className="text-gray-900">Connecticut</option>
+                    <option value="DE" className="text-gray-900">Delaware</option>
+                    <option value="FL" className="text-gray-900">Florida</option>
+                    <option value="GA" className="text-gray-900">Georgia</option>
+                    <option value="HI" className="text-gray-900">Hawaii</option>
+                    <option value="ID" className="text-gray-900">Idaho</option>
+                    <option value="IL" className="text-gray-900">Illinois</option>
+                    <option value="IN" className="text-gray-900">Indiana</option>
+                    <option value="IA" className="text-gray-900">Iowa</option>
+                    <option value="KS" className="text-gray-900">Kansas</option>
+                    <option value="KY" className="text-gray-900">Kentucky</option>
+                    <option value="LA" className="text-gray-900">Louisiana</option>
+                    <option value="ME" className="text-gray-900">Maine</option>
+                    <option value="MD" className="text-gray-900">Maryland</option>
+                    <option value="MA" className="text-gray-900">Massachusetts</option>
+                    <option value="MI" className="text-gray-900">Michigan</option>
+                    <option value="MN" className="text-gray-900">Minnesota</option>
+                    <option value="MS" className="text-gray-900">Mississippi</option>
+                    <option value="MO" className="text-gray-900">Missouri</option>
+                    <option value="MT" className="text-gray-900">Montana</option>
+                    <option value="NE" className="text-gray-900">Nebraska</option>
+                    <option value="NV" className="text-gray-900">Nevada</option>
+                    <option value="NH" className="text-gray-900">New Hampshire</option>
+                    <option value="NJ" className="text-gray-900">New Jersey</option>
+                    <option value="NM" className="text-gray-900">New Mexico</option>
+                    <option value="NY" className="text-gray-900">New York</option>
+                    <option value="NC" className="text-gray-900">North Carolina</option>
+                    <option value="ND" className="text-gray-900">North Dakota</option>
+                    <option value="OH" className="text-gray-900">Ohio</option>
+                    <option value="OK" className="text-gray-900">Oklahoma</option>
+                    <option value="OR" className="text-gray-900">Oregon</option>
+                    <option value="PA" className="text-gray-900">Pennsylvania</option>
+                    <option value="RI" className="text-gray-900">Rhode Island</option>
+                    <option value="SC" className="text-gray-900">South Carolina</option>
+                    <option value="SD" className="text-gray-900">South Dakota</option>
+                    <option value="TN" className="text-gray-900">Tennessee</option>
+                    <option value="TX" className="text-gray-900">Texas</option>
+                    <option value="UT" className="text-gray-900">Utah</option>
+                    <option value="VT" className="text-gray-900">Vermont</option>
+                    <option value="VA" className="text-gray-900">Virginia</option>
+                    <option value="WA" className="text-gray-900">Washington</option>
+                    <option value="WV" className="text-gray-900">West Virginia</option>
+                    <option value="WI" className="text-gray-900">Wisconsin</option>
+                    <option value="WY" className="text-gray-900">Wyoming</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Clear All Button */}
+              <div className="mt-4">
+                <button
+                  onClick={() => {
+                    setSelectedState('')
+                    setSelectedLevels([])
+                    setTimeout(() => handleSearch(), 0)
+                  }}
+                  className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors"
+                >
+                  Clear All Filters
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Search Results */}
+        {(activeQuery || selectedState || selectedLevels.length > 0 || searchResults) && (
+          <div>
+            {isSearching && (
+              <div className="text-center py-12">
+                <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
+                <p className="mt-4 text-gray-600">Searching...</p>
+              </div>
+            )}
+
+            {error && (
+              <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-center">
+                <p className="text-red-600">Error loading search results. Please try again.</p>
+              </div>
+            )}
+
+            {searchResults && searchResults.total_results !== undefined && searchResults.pagination && (
+              <>
+                {/* Results Summary */}
+                <div className="mb-6">
+                  <h2 className="text-xl font-semibold text-gray-900">
+                    {searchResults.query ? (
+                      <>
+                        {searchResults.total_results.toLocaleString()} jurisdictions for "{searchResults.query}"
+                        {searchResults.total_results > 0 && (
+                          <span className="text-base font-normal text-gray-600 ml-2">
+                            (showing {searchResults.pagination.offset + 1}-
+                            {Math.min(searchResults.pagination.offset + searchResults.pagination.limit, searchResults.total_results)})
+                          </span>
+                        )}
+                      </>
+                    ) : (
+                      <>
+                        {searchResults.total_results.toLocaleString()} jurisdictions
+                        {searchResults.total_results > 0 && (
+                          <span className="text-base font-normal text-gray-600 ml-2">
+                            (showing {searchResults.pagination.offset + 1}-
+                            {Math.min(searchResults.pagination.offset + searchResults.pagination.limit, searchResults.total_results)})
+                          </span>
+                        )}
+                      </>
+                    )}
+                  </h2>
+                  {selectedState && (
+                    <p className="text-sm text-gray-600 mt-1">
+                      Filtered by state: {selectedState}
+                    </p>
+                  )}
+                </div>
+
+                {/* Results */}
+                <div className="space-y-4">
+                  {searchResults.results.jurisdictions.map((result, index) => (
+                    <JurisdictionDiscovery 
+                      key={index} 
+                      jurisdiction={{
+                        name: result.title,
+                        state: result.metadata.state || '',
+                        website: result.metadata.website,
+                        youtube_channels: result.metadata.youtube_channels,
+                        facebook: result.metadata.facebook,
+                        twitter: result.metadata.twitter,
+                        agenda_portal: result.metadata.agenda_portal,
+                        meeting_platform: result.metadata.meeting_platform,
+                        completeness: result.metadata.completeness || 0
+                      }}
+                    />
+                  ))}
+                </div>
+
+                {/* No Results */}
+                {searchResults.total_results === 0 && (
+                  <div className="bg-gray-50 border border-gray-200 rounded-lg p-12 text-center">
+                    <MapPinIcon className="h-16 w-16 text-gray-400 mx-auto mb-4" />
+                    <h3 className="text-xl font-semibold text-gray-900 mb-2">No jurisdictions found</h3>
+                    <p className="text-gray-600">
+                      Try adjusting your search terms or filters
+                    </p>
+                  </div>
+                )}
+
+                {/* Pagination */}
+                {searchResults.total_results > 0 && searchResults.pagination.total_pages > 1 && (
+                  <div className="mt-8 flex items-center justify-center gap-2">
+                    <button
+                      onClick={() => handlePageChange(currentPage - 1)}
+                      disabled={!searchResults.pagination.has_prev}
+                      className={`px-4 py-2 rounded-lg ${
+                        searchResults.pagination.has_prev
+                          ? 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-50'
+                          : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                      }`}
+                    >
+                      Previous
+                    </button>
+                    
+                    <div className="flex items-center gap-2">
+                      {Array.from({ length: Math.min(5, searchResults.pagination.total_pages) }, (_, i) => {
+                        const pageNum = i + 1
+                        return (
+                          <button
+                            key={pageNum}
+                            onClick={() => handlePageChange(pageNum)}
+                            className={`px-4 py-2 rounded-lg ${
+                              currentPage === pageNum
+                                ? 'bg-primary-600 text-white'
+                                : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-50'
+                            }`}
+                          >
+                            {pageNum}
+                          </button>
+                        )
+                      })}
+                    </div>
+                    
+                    <button
+                      onClick={() => handlePageChange(currentPage + 1)}
+                      disabled={!searchResults.pagination.has_next}
+                      className={`px-4 py-2 rounded-lg ${
+                        searchResults.pagination.has_next
+                          ? 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-50'
+                          : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                      }`}
+                    >
+                      Next
+                    </button>
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}

@@ -1,0 +1,1480 @@
+import { useState, useRef, useEffect, Fragment } from 'react'
+import { useNavigate, useSearchParams, Link } from 'react-router-dom'
+import { useQuery } from '@tanstack/react-query'
+import axios from 'axios'
+import { Menu, Transition } from '@headlessui/react'
+import { 
+  MagnifyingGlassIcon, 
+  UserIcon, 
+  CalendarIcon,
+  BuildingOfficeIcon,
+  HeartIcon,
+  XMarkIcon,
+  AdjustmentsHorizontalIcon,
+  CheckIcon,
+  MapPinIcon,
+  ChevronDownIcon,
+  ChevronUpIcon,
+  GlobeAltIcon,
+  VideoCameraIcon,
+  Cog6ToothIcon,
+  ArrowRightOnRectangleIcon
+} from '@heroicons/react/24/outline'
+import { useAuth } from '../contexts/AuthContext'
+import { formatCurrency } from '../utils/formatters'
+
+interface SearchResult {
+  type: 'contact' | 'meeting' | 'organization' | 'cause'
+  title: string
+  subtitle: string
+  description: string
+  url: string
+  score: number
+  metadata: Record<string, any>
+}
+
+interface SearchResponse {
+  query: string
+  total_results: number
+  results: {
+    contacts: SearchResult[]
+    meetings: SearchResult[]
+    organizations: SearchResult[]
+    causes: SearchResult[]
+    jurisdictions?: SearchResult[]
+  }
+  pagination: {
+    page: number
+    limit: number
+    offset: number
+    total_pages: number
+    has_next: boolean
+    has_prev: boolean
+  }
+  filters: {
+    state?: string
+    ntee_code?: string
+    types: string[]
+  }
+}
+
+export default function UnifiedSearch() {
+  const navigate = useNavigate()
+  const [searchParams, setSearchParams] = useSearchParams()
+  
+  // Initialize state directly from URL params (lazy initializer for performance)
+  const [query, setQuery] = useState(() => searchParams.get('q') || '')
+  const [activeQuery, setActiveQuery] = useState(() => searchParams.get('q') || '')
+  const [selectedTypes, setSelectedTypes] = useState<string[]>(() => {
+    const typesParam = searchParams.get('types')
+    if (typesParam) {
+      const types = typesParam.split(',').filter(t => 
+        ['contacts', 'organizations', 'causes', 'meetings'].includes(t.trim())
+      )
+      return types.length > 0 ? types : ['contacts', 'organizations', 'causes']
+    }
+    return ['contacts', 'organizations', 'causes']
+  })
+  const [selectedState, setSelectedState] = useState(() => searchParams.get('state') || '')
+  const [currentPage, setCurrentPage] = useState(() => parseInt(searchParams.get('page') || '1'))
+  const [showFilters, setShowFilters] = useState(false)
+  const [showSuggestions, setShowSuggestions] = useState(false)
+  const [sortBy, setSortBy] = useState(() => searchParams.get('sort') || 'relevance')
+  const [nteeCategory, setNteeCategory] = useState(() => searchParams.get('ntee') || '')
+  const [jurisdictionDetails, setJurisdictionDetails] = useState<any[]>(() => {
+    const detailsParam = searchParams.get('jurisdiction_details')
+    if (detailsParam) {
+      try {
+        return JSON.parse(decodeURIComponent(detailsParam))
+      } catch (e) {
+        return []
+      }
+    }
+    return []
+  })
+  
+  // Derived state: Always have state code available from URL OR jurisdiction details
+  const [effectiveState, setEffectiveState] = useState(() => {
+    const urlState = searchParams.get('state')
+    if (urlState) return urlState
+    
+    // Extract from jurisdiction details if available
+    const detailsParam = searchParams.get('jurisdiction_details')
+    if (detailsParam) {
+      try {
+        const details = JSON.parse(decodeURIComponent(detailsParam))
+        // Find state in jurisdiction hierarchy
+        for (const j of details) {
+          if (j.state) return j.state
+          if (j.type === 'State' || j.type === 'state') {
+            const stateMap: Record<string, string> = {
+              'Massachusetts': 'MA', 'Alabama': 'AL', 'Georgia': 'GA',
+              'Washington': 'WA', 'Wisconsin': 'WI', 'California': 'CA',
+              'Texas': 'TX', 'New York': 'NY', 'Florida': 'FL'
+            }
+            return stateMap[j.name] || j.name
+          }
+        }
+      } catch (e) {
+        // Ignore parse errors
+      }
+    }
+    return ''
+  })
+  const [expandedJurisdictions, setExpandedJurisdictions] = useState<Set<number>>(new Set())
+  const [expandedOrganizations, setExpandedOrganizations] = useState<Set<string>>(new Set())
+  
+  const searchInputRef = useRef<HTMLInputElement>(null)
+  const { user, isAuthenticated, login, logout, isLoading } = useAuth()
+
+  // Initialize from URL parameters on mount
+  useEffect(() => {
+    const queryParam = searchParams.get('q')
+    const stateParam = searchParams.get('state')
+    const typesParam = searchParams.get('types')
+    searchParams.get('page') // Read but don't store
+    searchParams.get('sort') // Read but don't store
+    searchParams.get('ntee') // Read but don't store
+    const jurisdictionDetailsParam = searchParams.get('jurisdiction_details')
+    
+    if (queryParam) {
+      setQuery(queryParam)
+      setActiveQuery(queryParam)
+    }
+    if (stateParam) {
+      setSelectedState(stateParam)
+      setEffectiveState(stateParam)
+    } else if (jurisdictionDetailsParam) {
+      // Extract state from jurisdiction details
+      try {
+        const details = JSON.parse(decodeURIComponent(jurisdictionDetailsParam))
+        setJurisdictionDetails(details)
+        
+        // Find and set effective state
+        for (const j of details) {
+          if (j.state) {
+            setEffectiveState(j.state)
+            break
+          }
+          if (j.type === 'State' || j.type === 'state') {
+            const stateMap: Record<string, string> = {
+              'Massachusetts': 'MA', 'Alabama': 'AL', 'Georgia': 'GA',
+              'Washington': 'WA', 'Wisconsin': 'WI', 'California': 'CA',
+              'Texas': 'TX', 'New York': 'NY', 'Florida': 'FL'
+            }
+            const stateCode = stateMap[j.name] || j.name
+            setEffectiveState(stateCode)
+            break
+          }
+        }
+      } catch (e) {
+        setJurisdictionDetails([])
+      }
+    }
+    if (typesParam) {
+      const types = typesParam.split(',').filter(t => 
+        ['contacts', 'meetings', 'organizations', 'causes'].includes(t.trim())
+      )
+      if (types.length > 0) {
+        setSelectedTypes(types)
+      }
+    }
+  }, [searchParams, effectiveState])
+
+  // Preview/autocomplete query for search suggestions
+  const { data: previewResults } = useQuery<SearchResponse>({
+    queryKey: ['search-preview', query, effectiveState],
+    queryFn: async () => {
+      if (!query || query.length < 2) return null
+      
+      const params: any = {
+        q: query,
+        types: 'causes,contacts,organizations',
+        limit: 3
+      }
+      
+      // Use effectiveState - already computed from URL or jurisdiction details
+      if (effectiveState) {
+        params.state = effectiveState
+      }
+      
+      const response = await axios.get('/api/search/', { params })
+      return response.data
+    },
+    enabled: query.length >= 2 && showSuggestions,
+    staleTime: 1000 // Cache for 1 second to avoid excessive requests
+  })
+
+  // Main search results
+  const { data: searchResults, isLoading: isSearching, error } = useQuery<SearchResponse>({
+    queryKey: ['unified-search', activeQuery, selectedTypes, selectedState, currentPage, sortBy, nteeCategory],
+    queryFn: async () => {
+      // Allow searching with query OR with filters (browse mode)
+      if (!activeQuery && !selectedState && !selectedTypes.length) {
+        return null
+      }
+      
+      const params: any = {
+        types: selectedTypes.join(','),
+        limit: 20,
+        page: currentPage
+      }
+      
+      // Query is optional - can browse by state/type
+      if (activeQuery) {
+        params.q = activeQuery
+      }
+      
+      if (selectedState) {
+        params.state = selectedState
+      }
+      
+      // Add sort and filter parameters
+      if (sortBy && sortBy !== 'relevance') {
+        params.sort = sortBy
+      }
+      
+      if (nteeCategory) {
+        params.ntee_code = nteeCategory
+      }
+      
+      const response = await axios.get('/api/search/', { params })
+      return response.data
+    },
+    // Enable if we have query OR filters (browse mode)
+    enabled: (activeQuery && activeQuery.length >= 2) || selectedState !== '' || selectedTypes.length > 0
+  })
+
+  const handleSearch = (e?: React.FormEvent) => {
+    e?.preventDefault()
+    // Allow search with query OR just filters (browse mode)
+    if (query.trim().length >= 2 || selectedState || selectedTypes.length > 0) {
+      setActiveQuery(query)
+      setShowSuggestions(false)
+      setCurrentPage(1) // Reset to first page on new search
+      
+      // Update URL
+      const params: any = {}
+      if (query.trim()) params.q = query
+      if (selectedState) params.state = selectedState
+      if (selectedTypes.length > 0 && selectedTypes.length < 5) {
+        params.types = selectedTypes.join(',')
+      }
+      if (sortBy && sortBy !== 'relevance') params.sort = sortBy
+      if (nteeCategory) params.ntee = nteeCategory
+      setSearchParams(params)
+    }
+  }
+
+  const handlePageChange = (newPage: number) => {
+    setCurrentPage(newPage)
+    
+    // Update URL
+    const params: any = {}
+    if (activeQuery) params.q = activeQuery
+    if (selectedState) params.state = selectedState
+    if (selectedTypes.length > 0 && selectedTypes.length < 5) {
+      params.types = selectedTypes.join(',')
+    }
+    if (sortBy && sortBy !== 'relevance') params.sort = sortBy
+    if (nteeCategory) params.ntee = nteeCategory
+    if (newPage > 1) params.page = newPage.toString()
+    setSearchParams(params)
+    
+    // Scroll to top
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
+  const handleViewAllCategory = (category: string) => {
+    setActiveQuery(query)
+    setShowSuggestions(false)
+    setSelectedTypes([category])
+    
+    // Update URL with all current filters
+    const params: any = { q: query }
+    if (selectedState) params.state = selectedState
+    params.types = category
+    if (sortBy && sortBy !== 'relevance') params.sort = sortBy
+    if (nteeCategory) params.ntee = nteeCategory
+    setSearchParams(params)
+  }
+
+  const toggleType = (type: string) => {
+    const newTypes = selectedTypes.includes(type)
+      ? selectedTypes.filter(t => t !== type)
+      : [...selectedTypes, type]
+    
+    setSelectedTypes(newTypes)
+    setCurrentPage(1)
+    
+    // Update URL with all current filters
+    const params: any = {}
+    if (activeQuery) params.q = activeQuery
+    if (selectedState) params.state = selectedState
+    if (newTypes.length > 0 && newTypes.length < 5) {
+      params.types = newTypes.join(',')
+    }
+    if (sortBy && sortBy !== 'relevance') params.sort = sortBy
+    if (nteeCategory) params.ntee = nteeCategory
+    setSearchParams(params)
+  }
+
+  const toggleJurisdictionExpansion = (index: number) => {
+    setExpandedJurisdictions(prev => {
+      const newSet = new Set(prev)
+      if (newSet.has(index)) {
+        newSet.delete(index)
+      } else {
+        newSet.add(index)
+      }
+      return newSet
+    })
+  }
+
+  const toggleOrganizationExpansion = (ein: string) => {
+    setExpandedOrganizations(prev => {
+      const newSet = new Set(prev)
+      if (newSet.has(ein)) {
+        newSet.delete(ein)
+      } else {
+        newSet.add(ein)
+      }
+      return newSet
+    })
+  }
+
+  const getTypeIcon = (type: string) => {
+    switch (type) {
+      case 'contact':
+        return <UserIcon className="h-5 w-5" />
+      case 'meeting':
+        return <CalendarIcon className="h-5 w-5" />
+      case 'organization':
+        return <BuildingOfficeIcon className="h-5 w-5" />
+      case 'cause':
+        return <HeartIcon className="h-5 w-5" />
+      default:
+        return null
+    }
+  }
+
+  const getTypeColor = (type: string) => {
+    switch (type) {
+      case 'contact':
+        return 'bg-blue-100 text-blue-700 border-blue-200'
+      case 'meeting':
+        return 'bg-green-100 text-green-700 border-green-200'
+      case 'organization':
+        return 'bg-purple-100 text-purple-700 border-purple-200'
+      case 'cause':
+        return 'bg-pink-100 text-pink-700 border-pink-200'
+      default:
+        return 'bg-gray-100 text-gray-700 border-gray-200'
+    }
+  }
+
+  const ResultCard = ({ result }: { result: SearchResult }) => (
+    <div
+      className="bg-white rounded-lg border border-gray-200 p-4 hover:shadow-md transition-shadow"
+    >
+      <div className="flex items-start gap-3">
+        <div className={`p-2 rounded-lg border ${getTypeColor(result.type)}`}>
+          {getTypeIcon(result.type)}
+        </div>
+        
+        <div className="flex-1">
+          <div className="flex items-start justify-between gap-2">
+            <div className="flex-1">
+              <h3 
+                onClick={() => navigate(result.url)}
+                className="font-semibold text-gray-900 cursor-pointer hover:text-blue-600 mb-1"
+              >
+                {result.title}
+              </h3>
+              <p className="text-sm text-gray-600 mb-2">{result.subtitle}</p>
+            </div>
+            
+            {/* Logo for organizations */}
+            {result.type === 'organization' && (
+              result.metadata?.logo_url ? (
+                <img 
+                  src={result.metadata.logo_url} 
+                  alt={result.title}
+                  className="w-12 h-12 rounded object-contain flex-shrink-0 bg-gray-100 border border-gray-200"
+                  onError={(e) => {
+                    e.currentTarget.style.display = 'none'
+                    const fallback = e.currentTarget.nextElementSibling as HTMLElement | null
+                    if (fallback) fallback.style.display = 'flex'
+                  }}
+                />
+              ) : null
+            )}
+            {result.type === 'organization' && (
+              <div 
+                className="w-12 h-12 rounded flex items-center justify-center text-white text-lg font-bold flex-shrink-0"
+                style={{ 
+                  backgroundColor: '#52796F',
+                  display: result.metadata?.logo_url ? 'none' : 'flex'
+                }}
+              >
+                {result.title.charAt(0)}
+              </div>
+            )}
+          </div>
+          
+          <p className="text-sm text-gray-500 line-clamp-2 mb-2">{result.description}</p>
+          
+          {/* Mission statement for organizations */}
+          {result.type === 'organization' && result.metadata?.mission && (
+            <div className="mt-2 mb-2 p-3 bg-blue-50 border-l-4 border-blue-400 rounded">
+              <p className="text-sm text-gray-700 italic">
+                <span className="font-semibold text-blue-900">Mission: </span>
+                {result.metadata.mission}
+              </p>
+            </div>
+          )}
+          
+          {/* Website link for organizations */}
+          {result.type === 'organization' && result.metadata?.website && (
+            <a
+              href={result.metadata.website}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={(e) => e.stopPropagation()}
+              className="text-sm text-blue-600 hover:text-blue-800 hover:underline inline-flex items-center gap-1 mb-2"
+            >
+              🔗 {result.metadata.website}
+            </a>
+          )}
+          
+          {/* Additional metadata for organizations */}
+          {result.type === 'organization' && result.metadata && (
+            <div className="mt-2 flex flex-wrap gap-2 text-xs">
+              {result.metadata.ein && (
+                <span className="px-2 py-1 bg-gray-100 text-gray-700 rounded">
+                  EIN: {result.metadata.ein}
+                </span>
+              )}
+              {result.metadata.revenue && result.metadata.revenue > 0 && (
+                <span className="px-2 py-1 bg-green-100 text-green-700 rounded">
+                  💰 Revenue: {formatCurrency(result.metadata.revenue)}
+                  {result.metadata.tax_year && ` (${result.metadata.tax_year})`}
+                </span>
+              )}
+              {result.metadata.assets && result.metadata.assets > 0 && (
+                <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded">
+                  📊 Assets: {formatCurrency(result.metadata.assets)}
+                  {result.metadata.tax_year && ` (${result.metadata.tax_year})`}
+                </span>
+              )}
+              {result.metadata.causes && result.metadata.causes.length > 0 && (
+                <span className="px-2 py-1 bg-purple-100 text-purple-700 rounded">
+                  🏷️ {result.metadata.causes.slice(0, 3).join(', ')}
+                </span>
+              )}
+            </div>
+          )}
+          
+          {/* Expandable details for organizations */}
+          {result.type === 'organization' && result.metadata?.ein && (
+            <div className="mt-3">
+              <button
+                onClick={(e) => {
+                  e.stopPropagation()
+                  toggleOrganizationExpansion(result.metadata.ein)
+                }}
+                className="flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900 font-medium"
+              >
+                {expandedOrganizations.has(result.metadata.ein) ? (
+                  <ChevronUpIcon className="h-4 w-4" />
+                ) : (
+                  <ChevronDownIcon className="h-4 w-4" />
+                )}
+                {expandedOrganizations.has(result.metadata.ein) ? 'Hide' : 'Show'} Details
+              </button>
+              
+              {expandedOrganizations.has(result.metadata.ein) && (
+                <div className="mt-3 space-y-3 border-t pt-3">
+                  {/* Financials Section */}
+                  <div>
+                    <h4 className="text-sm font-semibold text-gray-700 mb-2 flex items-center gap-1">
+                      💰 Financial Information
+                      {result.metadata.tax_year && (
+                        <span className="text-xs text-gray-500 font-normal">(Tax Year {result.metadata.tax_year})</span>
+                      )}
+                    </h4>
+                    
+                    {/* Check if ANY financial data exists */}
+                    {!result.metadata.revenue && !result.metadata.assets && !result.metadata.income ? (
+                      <div className="bg-amber-50 p-4 rounded border border-amber-200 text-sm">
+                        <p className="text-amber-800 mb-2">
+                          <span className="font-semibold">📊 Form 990 data not yet available</span>
+                        </p>
+                        <p className="text-amber-700 text-xs">
+                          Financial information from IRS Form 990 filings is being enriched. 
+                          Check back later or visit{' '}
+                          <a 
+                            href={`https://projects.propublica.org/nonprofits/organizations/${result.metadata.ein}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="underline hover:text-amber-900"
+                          >
+                            ProPublica Nonprofit Explorer
+                          </a>
+                          {' '}for current data.
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
+                        <div className="bg-green-50 p-3 rounded border border-green-200">
+                          <div className="text-xs text-green-700 font-medium mb-1">Total Revenue</div>
+                          <div className="text-lg font-bold text-green-900">
+                            {result.metadata.revenue !== null && result.metadata.revenue !== undefined 
+                              ? formatCurrency(result.metadata.revenue) 
+                              : <span className="text-sm text-gray-500">Pending</span>}
+                          </div>
+                        </div>
+                        <div className="bg-blue-50 p-3 rounded border border-blue-200">
+                          <div className="text-xs text-blue-700 font-medium mb-1">Total Assets</div>
+                          <div className="text-lg font-bold text-blue-900">
+                            {result.metadata.assets !== null && result.metadata.assets !== undefined 
+                              ? formatCurrency(result.metadata.assets) 
+                              : <span className="text-sm text-gray-500">Pending</span>}
+                          </div>
+                        </div>
+                        <div className="bg-purple-50 p-3 rounded border border-purple-200">
+                          <div className="text-xs text-purple-700 font-medium mb-1">Net Income</div>
+                          <div className="text-lg font-bold text-purple-900">
+                            {result.metadata.income !== null && result.metadata.income !== undefined 
+                              ? formatCurrency(result.metadata.income) 
+                              : <span className="text-sm text-gray-500">Pending</span>}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                  
+                  {/* Board Members Section - Placeholder */}
+                  <div>
+                    <h4 className="text-sm font-semibold text-gray-700 mb-2 flex items-center gap-1">
+                      👥 Board Members
+                    </h4>
+                    <div className="bg-gray-50 p-3 rounded border border-gray-200 text-sm text-gray-600">
+                      Board member information coming soon
+                    </div>
+                  </div>
+                  
+                  {/* Grants Section - Placeholder */}
+                  <div>
+                    <h4 className="text-sm font-semibold text-gray-700 mb-2 flex items-center gap-1">
+                      📜 Recent Grants
+                    </h4>
+                    <div className="bg-gray-50 p-3 rounded border border-gray-200 text-sm text-gray-600">
+                      Grant information coming soon
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+          
+          {/* Type badge */}
+          <div className="mt-2">
+            <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${getTypeColor(result.type)}`}>
+              {getTypeIcon(result.type)}
+              {result.type.charAt(0).toUpperCase() + result.type.slice(1)}
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+
+  return (
+    <div className="min-h-screen bg-gray-50">
+      {/* Top Navigation Bar */}
+      <div className="bg-white border-b border-gray-200 mb-6">
+        <div className="max-w-6xl mx-auto px-6 py-3 flex items-center justify-between">
+          <Link to="/" className="flex items-center gap-2">
+            <img 
+              src="/communityone_logo.svg" 
+              alt="CommunityOne Logo" 
+              className="h-10"
+            />
+            <h1 className="text-xl font-bold" style={{ color: '#354F52' }}>
+              Open Navigator
+            </h1>
+          </Link>
+          
+          {/* Login/Avatar */}
+          <div className="flex items-center gap-4">
+            {isLoading ? (
+              <div className="px-3 py-2">
+                <div className="animate-spin h-8 w-8 border-3 border-gray-300 border-t-primary-600 rounded-full"></div>
+              </div>
+            ) : isAuthenticated && user ? (
+              <Menu as="div" className="relative">
+                <Menu.Button className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-gray-100 transition-colors">
+                  {user.avatar_url ? (
+                    <img 
+                      src={user.avatar_url} 
+                      alt={user.full_name || user.email}
+                      className="h-9 w-9 rounded-full border-2 border-primary-500 shadow-sm"
+                      onError={(e) => {
+                        e.currentTarget.style.display = 'none';
+                        const fallback = e.currentTarget.nextElementSibling as HTMLElement | null;
+                        if (fallback) fallback.style.display = 'flex';
+                      }}
+                    />
+                  ) : null}
+                  <div 
+                    className="h-9 w-9 rounded-full bg-gradient-to-br from-primary-500 to-primary-600 flex items-center justify-center text-white font-bold text-sm shadow-sm"
+                    style={{ display: user.avatar_url ? 'none' : 'flex' }}
+                  >
+                    {(user.full_name || user.username || user.email).charAt(0).toUpperCase()}
+                  </div>
+                  <span className="text-sm font-medium text-gray-700">
+                    {user.full_name || user.username || user.email.split('@')[0]}
+                  </span>
+                  <ChevronDownIcon className="h-4 w-4 text-gray-600" />
+                </Menu.Button>
+                
+                <Transition
+                  as={Fragment}
+                  enter="transition ease-out duration-100"
+                  enterFrom="transform opacity-0 scale-95"
+                  enterTo="transform opacity-100 scale-100"
+                  leave="transition ease-in duration-75"
+                  leaveFrom="transform opacity-100 scale-100"
+                  leaveTo="transform opacity-0 scale-95"
+                >
+                  <Menu.Items className="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-lg border border-gray-200 focus:outline-none z-50">
+                    <div className="px-4 py-3 border-b border-gray-200">
+                      <p className="text-sm font-medium text-gray-900">{user.full_name || user.username}</p>
+                      <p className="text-xs text-gray-500 truncate">{user.email}</p>
+                    </div>
+                    <div className="py-1">
+                      <Menu.Item>
+                        {({ active }) => (
+                          <Link
+                            to="/settings"
+                            className={`${active ? 'bg-gray-50' : ''} flex items-center gap-2 px-4 py-2 text-sm text-gray-700`}
+                          >
+                            <Cog6ToothIcon className="h-4 w-4" />
+                            Settings
+                          </Link>
+                        )}
+                      </Menu.Item>
+                      <Menu.Item>
+                        {({ active }) => (
+                          <button
+                            onClick={logout}
+                            className={`${active ? 'bg-gray-50' : ''} flex items-center gap-2 w-full px-4 py-2 text-sm text-red-600`}
+                          >
+                            <ArrowRightOnRectangleIcon className="h-4 w-4" />
+                            Sign Out
+                          </button>
+                        )}
+                      </Menu.Item>
+                    </div>
+                  </Menu.Items>
+                </Transition>
+              </Menu>
+            ) : (
+              <button
+                onClick={() => login('huggingface')}
+                className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors font-medium"
+              >
+                Login
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+      
+      <div className="max-w-6xl mx-auto px-6 pb-6">
+        {/* Search Header */}
+        <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
+          <h1 className="text-3xl font-bold text-gray-900 mb-4">Search</h1>
+          
+          {/* Search Bar */}
+          <form onSubmit={handleSearch} className="relative">
+            <div className="relative">
+              <input
+                ref={searchInputRef}
+                type="text"
+                value={query}
+                onChange={(e) => {
+                  setQuery(e.target.value)
+                  setShowSuggestions(true)
+                }}
+                onFocus={() => setShowSuggestions(true)}
+                onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
+                placeholder="Search for people, meetings, organizations, causes..."
+                className="w-full px-12 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent text-lg text-gray-900"
+              />
+              <MagnifyingGlassIcon className="absolute left-4 top-3.5 h-6 w-6 text-gray-400" />
+              
+              {query && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setQuery('')
+                    setActiveQuery('')
+                    searchInputRef.current?.focus()
+                  }}
+                  className="absolute right-4 top-3.5 text-gray-400 hover:text-gray-600"
+                >
+                  <XMarkIcon className="h-6 w-6" />
+                </button>
+              )}
+            </div>
+            
+            {/* Rich Preview Dropdown with Grouped Results */}
+            {showSuggestions && previewResults && previewResults.total_results > 0 && (
+              <div className="absolute z-10 w-full mt-2 bg-white border border-gray-200 rounded-lg shadow-xl max-h-96 overflow-y-auto">
+                
+                {/* Causes Section */}
+                {previewResults.results.causes.length > 0 && (
+                  <div className="border-b border-gray-200">
+                    <div className="px-4 py-2 bg-gray-50 flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <HeartIcon className="h-4 w-4 text-gray-500" />
+                        <span className="text-xs font-semibold text-gray-700 uppercase">Causes</span>
+                      </div>
+                      {previewResults.results.causes.length > 0 && (
+                        <button
+                          onClick={() => handleViewAllCategory('causes')}
+                          className="text-xs text-primary-600 hover:text-primary-700 font-medium"
+                        >
+                          View All
+                        </button>
+                      )}
+                    </div>
+                    {previewResults.results.causes.slice(0, 3).map((result, idx) => (
+                      <button
+                        key={idx}
+                        onClick={() => navigate(result.url)}
+                        className="w-full text-left px-4 py-2 hover:bg-gray-50 flex items-start gap-3 transition-colors"
+                      >
+                        <HeartIcon className="h-5 w-5 text-gray-600 mt-0.5 flex-shrink-0" />
+                        <div className="flex-1 min-w-0">
+                          <div className="font-medium text-gray-900 truncate">{result.title}</div>
+                          <div className="text-sm text-gray-600 truncate">{result.subtitle}</div>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                )}
+
+                {/* People (Contacts) Section */}
+                {previewResults.results.contacts.length > 0 && (
+                  <div className="border-b border-gray-200">
+                    <div className="px-4 py-2 bg-gray-50 flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <UserIcon className="h-4 w-4 text-gray-500" />
+                        <span className="text-xs font-semibold text-gray-700 uppercase">People</span>
+                      </div>
+                      {previewResults.results.contacts.length > 0 && (
+                        <button
+                          onClick={() => handleViewAllCategory('contacts')}
+                          className="text-xs text-primary-600 hover:text-primary-700 font-medium"
+                        >
+                          View All
+                        </button>
+                      )}
+                    </div>
+                    {previewResults.results.contacts.slice(0, 3).map((result, idx) => (
+                      <button
+                        key={idx}
+                        onClick={() => navigate(result.url)}
+                        className="w-full text-left px-4 py-2 hover:bg-gray-50 flex items-start gap-3 transition-colors"
+                      >
+                        <UserIcon className="h-5 w-5 text-gray-600 mt-0.5 flex-shrink-0" />
+                        <div className="flex-1 min-w-0">
+                          <div className="font-medium text-gray-900 truncate">{result.title}</div>
+                          <div className="text-sm text-gray-600 truncate">{result.subtitle}</div>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                )}
+
+                {/* Organizations Section */}
+                {previewResults.results.organizations.length > 0 && (
+                  <div>
+                    <div className="px-4 py-2 bg-gray-50 flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <BuildingOfficeIcon className="h-4 w-4 text-gray-500" />
+                        <span className="text-xs font-semibold text-gray-700 uppercase">Organizations</span>
+                      </div>
+                      {previewResults.results.organizations.length > 0 && (
+                        <button
+                          onClick={() => handleViewAllCategory('organizations')}
+                          className="text-xs text-primary-600 hover:text-primary-700 font-medium"
+                        >
+                          View All
+                        </button>
+                      )}
+                    </div>
+                    {previewResults.results.organizations.slice(0, 3).map((result, idx) => (
+                      <button
+                        key={idx}
+                        onClick={() => navigate(result.url)}
+                        className="w-full text-left px-4 py-2 hover:bg-gray-50 flex items-start gap-3 transition-colors last:rounded-b-lg"
+                      >
+                        {/* Logo with fallback */}
+                        {result.metadata?.logo_url ? (
+                          <img 
+                            src={result.metadata.logo_url} 
+                            alt={result.title}
+                            className="h-10 w-10 rounded object-contain flex-shrink-0 bg-gray-100 border border-gray-200"
+                            onError={(e) => {
+                              e.currentTarget.style.display = 'none'
+                              const fallback = e.currentTarget.nextElementSibling as HTMLElement | null
+                              if (fallback) fallback.style.display = 'flex'
+                            }}
+                          />
+                        ) : null}
+                        <div 
+                          className="h-10 w-10 rounded flex items-center justify-center text-white text-sm font-bold flex-shrink-0"
+                          style={{ 
+                            backgroundColor: '#52796F',
+                            display: result.metadata?.logo_url ? 'none' : 'flex'
+                          }}
+                        >
+                          {result.title.charAt(0)}
+                        </div>
+                        
+                        <div className="flex-1 min-w-0">
+                          <div className="font-medium text-gray-900 truncate">{result.title}</div>
+                          <div className="text-sm text-gray-600 truncate">{result.subtitle}</div>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                )}
+
+                {/* Footer with total results */}
+                <div className="px-4 py-2 bg-gray-50 text-center border-t border-gray-200">
+                  <button
+                    onClick={() => handleSearch()}
+                    className="text-sm text-primary-600 hover:text-primary-700 font-medium"
+                  >
+                    See all {previewResults.total_results} results →
+                  </button>
+                </div>
+              </div>
+            )}
+          </form>
+
+          {/* Filter Bar */}
+          <div className="mt-4 flex items-center gap-3 flex-wrap">
+            <button
+              onClick={() => setShowFilters(!showFilters)}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg border-2 transition-colors ${
+                showFilters 
+                  ? 'border-primary-500 bg-primary-50 text-primary-700'
+                  : 'border-gray-300 text-gray-700 hover:border-gray-400 hover:bg-gray-50'
+              }`}
+            >
+              <AdjustmentsHorizontalIcon className="h-5 w-5" />
+              Filters
+              {(selectedState || sortBy !== 'relevance' || nteeCategory) && (
+                <span className="ml-1 px-2 py-0.5 bg-primary-600 text-white text-xs rounded-full">
+                  {[selectedState, sortBy !== 'relevance' ? 'sorted' : null, nteeCategory].filter(Boolean).length}
+                </span>
+              )}
+            </button>
+
+            {/* Quick Type Filters - Meetings pill on far right */}
+            {(['contacts', 'organizations', 'causes', 'meetings'] as const).map((type) => (
+              <button
+                key={type}
+                onClick={() => toggleType(type)}
+                className={`flex items-center gap-2 px-4 py-2 rounded-full border-2 transition-all ${
+                  selectedTypes.includes(type)
+                    ? `${getTypeColor(type)} border-current font-medium shadow-sm`
+                    : 'border-gray-300 bg-white text-gray-600 hover:border-gray-400 hover:bg-gray-50'
+                }`}
+              >
+                {selectedTypes.includes(type) && (
+                  <CheckIcon className="h-4 w-4 flex-shrink-0" />
+                )}
+                {getTypeIcon(type)}
+                {type.charAt(0).toUpperCase() + type.slice(1)}
+              </button>
+            ))}
+          </div>
+
+          {/* Active Filters Display */}
+          {(selectedState || sortBy !== 'relevance' || nteeCategory || jurisdictionDetails.length > 0) && (
+            <div className="mt-3 flex items-center gap-2 flex-wrap">
+              <span className="text-sm text-gray-600">Active filters:</span>
+              {selectedState && (
+                <span className="inline-flex items-center gap-1 px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm">
+                  State: {selectedState}
+                  <button
+                    onClick={() => {
+                      setSelectedState('')
+                      setTimeout(() => handleSearch(), 0)
+                    }}
+                    className="hover:bg-blue-200 rounded-full p-0.5"
+                  >
+                    <XMarkIcon className="h-3 w-3" />
+                  </button>
+                </span>
+              )}
+              {jurisdictionDetails.length > 0 && (
+                <span className="inline-flex items-center gap-1 px-3 py-1 bg-teal-100 text-teal-800 rounded-full text-sm">
+                  <MapPinIcon className="h-3 w-3" />
+                  {jurisdictionDetails.length} Jurisdictions
+                  <button
+                    onClick={() => {
+                      setJurisdictionDetails([])
+                      const params = new URLSearchParams(window.location.search)
+                      params.delete('jurisdiction_details')
+                      setSearchParams(params)
+                    }}
+                    className="hover:bg-teal-200 rounded-full p-0.5"
+                  >
+                    <XMarkIcon className="h-3 w-3" />
+                  </button>
+                </span>
+              )}
+              {sortBy !== 'relevance' && (
+                <span className="inline-flex items-center gap-1 px-3 py-1 bg-purple-100 text-purple-800 rounded-full text-sm">
+                  Sort: {
+                    sortBy === 'name-asc' ? 'Name A-Z' :
+                    sortBy === 'name-desc' ? 'Name Z-A' :
+                    sortBy === 'revenue-desc' ? 'Revenue ↓' :
+                    sortBy === 'revenue-asc' ? 'Revenue ↑' :
+                    sortBy === 'assets-desc' ? 'Assets ↓' :
+                    sortBy === 'assets-asc' ? 'Assets ↑' : sortBy
+                  }
+                  <button
+                    onClick={() => {
+                      setSortBy('relevance')
+                      setTimeout(() => handleSearch(), 0)
+                    }}
+                    className="hover:bg-purple-200 rounded-full p-0.5"
+                  >
+                    <XMarkIcon className="h-3 w-3" />
+                  </button>
+                </span>
+              )}
+              {nteeCategory && (
+                <span className="inline-flex items-center gap-1 px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm">
+                  Category: {nteeCategory}
+                  <button
+                    onClick={() => {
+                      setNteeCategory('')
+                      setTimeout(() => handleSearch(), 0)
+                    }}
+                    className="hover:bg-green-200 rounded-full p-0.5"
+                  >
+                    <XMarkIcon className="h-3 w-3" />
+                  </button>
+                </span>
+              )}
+            </div>
+          )}
+
+          {/* Advanced Filters Panel */}
+          {showFilters && (
+            <div className="mt-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {/* State Filter */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    State
+                  </label>
+                  <select
+                    value={selectedState}
+                    onChange={(e) => {
+                      setSelectedState(e.target.value)
+                      setCurrentPage(1)
+                      setTimeout(() => handleSearch(), 0)
+                    }}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-gray-900 bg-white"
+                  >
+                    <option value="" className="text-gray-900">All States</option>
+                    <option value="AL" className="text-gray-900">Alabama</option>
+                    <option value="GA" className="text-gray-900">Georgia</option>
+                    <option value="MA" className="text-gray-900">Massachusetts</option>
+                    <option value="WA" className="text-gray-900">Washington</option>
+                    <option value="WI" className="text-gray-900">Wisconsin</option>
+                  </select>
+                </div>
+
+                {/* Sort By */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Sort By
+                  </label>
+                  <select
+                    value={sortBy}
+                    onChange={(e) => {
+                      setSortBy(e.target.value)
+                      setCurrentPage(1)
+                      setTimeout(() => handleSearch(), 0)
+                    }}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-gray-900 bg-white"
+                  >
+                    <option value="relevance" className="text-gray-900">Relevance</option>
+                    <option value="name-asc" className="text-gray-900">Name (A-Z)</option>
+                    <option value="name-desc" className="text-gray-900">Name (Z-A)</option>
+                    <option value="revenue-desc" className="text-gray-900">Revenue (High to Low)</option>
+                    <option value="revenue-asc" className="text-gray-900">Revenue (Low to High)</option>
+                    <option value="assets-desc" className="text-gray-900">Assets (High to Low)</option>
+                    <option value="assets-asc" className="text-gray-900">Assets (Low to High)</option>
+                  </select>
+                </div>
+
+                {/* NTEE Category (for organizations) */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Category (NTEE)
+                  </label>
+                  <select
+                    value={nteeCategory}
+                    onChange={(e) => {
+                      setNteeCategory(e.target.value)
+                      setCurrentPage(1)
+                      setTimeout(() => handleSearch(), 0)
+                    }}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-gray-900 bg-white"
+                    disabled={!selectedTypes.includes('organizations')}
+                  >
+                    <option value="" className="text-gray-900">All Categories</option>
+                    <option value="A" className="text-gray-900">Arts & Culture</option>
+                    <option value="B" className="text-gray-900">Education</option>
+                    <option value="C" className="text-gray-900">Environment</option>
+                    <option value="D" className="text-gray-900">Animal-Related</option>
+                    <option value="E" className="text-gray-900">Health</option>
+                    <option value="F" className="text-gray-900">Mental Health</option>
+                    <option value="G" className="text-gray-900">Diseases</option>
+                    <option value="H" className="text-gray-900">Medical Research</option>
+                    <option value="I" className="text-gray-900">Crime & Legal</option>
+                    <option value="J" className="text-gray-900">Employment</option>
+                    <option value="K" className="text-gray-900">Food & Agriculture</option>
+                    <option value="L" className="text-gray-900">Housing</option>
+                    <option value="M" className="text-gray-900">Public Safety</option>
+                    <option value="N" className="text-gray-900">Recreation & Sports</option>
+                    <option value="O" className="text-gray-900">Youth Development</option>
+                    <option value="P" className="text-gray-900">Human Services</option>
+                    <option value="Q" className="text-gray-900">International</option>
+                    <option value="R" className="text-gray-900">Civil Rights</option>
+                    <option value="S" className="text-gray-900">Community</option>
+                    <option value="T" className="text-gray-900">Philanthropy</option>
+                    <option value="U" className="text-gray-900">Science</option>
+                    <option value="V" className="text-gray-900">Social Science</option>
+                    <option value="W" className="text-gray-900">Public Affairs</option>
+                    <option value="X" className="text-gray-900">Religion</option>
+                    <option value="Y" className="text-gray-900">Mutual Benefit</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Clear All Button */}
+              <div className="mt-4">
+                <button
+                  onClick={() => {
+                    setSelectedState('')
+                    setSortBy('relevance')
+                    setNteeCategory('')
+                    setTimeout(() => handleSearch(), 0)
+                  }}
+                  className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors"
+                >
+                  Clear All Filters
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Search Results */}
+        {(activeQuery || selectedState || searchResults) && (
+          <div>
+            {isSearching && (
+              <div className="text-center py-12">
+                <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
+                <p className="mt-4 text-gray-600">Searching...</p>
+              </div>
+            )}
+
+            {error && (
+              <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-center">
+                <p className="text-red-600">Error loading search results. Please try again.</p>
+              </div>
+            )}
+
+            {searchResults && searchResults.total_results !== undefined && searchResults.pagination && (
+              <>
+                {/* Results Summary */}
+                <div className="mb-6">
+                  <h2 className="text-xl font-semibold text-gray-900">
+                    {searchResults.query ? (
+                      <>
+                        {searchResults.total_results.toLocaleString()} results for "{searchResults.query}"
+                        {searchResults.total_results > 0 && (
+                          <span className="text-base font-normal text-gray-600 ml-2">
+                            (showing {searchResults.pagination.offset + 1}-
+                            {Math.min(searchResults.pagination.offset + searchResults.pagination.limit, searchResults.total_results)})
+                          </span>
+                        )}
+                      </>
+                    ) : (
+                      <>
+                        {searchResults.total_results.toLocaleString()} results
+                        {searchResults.total_results > 0 && (
+                          <span className="text-base font-normal text-gray-600 ml-2">
+                            (showing {searchResults.pagination.offset + 1}-
+                            {Math.min(searchResults.pagination.offset + searchResults.pagination.limit, searchResults.total_results)})
+                          </span>
+                        )}
+                      </>
+                    )}
+                  </h2>
+                  {selectedState && (
+                    <p className="text-sm text-gray-600 mt-1">
+                      Filtered by state: {selectedState}
+                    </p>
+                  )}
+                </div>
+
+                {/* Jurisdiction Details Breakdown */}
+                {jurisdictionDetails.length > 0 && (
+                  <div className="mb-6 p-6 bg-gradient-to-br from-teal-50 to-blue-50 rounded-xl border border-teal-200">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                      <MapPinIcon className="h-6 w-6 text-teal-600" />
+                      Your Jurisdictions
+                    </h3>
+                    <p className="text-sm text-gray-600 mb-4">
+                      When you select a city, you're connected to {jurisdictionDetails.length} levels of government:
+                    </p>
+                    <div className="space-y-3">
+                      {jurisdictionDetails.map((item: any, index: number) => {
+                        const isExpanded = expandedJurisdictions.has(index)
+                        return (
+                          <div
+                            key={index}
+                            className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden transition-all duration-200 hover:shadow-md"
+                          >
+                            {/* Collapsed Header - Always Visible */}
+                            <button
+                              onClick={() => toggleJurisdictionExpansion(index)}
+                              className="w-full flex items-center justify-between p-4 text-left hover:bg-gray-50 transition-colors"
+                            >
+                              <div className="flex-1">
+                                <div className="flex items-center gap-2">
+                                  <span className="font-semibold text-gray-900">{item.type}</span>
+                                  <span className="text-gray-400">•</span>
+                                  <span className="text-gray-700">{item.name}</span>
+                                </div>
+                                {!isExpanded && (
+                                  <div className="text-sm text-gray-500 mt-1">
+                                    Click to view details and discover data sources
+                                  </div>
+                                )}
+                              </div>
+                              <div className="flex items-center gap-3">
+                                <CheckIcon className="h-5 w-5 text-green-600 flex-shrink-0" />
+                                {isExpanded ? (
+                                  <ChevronUpIcon className="h-5 w-5 text-gray-400 flex-shrink-0" />
+                                ) : (
+                                  <ChevronDownIcon className="h-5 w-5 text-gray-400 flex-shrink-0" />
+                                )}
+                              </div>
+                            </button>
+
+                            {/* Expanded Details */}
+                            {isExpanded && (
+                              <div className="px-4 pb-4 border-t border-gray-100 bg-gray-50">
+                                <div className="mt-4 space-y-3">
+                                  {/* Jurisdiction Info */}
+                                  <div className="grid grid-cols-2 gap-4">
+                                    <div>
+                                      <div className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">Type</div>
+                                      <div className="text-sm text-gray-900">{item.type}</div>
+                                    </div>
+                                    <div>
+                                      <div className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">Name</div>
+                                      <div className="text-sm text-gray-900">{item.name}</div>
+                                    </div>
+                                    {item.count !== undefined && (
+                                      <div>
+                                        <div className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">Count</div>
+                                        <div className="text-sm text-gray-900">{item.count.toLocaleString()}</div>
+                                      </div>
+                                    )}
+                                  </div>
+
+                                  {/* Discover Data Sources Button */}
+                                  <div className="pt-3 border-t border-gray-200">
+                                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                                      <div className="flex items-start gap-3">
+                                        <div className="flex-shrink-0">
+                                          <GlobeAltIcon className="h-5 w-5 text-blue-600" />
+                                        </div>
+                                        <div className="flex-1">
+                                          <h4 className="text-sm font-semibold text-blue-900 mb-1">
+                                            Automated Data Discovery
+                                          </h4>
+                                          <p className="text-xs text-blue-700 mb-3">
+                                            Automatically find official websites, meeting agendas, YouTube channels, and social media for this jurisdiction.
+                                          </p>
+                                          <button
+                                            onClick={(e) => {
+                                              e.stopPropagation()
+                                              // Navigate to discovery page
+                                              const searchQuery = `${item.name} ${item.type}`
+                                              navigate(`/discovery?q=${encodeURIComponent(searchQuery)}&jurisdiction=${encodeURIComponent(item.name)}`)
+                                            }}
+                                            className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
+                                          >
+                                            <MagnifyingGlassIcon className="h-4 w-4" />
+                                            Discover Data Sources
+                                          </button>
+                                        </div>
+                                      </div>
+                                    </div>
+                                  </div>
+
+                                  {/* What We'll Find */}
+                                  <div className="pt-3 border-t border-gray-200">
+                                    <div className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">
+                                      What We'll Discover
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-2 text-sm">
+                                      <div className="flex items-center gap-2 text-gray-700">
+                                        <GlobeAltIcon className="h-4 w-4 text-gray-400" />
+                                        Official Website
+                                      </div>
+                                      <div className="flex items-center gap-2 text-gray-700">
+                                        <CalendarIcon className="h-4 w-4 text-gray-400" />
+                                        Meeting Agendas
+                                      </div>
+                                      <div className="flex items-center gap-2 text-gray-700">
+                                        <VideoCameraIcon className="h-4 w-4 text-gray-400" />
+                                        YouTube Channels
+                                      </div>
+                                      <div className="flex items-center gap-2 text-gray-700">
+                                        <BuildingOfficeIcon className="h-4 w-4 text-gray-400" />
+                                        Social Media
+                                      </div>
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        )
+                      })}
+                    </div>
+                    <div className="mt-4 p-4 bg-blue-100 rounded-lg">
+                      <p className="text-sm text-blue-900">
+                        <strong>💡 Why this matters:</strong> Each jurisdiction has its own meetings, budgets, and leaders that affect your daily life. Track all of them in one place.
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Results by Type */}
+                {selectedTypes.includes('contacts') && searchResults.results?.contacts && searchResults.results.contacts.length > 0 && (
+                  <div className="mb-8">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                      <UserIcon className="h-6 w-6 text-blue-600" />
+                      People ({searchResults.results.contacts.length})
+                    </h3>
+                    <div className="grid grid-cols-1 gap-4">
+                      {searchResults.results.contacts.map((result, idx) => (
+                        <ResultCard key={idx} result={result} />
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {selectedTypes.includes('meetings') && searchResults.results?.meetings && searchResults.results.meetings.length > 0 && (
+                  <div className="mb-8">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                      <CalendarIcon className="h-6 w-6 text-green-600" />
+                      Meetings ({searchResults.results.meetings.length})
+                    </h3>
+                    <div className="grid grid-cols-1 gap-4">
+                      {searchResults.results.meetings.map((result, idx) => (
+                        <ResultCard key={idx} result={result} />
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {selectedTypes.includes('organizations') && searchResults.results?.organizations && searchResults.results.organizations.length > 0 && (
+                  <div className="mb-8">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                      <BuildingOfficeIcon className="h-6 w-6 text-purple-600" />
+                      Organizations ({searchResults.results.organizations.length})
+                    </h3>
+                    <div className="grid grid-cols-1 gap-4">
+                      {searchResults.results.organizations.map((result, idx) => (
+                        <ResultCard key={idx} result={result} />
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {selectedTypes.includes('causes') && searchResults.results?.causes && searchResults.results.causes.length > 0 && (
+                  <div className="mb-8">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                      <HeartIcon className="h-6 w-6 text-pink-600" />
+                      Causes ({searchResults.results.causes.length})
+                    </h3>
+                    <div className="grid grid-cols-1 gap-4">
+                      {searchResults.results.causes.map((result, idx) => (
+                        <ResultCard key={idx} result={result} />
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {selectedTypes.includes('jurisdictions') && searchResults.results?.jurisdictions && searchResults.results.jurisdictions.length > 0 && (
+                  <div className="mb-8">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                      <MapPinIcon className="h-6 w-6 text-orange-600" />
+                      Jurisdictions ({searchResults.results.jurisdictions.length})
+                    </h3>
+                    <div className="grid grid-cols-1 gap-4">
+                      {searchResults.results.jurisdictions.map((result, idx) => (
+                        <ResultCard key={idx} result={result} />
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* No Results */}
+                {searchResults.total_results === 0 && (
+                  <div className="text-center py-12 bg-white rounded-lg border border-gray-200">
+                    <MagnifyingGlassIcon className="h-16 w-16 text-gray-300 mx-auto mb-4" />
+                    <h3 className="text-lg font-semibold text-gray-900 mb-2">No results found</h3>
+                    <p className="text-gray-600">
+                      Try different keywords or adjust your filters
+                    </p>
+                  </div>
+                )}
+
+                {/* Pagination Controls */}
+                {searchResults.total_results > 0 && searchResults.pagination.total_pages > 1 && (
+                  <div className="mt-8 flex items-center justify-between bg-white rounded-lg border border-gray-200 p-4">
+                    <div className="text-sm text-gray-600">
+                      Page {searchResults.pagination.page} of {searchResults.pagination.total_pages}
+                      <span className="ml-2">•</span>
+                      <span className="ml-2">{searchResults.total_results} total results</span>
+                    </div>
+                    
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => handlePageChange(searchResults.pagination.page - 1)}
+                        disabled={!searchResults.pagination.has_prev}
+                        className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                          searchResults.pagination.has_prev
+                            ? 'bg-primary-600 text-white hover:bg-primary-700'
+                            : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                        }`}
+                      >
+                        ← Previous
+                      </button>
+                      
+                      {/* Page numbers */}
+                      <div className="flex items-center gap-1">
+                        {Array.from({ length: Math.min(5, searchResults.pagination.total_pages) }, (_, i) => {
+                          const pageNum = Math.max(
+                            1,
+                            Math.min(
+                              searchResults.pagination.page - 2 + i,
+                              searchResults.pagination.total_pages - 4
+                            )
+                          ) + Math.min(i, 4)
+                          
+                          if (pageNum > searchResults.pagination.total_pages) return null
+                          
+                          return (
+                            <button
+                              key={pageNum}
+                              onClick={() => handlePageChange(pageNum)}
+                              className={`px-3 py-1 rounded ${
+                                pageNum === searchResults.pagination.page
+                                  ? 'bg-primary-600 text-white font-semibold'
+                                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                              }`}
+                            >
+                              {pageNum}
+                            </button>
+                          )
+                        })}
+                      </div>
+                      
+                      <button
+                        onClick={() => handlePageChange(searchResults.pagination.page + 1)}
+                        disabled={!searchResults.pagination.has_next}
+                        className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                          searchResults.pagination.has_next
+                            ? 'bg-primary-600 text-white hover:bg-primary-700'
+                            : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                        }`}
+                      >
+                        Next →
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+        )}
+
+        {/* Initial State - Search Examples */}
+        {!activeQuery && (
+          <div className="bg-white rounded-lg shadow-sm p-8">
+            {(selectedState || selectedTypes.length < 5) && (
+              <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                <p className="text-blue-800 font-medium">
+                  {selectedState && `State filter: ${selectedState}`}
+                  {selectedState && selectedTypes.length < 5 && ' • '}
+                  {selectedTypes.length < 5 && `Type filter: ${selectedTypes.join(', ')}`}
+                </p>
+                <p className="text-blue-700 text-sm mt-1">
+                  Enter a search query above to see results with these filters applied.
+                </p>
+              </div>
+            )}
+            <h2 className="text-xl font-semibold text-gray-900 mb-6">Try searching for:</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {[
+                { query: 'dental health', icon: HeartIcon, description: 'Find organizations and meetings about dental health' },
+                { query: 'affordable housing', icon: BuildingOfficeIcon, description: 'Discover housing-related initiatives' },
+                { query: 'school board', icon: CalendarIcon, description: 'View school board meetings and decisions' },
+                { query: 'mental health', icon: HeartIcon, description: 'Explore mental health programs and services' },
+              ].map((example, idx) => (
+                <button
+                  key={idx}
+                  onClick={() => {
+                    setQuery(example.query)
+                    setActiveQuery(example.query)
+                  }}
+                  className="text-left p-4 border-2 border-gray-200 rounded-lg hover:border-primary-500 hover:bg-primary-50 transition-colors"
+                >
+                  <div className="flex items-center gap-3 mb-2">
+                    <example.icon className="h-6 w-6 text-primary-600" />
+                    <span className="font-semibold text-gray-900">{example.query}</span>
+                  </div>
+                  <p className="text-sm text-gray-600">{example.description}</p>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}

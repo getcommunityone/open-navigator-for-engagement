@@ -49,38 +49,38 @@ This documentation is organized by audience. Click the section that best describ
 
 ## Platform Scale
 
-Open Navigator provides access to comprehensive data across the United States:
+Open Navigator provides access to comprehensive data from 5 states:
 
 <div style={{display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px', margin: '30px 0', textAlign: 'center'}}>
 
 <div style={{padding: '20px', background: '#f5f5f5', borderRadius: '8px'}}>
-  <div style={{fontSize: '2.5em', fontWeight: 'bold', color: '#2196F3'}}>90,000+</div>
+  <div style={{fontSize: '2.5em', fontWeight: 'bold', color: '#2196F3'}}>925</div>
   <div style={{marginTop: '10px', color: '#666'}}>Government Jurisdictions</div>
 </div>
 
 <div style={{padding: '20px', background: '#f5f5f5', borderRadius: '8px'}}>
-  <div style={{fontSize: '2.5em', fontWeight: 'bold', color: '#4CAF50'}}>3,000,000+</div>
+  <div style={{fontSize: '2.5em', fontWeight: 'bold', color: '#4CAF50'}}>43,726</div>
   <div style={{marginTop: '10px', color: '#666'}}>Nonprofit Organizations</div>
 </div>
 
 <div style={{padding: '20px', background: '#f5f5f5', borderRadius: '8px'}}>
-  <div style={{fontSize: '2.5em', fontWeight: 'bold', color: '#FF9800'}}>3,144</div>
-  <div style={{marginTop: '10px', color: '#666'}}>U.S. Counties</div>
+  <div style={{fontSize: '2.5em', fontWeight: 'bold', color: '#FF9800'}}>6,913</div>
+  <div style={{marginTop: '10px', color: '#666'}}>Meeting Minutes Analyzed</div>
 </div>
 
 <div style={{padding: '20px', background: '#f5f5f5', borderRadius: '8px'}}>
-  <div style={{fontSize: '2.5em', fontWeight: 'bold', color: '#9C27B0'}}>19,500+</div>
-  <div style={{marginTop: '10px', color: '#666'}}>Cities & Municipalities</div>
+  <div style={{fontSize: '2.5em', fontWeight: 'bold', color: '#9C27B0'}}>362</div>
+  <div style={{marginTop: '10px', color: '#666'}}>Elected Officials</div>
 </div>
 
 <div style={{padding: '20px', background: '#f5f5f5', borderRadius: '8px'}}>
-  <div style={{fontSize: '2.5em', fontWeight: 'bold', color: '#F44336'}}>13,000+</div>
+  <div style={{fontSize: '2.5em', fontWeight: 'bold', color: '#F44336'}}>306</div>
   <div style={{marginTop: '10px', color: '#666'}}>School Districts</div>
 </div>
 
 <div style={{padding: '20px', background: '#f5f5f5', borderRadius: '8px'}}>
-  <div style={{fontSize: '2.5em', fontWeight: 'bold', color: '#00BCD4'}}>50</div>
-  <div style={{marginTop: '10px', color: '#666'}}>States (All U.S. States)</div>
+  <div style={{fontSize: '2.5em', fontWeight: 'bold', color: '#00BCD4'}}>5</div>
+  <div style={{marginTop: '10px', color: '#666'}}>States with Full IRS Data</div>
 </div>
 
 </div>
@@ -257,7 +257,7 @@ For production deployment options, see:
 <div className="card" style={{padding: '20px'}}>
   <h3>Citations</h3>
   <p>View complete citations, licenses, and data source attribution.</p>
-  <p><strong><a href="/data-sources/citations">View Citations →</a></strong></p>
+  <p><strong><a href="/docs/data-sources/citations">View Citations →</a></strong></p>
 </div>
 
 </div>

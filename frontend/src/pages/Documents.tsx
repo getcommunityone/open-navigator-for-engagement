@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useSearchParams } from 'react-router-dom'
-import axios from 'axios'
 import { MagnifyingGlassIcon } from '@heroicons/react/24/outline'
+import api from '../lib/api'
 
 interface Document {
   id: string
@@ -31,7 +31,7 @@ export default function Documents() {
   const { data, isLoading } = useQuery({
     queryKey: ['documents', searchQuery, page],
     queryFn: async () => {
-      const response = await axios.get('/api/documents', {
+      const response = await api.get('/documents', {
         params: { search: searchQuery, page, limit: 20 },
       })
       return response.data

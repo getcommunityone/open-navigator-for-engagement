@@ -12,26 +12,25 @@ This document lists all nonprofit data sources and reference websites used by Op
 
 ### ProPublica Nonprofit Explorer ⭐
 
-**Source:** ProPublica  
-**URL:** https://projects.propublica.org/nonprofits/  
-**API:** https://projects.propublica.org/nonprofits/api  
+**Source:** IRS Business Master File (BMF)  
+**URL:** https://www.irs.gov/charities-non-profits/tax-exempt-organization-search-bulk-data-downloads  
 
 **What It Contains:**
-- **3M+ nonprofit organizations** (all IRS-registered 501(c) organizations)
+- **43,726 nonprofit organizations** (from 5 states with full IRS BMF data)
 - **IRS Form 990 data** - Complete financial disclosures
 - Revenue, expenses, assets, and liabilities
 - Executive compensation
 - Mission statements and program descriptions
-- Historical filings (10+ years of data)
+- NTEE codes for categorization
 
 **Why We Use It:**
-> "ProPublica's Nonprofit Explorer provides the most comprehensive, free, public access to IRS Form 990 data. It includes every nonprofit that files with the IRS."
+> "The IRS Business Master File provides the most authoritative, complete data on tax-exempt organizations directly from the IRS."
 
 **Coverage:**
-- ✅ **Volume:** 3M+ organizations
-- ✅ **Free API:** No rate limits for non-commercial use
+- ✅ **Volume:** 43,726 organizations from 5 states
+- ✅ **Free Access:** Public domain data
 - ✅ **Data Quality:** Direct from IRS filings
-- ✅ **Historical Data:** Multiple years available
+- ✅ **Monthly Updates:** Refreshed regularly
 
 ---
 
@@ -156,7 +155,122 @@ These sites provide additional nonprofit evaluation and ratings. They are not cu
 
 ---
 
-## 📈 Integration Roadmap
+## � Grant Research & Fundraising Platforms
+
+These platforms help nonprofits find grant opportunities and manage fundraising. They're built on open-source principles or community-funded models to keep data accessible.
+
+### Grantmakers.io ⭐ - "The Gold Standard for Free Grant Research"
+
+**Source:** Community-supported open-source project  
+**URL:** https://www.grantmakers.io/  
+**Cost:** 100% FREE, no login required  
+
+**What It Provides:**
+- **Lightning-fast search** through IRS 990-PF data (private foundation tax returns)
+- **Foundation giving histories** - See who funded what organizations
+- **Grantee databases** - Find all grants made to specific nonprofits
+- **Geographic targeting** - Search by state, city, or region
+- **Year-over-year trends** - Track foundation giving patterns
+- **No barriers** - Zero account creation, API keys, or paywalls
+
+**Coverage:**
+- ✅ **75,000+ grantmaking foundations** filing Form 990-PF
+- ✅ **Millions of grant records** searchable instantly
+- ✅ **Full foundation financials** - Assets, officers, giving patterns
+- ✅ **Historical data** - Multi-year foundation trends
+
+**Why It's Special:**
+> "Grantmakers.io is the gold standard for 'free as in freedom.' It's community-supported to remain accessible forever, with no login walls or premium tiers."
+
+**Use Cases:**
+- **Grant Prospecting:** Find foundations that funded similar organizations in your area
+- **Relationship Research:** Identify foundations supporting oral health, public health, civic engagement
+- **Competitive Analysis:** See which nonprofits are getting grants in your field
+- **Foundation Vetting:** Review foundation assets and giving patterns before applying
+
+**Example Searches:**
+- Foundations that funded "fluoridation" or "oral health" projects
+- Grantmakers in Massachusetts supporting health policy advocacy
+- Foundations with >$10M assets funding civic engagement
+- All grants made by Robert Wood Johnson Foundation to Alabama nonprofits
+
+---
+
+### Zeffy ⭐ - "100% Free Fundraising with AI Grant Matching"
+
+**Source:** Zeffy, Inc.  
+**URL:** https://www.zeffy.com/  
+**Cost:** 100% FREE for nonprofits (donor-covered fees model)  
+
+**What It Provides:**
+- **100% free fundraising platform** (no platform fees, ever)
+- **AI-powered grant matching** - Machine learning matches your mission to opportunities
+- **Grant alerts** - Email notifications for new matching grants
+- **All-in-one tools** - Donations, events, memberships, grant discovery in one system
+- **North America coverage** - U.S. and Canadian grant databases
+
+**Why It's Unique:**
+Traditional fundraising platforms charge 3-5% fees on donations. Zeffy's donor-covered model means **100% of donations go to your organization**, making it ideal for grassroots oral health advocacy groups.
+
+**Grant Discovery Features:**
+- **Mission-based matching:** Upload your mission, get matched grants
+- **Federal grants:** Monitors Grants.gov for opportunities
+- **Foundation grants:** Tracks private foundation RFPs
+- **Corporate giving:** Alerts for corporate philanthropy programs
+- **Local grants:** Community foundation and regional funder opportunities
+
+**Use Cases for Open Navigator:**
+- **Nonprofit fundraising:** Zero-cost donation processing for organizations
+- **Grant prospecting:** AI helps match oral health nonprofits to relevant grants
+- **Event fundraising:** Free ticketing for fundraising galas, community events
+- **Membership management:** Track supporters, volunteers, members at no cost
+
+---
+
+### Community Foundations - "Local Grants Often Overlooked"
+
+**Source:** Council on Foundations  
+**Locator:** https://www.cof.org/community-foundation-locator  
+**Coverage:** 700+ community foundations across the U.S.  
+
+**What They Are:**
+Community foundations are public charities that pool donations from individuals, families, and businesses to support local nonprofits through competitive grants, scholarships, and donor-advised funds.
+
+**Why They Matter:**
+- 🏘️ **Local focus:** Prioritize organizations in their specific region
+- 💵 **Accessible grants:** $500-$50,000 range, ideal for grassroots groups
+- 🤝 **Relationship-based:** Know local issues and local leaders
+- 📋 **Simpler applications:** Less bureaucratic than federal grants
+- ⚡ **Faster decisions:** Quarterly or rolling deadlines
+- 🎯 **Mission alignment:** Support community health, civic engagement, education
+
+**Examples:**
+
+| Foundation | Region | Website | Grant Focus |
+|------------|--------|---------|-------------|
+| Central Alabama Community Foundation | Birmingham, AL | https://www.cacfbirmingham.org/ | Health, education, civic engagement |
+| Boston Foundation | Boston, MA | https://www.tbf.org/ | Health, housing, civic participation |
+| Community Foundation of Greater Memphis | Memphis, TN | https://www.cfgm.org/ | Health, youth, community engagement |
+| Silicon Valley Community Foundation | San Francisco Bay | https://www.siliconvalleycf.org/ | Health, education, environment |
+| Seattle Foundation | Seattle, WA | https://www.seattlefoundation.org/ | Racial equity, community health |
+
+**How to Find Your Local Community Foundation:**
+1. **Council on Foundations Directory:** https://www.cof.org/community-foundation-locator
+2. **Candid Foundation Finder:** https://candid.org/find-us/foundation-finder
+3. **Google Search:** "[Your City] Community Foundation"
+
+**Grant Opportunities:**
+- **Competitive grants:** Open RFPs for nonprofits in specific focus areas
+- **Capacity building:** Support for operations, staffing, strategic planning
+- **Donor-advised funds:** Individuals/families make grants through the foundation
+- **Fiscal sponsorship:** Some sponsor projects for groups without 501(c)(3) status
+
+**For Oral Health Advocacy:**
+Many community foundations have health equity or preventive health focus areas that align perfectly with fluoridation advocacy, dental access programs, and oral health education. They're often the **best first step** for local grassroots campaigns.
+
+---
+
+## �📈 Integration Roadmap
 
 ### Phase 1: ✅ **Implemented**
 - ProPublica Nonprofit Explorer (3M+ orgs via API)

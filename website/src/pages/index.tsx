@@ -11,6 +11,8 @@ import styles from './index.module.css';
 
 function HomepageHeader() {
   const {siteConfig} = useDocusaurusContext();
+  // Get app URL from custom fields (safe for client-side code)
+  const APP_URL = siteConfig.customFields?.appUrl as string || 'https://www.communityone.com';
   const logoUrl = useBaseUrl('/img/communityone_logo.svg');
   return (
     <header className={clsx('hero hero--primary', styles.heroBanner)}>
@@ -35,6 +37,9 @@ function HomepageHeader() {
 }
 
 function AudiencePathways() {
+  const {siteConfig} = useDocusaurusContext();
+  const APP_URL = siteConfig.customFields?.appUrl as string || 'https://www.communityone.com';
+  
   return (
     <section className="container margin-vert--xl">
       <div className="row">
@@ -92,7 +97,7 @@ function AudiencePathways() {
                 Start Here: Advocacy Docs →
               </Link>
               <div style={{ marginTop: '1rem', fontSize: '0.9rem', color: '#555' }}>
-                <a href="http://localhost:5173" style={{ fontWeight: 'bold' }}>
+                <a href={APP_URL} style={{ fontWeight: 'bold' }}>
                   🚀 Or launch the app immediately
                 </a>
               </div>
@@ -317,6 +322,9 @@ function WhyItMatters() {
 }
 
 function GetStartedCTA() {
+  const {siteConfig} = useDocusaurusContext();
+  const APP_URL = siteConfig.customFields?.appUrl as string || 'https://www.communityone.com';
+  
   return (
     <section style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', padding: '4rem 0', color: 'white' }}>
       <div className="container text--center">
@@ -341,7 +349,7 @@ function GetStartedCTA() {
           </Link>
           <Link
             className="button button--secondary button--lg"
-            href="http://localhost:5173"
+            href={APP_URL}
             style={{ minWidth: '200px' }}>
             🚀 Launch App
           </Link>

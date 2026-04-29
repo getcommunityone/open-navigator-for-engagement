@@ -59,6 +59,98 @@ July 2023, Toronto, Canada.
 - Source: https://dataverse.harvard.edu/
 - License: Varies by dataset
 
+### **City Scrapers** ⭐
+- Open source civic tech project for scraping local government meetings
+- Organization: Documenters.org / City Bureau
+- Source: https://cityscrapers.org/
+- GitHub: https://github.com/city-scrapers
+- License: MIT License (open source)
+- Coverage: Chicago, Pittsburgh, Detroit, Cleveland, Los Angeles (250+ government agencies)
+- What we use: Validated meeting URLs, Legistar/Granicus platform endpoints, spider code for scraper patterns
+- Used for: Meeting discovery, URL extraction, platform detection, scraper validation
+
+**City Scrapers Repositories:**
+- Chicago: https://github.com/city-scrapers/city-scrapers (~100 agencies)
+- Pittsburgh: https://github.com/city-scrapers/city-scrapers-pitt (~30 agencies)
+- Detroit: https://github.com/city-scrapers/city-scrapers-detroit (~40 agencies)
+- Cleveland: https://github.com/city-scrapers/city-scrapers-cle (~30 agencies)
+- Los Angeles: https://github.com/city-scrapers/city-scrapers-la (~50 agencies)
+
+**BibTeX:**
+```bibtex
+@software{city_scrapers,
+    title = {City Scrapers},
+    author = {{Documenters.org}},
+    year = {2024},
+    url = {https://cityscrapers.org/},
+    note = {Open source civic tech project providing validated scrapers for local government meetings across major U.S. cities}
+}
+```
+
+### **Google Civic Information API** ⭐
+- Government officials, polling locations, and election data
+- Organization: Google LLC
+- API Documentation: https://developers.google.com/civic-information
+- License: Free (with quota limits)
+- Rate Limit: 25,000 requests/day (free tier)
+- Coverage: U.S. federal, state, and local government officials; polling locations; election data
+- What we use: Elected officials by address, representative contact info, voting districts
+- Used for: Contact discovery, official verification, civic engagement tools
+
+**API Endpoints Used:**
+- Representatives by Address: Get all elected officials for a given address
+- Elections: Voter information, polling locations, ballot information
+- Divisions: Geographic/political divisions (OCD-IDs)
+
+**BibTeX:**
+```bibtex
+@misc{google_civic_api,
+    title = {Google Civic Information API},
+    author = {{Google LLC}},
+    year = {2024},
+    url = {https://developers.google.com/civic-information},
+    note = {API providing government official contact information, election data, and polling locations}
+}
+```
+
+**Terms of Service:**
+- Attribution required when displaying official data
+- Caching limited to 30 days
+- Must comply with Google API Terms of Service
+
+### **YouTube Data API v3** ⭐
+- Video metadata, channel information, and search for government meetings
+- Organization: Google LLC
+- API Documentation: https://developers.google.com/youtube/v3
+- License: Free (with quota limits)
+- Rate Limit: 10,000 units/day (free tier), search costs 100 units per request
+- Coverage: Global video platform with millions of government channels
+- What we use: Government channel discovery, meeting video metadata, transcript availability
+- Used for: Video discovery, channel statistics, meeting video archival
+
+**API Features Used:**
+- Search: Find government channels by jurisdiction name
+- Channels: Get channel metadata, subscriber counts, video counts
+- Videos: Metadata including title, description, upload date, duration
+- Captions: Check for closed caption/transcript availability
+
+**BibTeX:**
+```bibtex
+@misc{youtube_data_api,
+    title = {YouTube Data API v3},
+    author = {{Google LLC}},
+    year = {2024},
+    url = {https://developers.google.com/youtube/v3},
+    note = {API for accessing YouTube video metadata, channel information, and search functionality}
+}
+```
+
+**Terms of Service:**
+- YouTube API Services Terms: https://developers.google.com/youtube/terms/api-services-terms-of-service
+- Attribution required with YouTube logo
+- Quota limits enforced (10,000 units/day free)
+- Video embeds must use official YouTube player
+
 ### **Ballotpedia** ⭐
 - Ballot measures, referendums, and propositions
 - Organization: Lucy Burns Institute
@@ -109,26 +201,100 @@ We use the GivingTuesday 990 Data Lake for detailed nonprofit financial data fro
 
 **Organization:** GivingTuesday  
 **Website:** https://990data.givingtuesday.org/  
-**Data Lake:** `s3://gt990datalake-rawdata` (AWS S3, us-east-1 Virginia)  
+**Data Lake:** `s3://gt990datalake-rawdata` (AWS S3, us-east-1 Virginia, Public Access)  
 **Console:** https://us-east-1.console.aws.amazon.com/s3/buckets/gt990datalake-rawdata  
 **License:** Public domain (IRS data) + Open source tools  
-**Access:** Free, no AWS credentials required (`--no-sign-request`)
+**Access:** Free, no AWS credentials required (anonymous access via `--no-sign-request`)
 
 **What we use:**
-- **Raw 990 XMLs**: Individual e-filed Form 990 returns in XML format
-- **Indices**: CSV files listing all available 990s with metadata
-- **Coverage**: All e-filed 990s (2011-present, ~300K filings/year)
-- **Data extracted**: Revenue, expenses, assets, grants, programs, officer compensation, mission statements
+- **Raw 990 XMLs**: Individual e-filed Form 990 returns in XML format (1-2 MB each)
+- **Indices**: CSV/Parquet files listing all available 990s with metadata
+- **Coverage**: 5.4M+ e-filed Form 990s (2011-present, ~300K new filings/year)
+- **Scale**: ~10 TB of raw XML data
+- **Data extracted**: Revenue, expenses, assets, liabilities, grants, programs, officer compensation, mission statements, website URLs
 
 **Data Lake Structure:**
 ```
-gt990datalake-rawdata/
+s3://gt990datalake-rawdata/
 ├── EfileData/
-│   └── XmlFiles/              # Individual 990 XMLs
-│       └── [OBJECT_ID]_public.xml
+│   ├── XmlFiles/              # Individual 990 XMLs (~5.4M files, ~10 TB)
+│   │   └── [OBJECT_ID]_public.xml  (e.g., 202233259349300703_public.xml)
+│   └── XmlZips/               # ZIP archives (97 files, ~38 GB → ~95 GB uncompressed)
+│       └── YYYY_TEOS_XML_*.zip     (e.g., 2023_TEOS_XML_01A.zip ~400 MB)
 └── Indices/
-    └── 990xmls/               # CSV indices
-        └── index_all_years_efiledata_xmls_created_on_2023-10-29.csv
+    └── 990xmls/               # CSV indices with metadata
+        └── index_all_years_efiledata_xmls_created_on_2023-10-29.csv (~925 MB)
+```
+
+**Download Strategies:**
+
+| Approach | Best For | Time | Bandwidth | Storage |
+|----------|----------|------|-----------|---------|
+| **Individual XMLs** | Single state or targeted download | ~2 hrs (22K orgs) | 32 GB | 32 GB |
+| **ZIP Archives** | All states / nationwide | ~6 hrs total | 38 GB | 95 GB |
+
+**Choose Individual XMLs when:**
+- You need data for 1-5 states only
+- You want to download only specific EINs
+- Storage space is limited
+- You want incremental caching (download as needed)
+
+**Choose ZIP Archives when:**
+- You need all 50 states
+- You're building a comprehensive nonprofit database
+- You have 100+ GB storage
+- You want offline access to all filings
+
+**S3 Access Examples:**
+
+**Individual XMLs (for single state or targeted download):**
+```bash
+# List index files (no credentials needed)
+aws s3 ls s3://gt990datalake-rawdata/Indices/990xmls/ --no-sign-request
+
+# Download index (~925 MB)
+aws s3 cp s3://gt990datalake-rawdata/Indices/990xmls/index_all_years_efiledata_xmls_created_on_2023-10-29.csv . --no-sign-request
+
+# Download specific XML
+aws s3 cp s3://gt990datalake-rawdata/EfileData/XmlFiles/202233259349300703_public.xml . --no-sign-request
+
+# Batch download for single state (using our script)
+python scripts/batch_download_990s.py --state MA --health-only --concurrent 1000
+```
+
+**ZIP Archives (for all states / nationwide):**
+```bash
+# Download all 97 ZIPs (~38 GB) to local directory
+./scripts/download_990_zips.sh
+
+# Extract all ZIPs to get ~384K XMLs (~95 GB)
+./scripts/extract_990_zips.sh
+
+# Build local index for fast lookup
+python scripts/build_990_local_index.py
+
+# Now enrich from local files (no network needed!)
+python scripts/enrich_all_states_990.py
+```
+
+**Index Schema:**
+The CSV index contains columns: `EIN`, `TaxPeriod`, `ObjectId`, `URL`, `FormType`, `OrganizationName`, `DLN`, `SubmittedOn`
+
+**Python Access:**
+```python
+import boto3
+from botocore import UNSIGNED
+from botocore.config import Config
+
+# Configure anonymous S3 client
+s3 = boto3.client('s3', config=Config(signature_version=UNSIGNED))
+
+# Download XML
+xml_obj = s3.get_object(
+    Bucket='gt990datalake-rawdata',
+    Key='EfileData/XmlFiles/202233259349300703_public.xml'
+)
+xml_content = xml_obj['Body'].read()
 ```
 
 **BibTeX:**
@@ -539,6 +705,318 @@ The Popolo specification builds upon and references the following W3C, IETF, and
 - ✅ **Industry Standard**: Adopted by large nonprofits using Microsoft ecosystem
 - ✅ **Grant Compliance**: Built-in support for grant reporting and outcome measurement
 - ✅ **Constituent 360**: Unified view of donor, volunteer, member activities
+
+---
+
+## 🎯 **Grant Research and Fundraising Platforms**
+
+These platforms are built on open-source principles or community-funded models to keep grant and fundraising data accessible.
+
+### **Grantmakers.io** ⭐
+
+**"Free as in Freedom" Grant Research**
+
+Grantmakers.io is the gold standard for open, community-supported foundation research. It provides lightning-fast search through IRS 990-PF data with no login required.
+
+**Organization:** Community-supported open-source project  
+**Website:** https://www.grantmakers.io/  
+**Data Source:** IRS Form 990-PF (Private Foundation tax returns)  
+**License:** Open source, community-funded  
+**Access:** 100% free, no account or API key required  
+**Coverage:** All U.S. private foundations filing Form 990-PF (75,000+ grantmaking foundations)
+
+**What we use:**
+- **Foundation Giving Histories**: Search foundations by who they've funded in the past
+- **Grantee Databases**: Find all grants made to specific organizations
+- **Geographic Targeting**: Search by state, city, or region
+- **Funding Amounts**: Filter by grant size ranges
+- **NTEE Categories**: Search by nonprofit sector (health, education, environment, etc.)
+- **Year-over-Year Trends**: Track foundation giving patterns over time
+
+**Key Features:**
+- ⚡ **Lightning-Fast Search**: Instant results across millions of grant records
+- 🔓 **No Login Required**: Completely open access, no barriers
+- 📊 **Detailed 990-PF Data**: Full foundation financials, officers, assets
+- 🎯 **Relationship Mapping**: Discover foundation-grantee connections
+- 📈 **Trend Analysis**: Multi-year giving patterns and focus areas
+- 🆓 **Always Free**: Community-funded to remain accessible
+
+**Use Cases:**
+- **Grant Prospecting**: Find foundations that fund similar organizations in your area
+- **Relationship Research**: Identify foundations that have supported oral health, public health, or civic engagement
+- **Competitive Analysis**: See which organizations are receiving grants in your field
+- **Foundation Vetting**: Review foundation assets, giving patterns, and leadership before applying
+
+**Example Searches:**
+- Foundations that funded "fluoridation" or "oral health" projects
+- Grantmakers in Massachusetts supporting health policy advocacy
+- Foundations with >$10M assets funding civic engagement
+- All grants made by Robert Wood Johnson Foundation to nonprofits in Alabama
+
+**BibTeX:**
+```bibtex
+@misc{grantmakersio,
+    title = {Grantmakers.io: Open Foundation Research Platform},
+    year = {2026},
+    url = {https://www.grantmakers.io/},
+    note = {Community-supported open-source platform for searching IRS 990-PF private foundation data}
+}
+```
+
+**Citation:** "Grantmakers.io. Community-supported open foundation research. https://www.grantmakers.io/"
+
+---
+
+### **Zeffy** ⭐
+
+**100% Free Fundraising with AI-Powered Grant Matching**
+
+Zeffy is unique for being a completely free fundraising platform that also offers an AI-powered grant search tool to help match nonprofit missions with potential grant opportunities.
+
+**Organization:** Zeffy, Inc.  
+**Website:** https://www.zeffy.com/  
+**Platform:** Fundraising + Grant Discovery  
+**Cost:** 100% free for nonprofits (donor-covered fees model)  
+**Grant Tool:** AI-powered grant opportunity matching  
+**Coverage:** U.S. and Canadian grant opportunities
+
+**What we use:**
+- **AI Grant Matching**: Automated matching of nonprofit missions to relevant grant opportunities
+- **Fundraising Infrastructure**: Donation processing, event ticketing, membership management
+- **Donor Management**: CRM for tracking constituent relationships
+- **Grant Alerts**: Notifications when new matching opportunities are posted
+
+**Key Features:**
+- 💰 **100% Free**: No platform fees, monthly charges, or hidden costs
+- 🤖 **AI-Powered Matching**: Machine learning matches your mission to grant opportunities
+- 📧 **Grant Alerts**: Email notifications for new matching grants
+- 🎟️ **All-in-One Platform**: Donations, events, memberships, grants in one system
+- 🇺🇸 🇨🇦 **North America Coverage**: U.S. and Canadian grant databases
+- 📊 **Impact Reporting**: Built-in analytics for grant reporting requirements
+
+**Grant Discovery Capabilities:**
+- **Mission-Based Matching**: Upload your mission statement, get matched grants
+- **Federal Grants**: Monitors Grants.gov for federal opportunities
+- **Foundation Grants**: Tracks private foundation RFPs and announcements
+- **Corporate Giving**: Alerts for corporate philanthropy programs
+- **Local Grants**: Community foundation and regional funder opportunities
+
+**Use Cases for This Project:**
+- **Nonprofit Fundraising**: Organizations can use Zeffy for zero-cost donation processing
+- **Grant Prospecting**: AI helps match oral health nonprofits to relevant grant opportunities
+- **Event Fundraising**: Free ticketing for fundraising galas, community events
+- **Membership Management**: Track supporters, volunteers, members at no cost
+- **Sustainability**: Recommend to small nonprofits to reduce overhead costs
+
+**Why It's Important:**
+Traditional fundraising platforms charge 3-5% fees on donations, which drains resources from small nonprofits. Zeffy's donor-covered model means 100% of donations go to the organization, making it especially valuable for grassroots oral health advocacy groups.
+
+**BibTeX:**
+```bibtex
+@misc{zeffy_platform,
+    title = {Zeffy: 100% Free Fundraising Platform with AI Grant Matching},
+    author = {{Zeffy, Inc.}},
+    year = {2026},
+    url = {https://www.zeffy.com/},
+    note = {Free fundraising platform with AI-powered grant discovery for U.S. and Canadian nonprofits}
+}
+```
+
+**Citation:** "Zeffy. 100% Free Fundraising Platform with AI Grant Matching. https://www.zeffy.com/"
+
+---
+
+### **Community Foundations** ⭐
+
+**Local Grant Opportunities Often Overlooked**
+
+Community foundations are often the most accessible grant sources for local nonprofits, yet they're frequently overlooked because they don't appear in major federal databases. Most maintain their own open listings for regional grants.
+
+**What Community Foundations Are:**
+Community foundations are public charities that pool donations from individuals, families, and businesses to support local nonprofits through competitive grants, scholarship programs, and donor-advised funds.
+
+**Why They Matter:**
+- 🏘️ **Local Focus**: Prioritize organizations serving their specific geographic region
+- 💵 **Smaller, Accessible Grants**: $500-$50,000 range, ideal for grassroots groups
+- 🤝 **Relationship-Based**: Local foundations know local issues and local leaders
+- 📋 **Simpler Applications**: Less bureaucratic than federal or national foundations
+- ⚡ **Faster Decisions**: Many have quarterly or rolling deadlines
+- 🎯 **Mission Alignment**: Support for community health, civic engagement, education
+
+**Examples of Community Foundations:**
+
+| Foundation | Region | Website | Grant Focus Areas |
+|------------|--------|---------|-------------------|
+| **Central Alabama Community Foundation** | Birmingham, AL metro | https://www.cacfbirmingham.org/ | Health, education, civic engagement, arts |
+| **Community Foundation for Greater Atlanta** | Atlanta, GA metro | https://cfgreateratlanta.org/ | Health equity, education, economic mobility |
+| **Boston Foundation** | Boston, MA metro | https://www.tbf.org/ | Health, housing, education, civic participation |
+| **Community Foundation of Greater Memphis** | Memphis, TN metro | https://cfgm.org/ | Health, youth development, community engagement |
+| **Silicon Valley Community Foundation** | San Francisco Bay Area | https://www.siliconvalleycf.org/ | Health, education, immigration, environment |
+| **Greater Kansas City Community Foundation** | Kansas City, MO/KS | https://www.growyourgiving.org/ | Health, education, civic infrastructure |
+| **Seattle Foundation** | Seattle, WA metro | https://www.seattlefoundation.org/ | Racial equity, community health, economic opportunity |
+
+**How to Find Your Local Community Foundation:**
+1. **Council on Foundations Directory**: https://www.cof.org/community-foundation-locator
+2. **Candid (formerly Foundation Center)**: https://candid.org/find-us/foundation-finder
+3. **State Associations**: Most states have a community foundation association
+4. **Google Search**: "[Your City] Community Foundation" or "[Your County] Community Foundation"
+
+**Grant Opportunities:**
+- **Competitive Grants**: Open RFPs for nonprofits in specific focus areas
+- **Capacity Building Grants**: Support for operations, staffing, strategic planning
+- **Donor-Advised Funds**: Individuals/families make grants through the foundation
+- **Fiscal Sponsorship**: Some foundations sponsor projects for groups without 501(c)(3) status
+- **Scholarship Programs**: Education grants for students (often administered by community foundations)
+
+**For Oral Health Advocacy:**
+Many community foundations have health equity or preventive health focus areas that align perfectly with fluoridation advocacy, dental access programs, and oral health education. They're often the best first step for local grassroots campaigns.
+
+**How We Use Community Foundation Data:**
+- **Local Grant Mapping**: Identify which community foundations serve each jurisdiction
+- **Nonprofit Funding Sources**: Link organizations to local foundation grants received
+- **Geographic Targeting**: Recommend local funders when users search by city/county
+- **Grant Prospecting**: Alert nonprofits to community foundation RFPs in their area
+
+**BibTeX:**
+```bibtex
+@misc{community_foundations,
+    title = {Community Foundations: Local Grant Opportunities},
+    author = {{Council on Foundations}},
+    year = {2026},
+    url = {https://www.cof.org/community-foundation-locator},
+    note = {Network of 700+ community foundations providing local grants across the United States}
+}
+```
+
+**Citation:** "Community Foundations. Council on Foundations. https://www.cof.org/community-foundation-locator"
+
+---
+
+## 🏛️ **Civic Tech Organizations & Resources**
+
+### **Code for America** ⭐
+
+The flagship U.S. civic technology nonprofit organization, convening government leaders and technologists to transform public services.
+
+**Organization:** Code for America  
+**Website:** https://codeforamerica.org/  
+**About:** National nonprofit working with government to build digital services that are simple, effective, and accessible to all  
+**Founded:** 2009  
+**Coverage:** National (50 states), with focus on state-level government transformation  
+
+**What we use:**
+- **Summit Insights**: Annual Summit (most recently Summit 2026) where state-level AI leads and municipal CIOs set the civic tech agenda for the year
+- **Brigade Network**: Community chapters across the U.S. working on local civic tech projects
+- **Best Practices**: Government service design patterns, digital service standards
+- **Technology Landscape**: Trends in state and local government digital transformation
+
+**Key Programs:**
+- **Code for America Summit**: Annual conference bringing together 1,500+ government leaders, technologists, and advocates
+- **Brigade Network**: 80+ volunteer chapters in cities across America building civic tech solutions
+- **Get CalFresh**: Flagship product helping millions access food benefits through simplified digital applications
+- **Clear My Record**: Automated criminal record clearance to help people move forward
+- **Government Services Portfolio**: Digital tools for social safety net programs
+
+**Resources:**
+- Summit: https://codeforamerica.org/summit/
+- Brigade Network: https://brigade.codeforamerica.org/
+- Blog: https://codeforamerica.org/news/
+- GitHub: https://github.com/codeforamerica
+- Annual Reports: https://codeforamerica.org/news/category/annual-reports/
+
+**Why Code for America:**
+- **Agenda Setting**: The Summit is where state-level AI leads and municipal CIOs define priorities for the year
+- **Network Effect**: Connects civic technologists across the country
+- **Proven Impact**: Products serving millions of Americans annually
+- **Open Source**: Many tools available as open source for other governments to adopt
+
+**BibTeX:**
+```bibtex
+@misc{code_for_america,
+    title = {Code for America},
+    author = {{Code for America}},
+    year = {2026},
+    url = {https://codeforamerica.org/},
+    note = {National nonprofit transforming government digital services and convening state and local government technology leaders}
+}
+```
+
+**Citation:** "Code for America. https://codeforamerica.org/"
+
+---
+
+### **GovTech.com (Government Technology)** ⭐
+
+The primary news and ranking source for the government technology industry, providing market intelligence and trend analysis.
+
+**Organization:** Government Technology (e.Republic)  
+**Website:** https://www.govtech.com/  
+**About:** Leading publication covering technology trends, policy, and innovation in state and local government  
+**Founded:** 1987  
+**Coverage:** State and local government across all 50 states  
+
+**What we use:**
+- **GovTech 100**: Annual definitive directory of the top 100 trending companies in the U.S. public sector technology market
+- **Industry Trends**: Analysis of emerging technologies, procurement trends, and digital transformation initiatives
+- **Vendor Landscape**: Tracking government technology companies, products, and solutions
+- **Policy Coverage**: Legislative and regulatory developments affecting civic technology
+
+**Key Resources:**
+- **GovTech 100 List**: https://www.govtech.com/100/ - The definitive annual ranking of companies shaping the future of state and local government
+- **Navigator Awards**: https://www.govtech.com/navigator - Recognition of state and local government IT leaders
+- **Digital Cities Survey**: Annual ranking of America's most digitally advanced cities and counties
+- **Research Center**: https://www.govtech.com/research/ - White papers, surveys, and industry reports
+- **Webinars & Events**: https://www.govtech.com/events/
+
+**GovTech 100 Categories:**
+- Cloud & Infrastructure
+- Cybersecurity
+- Data & Analytics
+- Digital Government Services
+- Education Technology
+- Emergency Management
+- Financial Management
+- GIS & Mapping
+- Health & Human Services
+- Public Safety
+- Transportation
+
+**Why GovTech.com:**
+- **Market Intelligence**: The GovTech 100 is the authoritative list of trending companies in government technology
+- **Vendor Discovery**: Comprehensive directory of solutions available to state and local government
+- **Industry Standards**: Defines what's considered "trending" and "emerging" in the civic tech marketplace
+- **Procurement Insights**: Helps identify which technologies governments are actively adopting
+
+**Resources:**
+- Main Site: https://www.govtech.com/
+- GovTech 100: https://www.govtech.com/100/
+- Newsletter: https://www.govtech.com/newsletters/
+- Podcasts: https://www.govtech.com/podcasts/
+- Magazine Archive: https://www.govtech.com/magazines/
+
+**BibTeX:**
+```bibtex
+@misc{govtech_magazine,
+    title = {Government Technology Magazine},
+    author = {{e.Republic Inc.}},
+    year = {2026},
+    url = {https://www.govtech.com/},
+    note = {Leading publication and market intelligence source for state and local government technology, publisher of the annual GovTech 100 list}
+}
+```
+
+**GovTech 100 BibTeX:**
+```bibtex
+@misc{govtech_100,
+    title = {GovTech 100: Companies Trending in State and Local Government},
+    author = {{Government Technology}},
+    year = {2026},
+    url = {https://www.govtech.com/100/},
+    note = {Annual directory of the top 100 trending companies serving the U.S. public sector}
+}
+```
+
+**Citation:** "Government Technology. e.Republic Inc. https://www.govtech.com/"
 
 ---
 

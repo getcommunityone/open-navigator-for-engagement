@@ -1,10 +1,9 @@
 ---
 sidebar_position: 2
-sidebar_label: Citations & Data Sources
-sidebar: citationsSidebar
+sidebar_label: Data and Citations
 ---
 
-# Citations & Data Sources
+# Data and Citations
 
 :::tip[Why This Page Matters]
 **All data used in Open Navigator for Engagement is properly cited and attributed.** This page provides complete citations, licenses, BibTeX references, and links to original sources for academic research, government data, data sharing standards, and more.
@@ -23,7 +22,7 @@ This page documents all data sources, standards, and research contributions used
 <div style={{display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '15px', margin: '20px 0'}}>
   <a href="#-academic-research" className="card" style={{textDecoration: 'none', padding: '15px', borderLeft: '4px solid #2196F3'}}>
     <strong>🎓 Academic Research</strong><br/>
-    <span style={{fontSize: '0.9em', color: '#666'}}>MeetingBank, LocalView, Roper Center, CDP, City Scrapers</span>
+    <span style={{fontSize: '0.9em', color: '#666'}}>MeetingBank, LocalView, CivicSearch, Datamuse API, Roper Center, CDP, City Scrapers</span>
   </a>
   <a href="#government-data" className="card" style={{textDecoration: 'none', padding: '15px', borderLeft: '4px solid #4CAF50'}}>
     <strong>🏛️ Government Data</strong><br/>
@@ -39,7 +38,7 @@ This page documents all data sources, standards, and research contributions used
   </a>
   <a href="#nonprofit--philanthropy" className="card" style={{textDecoration: 'none', padding: '15px', borderLeft: '4px solid #F44336'}}>
     <strong>🏢 Nonprofit & Philanthropy</strong><br/>
-    <span style={{fontSize: '0.9em', color: '#666'}}>IRS EO-BMF (1.9M+ orgs), Google BigQuery (5M+ Form 990s), ProPublica (Nonprofits, Congress, Campaign Finance, Vital Signs), Every.org, Findhelp, 211, Microsoft CDM, ARDA, HIFLD, NCS</span>
+    <span style={{fontSize: '0.9em', color: '#666'}}>IRS EO-BMF (1.9M+ orgs), Google BigQuery (5M+ Form 990s), GivingTuesday Data Lake (5.4M+ raw XMLs), ProPublica (Nonprofits, Congress, Campaign Finance, Vital Signs), Every.org, Findhelp, 211, Microsoft CDM, ARDA, HIFLD, NCS</span>
   </a>
   <a href="#-fact-checking" className="card" style={{textDecoration: 'none', padding: '15px', borderLeft: '4px solid #8BC34A'}}>
     <strong>✅ Fact-Checking</strong><br/>
@@ -70,6 +69,8 @@ This page documents all data sources, standards, and research contributions used
 - [City Scrapers / Documenters.org](#city-scrapers--documentersorg)
 - [Roper Center for Public Opinion Research](#roper-center-for-public-opinion-research)
 - [Harvard Dataverse](#harvard-dataverse)
+- [CivicSearch (School Board Meeting Platform)](#civicsearch-school-board-meeting-platform)
+- [Datamuse API (Word-Finding Engine)](#datamuse-api-word-finding-engine)
 
 ### MeetingBank Dataset
 
@@ -219,6 +220,152 @@ This page documents all data sources, standards, and research contributions used
 
 ---
 
+### CivicSearch (School Board Meeting Platform)
+
+**Organization:** Datamuse, Inc.  
+**What we use:** Aggregated school board meeting transcripts, agendas, and videos for tracking education policy and local governance.
+
+- **Website:** https://schools.civicsearch.org/
+- **Platform:** Datamuse-powered civic search interface
+- **Coverage:** School districts nationwide with meeting transcripts and videos
+- **Data Included:**
+  - School board meeting transcripts (AI-indexed)
+  - Meeting agendas and minutes
+  - Video recordings (when available)
+  - Searchable text across multiple districts
+  - Meeting dates and attendance
+- **Example:** [Tuscaloosa City Schools](https://schools.civicsearch.org/tuscaloosa-city-alabama)
+- **License:** Free public access for search; bulk/API access requires case-by-case approval
+- **Use Case:** Education policy tracking, school board decision analysis, parent/community engagement
+
+**Access Tiers:**
+- **Public Search:** Free access via web interface
+- **Bulk Data/API:** Contact Datamuse for research or civic organization partnerships
+- **Commercial Use:** Licensing required for commercial applications
+
+**Data Privacy:**
+- Public meeting transcripts are public record
+- Datamuse indexing and presentation subject to their site terms
+- No user-uploaded data sold to third parties
+
+**Attribution Requirements:**
+```
+Data source: CivicSearch (Datamuse, Inc.)
+https://schools.civicsearch.org/
+School board meeting transcripts and agendas
+```
+
+**Terms of Service:**
+- ❌ **No automated scraping** - Use official API when available
+- ✅ **Attribution required** - Link back to CivicSearch for data used
+- ✅ **Public record data** - Meeting transcripts are generally public domain
+- ⚠️ **Bulk access** - Requires partnership agreement for large-scale data extraction
+
+**BibTeX:**
+```bibtex
+@misc{civicsearch_datamuse,
+  author = {{Datamuse, Inc.}},
+  title = {CivicSearch: School Board Meeting Platform},
+  year = {2026},
+  url = {https://schools.civicsearch.org/},
+  note = {AI-indexed school board meeting transcripts and agendas}
+}
+```
+
+**Contact for Data Partnerships:**
+For bulk data access, API integration, or civic tech collaborations, reach out to Datamuse directly as a "civic technologist" or research organization. There is no standard commercial checkout - partnerships are handled case-by-case.
+
+---
+
+### Datamuse API (Word-Finding Engine)
+
+**Organization:** Datamuse, Inc.  
+**What we use:** Natural language processing tools for text analysis, word associations, rhyme detection, and semantic search in meeting transcripts and policy documents.
+
+- **API Documentation:** https://www.datamuse.com/api/
+- **Developer Site:** https://www.datamuse.com/
+- **Use Cases:** Dictionary apps, RhymeZone, word associations, semantic search
+- **Coverage:** English language word relationships, definitions, pronunciations, usage frequency
+- **License:** Free tier for most applications; paid tier for high-volume commercial use
+
+**API Endpoints:**
+- `/words` - Word finding based on constraints (rhymes, similar meaning, etc.)
+- `/sug` - Word suggestions for autocomplete
+- Query parameters for semantic relationships, phonetic matching, vocabulary
+
+**Pricing Tiers:**
+
+| Tier | Cost | Limits | Use Case |
+|------|------|--------|----------|
+| **Free** | $0 | 100,000 requests/day | Non-commercial, small commercial apps |
+| **Professional** | Contact for pricing | Unlimited + support | High-volume commercial applications |
+
+**Free Tier Details:**
+- ✅ **100,000 requests per day** - Generous limit for most applications
+- ✅ **Commercial use allowed** - Can use in commercial apps under daily limit
+- ✅ **No API key required** - Simple HTTP GET requests
+- ✅ **Fast response times** - Optimized for real-time applications
+
+**Paid Tier (High-Volume):**
+- Exceeding 100,000 requests/day requires paid tier
+- Contact Datamuse for custom pricing and SLA
+- Dedicated support and guaranteed uptime
+
+**Attribution Requirements:**
+- ✅ **Link to Datamuse:** Required (or strongly requested) for free tier users
+- ✅ **Credit in documentation:** Mention "Powered by Datamuse API"
+- Example: `<a href="https://www.datamuse.com/">Powered by Datamuse API</a>`
+
+**Restrictions:**
+- ❌ **No scraping of web interfaces** - Use official API, not web scraping
+- ❌ **Rate limiting enforced** - Exceeding 100K/day will be throttled
+- ✅ **Caching allowed** - Can cache results to reduce API calls
+
+**Terms of Service:**
+- Free tier subject to daily quota
+- No sale of user-uploaded data
+- Commercial use allowed within free tier limits
+- Bulk/enterprise usage requires paid license
+
+**Example API Call:**
+```bash
+# Find words that mean "government" and sound like "regime"
+curl "https://api.datamuse.com/words?ml=government&sl=regime"
+
+# Find words that rhyme with "policy"
+curl "https://api.datamuse.com/words?rel_rhy=policy"
+
+# Word associations for "civic engagement"
+curl "https://api.datamuse.com/words?ml=civic+engagement&max=10"
+```
+
+**BibTeX:**
+```bibtex
+@misc{datamuse_api,
+  author = {{Datamuse, Inc.}},
+  title = {Datamuse API: Word-Finding Query Engine},
+  year = {2026},
+  url = {https://www.datamuse.com/api/},
+  note = {Free tier: 100,000 requests/day. Commercial use allowed.}
+}
+```
+
+**Integration Use Cases:**
+- **Meeting Transcript Analysis:** Identify policy-related terms and semantic relationships
+- **Search Enhancement:** Improve search with synonym expansion and related terms
+- **Topic Modeling:** Extract key themes from public comments and testimony
+- **Accessibility:** Provide word suggestions for users with cognitive disabilities
+- **Multilingual Support:** Word associations for translation assistance
+
+**Datamuse.ai (Separate Product):**
+Note: Datamuse.ai is a distinct SaaS product for natural language exploration:
+- **Starter:** ~$29/month (100 queries/month)
+- **Professional:** ~$99/month (unlimited queries + API access)
+- **Free Trial:** Available for testing
+This is separate from the word-finding API and has different pricing.
+
+---
+
 ## 🏛️ Government Data
 
 **In this section:**
@@ -309,9 +456,28 @@ This page documents all data sources, standards, and research contributions used
 **What we use:** State and local legislative information, bill tracking.
 
 - **Source:** https://openstates.org/
+- **Parent Organization:** Plural (https://open.pluralpolicy.com/)
+- **Bulk Downloads:** https://open.pluralpolicy.com/data/ ⭐ **Recommended**
 - **Coverage:** 100,000+ state bills, 7,300+ state legislators
-- **License:** Varies by state
-- **API Key:** Required for access
+- **License:** Public Domain (bulk data) / Varies by state (some content)
+- **API Key:** Required for API access (free, 50K requests/month)
+
+**Bulk Data Options:**
+- **CSV:** Complete legislative sessions per state (https://data.openstates.org/session/csv/)
+- **JSON:** Bills with full text (https://data.openstates.org/session/json/)
+- **PostgreSQL:** Monthly database dumps (https://data.openstates.org/postgres/monthly/)
+- **No rate limits** - Bulk downloads encouraged for analysis
+
+**BibTeX:**
+```bibtex
+@misc{plural_openstates_2024,
+  author = {{Plural Policy}},
+  title = {Open States: Legislative Data for All 50 States},
+  year = {2024},
+  url = {https://open.pluralpolicy.com/},
+  note = {Bulk data downloads available at https://open.pluralpolicy.com/data/}
+}
+```
 
 ---
 
@@ -563,6 +729,7 @@ concept_id_1 | concept_id_2 | relationship_id
 **In this section:**
 - [IRS Exempt Organizations Business Master File (EO-BMF)](#irs-exempt-organizations-business-master-file-eo-bmf) - **PRIMARY BULK DATA SOURCE (1.9M+ orgs)**
 - [Google BigQuery IRS 990 Data](#google-bigquery-irs-990-data) - **RECOMMENDED FOR BULK FORM 990 ENRICHMENT (5M+ filings)**
+- [GivingTuesday 990 Data Infrastructure](#givingtuesday-990-data-infrastructure) - **AWS S3 DATA LAKE (5.4M+ raw Form 990 XMLs)**
 - [ProPublica Nonprofit Explorer](#propublica-nonprofit-explorer)
 - [ProPublica Congress API](#propublica-congress-api)
 - [ProPublica Campaign Finance API](#propublica-campaign-finance-api)
@@ -759,6 +926,166 @@ LIMIT 1000
 
 ---
 
+### GivingTuesday 990 Data Infrastructure
+
+**Organization:** GivingTuesday  
+**What we use:** Raw Form 990 XML filings from AWS S3 for detailed financial data extraction, custom field parsing, and comprehensive nonprofit analysis.
+
+- **Website:** https://990data.givingtuesday.org/
+- **Data Lake:** `s3://gt990datalake-rawdata` (AWS S3, us-east-1 Virginia, Public Access)
+- **Console:** https://us-east-1.console.aws.amazon.com/s3/buckets/gt990datalake-rawdata
+- **Coverage:** 5.4M+ e-filed Form 990s (2011-present, ~300K new filings/year)
+- **Scale:** ~10 TB of raw XML data
+- **Update Frequency:** Ongoing (as IRS publishes new e-filings)
+- **License:** Public domain (IRS data) + Open source tools
+- **Access:** Free, no AWS credentials required (anonymous access via `--no-sign-request`)
+- **Format:** XML files (1-2 MB each) + CSV/Parquet indices
+
+**Data Lake Structure:**
+```
+s3://gt990datalake-rawdata/
+├── EfileData/
+│   ├── XmlFiles/              # Individual 990 XMLs (~5.4M files, ~10 TB)
+│   │   └── [OBJECT_ID]_public.xml  (e.g., 202233259349300703_public.xml)
+│   └── XmlZips/               # ZIP archives (97 files, ~38 GB → ~95 GB uncompressed)
+│       └── YYYY_TEOS_XML_*.zip     (e.g., 2023_TEOS_XML_01A.zip ~400 MB)
+└── Indices/
+    └── 990xmls/               # CSV indices with metadata
+        └── index_all_years_efiledata_xmls_created_on_2023-10-29.csv (~925 MB)
+```
+
+**Download Strategies:**
+
+| Approach | Best For | Time | Bandwidth | Storage |
+|----------|----------|------|-----------|---------|
+| **Individual XMLs** | Single state or targeted | ~2 hrs (22K orgs) | 32 GB | 32 GB |
+| **ZIP Archives** | All states / nationwide | ~6 hrs total | 38 GB | 95 GB |
+
+**Choose Individual XMLs when:**
+- You need data for 1-5 states only
+- You want to download only specific EINs
+- Storage space is limited
+- You want incremental caching
+
+**Choose ZIP Archives when:**
+- You need all 50 states
+- You're building a comprehensive database
+- You have 100+ GB storage
+- You want offline access to all filings
+
+**What You Can Extract:**
+- **Financials:** Revenue, expenses, assets, liabilities, net income, grants paid/received
+- **Programs:** Detailed program descriptions, accomplishments, expenses per program (up to 10)
+- **Governance:** Officer compensation, board members, key employees (with names and titles)
+- **Activities:** Legislative activities, lobbying expenses, political contributions
+- **Mission:** Organization mission statement and activity descriptions
+- **Website:** Organization website URLs
+- **Grants:** List of grant recipients with amounts (for grantmaking organizations)
+- **Custom Fields:** Any field in the IRS Form 990 schema (990, 990-EZ, 990-PF)
+
+**S3 Access Examples:**
+
+**Individual XMLs (for single state or targeted download):**
+```bash
+# List index files (no credentials needed)
+aws s3 ls s3://gt990datalake-rawdata/Indices/990xmls/ --no-sign-request
+
+# Download index (~925 MB)
+aws s3 cp s3://gt990datalake-rawdata/Indices/990xmls/index_all_years_efiledata_xmls_created_on_2023-10-29.csv . --no-sign-request
+
+# Download specific XML
+aws s3 cp s3://gt990datalake-rawdata/EfileData/XmlFiles/202233259349300703_public.xml . --no-sign-request
+
+# Batch download for single state (using our script)
+python scripts/batch_download_990s.py --state MA --health-only --concurrent 1000
+```
+
+**ZIP Archives (for all states / nationwide):**
+```bash
+# Download all 97 ZIPs (~38 GB) to local directory
+./scripts/download_990_zips.sh
+
+# Extract all ZIPs to get ~384K XMLs (~95 GB)
+./scripts/extract_990_zips.sh
+
+# Build local index for fast lookup
+python scripts/build_990_local_index.py
+
+# Now enrich from local files (no network needed!)
+python scripts/enrich_all_states_990.py
+```
+
+**Python Access:**
+```python
+import boto3
+from botocore import UNSIGNED
+from botocore.config import Config
+
+# Configure anonymous S3 client
+s3 = boto3.client('s3', config=Config(signature_version=UNSIGNED))
+
+# Download individual XML
+xml_obj = s3.get_object(
+    Bucket='gt990datalake-rawdata',
+    Key='EfileData/XmlFiles/202233259349300703_public.xml'
+)
+xml_content = xml_obj['Body'].read()
+
+# Download ZIP
+zip_obj = s3.get_object(
+    Bucket='gt990datalake-rawdata',
+    Key='EfileData/XmlZips/2023_TEOS_XML_01A.zip'
+)
+zip_content = zip_obj['Body'].read()
+```
+
+**Index Schema:**
+The CSV index contains: `EIN`, `TaxPeriod`, `ObjectId`, `URL`, `FormType`, `OrganizationName`, `DLN`, `SubmittedOn`
+
+**Key Advantages:**
+- **Raw XML Access:** Extract ANY field from Form 990, including custom/rare fields
+- **No Query Costs:** Download once, parse locally (unlike BigQuery queries)
+- **Offline Processing:** Process on your own infrastructure without rate limits
+- **Complete Historical Data:** All e-filed 990s since 2011
+- **Batch Downloads:** Download thousands of XMLs in parallel
+- **No Authentication:** Public S3 bucket (no AWS account needed)
+
+**Use Cases:**
+- **Custom Field Extraction:** Parse fields not available in BigQuery (e.g., specific schedules)
+- **Bulk Enrichment:** Download and process thousands of nonprofits locally
+- **Offline Analysis:** Build your own database from raw XML
+- **Historical Trends:** Analyze 10+ years of financial data
+- **Grant Research:** Extract detailed grant recipient lists from Form 990 Schedule I
+
+**BibTeX Citation:**
+```bibtex
+@misc{givingtuesday990data,
+  title = {GivingTuesday 990 Data Infrastructure},
+  author = {{GivingTuesday}},
+  year = {2023},
+  url = {https://990data.givingtuesday.org/},
+  note = {AWS S3 data lake of IRS Form 990 XML filings. Bucket: s3://gt990datalake-rawdata. Coverage: 5.4M+ filings (2011-present)}
+}
+```
+
+**Integration:**
+- **IRS EO-BMF** provides the complete organization registry (1.9M+ orgs)
+- **GivingTuesday Data Lake** enriches with raw XML for custom parsing
+- **Google BigQuery** offers SQL interface for standard fields
+- **ProPublica API** adds web-friendly access for individual lookups
+
+**Complements:**
+- See [Form 990 XML Data (GivingTuesday Data Lake)](./form-990-xml.md) for detailed integration guide
+- See [Form 990 Enrichment Guide](../guides/form-990-enrichment.md) for usage examples
+- See [IRS Bulk Data Integration](./irs-bulk-data.md) for EO-BMF foundation layer
+
+**Attribution:**
+When publishing analyses using this data, please cite:
+1. GivingTuesday 990 Data Infrastructure: https://990data.givingtuesday.org/
+2. Our enrichment tools: https://github.com/getcommunityone/open-navigator-for-engagement
+
+---
+
 ### ProPublica Nonprofit Explorer
 
 **Organization:** ProPublica, Inc.  
@@ -827,10 +1154,69 @@ LIMIT 1000
 
 ---
 
+### Federal Election Commission (FEC) - Bulk Data & OpenFEC API
+
+**Organization:** Federal Election Commission (FEC), U.S. Government  
+**What we use:** **PRIMARY SOURCE** for campaign finance data - individual contributions, candidate filings, committee data, and political expenditures for comprehensive campaign finance analysis.
+
+- **OpenFEC API:** https://api.open.fec.gov/developers/
+- **Bulk Data Portal:** https://www.fec.gov/data/browse-data/?tab=bulk-data
+- **Documentation:** https://www.fec.gov/campaign-finance-data/
+- **Coverage:** Complete FEC data from 1980s to present (updated nightly)
+- **Data Included:**
+  - **Individual contributions** $200+ (Schedule A)
+  - **Operating expenditures** (Schedule B)
+  - **Candidate master files** (House, Senate, Presidential)
+  - **Committee master files** (PACs, Super PACs, party committees)
+  - **Campaign finance totals** by election cycle
+  - **Independent expenditures** and electioneering communications
+- **Access Methods:**
+  - **Bulk Downloads:** Free, unlimited, no API key (CSV and FEC format)
+  - **OpenFEC API:** Free with API key (1,000 requests/hour)
+  - **Demo Key:** 30 requests/hour (no registration)
+- **API Key:** Free at https://api.data.gov/signup/
+- **License:** Public Domain (U.S. Government)
+- **Update Frequency:** Nightly (most datasets)
+
+**Use Cases:**
+- Map donor networks and political influence patterns
+- Link nonprofit leadership donations to policy decisions
+- Track campaign finance in health advocacy organizations
+- Analyze funding sources for ballot initiatives
+- Cross-reference contributions with government grant awards
+- "Follow the money" from donor to policy outcome
+
+**Critical Policy Restriction:**
+- ⚠️ **Cannot use contributor data for commercial solicitation or fundraising**
+- FEC data is for transparency and research, not marketing
+
+**BibTeX:**
+```bibtex
+@misc{fec_data_2024,
+  author = {{Federal Election Commission}},
+  title = {Campaign Finance Data and Bulk Downloads},
+  year = {2024},
+  url = {https://www.fec.gov/data/},
+  note = {Updated nightly. Accessed: 2024}
+}
+
+@misc{openfec_api_2024,
+  author = {{Federal Election Commission}},
+  title = {OpenFEC API},
+  year = {2024},
+  url = {https://api.open.fec.gov/developers/},
+  note = {RESTful API for campaign finance data. Accessed: 2024}
+}
+```
+
+**Integration:** `discovery/fec_integration.py`
+
+---
+
 ### ProPublica Campaign Finance API
 
 **Organization:** ProPublica, Inc.  
-**What we use:** Federal Election Commission (FEC) filings, campaign contributions, committee data, and expenditures to analyze the influence of money in politics.
+**What we use:** Simplified access to FEC data with pre-aggregated summaries and top donor analysis (complements direct FEC data access).
 
 - **Source:** https://projects.propublica.org/api-docs/campaign-finance/
 - **API Documentation:** https://projects.propublica.org/api-docs/campaign-finance/
@@ -846,11 +1232,13 @@ LIMIT 1000
 - **Rate Limits:** 5,000 requests per day
 - **License:** Free for non-commercial and commercial use with attribution
 
+**Note:** ProPublica API provides easier-to-use summaries of FEC data. For bulk analysis, use FEC Bulk Downloads directly.
+
 **Use Cases:**
-- "Follow the money" - link campaign contributions to policy decisions
-- Analyze donor influence on local and federal officials
-- Track funding sources for ballot initiatives and referendums
-- Political economy analysis: correlate budget decisions with donor interests
+- Quick lookups of candidate finance summaries
+- Pre-aggregated top donor analysis
+- Industry contribution patterns
+- Journalist-friendly data formatting
 
 **BibTeX:**
 ```bibtex

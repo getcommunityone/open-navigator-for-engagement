@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import axios from 'axios'
 import { Tab } from '@headlessui/react'
+import api from '../lib/api'
 import { 
   UserIcon, 
   BuildingLibraryIcon,
@@ -60,7 +60,7 @@ export default function Profile() {
   const { data: leadersFollowing } = useQuery<Leader[]>({
     queryKey: ['following', 'leaders'],
     queryFn: async () => {
-      const response = await axios.get('/api/social/following/leaders')
+      const response = await api.get('/social/following/leaders')
       return response.data
     },
     enabled: !!user
@@ -69,7 +69,7 @@ export default function Profile() {
   const { data: orgsFollowing } = useQuery<Organization[]>({
     queryKey: ['following', 'organizations'],
     queryFn: async () => {
-      const response = await axios.get('/api/social/following/organizations')
+      const response = await api.get('/social/following/organizations')
       return response.data
     },
     enabled: !!user
@@ -78,7 +78,7 @@ export default function Profile() {
   const { data: causesFollowing } = useQuery<Cause[]>({
     queryKey: ['following', 'causes'],
     queryFn: async () => {
-      const response = await axios.get('/api/social/following/causes')
+      const response = await api.get('/social/following/causes')
       return response.data
     },
     enabled: !!user

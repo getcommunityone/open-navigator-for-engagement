@@ -1,3 +1,7 @@
+---
+sidebar_position: 14
+---
+
 # Jurisdiction Discovery - Deployment Options
 
 ## Option 1: Local CLI ✅ Recommended for Testing

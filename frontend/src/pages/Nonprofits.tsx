@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { formatCurrency } from '../utils/formatters'
 
 interface Nonprofit {
   source: string
@@ -62,15 +63,7 @@ export default function Nonprofits() {
     searchNonprofits()
   }, [])
 
-  const formatCurrency = (amount?: number) => {
-    if (!amount) return 'N/A'
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0
-    }).format(amount)
-  }
+  // formatCurrency imported from utils/formatters
 
   return (
     <div className="min-h-screen p-8" style={{ backgroundColor: '#F1F5F9' }}>
@@ -202,13 +195,27 @@ export default function Nonprofits() {
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
                     <div className="flex items-center gap-3">
-                      {org.logo_url && (
+                      {org.logo_url ? (
                         <img 
                           src={org.logo_url} 
                           alt={org.name}
-                          className="w-12 h-12 rounded object-cover"
+                          className="w-12 h-12 rounded object-contain bg-gray-100 border border-gray-200"
+                          onError={(e) => {
+                            e.currentTarget.style.display = 'none'
+                            const fallback = e.currentTarget.nextElementSibling as HTMLElement | null
+                            if (fallback) fallback.style.display = 'flex'
+                          }}
                         />
-                      )}
+                      ) : null}
+                      <div 
+                        className="w-12 h-12 rounded flex items-center justify-center text-white text-lg font-bold"
+                        style={{ 
+                          backgroundColor: '#52796F',
+                          display: org.logo_url ? 'none' : 'flex'
+                        }}
+                      >
+                        {org.name.charAt(0)}
+                      </div>
                       <div>
                         <h3 className="text-lg font-semibold text-gray-900">
                           {org.name}

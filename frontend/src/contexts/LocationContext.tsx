@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react'
 import { useAuth } from './AuthContext'
+import { stateNameToCode } from '../utils/stateMapping'
 
 interface LocationData {
   address?: string
@@ -29,8 +30,11 @@ export const LocationProvider: React.FC<{ children: ReactNode }> = ({ children }
     if (isAuthenticated && user) {
       // Use location from user profile if available
       if (user.state && user.city) {
+        // Migrate full state names to state codes
+        const stateCode = stateNameToCode(user.state)
+        
         setLocationState({
-          state: user.state,
+          state: stateCode,
           county: user.county || '',
           city: user.city,
           school_board: user.school_board,
@@ -41,7 +45,17 @@ export const LocationProvider: React.FC<{ children: ReactNode }> = ({ children }
       const savedLocation = localStorage.getItem('user_location')
       if (savedLocation) {
         try {
-          setLocationState(JSON.parse(savedLocation))
+          const parsed = JSON.parse(savedLocation)
+          
+          // Migrate full state names to state codes
+          if (parsed.state) {
+            parsed.state = stateNameToCode(parsed.state)
+          }
+          
+          setLocationState(parsed)
+          
+          // Save back the migrated version
+          localStorage.setItem('user_location', JSON.stringify(parsed))
         } catch (e) {
           console.error('Failed to parse saved location:', e)
         }

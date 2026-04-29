@@ -1,6 +1,8 @@
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { useState, Fragment, useEffect } from 'react'
 import { Tab } from '@headlessui/react'
+import { useQuery } from '@tanstack/react-query'
+import axios from 'axios'
 import { 
   MagnifyingGlassIcon, 
   DocumentTextIcon, 
@@ -16,7 +18,11 @@ import {
   BriefcaseIcon,
   ScaleIcon,
   UserGroupIcon,
-  CodeBracketIcon
+  CodeBracketIcon,
+  BuildingOfficeIcon,
+  UserIcon,
+  CheckCircleIcon,
+  MapPinIcon
 } from '@heroicons/react/24/outline'
 import AddressLookup from '../components/AddressLookup'
 import { useLocation as useLocationContext } from '../contexts/LocationContext'
@@ -28,45 +34,54 @@ export default function Home() {
   const [searchScope, setSearchScope] = useState('city') // city, county, state, community (school), national
   const [selectedTab, setSelectedTab] = useState(0)
   const [showSuggestions, setShowSuggestions] = useState(false)
-  const [filteredSuggestions, setFilteredSuggestions] = useState<string[]>([])
   const { location, setLocation } = useLocationContext()
 
-  const DOCS_URL = import.meta.env.PROD ? '/docs' : 'http://localhost:3000/docs'
+  const DOCS_URL = import.meta.env.PROD ? '/docs/intro' : 'http://localhost:3000/docs/intro'
 
-  // Common search suggestions
-  const searchSuggestions = [
-    'housing',
-    'affordable housing',
-    'health',
-    'dental health',
-    'oral health',
-    'education',
-    'school funding',
-    'budget',
-    'city budget',
-    'transportation',
-    'public transit',
-    'infrastructure',
-    'parks',
-    'recreation',
-    'zoning',
-    'development',
-    'public safety',
-    'police',
-    'fire department',
-    'water',
-    'utilities',
-    'taxes',
-    'property taxes',
-    'employment',
-    'jobs',
-    'economic development',
-    'environment',
-    'climate',
-    'sustainability',
-    'waste management',
-    'recycling',
-  ]
+  // Live search preview (type-ahead with actual results from API)
+  const { data: previewResults, isLoading: previewLoading, error: previewError } = useQuery({
+    queryKey: ['search-preview-home', keyword, location?.state],
+    queryFn: async () => {
+      console.log('🔍 [Home] Fetching preview for:', keyword, 'in state:', location?.state);
+      if (!keyword || keyword.length < 2) {
+        console.log('⚠️ [Home] Query too short, skipping');
+        return null;
+      }
+      
+      const url = '/api/search/';
+      const params: any = {
+        q: keyword,
+        types: 'causes,contacts,organizations',
+        limit: 3
+      };
+      
+      // Add state filter if location is set
+      if (location && location.state) {
+        params.state = location.state;
+        console.log('📍 [Home] Filtering by state:', location.state);
+      }
+      
+      console.log('📤 [Home] API Request:', url, params);
+      const response = await axios.get(url, { params });
+      console.log('📥 [Home] API Response:', response.data);
+      console.log('📊 [Home] Total results:', response.data.total_results);
+      return response.data;
+    },
+    enabled: keyword.length >= 2 && showSuggestions,
+    staleTime: 1000
+  });
+
+  // Log when preview results change
+  useEffect(() => {
+    console.log('🔄 [Home] Preview results updated:', {
+      hasResults: !!previewResults,
+      totalResults: previewResults?.total_results,
+      showSuggestions,
+      keyword,
+      isLoading: previewLoading,
+      error: previewError
+    });
+  }, [previewResults, showSuggestions, keyword, previewLoading, previewError]);
 
   // Handle tab parameter from URL
   useEffect(() => {
@@ -86,21 +101,24 @@ export default function Home() {
   const handleKeywordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value
     setKeyword(value)
-
-    if (value.length > 0) {
-      const filtered = searchSuggestions.filter(suggestion =>
-        suggestion.toLowerCase().includes(value.toLowerCase())
-      ).slice(0, 8) // Limit to 8 suggestions
-      setFilteredSuggestions(filtered)
-      setShowSuggestions(filtered.length > 0)
-    } else {
-      setShowSuggestions(false)
-    }
+    setShowSuggestions(value.length >= 2)
   }
 
   const handleSelectSuggestion = (suggestion: string) => {
     setKeyword(suggestion)
     setShowSuggestions(false)
+  }
+
+  const handleViewAllCategory = (category: string) => {
+    if (keyword.trim().length >= 2) {
+      const params = new URLSearchParams()
+      params.set('q', keyword)
+      params.set('types', category)
+      if (location && location.state) {
+        params.set('state', location.state)
+      }
+      navigate(`/search?${params.toString()}`)
+    }
   }
 
   const handleSearch = (e: React.FormEvent) => {
@@ -111,7 +129,7 @@ export default function Home() {
       if (searchScope) params.set('scope', searchScope)
       
       // Add location context based on scope
-      if (location && searchScope !== 'national') {
+      if (location) {
         if (searchScope === 'state' || searchScope === 'county' || searchScope === 'city' || searchScope === 'community') {
           params.set('state', location.state)
         }
@@ -159,7 +177,7 @@ export default function Home() {
         navigate(category.route)
       }
     } else if (category.query) {
-      navigate(`/documents?search=${encodeURIComponent(category.query)}`)
+      navigate(`/search?q=${encodeURIComponent(category.query)}`)
     }
   }
 
@@ -173,7 +191,9 @@ export default function Home() {
           <p className="text-xl mb-12 max-w-3xl mx-auto" style={{ color: '#354F52' }}>
             Track what local governments and charities say, spend—and block.
             <br />
-            Find leaders by name. Discover causes. 90,000+ cities. 3M+ charities. All free.
+            Find leaders by name. Discover causes.{' '}
+            <Link to="/jurisdictions" className="font-semibold hover:underline">925 jurisdictions</Link>.{' '}
+            <Link to="/search?types=organizations" className="font-semibold hover:underline">43,726 nonprofits</Link>. All free.
           </p>
 
           {/* Tabbed Interface */}
@@ -214,36 +234,147 @@ export default function Home() {
                       <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-end">
                         <div className="lg:col-span-7">
                           <label className="block text-left text-sm font-medium text-gray-700 mb-2">
-                            What are you looking for?
+                            Search for topics, people, organizations, or causes
                           </label>
                           <div className="relative">
                             <input
                               type="text"
-                              placeholder="Try: housing, health, education, budget..."
+                              placeholder="Try: mayor, dental clinic, food bank, affordable housing..."
                               value={keyword}
                               onChange={handleKeywordChange}
                               onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
                               onFocus={() => {
-                                if (keyword.length > 0 && filteredSuggestions.length > 0) {
+                                if (keyword.length >= 2) {
                                   setShowSuggestions(true)
                                 }
                               }}
                               className="w-full px-4 py-3 text-lg border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent text-gray-900"
                             />
                             
-                            {/* Autocomplete Suggestions */}
-                            {showSuggestions && filteredSuggestions.length > 0 && (
-                              <div className="absolute z-10 w-full mt-1 bg-white border-2 border-gray-300 rounded-lg shadow-lg max-h-64 overflow-y-auto">
-                                {filteredSuggestions.map((suggestion, index) => (
+                            {/* Rich Preview Dropdown with Grouped Results */}
+                            {showSuggestions && previewResults && previewResults.total_results > 0 && (
+                              <div className="absolute z-10 w-full mt-2 bg-white border border-gray-200 rounded-lg shadow-xl max-h-96 overflow-y-auto">
+                                
+                                {/* Causes Section */}
+                                {previewResults.results.causes.length > 0 && (
+                                  <div className="border-b border-gray-200">
+                                    <div className="px-4 py-2 bg-gray-50 flex items-center justify-between">
+                                      <div className="flex items-center gap-2">
+                                        <HeartIcon className="h-4 w-4 text-gray-500" />
+                                        <span className="text-xs font-semibold text-gray-700 uppercase">Causes</span>
+                                      </div>
+                                      <button
+                                        type="button"
+                                        onClick={() => handleViewAllCategory('causes')}
+                                        className="text-xs text-primary-600 hover:text-primary-700 font-medium"
+                                      >
+                                        View All
+                                      </button>
+                                    </div>
+                                    {previewResults.results.causes.slice(0, 3).map((result: any, idx: number) => (
+                                      <button
+                                        key={idx}
+                                        type="button"
+                                        onClick={() => handleSelectSuggestion(result.title)}
+                                        className="w-full text-left px-4 py-2 hover:bg-gray-50 flex items-start gap-3 transition-colors"
+                                      >
+                                        <HeartIcon className="h-5 w-5 text-gray-600 mt-0.5 flex-shrink-0" />
+                                        <div className="flex-1 min-w-0">
+                                          <div className="font-medium text-gray-900 truncate">{result.title}</div>
+                                          <div className="text-sm text-gray-600 truncate">{result.subtitle}</div>
+                                        </div>
+                                      </button>
+                                    ))}
+                                  </div>
+                                )}
+
+                                {/* People (Contacts) Section */}
+                                {previewResults.results.contacts.length > 0 && (
+                                  <div className="border-b border-gray-200">
+                                    <div className="px-4 py-2 bg-gray-50 flex items-center justify-between">
+                                      <div className="flex items-center gap-2">
+                                        <UserIcon className="h-4 w-4 text-gray-500" />
+                                        <span className="text-xs font-semibold text-gray-700 uppercase">People</span>
+                                      </div>
+                                      <button
+                                        type="button"
+                                        onClick={() => handleViewAllCategory('contacts')}
+                                        className="text-xs text-primary-600 hover:text-primary-700 font-medium"
+                                      >
+                                        View All
+                                      </button>
+                                    </div>
+                                    {previewResults.results.contacts.slice(0, 3).map((result: any, idx: number) => (
+                                      <button
+                                        key={idx}
+                                        type="button"
+                                        onClick={() => handleSelectSuggestion(result.title)}
+                                        className="w-full text-left px-4 py-2 hover:bg-gray-50 flex items-start gap-3 transition-colors"
+                                      >
+                                        <UserIcon className="h-5 w-5 text-gray-600 mt-0.5 flex-shrink-0" />
+                                        <div className="flex-1 min-w-0">
+                                          <div className="font-medium text-gray-900 truncate">{result.title}</div>
+                                          <div className="text-sm text-gray-600 truncate">{result.subtitle}</div>
+                                        </div>
+                                      </button>
+                                    ))}
+                                  </div>
+                                )}
+
+                                {/* Organizations Section */}
+                                {previewResults.results.organizations.length > 0 && (
+                                  <div>
+                                    <div className="px-4 py-2 bg-gray-50 flex items-center justify-between">
+                                      <div className="flex items-center gap-2">
+                                        <BuildingOfficeIcon className="h-4 w-4 text-gray-500" />
+                                        <span className="text-xs font-semibold text-gray-700 uppercase">Organizations</span>
+                                      </div>
+                                      <button
+                                        type="button"
+                                        onClick={() => handleViewAllCategory('organizations')}
+                                        className="text-xs text-primary-600 hover:text-primary-700 font-medium"
+                                      >
+                                        View All
+                                      </button>
+                                    </div>
+                                    {previewResults.results.organizations.slice(0, 3).map((result: any, idx: number) => (
+                                      <button
+                                        key={idx}
+                                        type="button"
+                                        onClick={() => handleSelectSuggestion(result.title)}
+                                        className="w-full text-left px-4 py-2 hover:bg-gray-50 flex items-start gap-3 transition-colors last:rounded-b-lg"
+                                      >
+                                        {result.metadata?.logo_url ? (
+                                          <img 
+                                            src={result.metadata.logo_url} 
+                                            alt={`${result.title} logo`}
+                                            className="h-5 w-5 rounded object-contain mt-0.5 flex-shrink-0"
+                                            onError={(e) => {
+                                              // Fallback to icon if image fails to load
+                                              e.currentTarget.style.display = 'none';
+                                              e.currentTarget.nextElementSibling?.classList.remove('hidden');
+                                            }}
+                                          />
+                                        ) : null}
+                                        <BuildingOfficeIcon className={`h-5 w-5 text-gray-600 mt-0.5 flex-shrink-0 ${result.metadata?.logo_url ? 'hidden' : ''}`} />
+                                        <div className="flex-1 min-w-0">
+                                          <div className="font-medium text-gray-900 truncate">{result.title}</div>
+                                          <div className="text-sm text-gray-600 truncate">{result.subtitle}</div>
+                                        </div>
+                                      </button>
+                                    ))}
+                                  </div>
+                                )}
+
+                                {/* Footer with total results */}
+                                <div className="px-4 py-2 bg-gray-50 text-center border-t border-gray-200">
                                   <button
-                                    key={index}
-                                    type="button"
-                                    onClick={() => handleSelectSuggestion(suggestion)}
-                                    className="w-full text-left px-4 py-2 hover:bg-primary-50 text-gray-900 text-base border-b border-gray-100 last:border-b-0"
+                                    type="submit"
+                                    className="text-sm text-primary-600 hover:text-primary-700 font-medium"
                                   >
-                                    {suggestion}
+                                    See all {previewResults.total_results} results →
                                   </button>
-                                ))}
+                                </div>
                               </div>
                             )}
                           </div>
@@ -253,36 +384,43 @@ export default function Home() {
                           <label className="block text-left text-sm font-medium text-gray-700 mb-2">
                             Search In
                           </label>
-                          <select
-                            value={searchScope}
-                            onChange={(e) => {
-                              const newValue = e.target.value
-                              setSearchScope(newValue)
-                              // If user clicks "Set your location first", navigate to community tab
-                              if (newValue === 'community' && !location) {
-                                navigate('/?tab=community')
-                              }
-                            }}
-                            className="w-full px-4 py-3 text-lg border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-white text-gray-900"
-                          >
-                            {location ? (
-                              <>
+                          {location ? (
+                            <div className="relative">
+                              <select
+                                value={searchScope}
+                                onChange={(e) => setSearchScope(e.target.value)}
+                                className="w-full px-4 py-3 text-lg border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-white text-gray-900"
+                              >
                                 <option value="city">My City ({location.city})</option>
                                 <option value="county">My County ({location.county || 'County'})</option>
                                 <option value="state">My State ({location.state})</option>
                                 <option value="community">School Board ({location.city})</option>
-                                <option value="national">Nationwide</option>
-                              </>
-                            ) : (
-                              <>
-                                <option value="community">Set your location first</option>
-                                <option value="national">Nationwide</option>
-                              </>
-                            )}
-                          </select>
+                              </select>
+                              <button
+                                type="button"
+                                onClick={() => navigate('/?tab=community')}
+                                className="absolute -bottom-6 left-0 right-0 text-xs text-primary-600 hover:text-primary-700 font-medium underline flex items-center justify-center gap-1"
+                              >
+                                <MapPinIcon className="h-3 w-3" />
+                                Change Location
+                              </button>
+                            </div>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => navigate('/?tab=community')}
+                              className="w-full px-4 py-3 text-lg border-2 border-primary-600 rounded-lg bg-primary-50 text-primary-700 hover:bg-primary-100 transition-colors font-semibold flex items-center justify-center gap-2"
+                            >
+                              <MapPinIcon className="h-5 w-5" />
+                              Set Your Location First
+                            </button>
+                          )}
                         </div>
 
                         <div className="lg:col-span-2">
+                          <label className="block text-left text-sm font-medium text-gray-700 mb-2 invisible">
+                            Search
+                          </label>
                           <button
                             type="submit"
                             className="w-full text-white px-6 py-3 rounded-lg transition-colors text-lg font-semibold flex items-center justify-center gap-2"
@@ -309,6 +447,31 @@ export default function Home() {
                       Enter your address to find local organizations, city councils, county boards, school districts, and charities near you
                     </p>
                     <AddressLookup onLocationFound={handleAddressFound} />
+                    
+                    {/* Success message and return to search button */}
+                    {location && (
+                      <div className="mt-8 p-6 bg-green-50 border-2 border-green-200 rounded-xl">
+                        <div className="flex items-start gap-3 mb-4">
+                          <CheckCircleIcon className="h-6 w-6 text-green-600 flex-shrink-0 mt-0.5" />
+                          <div className="flex-1">
+                            <h3 className="text-lg font-bold text-green-900 mb-1">
+                              Location Set Successfully!
+                            </h3>
+                            <p className="text-green-700">
+                              You're all set for <strong>{location.city}, {location.state}</strong>. Now you can search for topics in your community.
+                            </p>
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => setSelectedTab(0)}
+                          className="w-full bg-green-600 hover:bg-green-700 text-white px-6 py-4 rounded-lg font-semibold text-lg flex items-center justify-center gap-2 transition-all shadow-lg hover:shadow-xl"
+                        >
+                          <MagnifyingGlassIcon className="h-6 w-6" />
+                          Search Topics in My Community
+                          <ArrowRightIcon className="h-5 w-5" />
+                        </button>
+                      </div>
+                    )}
                   </div>
                 </Tab.Panel>
               </Tab.Panels>

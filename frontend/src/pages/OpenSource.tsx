@@ -19,7 +19,7 @@ export default function OpenSource() {
       icon: DocumentTextIcon,
       title: 'Comprehensive Documentation',
       description: 'Detailed documentation for developers, including API docs, data models, deployment guides, and contribution guidelines.',
-      link: '/docs',
+      link: import.meta.env.PROD ? '/docs/intro' : 'http://localhost:3000/docs/intro',
     },
     {
       icon: UserGroupIcon,
@@ -91,11 +91,11 @@ export default function OpenSource() {
               <ul className="space-y-2 text-sm text-gray-600">
                 <li className="flex items-start gap-2">
                   <span className="text-green-600 font-bold">✓</span>
-                  Track 90,000+ cities, counties, and school districts
+                  Track 925 cities, counties, and school districts
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="text-green-600 font-bold">✓</span>
-                  Monitor 3M+ nonprofits and community organizations
+                  Monitor 43,726 nonprofits and community organizations
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="text-green-600 font-bold">✓</span>

@@ -60,9 +60,9 @@ Includes:
 - **Government APIs**: U.S. Census, NCES, IRS, Open States
 - **Standards**: OCD-ID (OCDEP 2), Popolo Project, Schema.org, CEDS, OMOP CDM (OHDSI), IATI v2.03
 - **Data Models**: Microsoft CDM for Nonprofits, OMOP vocabulary system
-- **Fact-Checking**: Google Fact Check API, PolitiFact, FactCheck.org
-- **Nonprofit Data**: ProPublica API (3M+ orgs), Every.org, Findhelp (400K+ programs)
-- **Churches & Faith-Based**: ARDA Congregations, HIFLD Places of Worship (350K+ locations), National Congregations Study
+- **Fact-Checking**: N/A (not currently integrated)
+- **Nonprofit Data**: IRS BMF (43,726 orgs from 5 states)
+- **Churches & Faith-Based**: 4,372 congregations from IRS data
 - **Enterprise Tech**: Microsoft (Nonprofit CDM), Google (Data Commons), AWS (Open Data), Databricks (Unity Catalog, MLflow), Snowflake, Salesforce (NPSP)
 - **BibTeX citations** for academic papers and research use
 :::
@@ -438,4 +438,4 @@ Adjust rate limits in `config/settings.py`.
 - **GitHub Issues**: [Report bugs or request features](https://github.com/getcommunityone/open-navigator-for-engagement/issues)
 - **Documentation**: Browse the sidebar
 - **API Docs**: http://localhost:8000/docs
-- **Email**: support@communityone.com
+- **Email**: john.bowyer@communityone.com

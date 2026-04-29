@@ -11,11 +11,13 @@ Data Lake:
 - XMLs: EfileData/XmlFiles/[OBJECT_ID]_public.xml
 
 Data enriched:
+- Website URLs (WebsiteAddressTxt)
+- Mission statements and program descriptions (ActivityOrMissionDesc)
 - Total revenue, expenses, net income
 - Assets, liabilities, net assets
 - Program expenses, administrative, fundraising
 - Contributions, grants, investment income
-- Mission statements and program descriptions
+- Officer compensation and leadership (Part VII)
 
 Usage:
     # Install dependencies first
@@ -80,12 +82,25 @@ class GivingTuesday990Enricher:
         self,
         index_path: str = "data/cache/form990_gt_index.parquet",
         cache_dir: str = "data/cache/form_990_xml",
-        max_concurrent: int = 20
+        max_concurrent: int = 20,
+        use_local_xmls: bool = False,
+        local_index_path: str = "data/cache/form990/local_index_dev_states.parquet"
     ):
-        """Initialize the enricher"""
+        """Initialize the enricher
+        
+        Args:
+            index_path: Path to GivingTuesday index
+            cache_dir: Directory to cache downloaded XMLs
+            max_concurrent: Max concurrent S3 requests
+            use_local_xmls: If True, use locally extracted XMLs instead of downloading
+            local_index_path: Path to local XML index (created by build_990_local_index.py)
+        """
         self.index_path = Path(index_path)
         self.cache_dir = Path(cache_dir)
         self.cache_dir.mkdir(parents=True, exist_ok=True)
+        
+        self.use_local_xmls = use_local_xmls
+        self.local_index_path = Path(local_index_path)
         
         # S3 client for GivingTuesday Data Lake (no credentials needed)
         self.s3 = boto3.client(
@@ -98,17 +113,31 @@ class GivingTuesday990Enricher:
         self.max_concurrent = max_concurrent
         self.semaphore = asyncio.Semaphore(max_concurrent)
         
-        # Load index if it exists
+        # Load appropriate index
         self.index_df = None
-        if self.index_path.exists():
-            logger.info(f"📚 Loading existing index from {self.index_path}")
-            self.index_df = pd.read_parquet(self.index_path)
-            logger.info(f"   Index contains {len(self.index_df):,} Form 990 filings")
+        if use_local_xmls:
+            if self.local_index_path.exists():
+                logger.info(f"📚 Loading local XML index from {self.local_index_path}")
+                self.index_df = pd.read_parquet(self.local_index_path)
+                logger.info(f"   Local index contains {len(self.index_df):,} Form 990 XMLs")
+            else:
+                logger.warning(f"⚠️  Local index not found: {self.local_index_path}")
+                logger.warning(f"   Run: python scripts/build_990_local_index.py")
+        else:
+            if self.index_path.exists():
+                logger.info(f"📚 Loading GivingTuesday index from {self.index_path}")
+                self.index_df = pd.read_parquet(self.index_path)
+                logger.info(f"   Index contains {len(self.index_df):,} Form 990 filings")
         
         logger.info(f"🚀 GivingTuesday 990 enricher initialized")
-        logger.info(f"   Data Lake: s3://{self.bucket}")
-        logger.info(f"   Max concurrent requests: {max_concurrent}")
-        logger.info(f"   Cache directory: {self.cache_dir}")
+        if use_local_xmls:
+            logger.info(f"   Mode: LOCAL XMLs")
+            logger.info(f"   Local index: {self.local_index_path}")
+        else:
+            logger.info(f"   Mode: DOWNLOAD from S3")
+            logger.info(f"   Data Lake: s3://{self.bucket}")
+            logger.info(f"   Max concurrent requests: {max_concurrent}")
+            logger.info(f"   Cache directory: {self.cache_dir}")
     
     def download_index(self, index_key: str = "Indices/990xmls/index_all_years_efiledata_xmls_created_on_2023-10-29.csv"):
         """
@@ -174,35 +203,41 @@ class GivingTuesday990Enricher:
         """
         Find the most recent Form 990 filing for an EIN
         
-        Returns dict with OBJECT_ID and other metadata, or None if not found
+        Returns dict with OBJECT_ID/file_path and other metadata, or None if not found
         """
         if self.index_df is None:
-            logger.warning("⚠️  Index not loaded. Run --download-index first.")
+            logger.warning("⚠️  Index not loaded.")
             return None
         
         # Ensure EIN is 9 digits with leading zeros
         ein = str(ein).zfill(9)
         
+        # For local XMLs, use 'ein' column; for GT index, use 'EIN'
+        ein_col = 'ein' if self.use_local_xmls else 'EIN'
+        
         # Find all filings for this EIN
-        filings = self.index_df[self.index_df['EIN'] == ein]
+        filings = self.index_df[self.index_df[ein_col] == ein]
         
         if len(filings) == 0:
             return None
         
         # Prefer most recent if multiple filings
-        if prefer_recent and 'TaxPeriod' in filings.columns:
-            filings = filings.sort_values('TaxPeriod', ascending=False)
+        if prefer_recent:
+            if self.use_local_xmls and 'tax_year' in filings.columns:
+                filings = filings.sort_values('tax_year', ascending=False)
+            elif 'TaxPeriod' in filings.columns:
+                filings = filings.sort_values('TaxPeriod', ascending=False)
         
         # Return first (most recent) filing as dict
         return filings.iloc[0].to_dict()
     
     async def fetch_and_parse_990(self, ein: str, filing_info: Optional[Dict] = None) -> Dict:
         """
-        Fetch and parse a Form 990 XML from GivingTuesday Data Lake
+        Fetch and parse a Form 990 XML (from S3 or local file)
         
         Args:
             ein: 9-digit EIN
-            filing_info: Optional dict from find_filing() with OBJECT_ID
+            filing_info: Optional dict from find_filing() with OBJECT_ID or file_path
         
         Returns:
             Dict with extracted fields or {'form_990_status': 'not_found'}
@@ -233,6 +268,31 @@ class GivingTuesday990Enricher:
                     json.dump(result, f)
                 return result
             
+            # Use local XML if available
+            if self.use_local_xmls and 'file_path' in filing_info:
+                try:
+                    from pathlib import Path
+                    project_root = Path(__file__).parent.parent
+                    xml_path = project_root / filing_info['file_path']
+                    
+                    with open(xml_path, 'rb') as f:
+                        xml_content = f.read()
+                    
+                    # Parse XML
+                    result = self.parse_990_xml(xml_content, filing_info)
+                    
+                    # Cache result
+                    with open(cache_file, 'w') as f:
+                        json.dump(result, f)
+                    
+                    return result
+                    
+                except Exception as e:
+                    logger.error(f"Error reading local XML for EIN {ein}: {e}")
+                    result = {'form_990_status': 'error', 'form_990_error': str(e), 'form_990_last_updated': datetime.now().isoformat()}
+                    return result
+            
+            # Otherwise download from S3
             # Construct S3 key using ObjectId (or use direct URL if available)
             # GivingTuesday index columns: ObjectId, URL, TaxPeriod, FormType
             direct_url = filing_info.get('URL')
@@ -329,6 +389,71 @@ class GivingTuesday990Enricher:
                         return None
                 return str(obj) if obj is not None else None
             
+            # Extract officers/directors from Part VII
+            officers = []
+            
+            # Form 990 Part VII Section A - Officers, Directors, Trustees, Key Employees
+            part_vii = form_990.get('Form990PartVIISectionAGrp', [])
+            
+            # Ensure it's a list (xmltodict returns single item as dict)
+            if isinstance(part_vii, dict):
+                part_vii = [part_vii]
+            
+            for officer in part_vii:
+                if not isinstance(officer, dict):
+                    continue
+                    
+                name = (
+                    get_text(officer, 'PersonNm') or
+                    get_text(officer, 'NamePerson', 'BusinessNameLine1Txt') or
+                    get_text(officer, 'NamePerson', 'BusinessNameLine1')
+                )
+                
+                title = get_text(officer, 'TitleTxt') or get_text(officer, 'Title')
+                
+                hours = (
+                    get_num(officer, 'AverageHoursPerWeekRt') or
+                    get_num(officer, 'AverageHoursPerWeekRltdOrgRt') or
+                    get_num(officer, 'AverageHours')
+                )
+                
+                # Compensation from this org
+                comp_org = (
+                    get_num(officer, 'ReportableCompFromOrgAmt') or
+                    get_num(officer, 'CompensationAmt') or
+                    0
+                )
+                
+                # Compensation from related orgs
+                comp_related = (
+                    get_num(officer, 'ReportableCompFromRltdOrgAmt') or
+                    0
+                )
+                
+                # Other compensation (benefits, deferred comp, etc)
+                comp_other = (
+                    get_num(officer, 'OtherCompensationAmt') or
+                    0
+                )
+                
+                # Total compensation
+                total_comp = comp_org + comp_related + comp_other
+                
+                if name:  # Only add if we have a name
+                    officers.append({
+                        'name': name,
+                        'title': title,
+                        'hours_per_week': hours,
+                        'compensation': total_comp,
+                        'compensation_org': comp_org,
+                        'compensation_related': comp_related,
+                        'compensation_other': comp_other,
+                    })
+            
+            # Convert officers list to JSON string for storage
+            import json
+            officers_json = json.dumps(officers) if officers else None
+            
             # Extract fields
             result = {
                 'form_990_status': 'found',
@@ -355,8 +480,18 @@ class GivingTuesday990Enricher:
                 # Grants
                 'form_990_grants_paid': get_num(form_990, 'GrantsAndSimilarAmountsPaidAmt') or get_num(form_990, 'GrantsAndAllocations'),
                 
-                # Mission (from return header)
-                'form_990_mission': get_text(root, 'ReturnHeader', 'Filer', 'BusinessName', 'BusinessNameLine1Txt'),
+                # Website (Part I Line 1)
+                'form_990_website': get_text(form_990, 'WebsiteAddressTxt') or get_text(form_990, 'WebsiteAddress'),
+                
+                # Mission (Part I Line 1 or Part III)
+                'form_990_mission': (
+                    get_text(form_990, 'ActivityOrMissionDesc') or 
+                    get_text(form_990, 'MissionDesc') or
+                    get_text(root, 'ReturnHeader', 'Filer', 'BusinessName', 'BusinessNameLine1Txt')
+                ),
+                
+                # Officers and Directors (Part VII)
+                'form_990_officers': officers_json,
                 
                 'form_990_last_updated': datetime.now().isoformat(),
             }
@@ -378,7 +513,9 @@ class GivingTuesday990Enricher:
         self,
         df: pd.DataFrame,
         ein_column: str = 'ein',
-        batch_size: int = 1000
+        batch_size: int = 1000,
+        skip_enriched: bool = False,
+        max_age_days: int = 365
     ) -> pd.DataFrame:
         """
         Enrich a DataFrame with Form 990 data
@@ -387,6 +524,8 @@ class GivingTuesday990Enricher:
             df: DataFrame with nonprofit data
             ein_column: Name of column containing EINs
             batch_size: Process in batches of this size
+            skip_enriched: If True, skip records that already have recent form_990_last_updated
+            max_age_days: Maximum age in days before re-enriching (used with skip_enriched)
         
         Returns:
             DataFrame with added form_990_* columns
@@ -397,6 +536,8 @@ class GivingTuesday990Enricher:
         logger.info(f"Total records: {len(df):,}")
         logger.info(f"Max concurrent: {self.max_concurrent}")
         logger.info(f"Batch size: {batch_size:,}")
+        if skip_enriched:
+            logger.info(f"Incremental mode: Skipping records enriched within {max_age_days} days")
         logger.info("=" * 60)
         
         if self.index_df is None:
@@ -414,14 +555,49 @@ class GivingTuesday990Enricher:
         
         logger.info(f"   Found {len(ein_to_filing):,} / {len(df[ein_column].unique()):,} EINs in index")
         
+        # Filter for incremental processing if requested
+        if skip_enriched and 'form_990_last_updated' in df.columns:
+            from datetime import datetime, timedelta
+            cutoff_date = datetime.now() - timedelta(days=max_age_days)
+            
+            # Find records that need enrichment
+            needs_enrichment = df['form_990_last_updated'].isna()
+            
+            # Also re-enrich if too old
+            if df['form_990_last_updated'].notna().any():
+                try:
+                    last_updated = pd.to_datetime(df['form_990_last_updated'], errors='coerce')
+                    needs_enrichment |= (last_updated < cutoff_date)
+                except:
+                    pass
+            
+            # Filter to only records that need enrichment
+            df_to_enrich = df[needs_enrichment].copy()
+            df_skip = df[~needs_enrichment].copy()
+            
+            logger.info(f"📊 Incremental processing:")
+            logger.info(f"   Skipping: {len(df_skip):,} (already enriched)")
+            logger.info(f"   Enriching: {len(df_to_enrich):,} (missing or outdated)")
+            
+            # If nothing needs enrichment, return original
+            if len(df_to_enrich) == 0:
+                logger.success("✅ All records already enriched!")
+                return df
+            
+            # Continue with df_to_enrich
+            df_working = df_to_enrich
+        else:
+            df_working = df
+            df_skip = None
+        
         # Process in batches
         results = []
-        num_batches = (len(df) + batch_size - 1) // batch_size
+        num_batches = (len(df_working) + batch_size - 1) // batch_size
         
         for batch_idx in range(num_batches):
             start_idx = batch_idx * batch_size
-            end_idx = min(start_idx + batch_size, len(df))
-            batch_df = df.iloc[start_idx:end_idx]
+            end_idx = min(start_idx + batch_size, len(df_working))
+            batch_df = df_working.iloc[start_idx:end_idx]
             
             logger.info(f"\nBatch {batch_idx + 1}/{num_batches}: {len(batch_df)} records")
             
@@ -438,7 +614,26 @@ class GivingTuesday990Enricher:
         
         # Add results to DataFrame
         logger.info("\n📊 Merging results...")
-        enriched_df = pd.concat([df.reset_index(drop=True), pd.DataFrame(results)], axis=1)
+        
+        # Drop existing form_990_* columns from records we enriched
+        form_990_cols = [col for col in df_working.columns if col.startswith('form_990_')]
+        if form_990_cols:
+            logger.info(f"   Dropping {len(form_990_cols)} existing form_990_* columns from enriched records")
+            df_working_clean = df_working.drop(columns=form_990_cols)
+        else:
+            df_working_clean = df_working
+        
+        # Merge enriched data with results
+        enriched_batch = pd.concat([df_working_clean.reset_index(drop=True), pd.DataFrame(results)], axis=1)
+        
+        # If we skipped records (incremental mode), combine them back
+        if df_skip is not None and len(df_skip) > 0:
+            logger.info(f"   Combining {len(enriched_batch):,} newly enriched + {len(df_skip):,} skipped records")
+            enriched_df = pd.concat([enriched_batch, df_skip], ignore_index=True)
+            # Sort to restore original order (approximately)
+            enriched_df = enriched_df.sort_values(ein_column).reset_index(drop=True)
+        else:
+            enriched_df = enriched_batch
         
         # Stats
         found = sum(1 for r in results if r.get('form_990_status') == 'found')
@@ -495,14 +690,27 @@ Data Lake: https://990data.givingtuesday.org/
                         help='Sample N records for testing')
     parser.add_argument('--concurrent', type=int, default=20,
                         help='Max concurrent requests (default: 20)')
+    parser.add_argument('--skip-enriched', action='store_true',
+                        help='Skip records already enriched (incremental mode)')
+    parser.add_argument('--max-age-days', type=int, default=365,
+                        help='Re-enrich if older than N days (default: 365, used with --skip-enriched)')
     parser.add_argument('--index-key', type=str,
                         default='Indices/990xmls/index_all_years_efiledata_xmls_created_on_2023-10-29.csv',
                         help='S3 key for index file')
+    parser.add_argument('--use-local', action='store_true',
+                        help='Use locally extracted XMLs instead of downloading from S3')
+    parser.add_argument('--local-index', type=str,
+                        default='data/cache/form990/local_index_dev_states.parquet',
+                        help='Path to local XML index (default: data/cache/form990/local_index_dev_states.parquet)')
     
     args = parser.parse_args()
     
     # Initialize enricher
-    enricher = GivingTuesday990Enricher(max_concurrent=args.concurrent)
+    enricher = GivingTuesday990Enricher(
+        max_concurrent=args.concurrent,
+        use_local_xmls=args.use_local,
+        local_index_path=args.local_index
+    )
     
     # Download index if requested
     if args.download_index:
@@ -532,43 +740,22 @@ Data Lake: https://990data.givingtuesday.org/
         df = df.sample(n=min(args.sample, len(df)), random_state=42)
         logger.info(f"   Sampled {len(df):,} nonprofits")
     
-    # Enrich the subset
-    logger.info(f"\n🔄 Enriching {len(df_to_enrich):,} nonprofits...")
-    enriched_subset = await enricher.enrich_dataframe(df_to_enrich)
-    
-    # If filters were applied and updating in place, merge back into full dataset
-    if filter_applied and args.output == args.input:
-        logger.info(f"\n🔀 Merging enriched data back into full dataset...")
-        
-        # Drop Form 990 columns from full dataset for rows being updated
-        form_990_cols = [col for col in df_full.columns if col.startswith('form_990_')]
-        eins_updated = enriched_subset['ein'].values
-        
-        # Remove old enrichment data for these EINs
-        df_full = df_full[~df_full['ein'].isin(eins_updated)]
-        
-        # Append newly enriched data
-        final_df = pd.concat([df_full, enriched_subset], ignore_index=True)
-        
-        # Sort by EIN for consistency
-        final_df = final_df.sort_values('ein').reset_index(drop=True)
-        
-        logger.info(f"   Final dataset: {len(final_df):,} nonprofits")
-        logger.info(f"   Updated: {len(enriched_subset):,} nonprofits")
-    else:
-        # No filters or different output file, just save enriched subset
-        final_df = enriched_subset
+    # Enrich the dataset
+    logger.info(f"\n🔄 Enriching {len(df):,} nonprofits...")
+    enriched_df = await enricher.enrich_dataframe(
+        df, 
+        skip_enriched=args.skip_enriched,
+        max_age_days=args.max_age_days
+    )
     
     # Save
-    final_df.to_parquet(args.output, index=False)
+    enriched_df.to_parquet(args.output, index=False)
     logger.success(f"💾 Saved to: {args.output}")
-    
-    if filter_applied and args.output == args.input:
-        logger.success(f"   ✅ Updated {len(enriched_subset):,} organizations in {args.output}")
+    logger.success(f"   ✅ Enriched {len(enriched_df):,} organizations")
     
     # Show sample
     logger.info("\n📊 Sample enriched records:")
-    sample_cols = ['organization_name', 'form_990_status', 'form_990_total_revenue', 'form_990_total_expenses']
+    sample_cols = ['organization_name', 'form_990_status', 'form_990_total_revenue', 'form_990_total_expenses', 'form_990_officers']
     available_cols = [c for c in sample_cols if c in enriched_df.columns]
     if available_cols:
         print(enriched_df[available_cols].head(10).to_string())

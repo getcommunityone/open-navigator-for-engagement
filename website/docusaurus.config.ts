@@ -28,6 +28,11 @@ const config: Config = {
 
   onBrokenLinks: 'warn',
 
+  // Custom fields to make environment variables available in client-side code
+  customFields: {
+    appUrl: process.env.APP_URL || (process.env.NODE_ENV === 'development' ? 'http://localhost:5173' : 'https://www.communityone.com'),
+  },
+
   // Even if you don't use internationalization, you can use this field to set
   // useful metadata like html lang. For example, if your site is Chinese, you
   // may want to replace "en" with "zh-Hans".
@@ -41,7 +46,7 @@ const config: Config = {
       'classic',
       {
         docs: {
-          routeBasePath: '/', // Docs at root of baseUrl (baseUrl handles /docs/ prefix in production)
+          routeBasePath: 'docs', // Serve docs at /docs path
           sidebarPath: './sidebars.ts',
           // Please change this to your repo.
           // Remove this to remove the "edit this page" links.
@@ -66,11 +71,12 @@ const config: Config = {
         theme: {
           customCss: './src/css/custom.css',
         },
-        // Google Analytics - moved from themeConfig
-        gtag: {
-          trackingID: 'G-5EQV815915',
-          anonymizeIP: true,
-        },
+        // Google Analytics - disabled to prevent runtime errors
+        // Re-enable for production deployment by uncommenting:
+        // gtag: {
+        //   trackingID: 'G-5EQV815915',
+        //   anonymizeIP: true,
+        // },
       } satisfies Preset.Options,
     ],
   ],
@@ -106,7 +112,7 @@ const config: Config = {
       logo: {
         alt: 'CommunityOne Logo',
         src: 'img/communityone_logo.svg',
-        href: 'http://localhost:5173',
+        href: process.env.APP_URL || (process.env.NODE_ENV === 'development' ? 'http://localhost:5173' : 'https://www.communityone.com'),
         target: '_self',
       },
       items: [
@@ -136,7 +142,7 @@ const config: Config = {
         },
         {
           to: 'data-sources/citations',
-          label: 'Citations',
+          label: 'Data and Terms',
           position: 'left',
         },
         {to: 'blog', label: 'Blog', position: 'left'},
@@ -185,6 +191,23 @@ const config: Config = {
             {
               label: 'GroundVue (Partner)',
               href: 'https://www.groundvue.org/',
+            },
+          ],
+        },
+        {
+          title: 'Legal',
+          items: [
+            {
+              label: 'Privacy Policy',
+              to: 'legal/privacy-policy',
+            },
+            {
+              label: 'Terms of Service',
+              to: 'legal/terms-of-service',
+            },
+            {
+              label: 'Data Provider Terms',
+              to: 'legal/data-provider-terms',
             },
           ],
         },

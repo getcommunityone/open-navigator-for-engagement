@@ -121,6 +121,100 @@ async def get_documents(
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@app.get("/api/search/")
+async def search_all(
+    q: str = Query(..., min_length=1, description="Search query"),
+    types: Optional[str] = Query("contacts,organizations,causes", description="Comma-separated types to search"),
+    state: Optional[str] = Query(None, description="Filter by state code (e.g. MA, AL)"),
+    limit: int = Query(10, ge=1, le=100),
+    page: int = Query(1, ge=1),
+    ntee_code: Optional[str] = Query(None, description="NTEE category code")
+):
+    """
+    Unified search across contacts, organizations, causes, and jurisdictions.
+    Returns results grouped by type with pagination.
+    """
+    try:
+        offset = (page - 1) * limit
+        search_types = [t.strip() for t in types.split(',') if t.strip()]
+        
+        # Initialize results structure
+        results = {
+            "contacts": [],
+            "organizations": [],
+            "causes": [],
+            "meetings": [],
+            "jurisdictions": []
+        }
+        
+        # Search logic (placeholder - implement actual search)
+        # For now, return mock results for demonstration
+        if "contacts" in search_types:
+            results["contacts"] = [
+                {
+                    "type": "contact",
+                    "title": f"Sample Contact matching '{q}'",
+                    "subtitle": "Government Official",
+                    "description": "Contact information for local official",
+                    "url": "/contact/1",
+                    "score": 0.9,
+                    "metadata": {"state": state or "MA"}
+                }
+            ]
+        
+        if "organizations" in search_types:
+            results["organizations"] = [
+                {
+                    "type": "organization",
+                    "title": f"Sample Organization matching '{q}'",
+                    "subtitle": "Nonprofit Organization",
+                    "description": "Community health organization",
+                    "url": "/org/1",
+                    "score": 0.85,
+                    "metadata": {"state": state or "MA", "ntee": ntee_code}
+                }
+            ]
+        
+        if "causes" in search_types:
+            results["causes"] = [
+                {
+                    "type": "cause",
+                    "title": f"Sample Cause matching '{q}'",
+                    "subtitle": "Health & Wellness",
+                    "description": "Advocacy for community health",
+                    "url": "/cause/1",
+                    "score": 0.8,
+                    "metadata": {}
+                }
+            ]
+        
+        # Calculate total results
+        total_results = sum(len(v) for v in results.values())
+        total_pages = max(1, (total_results + limit - 1) // limit)
+        
+        return {
+            "query": q,
+            "total_results": total_results,
+            "results": results,
+            "pagination": {
+                "page": page,
+                "limit": limit,
+                "offset": offset,
+                "total_pages": total_pages,
+                "has_next": page < total_pages,
+                "has_prev": page > 1
+            },
+            "filters": {
+                "state": state,
+                "ntee_code": ntee_code,
+                "types": search_types
+            }
+        }
+    except Exception as e:
+        logger.error(f"Search error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @app.post("/api/workflow/start")
 async def start_workflow(request: WorkflowRequest, background_tasks: BackgroundTasks):
     """Start a new analysis workflow."""

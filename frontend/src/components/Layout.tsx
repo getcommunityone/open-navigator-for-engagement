@@ -28,6 +28,8 @@ import { useLocation as useLocationContext } from '../contexts/LocationContext'
 const navigation = [
   { name: 'Home', href: '/', icon: HomeIcon },
   { name: 'Explore Data', href: '/explore', icon: MagnifyingGlassIcon },
+  { name: 'Search', href: '/search', icon: MagnifyingGlassIcon },
+  { name: 'Jurisdictions', href: '/jurisdictions', icon: MapPinIcon },
   { 
     section: 'Families & Individuals',
     items: [
@@ -78,7 +80,7 @@ export default function Layout() {
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault()
     if (searchQuery.trim()) {
-      navigate(`/documents?search=${encodeURIComponent(searchQuery)}`)
+      navigate(`/search?q=${encodeURIComponent(searchQuery)}`)
     }
   }
 
@@ -119,7 +121,7 @@ export default function Layout() {
               <div className="relative w-full">
                 <input
                   type="text"
-                  placeholder="Search documents, nonprofits, locations..."
+                  placeholder="Search people, meetings, organizations, causes..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="w-full px-4 py-2 pl-10 border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
@@ -460,10 +462,18 @@ export default function Layout() {
           <div className="text-sm text-gray-600">
             <div className="font-medium mb-1">Open Data Sources</div>
             <div className="text-xs">
-              • 90K+ Jurisdictions<br />
-              • 3M+ Nonprofits<br />
-              • 500K+ Meeting Pages<br />
-              • 100K+ Officials
+              • <Link to="/jurisdictions" className="hover:text-primary-600 hover:underline">925 Jurisdictions</Link><br />
+              • <Link to="/search?types=organizations" className="hover:text-primary-600 hover:underline">43,726 Nonprofits</Link><br />
+              • 6,913 Meeting Pages<br />
+              • <Link to="/search?types=contacts" className="hover:text-primary-600 hover:underline">362 Officials</Link>
+            </div>
+            <div className="mt-3 pt-3 border-t border-gray-100">
+              <Link 
+                to="/#contact" 
+                className="text-xs text-primary-600 hover:text-primary-700 hover:underline font-medium"
+              >
+                📍 Request Jurisdiction Coverage
+              </Link>
             </div>
           </div>
         </div>
