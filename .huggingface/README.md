@@ -4,7 +4,7 @@ emoji: 🏛️
 colorFrom: blue
 colorTo: green
 sdk: docker
-pinned: false
+pinned: true
 license: mit
 app_port: 7860
 short_description: The open path to everything local
