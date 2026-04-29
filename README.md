@@ -51,6 +51,27 @@ This project runs three separate services:
 > 
 > **💻 LOCAL DEV:** After running `./start-all.sh`, visit **http://localhost:5173**
 
+## 🚀 Deployment
+
+**Deploy to Hugging Face Spaces** in 3 commands:
+
+```bash
+echo "HF_USERNAME=your_username" >> .env
+./deploy-huggingface.sh
+# Configure hardware and secrets at https://huggingface.co/spaces/YOUR_USERNAME/www.communityone.com
+```
+
+**Full deployment guides:**
+- **[Hugging Face Spaces](website/docs/deployment/huggingface-spaces.md)** - Docker deployment (~$22/month)
+- **[Databricks Apps](website/docs/deployment/databricks-apps.md)** - Enterprise deployment
+- **[Local Development](website/docs/deployment/)** - Complete deployment documentation
+
+The `deploy-huggingface.sh` script automatically:
+- ✅ Tests builds locally (catches errors before pushing)
+- ✅ Creates the Space on Hugging Face  
+- ✅ Pushes code and triggers automatic build (~10-15 min)
+
+
 ### Prerequisites
 
 - Python 3.11+
