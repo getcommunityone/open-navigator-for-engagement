@@ -1,6 +1,6 @@
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { useState, useEffect, Fragment } from 'react'
-import { Tab, Dialog, Transition } from '@headlessui/react'
+import { Tab } from '@headlessui/react'
 import { useQuery } from '@tanstack/react-query'
 import axios from 'axios'
 import { 
@@ -24,8 +24,7 @@ import {
   XMarkIcon,
   BuildingOfficeIcon,
   UserIcon,
-  EnvelopeIcon,
-  PaperAirplaneIcon
+  EnvelopeIcon
 } from '@heroicons/react/24/outline'
 import { useLocation as useLocationContext } from '../contexts/LocationContext'
 import AddressLookup from '../components/AddressLookup'
@@ -39,7 +38,6 @@ export default function HomeModern() {
   const [searchScope, setSearchScope] = useState('city')
   const [showSuggestions, setShowSuggestions] = useState(false)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
-  const [showJurisdictionsModal, setShowJurisdictionsModal] = useState(false)
   const { location, setLocation} = useLocationContext()
 
   // Environment-aware URLs for docs and API

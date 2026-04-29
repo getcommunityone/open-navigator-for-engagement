@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { formatCurrency } from '../utils/formatters'
 
 interface Nonprofit {
   source: string
@@ -201,7 +202,8 @@ export default function Nonprofits() {
                           className="w-12 h-12 rounded object-contain bg-gray-100 border border-gray-200"
                           onError={(e) => {
                             e.currentTarget.style.display = 'none'
-                            e.currentTarget.nextElementSibling!.style.display = 'flex'
+                            const fallback = e.currentTarget.nextElementSibling as HTMLElement | null
+                            if (fallback) fallback.style.display = 'flex'
                           }}
                         />
                       ) : null}

@@ -248,7 +248,7 @@ export default function JurisdictionDiscovery({ jurisdiction }: JurisdictionDisc
               </p>
               <ul className="mt-2 space-y-1 text-sm text-blue-800">
                 {jurisdiction.website && <li>✅ Official website (automatic)</li>}
-                {jurisdiction.youtube_channels?.length > 0 && <li>✅ YouTube channels (automatic)</li>}
+                {(jurisdiction.youtube_channels?.length ?? 0) > 0 && <li>✅ YouTube channels (automatic)</li>}
                 {jurisdiction.agenda_portal && <li>✅ Agenda portal (found via link scanning)</li>}
                 {(jurisdiction.facebook || jurisdiction.twitter) && <li>✅ Social media (automatic)</li>}
               </ul>

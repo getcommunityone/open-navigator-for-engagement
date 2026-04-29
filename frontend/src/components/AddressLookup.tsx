@@ -27,8 +27,7 @@ export default function AddressLookup({ onLocationFound, initialAddress = '', co
   const [foundLocation, setFoundLocation] = useState<LocationData | null>(null)
   const [showSuggestions, setShowSuggestions] = useState(false)
   const [selectedIndex, setSelectedIndex] = useState(-1)
-  const [isTyping, setIsTyping] = useState(false)
-  const debounceTimer = useRef<NodeJS.Timeout | null>(null)
+  const debounceTimer = useRef<number | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
 
   // Fetch suggestions as user types
@@ -85,7 +84,6 @@ export default function AddressLookup({ onLocationFound, initialAddress = '', co
   const handleAddressChange = (value: string) => {
     setAddress(value)
     setError(null)
-    setIsTyping(true)
 
     // Clear previous timer
     if (debounceTimer.current) {
@@ -95,7 +93,6 @@ export default function AddressLookup({ onLocationFound, initialAddress = '', co
     // Set new timer
     debounceTimer.current = setTimeout(() => {
       fetchSuggestions(value)
-      setIsTyping(false)
     }, 300)
   }
 

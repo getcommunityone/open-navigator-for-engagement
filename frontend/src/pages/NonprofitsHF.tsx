@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useSearchParams } from 'react-router-dom'
 import { searchNonprofits } from '../utils/huggingface'
+import { formatCurrency } from '../utils/formatters'
 
 const DATASET_NAME = "CommunityOne/one-nonprofits-organizations"
 

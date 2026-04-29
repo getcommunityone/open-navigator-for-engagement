@@ -41,6 +41,7 @@ interface SearchResponse {
     meetings: SearchResult[]
     organizations: SearchResult[]
     causes: SearchResult[]
+    jurisdictions?: SearchResult[]
   }
   pagination: {
     page: number
@@ -131,9 +132,9 @@ export default function UnifiedSearch() {
     const queryParam = searchParams.get('q')
     const stateParam = searchParams.get('state')
     const typesParam = searchParams.get('types')
-    const pageParam = searchParams.get('page')
-    const sortParam = searchParams.get('sort')
-    const nteeParam = searchParams.get('ntee')
+    searchParams.get('page') // Read but don't store
+    searchParams.get('sort') // Read but don't store
+    searchParams.get('ntee') // Read but don't store
     const jurisdictionDetailsParam = searchParams.get('jurisdiction_details')
     
     if (queryParam) {
@@ -284,12 +285,6 @@ export default function UnifiedSearch() {
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
-  const handleSuggestionClick = (suggestion: string) => {
-    setQuery(suggestion)
-    setActiveQuery(suggestion)
-    setShowSuggestions(false)
-  }
-
   const handleViewAllCategory = (category: string) => {
     setActiveQuery(query)
     setShowSuggestions(false)
@@ -408,7 +403,8 @@ export default function UnifiedSearch() {
                   className="w-12 h-12 rounded object-contain flex-shrink-0 bg-gray-100 border border-gray-200"
                   onError={(e) => {
                     e.currentTarget.style.display = 'none'
-                    e.currentTarget.nextElementSibling!.style.display = 'flex'
+                    const fallback = e.currentTarget.nextElementSibling as HTMLElement | null
+                    if (fallback) fallback.style.display = 'flex'
                   }}
                 />
               ) : null
@@ -686,7 +682,7 @@ export default function UnifiedSearch() {
               </Menu>
             ) : (
               <button
-                onClick={login}
+                onClick={() => login('huggingface')}
                 className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors font-medium"
               >
                 Login
@@ -835,7 +831,8 @@ export default function UnifiedSearch() {
                             className="h-10 w-10 rounded object-contain flex-shrink-0 bg-gray-100 border border-gray-200"
                             onError={(e) => {
                               e.currentTarget.style.display = 'none'
-                              e.currentTarget.nextElementSibling!.style.display = 'flex'
+                              const fallback = e.currentTarget.nextElementSibling as HTMLElement | null
+                              if (fallback) fallback.style.display = 'flex'
                             }}
                           />
                         ) : null}

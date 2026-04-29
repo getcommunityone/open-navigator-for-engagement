@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, Fragment } from 'react'
-import { useNavigate, useSearchParams, Link } from 'react-router-dom'
+import { useSearchParams, Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import axios from 'axios'
 import { Menu, Transition } from '@headlessui/react'
@@ -10,8 +10,6 @@ import {
   CheckIcon,
   MapPinIcon,
   ChevronDownIcon,
-  ChevronUpIcon,
-  GlobeAltIcon,
   Cog6ToothIcon,
   ArrowRightOnRectangleIcon
 } from '@heroicons/react/24/outline'
@@ -69,7 +67,6 @@ const JURISDICTION_LEVELS = [
 ] as const
 
 export default function JurisdictionsSearch() {
-  const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
   
   // Initialize state from URL params
@@ -87,7 +84,6 @@ export default function JurisdictionsSearch() {
   const [selectedState, setSelectedState] = useState(() => searchParams.get('state') || '')
   const [currentPage, setCurrentPage] = useState(() => parseInt(searchParams.get('page') || '1'))
   const [showFilters, setShowFilters] = useState(false)
-  const [expandedJurisdictions, setExpandedJurisdictions] = useState<Set<number>>(new Set())
   
   const searchInputRef = useRef<HTMLInputElement>(null)
   const { user, isAuthenticated, login, logout, isLoading } = useAuth()
@@ -207,18 +203,6 @@ export default function JurisdictionsSearch() {
     setSearchParams(params)
   }
 
-  const toggleJurisdictionExpansion = (index: number) => {
-    setExpandedJurisdictions(prev => {
-      const newSet = new Set(prev)
-      if (newSet.has(index)) {
-        newSet.delete(index)
-      } else {
-        newSet.add(index)
-      }
-      return newSet
-    })
-  }
-
   const getLevelColor = (level: string) => {
     const colors: Record<string, string> = {
       city: 'bg-blue-100 text-blue-700 border-blue-200',
@@ -324,7 +308,7 @@ export default function JurisdictionsSearch() {
               </Menu>
             ) : (
               <button
-                onClick={login}
+                onClick={() => login('huggingface')}
                 className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors font-medium"
               >
                 Login
