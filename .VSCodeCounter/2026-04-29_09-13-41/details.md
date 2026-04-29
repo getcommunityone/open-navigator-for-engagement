@@ -1,10 +1,10 @@
 # Details
 
-Date : 2026-04-26 14:46:19
+Date : 2026-04-29 09:13:41
 
 Directory /home/developer/projects/oral-health-policy-pulse
 
-Total : 322 files,  394405 codes, 7100 comments, 15381 blanks, all 416886 lines
+Total : 459 files,  147316 codes, 13037 comments, 26020 blanks, all 186373 lines
 
 [Summary](results.md) / Details / [Diff Summary](diff.md) / [Diff Details](diff-details.md)
 
@@ -12,17 +12,19 @@ Total : 322 files,  394405 codes, 7100 comments, 15381 blanks, all 416886 lines
 | filename | language | code | comment | blank | total |
 | :--- | :--- | ---: | ---: | ---: | ---: |
 | [.dockerignore](/.dockerignore) | Ignore | 62 | 13 | 13 | 88 |
-| [.github/copilot-instructions.md](/.github/copilot-instructions.md) | Markdown | 96 | 0 | 33 | 129 |
-| [.huggingface/README.md](/.huggingface/README.md) | Markdown | 92 | 0 | 30 | 122 |
-| [.huggingface/nginx.conf](/.huggingface/nginx.conf) | Properties | 59 | 5 | 13 | 77 |
-| [.huggingface/start.sh](/.huggingface/start.sh) | Shell Script | 11 | 2 | 3 | 16 |
-| [.huggingface/supervisord.conf](/.huggingface/supervisord.conf) | Properties | 18 | 0 | 3 | 21 |
-| [CITATIONS.md](/CITATIONS.md) | Markdown | 77 | 0 | 27 | 104 |
+| [.github/copilot-instructions.md](/.github/copilot-instructions.md) | Markdown | 145 | 0 | 46 | 191 |
+| [.github/workflows/ci-build-test.yml](/.github/workflows/ci-build-test.yml) | YAML | 119 | 6 | 26 | 151 |
+| [.github/workflows/deploy-huggingface.yml](/.github/workflows/deploy-huggingface.yml) | YAML | 51 | 2 | 10 | 63 |
+| [.huggingface/README.md](/.huggingface/README.md) | Markdown | 74 | 0 | 28 | 102 |
+| [.huggingface/nginx.conf](/.huggingface/nginx.conf) | Properties | 91 | 12 | 19 | 122 |
+| [.huggingface/start.sh](/.huggingface/start.sh) | Shell Script | 34 | 7 | 9 | 50 |
+| [.huggingface/supervisord.conf](/.huggingface/supervisord.conf) | Properties | 37 | 0 | 5 | 42 |
+| [CITATIONS.md](/CITATIONS.md) | Markdown | 881 | 0 | 182 | 1,063 |
 | [CONTRIBUTING.md](/CONTRIBUTING.md) | Markdown | 58 | 0 | 23 | 81 |
-| [Dockerfile](/Dockerfile) | Docker | 40 | 15 | 15 | 70 |
+| [Dockerfile](/Dockerfile) | Docker | 46 | 20 | 20 | 86 |
 | [Makefile](/Makefile) | Makefile | 145 | 0 | 25 | 170 |
-| [README.md](/README.md) | Markdown | 299 | 0 | 119 | 418 |
-| [README\_HF.md](/README_HF.md) | Markdown | 92 | 0 | 30 | 122 |
+| [README.md](/README.md) | Markdown | 304 | 0 | 120 | 424 |
+| [README\_HF.md](/README_HF.md) | Markdown | 94 | 0 | 30 | 124 |
 | [\_\_init\_\_.py](/__init__.py) | Python | 17 | 1 | 4 | 22 |
 | [agents/\_\_init\_\_.py](/agents/__init__.py) | Python | 14 | 1 | 2 | 17 |
 | [agents/advocacy.py](/agents/advocacy.py) | Python | 298 | 58 | 53 | 409 |
@@ -41,52 +43,74 @@ Total : 322 files,  394405 codes, 7100 comments, 15381 blanks, all 416886 lines
 | [api/app.py](/api/app.py) | Python | 429 | 100 | 89 | 618 |
 | [api/auth.py](/api/auth.py) | Python | 74 | 52 | 28 | 154 |
 | [api/database.py](/api/database.py) | Python | 35 | 18 | 10 | 63 |
-| [api/main.py](/api/main.py) | Python | 687 | 152 | 143 | 982 |
+| [api/main.py](/api/main.py) | Python | 693 | 152 | 143 | 988 |
 | [api/models.py](/api/models.py) | Python | 148 | 41 | 64 | 253 |
 | [api/routes/\_\_init\_\_.py](/api/routes/__init__.py) | Python | 0 | 3 | 1 | 4 |
-| [api/routes/auth.py](/api/routes/auth.py) | Python | 306 | 45 | 75 | 426 |
+| [api/routes/auth.py](/api/routes/auth.py) | Python | 310 | 50 | 77 | 437 |
+| [api/routes/contact.py](/api/routes/contact.py) | Python | 41 | 65 | 13 | 119 |
+| [api/routes/hf\_search.py](/api/routes/hf_search.py) | Python | 90 | 67 | 26 | 183 |
+| [api/routes/search.py](/api/routes/search.py) | Python | 697 | 549 | 146 | 1,392 |
 | [api/routes/social.py](/api/routes/social.py) | Python | 393 | 43 | 109 | 545 |
-| [api/static/assets/index-DCsXusS-.css](/api/static/assets/index-DCsXusS-.css) | (Read Error) | 0 | 0 | 0 | 0 |
-| [api/static/assets/index-Pblxxtcz.js](/api/static/assets/index-Pblxxtcz.js) | (Read Error) | 0 | 0 | 0 | 0 |
+| [api/routes/stats.py](/api/routes/stats.py) | Python | 283 | 96 | 57 | 436 |
+| [api/static/assets/index-DrgVaTBR.js](/api/static/assets/index-DrgVaTBR.js) | JavaScript | 186 | 0 | 3 | 189 |
+| [api/static/assets/index-F9fqvDye.css](/api/static/assets/index-F9fqvDye.css) | PostCSS | 1 | 0 | 1 | 2 |
 | [api/static/communityone\_logo.svg](/api/static/communityone_logo.svg) | XML | 13 | 5 | 5 | 23 |
-| [api/static/index.html](/api/static/index.html) | HTML | 17 | 0 | 1 | 18 |
+| [api/static/index.html](/api/static/index.html) | HTML | 24 | 1 | 2 | 27 |
 | [api/static/privacyfacebook.html](/api/static/privacyfacebook.html) | HTML | 244 | 0 | 33 | 277 |
 | [app.yaml](/app.yaml) | YAML | 31 | 2 | 5 | 38 |
 | [config/\_\_init\_\_.py](/config/__init__.py) | Python | 2 | 1 | 2 | 5 |
-| [config/settings.py](/config/settings.py) | Python | 73 | 21 | 21 | 115 |
-| [databricks/README.md](/databricks/README.md) | Markdown | 253 | 0 | 61 | 314 |
+| [config/settings.py](/config/settings.py) | Python | 76 | 22 | 22 | 120 |
+| [databricks/README.md](/databricks/README.md) | Markdown | 279 | 0 | 71 | 350 |
+| [databricks/communityone\_schema.sql](/databricks/communityone_schema.sql) | MS SQL | 501 | 88 | 53 | 642 |
 | [databricks/deployment.py](/databricks/deployment.py) | Python | 193 | 108 | 44 | 345 |
 | [databricks/evaluation.py](/databricks/evaluation.py) | Python | 162 | 146 | 36 | 344 |
 | [databricks/notebooks/01\_agent\_bricks\_quickstart.py](/databricks/notebooks/01_agent_bricks_quickstart.py) | Python | 52 | 262 | 16 | 330 |
-| [databricks/oral\_health\_schema.sql](/databricks/oral_health_schema.sql) | MS SQL | 210 | 43 | 33 | 286 |
+| [debug-dropdown.html](/debug-dropdown.html) | HTML | 80 | 0 | 13 | 93 |
 | [debug\_eboard.py](/debug_eboard.py) | Python | 89 | 15 | 30 | 134 |
-| [deploy-huggingface.sh](/deploy-huggingface.sh) | Shell Script | 110 | 18 | 21 | 149 |
+| [delete\_and\_publish\_all\_datasets.py](/delete_and_publish_all_datasets.py) | Python | 140 | 41 | 47 | 228 |
+| [deploy-huggingface.sh](/deploy-huggingface.sh) | Shell Script | 231 | 35 | 30 | 296 |
+| [discovery/README\_IRS\_BMF.md](/discovery/README_IRS_BMF.md) | Markdown | 62 | 0 | 22 | 84 |
 | [discovery/README\_NONPROFIT\_DISCOVERY.md](/discovery/README_NONPROFIT_DISCOVERY.md) | Markdown | 338 | 0 | 102 | 440 |
 | [discovery/\_\_init\_\_.py](/discovery/__init__.py) | Python | 0 | 11 | 1 | 12 |
+| [discovery/ballotpedia\_integration.py](/discovery/ballotpedia_integration.py) | Python | 361 | 215 | 104 | 680 |
 | [discovery/batch\_processor.py](/discovery/batch_processor.py) | Python | 352 | 115 | 78 | 545 |
 | [discovery/census\_ingestion.py](/discovery/census_ingestion.py) | Python | 217 | 110 | 61 | 388 |
 | [discovery/city\_scrapers\_urls.py](/discovery/city_scrapers_urls.py) | Python | 170 | 85 | 59 | 314 |
 | [discovery/comprehensive\_discovery\_pipeline.py](/discovery/comprehensive_discovery_pipeline.py) | Python | 434 | 107 | 95 | 636 |
 | [discovery/curated\_sources.py](/discovery/curated_sources.py) | Python | 173 | 163 | 68 | 404 |
 | [discovery/dataverse\_client.py](/discovery/dataverse_client.py) | Python | 345 | 189 | 91 | 625 |
+| [discovery/dbpedia\_integration.py](/discovery/dbpedia_integration.py) | Python | 226 | 167 | 24 | 417 |
 | [discovery/discovery\_pipeline.py](/discovery/discovery_pipeline.py) | Python | 192 | 93 | 58 | 343 |
 | [discovery/external\_url\_datasets.py](/discovery/external_url_datasets.py) | Python | 362 | 74 | 64 | 500 |
+| [discovery/fec\_integration.py](/discovery/fec_integration.py) | Python | 300 | 164 | 77 | 541 |
+| [discovery/google\_civic\_integration.py](/discovery/google_civic_integration.py) | Python | 225 | 100 | 64 | 389 |
+| [discovery/google\_data\_commons.py](/discovery/google_data_commons.py) | Python | 162 | 119 | 40 | 321 |
+| [discovery/grants\_gov\_integration.py](/discovery/grants_gov_integration.py) | Python | 218 | 115 | 61 | 394 |
 | [discovery/gsa\_domains.py](/discovery/gsa_domains.py) | Python | 105 | 56 | 39 | 200 |
+| [discovery/irs\_bmf\_ingestion.py](/discovery/irs_bmf_ingestion.py) | Python | 163 | 119 | 60 | 342 |
 | [discovery/localview\_ingestion.py](/discovery/localview_ingestion.py) | Python | 301 | 100 | 76 | 477 |
 | [discovery/meetingbank\_ingestion.py](/discovery/meetingbank_ingestion.py) | Python | 256 | 128 | 81 | 465 |
 | [discovery/nces\_ingestion.py](/discovery/nces_ingestion.py) | Python | 120 | 59 | 35 | 214 |
-| [discovery/nonprofit\_discovery.py](/discovery/nonprofit_discovery.py) | Python | 375 | 154 | 112 | 641 |
+| [discovery/nonprofit\_discovery.py](/discovery/nonprofit_discovery.py) | Python | 410 | 164 | 119 | 693 |
 | [discovery/openstates\_sources.py](/discovery/openstates_sources.py) | Python | 163 | 69 | 65 | 297 |
 | [discovery/platform\_detector.py](/discovery/platform_detector.py) | Python | 202 | 98 | 37 | 337 |
 | [discovery/social\_media\_discovery.py](/discovery/social_media_discovery.py) | Python | 238 | 137 | 59 | 434 |
 | [discovery/url\_discovery\_agent.py](/discovery/url_discovery_agent.py) | Python | 260 | 147 | 52 | 459 |
+| [discovery/voter\_data\_integration.py](/discovery/voter_data_integration.py) | Python | 169 | 143 | 50 | 362 |
+| [discovery/wikidata\_integration.py](/discovery/wikidata_integration.py) | Python | 247 | 182 | 33 | 462 |
 | [discovery/youtube\_channel\_discovery.py](/discovery/youtube_channel_discovery.py) | Python | 305 | 119 | 84 | 508 |
+| [docker-cleanup.sh](/docker-cleanup.sh) | Shell Script | 75 | 12 | 17 | 104 |
 | [docker-compose.yml](/docker-compose.yml) | YAML | 53 | 1 | 6 | 60 |
 | [docs/ACCOUNTABILITY\_DASHBOARD\_STRATEGY.md](/docs/ACCOUNTABILITY_DASHBOARD_STRATEGY.md) | Markdown | 178 | 0 | 76 | 254 |
 | [docs/ANSWER\_URL\_DATASETS.md](/docs/ANSWER_URL_DATASETS.md) | Markdown | 155 | 0 | 50 | 205 |
+| [docs/API\_INTEGRATION\_STATUS.md](/docs/API_INTEGRATION_STATUS.md) | Markdown | 364 | 0 | 110 | 474 |
+| [docs/BIGQUERY\_ENRICHMENT.md](/docs/BIGQUERY_ENRICHMENT.md) | Markdown | 141 | 0 | 51 | 192 |
+| [docs/BULK\_VS\_API.md](/docs/BULK_VS_API.md) | Markdown | 252 | 0 | 91 | 343 |
 | [docs/CENSUS\_DATA\_FIX.md](/docs/CENSUS_DATA_FIX.md) | Markdown | 69 | 0 | 32 | 101 |
 | [docs/CHANGELOG\_DISCOVERY\_V2.md](/docs/CHANGELOG_DISCOVERY_V2.md) | Markdown | 112 | 0 | 38 | 150 |
 | [docs/CIVIC\_TECH\_URL\_SOURCES.md](/docs/CIVIC_TECH_URL_SOURCES.md) | Markdown | 188 | 0 | 67 | 255 |
+| [docs/CONTACTS\_MEETINGS\_SUMMARY.md](/docs/CONTACTS_MEETINGS_SUMMARY.md) | Markdown | 274 | 0 | 81 | 355 |
+| [docs/CONTACTS\_MEETINGS\_WORKFLOW.md](/docs/CONTACTS_MEETINGS_WORKFLOW.md) | Markdown | 246 | 0 | 103 | 349 |
 | [docs/COST\_BREAKDOWN.md](/docs/COST_BREAKDOWN.md) | Markdown | 176 | 0 | 61 | 237 |
 | [docs/COST\_EFFECTIVE\_STORAGE.md](/docs/COST_EFFECTIVE_STORAGE.md) | Markdown | 389 | 0 | 159 | 548 |
 | [docs/DATAVERSE\_INTEGRATION.md](/docs/DATAVERSE_INTEGRATION.md) | Markdown | 334 | 0 | 112 | 446 |
@@ -97,6 +121,7 @@ Total : 322 files,  394405 codes, 7100 comments, 15381 blanks, all 416886 lines
 | [docs/EBOARD\_COOKIE\_GUIDE.md](/docs/EBOARD_COOKIE_GUIDE.md) | Markdown | 184 | 0 | 63 | 247 |
 | [docs/EBOARD\_MANUAL\_DOWNLOAD.md](/docs/EBOARD_MANUAL_DOWNLOAD.md) | Markdown | 95 | 0 | 31 | 126 |
 | [docs/ENHANCEMENT\_OFFICIAL\_SOURCES.md](/docs/ENHANCEMENT_OFFICIAL_SOURCES.md) | Markdown | 175 | 0 | 79 | 254 |
+| [docs/FAST\_ENRICHMENT\_STRATEGY.md](/docs/FAST_ENRICHMENT_STRATEGY.md) | Markdown | 247 | 0 | 77 | 324 |
 | [docs/FRONTEND\_INTEGRATION\_GUIDE.md](/docs/FRONTEND_INTEGRATION_GUIDE.md) | Markdown | 332 | 0 | 113 | 445 |
 | [docs/HANDLING\_MULTIPLE\_FORMATS.md](/docs/HANDLING_MULTIPLE_FORMATS.md) | Markdown | 508 | 0 | 152 | 660 |
 | [docs/HUGGINGFACE\_DATASETS\_ANALYSIS.md](/docs/HUGGINGFACE_DATASETS_ANALYSIS.md) | Markdown | 278 | 0 | 91 | 369 |
@@ -114,20 +139,32 @@ Total : 322 files,  394405 codes, 7100 comments, 15381 blanks, all 416886 lines
 | [docs/LOCALVIEW\_INTEGRATION\_GUIDE.md](/docs/LOCALVIEW_INTEGRATION_GUIDE.md) | Markdown | 177 | 0 | 76 | 253 |
 | [docs/MIGRATION\_SUMMARY\_V2.md](/docs/MIGRATION_SUMMARY_V2.md) | Markdown | 193 | 0 | 77 | 270 |
 | [docs/NEW\_CAPABILITIES.md](/docs/NEW_CAPABILITIES.md) | Markdown | 256 | 0 | 89 | 345 |
+| [docs/OAUTH\_HUGGINGFACE\_FIX.md](/docs/OAUTH_HUGGINGFACE_FIX.md) | Markdown | 189 | 0 | 57 | 246 |
 | [docs/POLITICAL\_ECONOMY\_ANALYSIS.md](/docs/POLITICAL_ECONOMY_ANALYSIS.md) | Markdown | 266 | 0 | 89 | 355 |
 | [docs/RUNNING\_DISCOVERY\_AT\_SCALE.md](/docs/RUNNING_DISCOVERY_AT_SCALE.md) | Markdown | 410 | 0 | 126 | 536 |
 | [docs/SCALE\_AND\_SEARCH\_PATTERNS.md](/docs/SCALE_AND_SEARCH_PATTERNS.md) | Markdown | 684 | 0 | 170 | 854 |
 | [docs/SCRAPER\_IMPROVEMENTS.md](/docs/SCRAPER_IMPROVEMENTS.md) | Markdown | 234 | 0 | 71 | 305 |
+| [docs/SOCIAL\_FEATURES.md](/docs/SOCIAL_FEATURES.md) | Markdown | 376 | 0 | 99 | 475 |
 | [docs/SPLIT\_SCREEN\_SYSTEM.md](/docs/SPLIT_SCREEN_SYSTEM.md) | Markdown | 293 | 0 | 81 | 374 |
+| [docs/UNIFIED\_NONPROFIT\_WORKFLOW.md](/docs/UNIFIED_NONPROFIT_WORKFLOW.md) | Markdown | 205 | 0 | 64 | 269 |
 | [docs/URL\_DATASETS\_CONFIRMED.md](/docs/URL_DATASETS_CONFIRMED.md) | Markdown | 250 | 0 | 91 | 341 |
 | [docs/URL\_DATASET\_INVESTIGATION.md](/docs/URL_DATASET_INVESTIGATION.md) | Markdown | 226 | 0 | 89 | 315 |
 | [docs/VIDEO\_CHANNEL\_DISCOVERY.md](/docs/VIDEO_CHANNEL_DISCOVERY.md) | Markdown | 458 | 0 | 151 | 609 |
 | [docs/VIDEO\_SOURCES\_COMPLETE.md](/docs/VIDEO_SOURCES_COMPLETE.md) | Markdown | 313 | 0 | 125 | 438 |
 | [docs/VIDEO\_URL\_SOURCES.md](/docs/VIDEO_URL_SOURCES.md) | Markdown | 371 | 0 | 93 | 464 |
 | [docs/YOUTUBE\_DISCOVERY\_IMPROVEMENTS.md](/docs/YOUTUBE_DISCOVERY_IMPROVEMENTS.md) | Markdown | 337 | 0 | 102 | 439 |
+| [enrich\_alabama\_nonprofits.sh](/enrich_alabama_nonprofits.sh) | Shell Script | 18 | 3 | 7 | 28 |
+| [examples/GRANTS\_GOV\_VALUE.md](/examples/GRANTS_GOV_VALUE.md) | Markdown | 181 | 0 | 48 | 229 |
+| [examples/POLITICAL\_FINANCE\_QUICK\_START.md](/examples/POLITICAL_FINANCE_QUICK_START.md) | Markdown | 308 | 0 | 94 | 402 |
+| [examples/POLITICAL\_INFLUENCE\_INTEGRATION.md](/examples/POLITICAL_INFLUENCE_INTEGRATION.md) | Markdown | 384 | 0 | 91 | 475 |
+| [examples/README.md](/examples/README.md) | Markdown | 361 | 0 | 113 | 474 |
+| [examples/demo\_fec\_integration.py](/examples/demo_fec_integration.py) | Python | 180 | 54 | 55 | 289 |
+| [examples/demo\_grants\_gov.py](/examples/demo_grants_gov.py) | Python | 204 | 35 | 52 | 291 |
+| [examples/demo\_political\_influence.py](/examples/demo_political_influence.py) | Python | 260 | 32 | 60 | 352 |
 | [examples/example\_workflow.py](/examples/example_workflow.py) | Python | 132 | 19 | 24 | 175 |
 | [examples/full\_demo.py](/examples/full_demo.py) | Python | 319 | 27 | 57 | 403 |
 | [examples/integration\_demo.py](/examples/integration_demo.py) | Python | 143 | 36 | 41 | 220 |
+| [examples/legislative\_map\_demo.py](/examples/legislative_map_demo.py) | Python | 113 | 30 | 45 | 188 |
 | [examples/process\_multiple\_formats.py](/examples/process_multiple_formats.py) | Python | 93 | 33 | 36 | 162 |
 | [examples/targets.json](/examples/targets.json) | JSON | 32 | 0 | 1 | 33 |
 | [examples/tuscaloosa\_accountability\_report.py](/examples/tuscaloosa_accountability_report.py) | Python | 488 | 166 | 115 | 769 |
@@ -139,9 +176,10 @@ Total : 322 files,  394405 codes, 7100 comments, 15381 blanks, all 416886 lines
 | [extraction/summarizer.py](/extraction/summarizer.py) | Python | 187 | 216 | 49 | 452 |
 | [extraction/temporal\_analyzer.py](/extraction/temporal_analyzer.py) | Python | 226 | 65 | 55 | 346 |
 | [extraction/universal\_extractor.py](/extraction/universal_extractor.py) | Python | 248 | 65 | 71 | 384 |
+| [fix\_and\_publish\_failed.py](/fix_and_publish_failed.py) | Python | 93 | 18 | 32 | 143 |
 | [frontend/.eslintrc.cjs](/frontend/.eslintrc.cjs) | JavaScript | 18 | 0 | 1 | 19 |
 | [frontend/README.md](/frontend/README.md) | Markdown | 126 | 0 | 41 | 167 |
-| [frontend/index.html](/frontend/index.html) | HTML | 16 | 0 | 1 | 17 |
+| [frontend/index.html](/frontend/index.html) | HTML | 23 | 1 | 2 | 26 |
 | [frontend/package-lock.json](/frontend/package-lock.json) | JSON | 5,124 | 0 | 1 | 5,125 |
 | [frontend/package.json](/frontend/package.json) | JSON | 45 | 0 | 1 | 46 |
 | [frontend/policy-dashboards/README.md](/frontend/policy-dashboards/README.md) | Markdown | 174 | 0 | 78 | 252 |
@@ -172,31 +210,49 @@ Total : 322 files,  394405 codes, 7100 comments, 15381 blanks, all 416886 lines
 | [frontend/postcss.config.js](/frontend/postcss.config.js) | JavaScript | 6 | 0 | 1 | 7 |
 | [frontend/public/communityone\_logo.svg](/frontend/public/communityone_logo.svg) | XML | 13 | 5 | 5 | 23 |
 | [frontend/public/privacyfacebook.html](/frontend/public/privacyfacebook.html) | HTML | 244 | 0 | 33 | 277 |
-| [frontend/src/App.tsx](/frontend/src/App.tsx) | TypeScript JSX | 31 | 0 | 3 | 34 |
-| [frontend/src/components/AddressLookup.tsx](/frontend/src/components/AddressLookup.tsx) | TypeScript JSX | 394 | 19 | 40 | 453 |
+| [frontend/src/App.tsx](/frontend/src/App.tsx) | TypeScript JSX | 59 | 3 | 5 | 67 |
+| [frontend/src/components/AddressLookup.tsx](/frontend/src/components/AddressLookup.tsx) | TypeScript JSX | 583 | 30 | 59 | 672 |
 | [frontend/src/components/FollowButton.tsx](/frontend/src/components/FollowButton.tsx) | TypeScript JSX | 147 | 4 | 10 | 161 |
-| [frontend/src/components/Layout.tsx](/frontend/src/components/Layout.tsx) | TypeScript JSX | 376 | 13 | 16 | 405 |
+| [frontend/src/components/JurisdictionDiscovery.tsx](/frontend/src/components/JurisdictionDiscovery.tsx) | TypeScript JSX | 239 | 13 | 17 | 269 |
+| [frontend/src/components/Layout.tsx](/frontend/src/components/Layout.tsx) | TypeScript JSX | 463 | 15 | 21 | 499 |
 | [frontend/src/components/RegistrationModal.tsx](/frontend/src/components/RegistrationModal.tsx) | TypeScript JSX | 192 | 7 | 18 | 217 |
+| [frontend/src/components/ScrollToTop.tsx](/frontend/src/components/ScrollToTop.tsx) | TypeScript JSX | 9 | 4 | 4 | 17 |
 | [frontend/src/components/SocialStats.tsx](/frontend/src/components/SocialStats.tsx) | TypeScript JSX | 106 | 2 | 14 | 122 |
-| [frontend/src/contexts/AuthContext.tsx](/frontend/src/contexts/AuthContext.tsx) | TypeScript JSX | 134 | 7 | 21 | 162 |
-| [frontend/src/contexts/LocationContext.tsx](/frontend/src/contexts/LocationContext.tsx) | TypeScript JSX | 66 | 4 | 12 | 82 |
-| [frontend/src/index.css](/frontend/src/index.css) | PostCSS | 37 | 0 | 7 | 44 |
-| [frontend/src/main.tsx](/frontend/src/main.tsx) | TypeScript JSX | 35 | 0 | 3 | 38 |
+| [frontend/src/contexts/AuthContext.tsx](/frontend/src/contexts/AuthContext.tsx) | TypeScript JSX | 102 | 6 | 17 | 125 |
+| [frontend/src/contexts/LocationContext.tsx](/frontend/src/contexts/LocationContext.tsx) | TypeScript JSX | 73 | 7 | 16 | 96 |
+| [frontend/src/index.css](/frontend/src/index.css) | PostCSS | 50 | 0 | 9 | 59 |
+| [frontend/src/main.tsx](/frontend/src/main.tsx) | TypeScript JSX | 37 | 0 | 3 | 40 |
+| [frontend/src/pages/AdvocacyTopics.tsx](/frontend/src/pages/AdvocacyTopics.tsx) | TypeScript JSX | 217 | 5 | 8 | 230 |
+| [frontend/src/pages/Analytics.tsx](/frontend/src/pages/Analytics.tsx) | TypeScript JSX | 204 | 32 | 14 | 250 |
 | [frontend/src/pages/Dashboard.tsx](/frontend/src/pages/Dashboard.tsx) | TypeScript JSX | 183 | 6 | 13 | 202 |
 | [frontend/src/pages/DebateGrader.tsx](/frontend/src/pages/DebateGrader.tsx) | TypeScript JSX | 245 | 8 | 22 | 275 |
+| [frontend/src/pages/Developers.tsx](/frontend/src/pages/Developers.tsx) | TypeScript JSX | 182 | 8 | 11 | 201 |
 | [frontend/src/pages/Documents.tsx](/frontend/src/pages/Documents.tsx) | TypeScript JSX | 216 | 5 | 13 | 234 |
+| [frontend/src/pages/Events.tsx](/frontend/src/pages/Events.tsx) | TypeScript JSX | 105 | 6 | 6 | 117 |
+| [frontend/src/pages/Explore.tsx](/frontend/src/pages/Explore.tsx) | TypeScript JSX | 435 | 32 | 36 | 503 |
+| [frontend/src/pages/FactChecking.tsx](/frontend/src/pages/FactChecking.tsx) | TypeScript JSX | 252 | 6 | 11 | 269 |
+| [frontend/src/pages/Hackathons.tsx](/frontend/src/pages/Hackathons.tsx) | TypeScript JSX | 199 | 9 | 11 | 219 |
 | [frontend/src/pages/Heatmap.tsx](/frontend/src/pages/Heatmap.tsx) | TypeScript JSX | 140 | 4 | 13 | 157 |
-| [frontend/src/pages/Home.tsx](/frontend/src/pages/Home.tsx) | TypeScript JSX | 385 | 13 | 29 | 427 |
-| [frontend/src/pages/Nonprofits.tsx](/frontend/src/pages/Nonprofits.tsx) | TypeScript JSX | 280 | 5 | 24 | 309 |
+| [frontend/src/pages/Home.tsx](/frontend/src/pages/Home.tsx) | TypeScript JSX | 533 | 20 | 38 | 591 |
+| [frontend/src/pages/HomeModern.tsx](/frontend/src/pages/HomeModern.tsx) | TypeScript JSX | 1,214 | 48 | 65 | 1,327 |
+| [frontend/src/pages/JurisdictionsSearch.tsx](/frontend/src/pages/JurisdictionsSearch.tsx) | TypeScript JSX | 595 | 26 | 43 | 664 |
+| [frontend/src/pages/Nonprofits.tsx](/frontend/src/pages/Nonprofits.tsx) | TypeScript JSX | 286 | 6 | 24 | 316 |
+| [frontend/src/pages/NonprofitsHF.tsx](/frontend/src/pages/NonprofitsHF.tsx) | TypeScript JSX | 354 | 26 | 29 | 409 |
+| [frontend/src/pages/OpenSource.tsx](/frontend/src/pages/OpenSource.tsx) | TypeScript JSX | 238 | 5 | 12 | 255 |
 | [frontend/src/pages/Opportunities.tsx](/frontend/src/pages/Opportunities.tsx) | TypeScript JSX | 145 | 6 | 14 | 165 |
-| [frontend/src/pages/PeopleFinder.tsx](/frontend/src/pages/PeopleFinder.tsx) | TypeScript JSX | 325 | 6 | 21 | 352 |
+| [frontend/src/pages/PeopleFinder.tsx](/frontend/src/pages/PeopleFinder.tsx) | TypeScript JSX | 283 | 8 | 25 | 316 |
 | [frontend/src/pages/Profile.tsx](/frontend/src/pages/Profile.tsx) | TypeScript JSX | 381 | 9 | 20 | 410 |
+| [frontend/src/pages/Services.tsx](/frontend/src/pages/Services.tsx) | TypeScript JSX | 136 | 10 | 10 | 156 |
 | [frontend/src/pages/Settings.tsx](/frontend/src/pages/Settings.tsx) | TypeScript JSX | 279 | 15 | 23 | 317 |
+| [frontend/src/pages/UnifiedSearch.tsx](/frontend/src/pages/UnifiedSearch.tsx) | TypeScript JSX | 1,330 | 63 | 88 | 1,481 |
+| [frontend/src/utils/formatters.ts](/frontend/src/utils/formatters.ts) | TypeScript | 26 | 10 | 6 | 42 |
+| [frontend/src/utils/huggingface.ts](/frontend/src/utils/huggingface.ts) | TypeScript | 161 | 107 | 35 | 303 |
+| [frontend/src/utils/stateMapping.ts](/frontend/src/utils/stateMapping.ts) | TypeScript | 70 | 12 | 6 | 88 |
 | [frontend/src/vite-env.d.ts](/frontend/src/vite-env.d.ts) | TypeScript | 6 | 2 | 3 | 11 |
 | [frontend/tailwind.config.js](/frontend/tailwind.config.js) | JavaScript | 36 | 1 | 1 | 38 |
-| [frontend/tsconfig.json](/frontend/tsconfig.json) | JSON with Comments | 25 | 3 | 4 | 32 |
+| [frontend/tsconfig.json](/frontend/tsconfig.json) | JSON with Comments | 26 | 3 | 4 | 33 |
 | [frontend/tsconfig.node.json](/frontend/tsconfig.node.json) | JSON | 10 | 0 | 1 | 11 |
-| [frontend/vite.config.ts](/frontend/vite.config.ts) | TypeScript | 24 | 1 | 2 | 27 |
+| [frontend/vite.config.ts](/frontend/vite.config.ts) | TypeScript | 33 | 1 | 2 | 36 |
 | [hf-dataset-cleanup.sh](/hf-dataset-cleanup.sh) | Shell Script | 28 | 4 | 7 | 39 |
 | [install.sh](/install.sh) | Shell Script | 96 | 11 | 14 | 121 |
 | [main.py](/main.py) | Python | 307 | 44 | 95 | 446 |
@@ -204,45 +260,72 @@ Total : 322 files,  394405 codes, 7100 comments, 15381 blanks, all 416886 lines
 | [models/meeting\_event.py](/models/meeting_event.py) | Python | 220 | 71 | 51 | 342 |
 | [notebooks/Jurisdiction\_Discovery.py](/notebooks/Jurisdiction_Discovery.py) | Python | 76 | 168 | 64 | 308 |
 | [notebooks/example\_analysis.py](/notebooks/example_analysis.py) | Python | 101 | 59 | 52 | 212 |
-| [output/tuscaloosa/generic\_20260423\_180616.json](/output/tuscaloosa/generic_20260423_180616.json) | JSON | 1,052 | 0 | 0 | 1,052 |
-| [output/tuscaloosa/generic\_20260423\_180619.json](/output/tuscaloosa/generic_20260423_180619.json) | JSON | 1 | 0 | 0 | 1 |
-| [output/tuscaloosa/granicus\_20260423\_180621.json](/output/tuscaloosa/granicus_20260423_180621.json) | JSON | 1 | 0 | 0 | 1 |
-| [output/tuscaloosa/legistar\_20260423\_180620.json](/output/tuscaloosa/legistar_20260423_180620.json) | JSON | 1 | 0 | 0 | 1 |
-| [output/tuscaloosa/suiteonemedia\_20260423\_181708.json](/output/tuscaloosa/suiteonemedia_20260423_181708.json) | JSON | 512 | 0 | 0 | 512 |
-| [output/tuscaloosa/suiteonemedia\_20260423\_182340.json](/output/tuscaloosa/suiteonemedia_20260423_182340.json) | JSON | 748 | 0 | 0 | 748 |
-| [output/tuscaloosa/suiteonemedia\_20260423\_182351.json](/output/tuscaloosa/suiteonemedia_20260423_182351.json) | JSON | 748 | 0 | 0 | 748 |
-| [output/tuscaloosa/suiteonemedia\_20260423\_210412.json](/output/tuscaloosa/suiteonemedia_20260423_210412.json) | JSON | 375 | 0 | 0 | 375 |
-| [output/tuscaloosa/suiteonemedia\_20260423\_210613.json](/output/tuscaloosa/suiteonemedia_20260423_210613.json) | JSON | 375 | 0 | 0 | 375 |
-| [output/tuscaloosa/suiteonemedia\_20260424\_112916.json](/output/tuscaloosa/suiteonemedia_20260424_112916.json) | JSON | 96,372 | 0 | 0 | 96,372 |
-| [output/tuscaloosa/suiteonemedia\_20260424\_144825.json](/output/tuscaloosa/suiteonemedia_20260424_144825.json) | JSON | 96,338 | 0 | 0 | 96,338 |
-| [output/tuscaloosa/suiteonemedia\_20260424\_224908.json](/output/tuscaloosa/suiteonemedia_20260424_224908.json) | JSON | 96,531 | 0 | 0 | 96,531 |
-| [output/tuscaloosa\_city\_schools/eboard\_20260423\_223435.json](/output/tuscaloosa_city_schools/eboard_20260423_223435.json) | JSON | 1 | 0 | 0 | 1 |
-| [output/tuscaloosa\_city\_schools/eboard\_20260423\_224726.json](/output/tuscaloosa_city_schools/eboard_20260423_224726.json) | JSON | 1 | 0 | 0 | 1 |
-| [output/tuscaloosa\_city\_schools/eboard\_20260423\_224818.json](/output/tuscaloosa_city_schools/eboard_20260423_224818.json) | JSON | 1 | 0 | 0 | 1 |
-| [output/tuscaloosa\_city\_schools/eboard\_20260423\_231344.json](/output/tuscaloosa_city_schools/eboard_20260423_231344.json) | JSON | 1 | 0 | 0 | 1 |
-| [output/tuscaloosa\_city\_schools/eboard\_20260423\_231421.json](/output/tuscaloosa_city_schools/eboard_20260423_231421.json) | JSON | 1 | 0 | 0 | 1 |
-| [output/tuscaloosa\_city\_schools/eboard\_20260423\_231511.json](/output/tuscaloosa_city_schools/eboard_20260423_231511.json) | JSON | 1 | 0 | 0 | 1 |
-| [output/tuscaloosa\_city\_schools/eboard\_20260424\_151807.json](/output/tuscaloosa_city_schools/eboard_20260424_151807.json) | JSON | 1 | 0 | 0 | 1 |
-| [output/tuscaloosa\_city\_schools/eboard\_20260424\_155458.json](/output/tuscaloosa_city_schools/eboard_20260424_155458.json) | JSON | 1 | 0 | 0 | 1 |
-| [output/tuscaloosa\_city\_schools/eboard\_20260424\_155609.json](/output/tuscaloosa_city_schools/eboard_20260424_155609.json) | JSON | 1 | 0 | 0 | 1 |
-| [output/tuscaloosa\_city\_schools/generic\_20260423\_223006.json](/output/tuscaloosa_city_schools/generic_20260423_223006.json) | JSON | 1 | 0 | 0 | 1 |
 | [pipeline/\_\_init\_\_.py](/pipeline/__init__.py) | Python | 2 | 1 | 2 | 5 |
+| [pipeline/create\_campaigns\_gold\_tables.py](/pipeline/create_campaigns_gold_tables.py) | Python | 359 | 133 | 91 | 583 |
+| [pipeline/create\_contacts\_gold\_tables.py](/pipeline/create_contacts_gold_tables.py) | Python | 339 | 127 | 107 | 573 |
+| [pipeline/create\_grants\_gold\_tables.py](/pipeline/create_grants_gold_tables.py) | Python | 182 | 110 | 43 | 335 |
+| [pipeline/create\_meetings\_gold\_tables.py](/pipeline/create_meetings_gold_tables.py) | Python | 213 | 66 | 77 | 356 |
+| [pipeline/create\_nonprofits\_gold\_tables.py](/pipeline/create_nonprofits_gold_tables.py) | Python | 317 | 117 | 78 | 512 |
 | [pipeline/delta\_lake.py](/pipeline/delta_lake.py) | Python | 274 | 75 | 7 | 356 |
 | [pipeline/delta\_lake\_queries.py](/pipeline/delta_lake_queries.py) | Python | 84 | 122 | 2 | 208 |
 | [pipeline/huggingface\_publisher.py](/pipeline/huggingface_publisher.py) | Python | 226 | 137 | 79 | 442 |
-| [requirements.txt](/requirements.txt) | pip requirements | 66 | 13 | 13 | 92 |
+| [publish\_gold\_datasets.py](/publish_gold_datasets.py) | Python | 101 | 20 | 33 | 154 |
+| [requirements.txt](/requirements.txt) | pip requirements | 67 | 19 | 14 | 100 |
+| [retry\_failed\_datasets.py](/retry_failed_datasets.py) | Python | 111 | 17 | 35 | 163 |
+| [run\_gold\_tables.sh](/run_gold_tables.sh) | Shell Script | 9 | 3 | 4 | 16 |
+| [scripts/README\_LEGISLATIVE\_TRACKING.md](/scripts/README_LEGISLATIVE_TRACKING.md) | Markdown | 170 | 0 | 69 | 239 |
+| [scripts/auto\_enrich\_nonprofits.sh](/scripts/auto_enrich_nonprofits.sh) | Shell Script | 17 | 4 | 5 | 26 |
+| [scripts/batch\_download\_990s.py](/scripts/batch_download_990s.py) | Python | 116 | 27 | 32 | 175 |
+| [scripts/bigquery\_tuscaloosa\_missions.sql](/scripts/bigquery_tuscaloosa_missions.sql) | MS SQL | 88 | 1 | 9 | 98 |
+| [scripts/build\_990\_local\_index.py](/scripts/build_990_local_index.py) | Python | 154 | 32 | 42 | 228 |
+| [scripts/bulk\_legislative\_download.py](/scripts/bulk_legislative_download.py) | Python | 255 | 148 | 76 | 479 |
+| [scripts/check\_state\_data.py](/scripts/check_state_data.py) | Python | 98 | 15 | 24 | 137 |
+| [scripts/cleanup\_disk\_space.sh](/scripts/cleanup_disk_space.sh) | Shell Script | 83 | 12 | 18 | 113 |
+| [scripts/cleanup\_nonprofit\_files.py](/scripts/cleanup_nonprofit_files.py) | Python | 113 | 25 | 42 | 180 |
+| [scripts/consolidate\_partitioned\_datasets.py](/scripts/consolidate_partitioned_datasets.py) | Python | 118 | 28 | 33 | 179 |
+| [scripts/create\_all\_gold\_tables.py](/scripts/create_all_gold_tables.py) | Python | 159 | 37 | 28 | 224 |
+| [scripts/create\_contacts\_by\_state.py](/scripts/create_contacts_by_state.py) | Python | 126 | 22 | 43 | 191 |
+| [scripts/create\_nonprofit\_officer\_contacts.py](/scripts/create_nonprofit_officer_contacts.py) | Python | 99 | 26 | 28 | 153 |
+| [scripts/create\_partitioned\_datasets.py](/scripts/create_partitioned_datasets.py) | Python | 191 | 83 | 47 | 321 |
 | [scripts/deploy-databricks-app.sh](/scripts/deploy-databricks-app.sh) | Shell Script | 50 | 10 | 13 | 73 |
 | [scripts/discover\_tuscaloosa\_nonprofits.py](/scripts/discover_tuscaloosa_nonprofits.py) | Python | 79 | 19 | 21 | 119 |
+| [scripts/download\_990\_zips.sh](/scripts/download_990_zips.sh) | Shell Script | 95 | 10 | 20 | 125 |
+| [scripts/enrich\_all\_states\_local.sh](/scripts/enrich_all_states_local.sh) | Shell Script | 74 | 8 | 16 | 98 |
+| [scripts/enrich\_ma\_990\_fast.py](/scripts/enrich_ma_990_fast.py) | Python | 62 | 107 | 17 | 186 |
+| [scripts/enrich\_nonprofits\_async.py](/scripts/enrich_nonprofits_async.py) | Python | 249 | 72 | 49 | 370 |
+| [scripts/enrich\_nonprofits\_bigquery.py](/scripts/enrich_nonprofits_bigquery.py) | Python | 169 | 407 | 20 | 596 |
+| [scripts/enrich\_nonprofits\_everyorg.py](/scripts/enrich_nonprofits_everyorg.py) | Python | 231 | 71 | 55 | 357 |
+| [scripts/enrich\_nonprofits\_form990.py](/scripts/enrich_nonprofits_form990.py) | Python | 290 | 93 | 74 | 457 |
+| [scripts/enrich\_nonprofits\_gt990.py](/scripts/enrich_nonprofits_gt990.py) | Python | 473 | 177 | 118 | 768 |
+| [scripts/enrich\_nonprofits\_logodev.py](/scripts/enrich_nonprofits_logodev.py) | Python | 239 | 112 | 60 | 411 |
+| [scripts/enrich\_nonprofits\_no\_auth.sh](/scripts/enrich_nonprofits_no_auth.sh) | Shell Script | 77 | 13 | 13 | 103 |
+| [scripts/enrich\_nonprofits\_propublica.py](/scripts/enrich_nonprofits_propublica.py) | Python | 237 | 93 | 58 | 388 |
+| [scripts/extract\_990\_dev\_states.sh](/scripts/extract_990_dev_states.sh) | Shell Script | 101 | 24 | 27 | 152 |
+| [scripts/extract\_990\_zips.sh](/scripts/extract_990_zips.sh) | Shell Script | 62 | 11 | 15 | 88 |
+| [scripts/extract\_contacts\_dev\_mode.py](/scripts/extract_contacts_dev_mode.py) | Python | 158 | 44 | 64 | 266 |
+| [scripts/finalize\_huggingface\_structure.py](/scripts/finalize_huggingface_structure.py) | Python | 171 | 17 | 20 | 208 |
+| [scripts/legislative\_tracker.py](/scripts/legislative_tracker.py) | Python | 295 | 110 | 75 | 480 |
+| [scripts/manage\_contacts.py](/scripts/manage_contacts.py) | Python | 292 | 88 | 83 | 463 |
+| [scripts/manage\_nonprofits.py](/scripts/manage_nonprofits.py) | Python | 189 | 46 | 69 | 304 |
 | [scripts/migrate\_social\_features.py](/scripts/migrate_social_features.py) | Python | 28 | 14 | 9 | 51 |
+| [scripts/move\_secrets\_to\_home.sh](/scripts/move_secrets_to_home.sh) | Shell Script | 35 | 7 | 12 | 54 |
+| [scripts/organize\_meetings\_by\_state.py](/scripts/organize_meetings_by_state.py) | Python | 211 | 48 | 74 | 333 |
+| [scripts/reorganize\_for\_huggingface.py](/scripts/reorganize_for_huggingface.py) | Python | 97 | 27 | 32 | 156 |
 | [scripts/run\_tuscaloosa\_pipeline.sh](/scripts/run_tuscaloosa_pipeline.sh) | Shell Script | 214 | 31 | 57 | 302 |
 | [scripts/setup-local.sh](/scripts/setup-local.sh) | Shell Script | 32 | 5 | 8 | 45 |
+| [scripts/split\_gold\_by\_state.py](/scripts/split_gold_by_state.py) | Python | 159 | 67 | 42 | 268 |
+| [scripts/split\_meetings\_by\_state.py](/scripts/split_meetings_by_state.py) | Python | 77 | 19 | 37 | 133 |
 | [scripts/test-app.py](/scripts/test-app.py) | Python | 25 | 8 | 7 | 40 |
-| [scripts/upload\_to\_huggingface.py](/scripts/upload_to_huggingface.py) | Python | 294 | 184 | 80 | 558 |
+| [scripts/upload\_meetings\_to\_hf.py](/scripts/upload_meetings_to_hf.py) | Python | 196 | 71 | 42 | 309 |
+| [scripts/upload\_nonprofits\_to\_hf.py](/scripts/upload_nonprofits_to_hf.py) | Python | 185 | 126 | 61 | 372 |
+| [scripts/upload\_state\_splits\_to\_hf.py](/scripts/upload_state_splits_to_hf.py) | Python | 183 | 73 | 44 | 300 |
+| [scripts/upload\_to\_huggingface.py](/scripts/upload_to_huggingface.py) | Python | 294 | 185 | 80 | 559 |
+| [setup-git-hooks.sh](/setup-git-hooks.sh) | Shell Script | 24 | 5 | 6 | 35 |
 | [setup-huggingface.sh](/setup-huggingface.sh) | Shell Script | 111 | 12 | 23 | 146 |
 | [setup.py](/setup.py) | Python | 96 | 2 | 3 | 101 |
-| [start-all.sh](/start-all.sh) | Shell Script | 141 | 24 | 32 | 197 |
+| [start-all.sh](/start-all.sh) | Shell Script | 156 | 26 | 37 | 219 |
 | [stop-all.sh](/stop-all.sh) | Shell Script | 41 | 6 | 13 | 60 |
-| [test-huggingface-build.sh](/test-huggingface-build.sh) | Shell Script | 8 | 9 | 4 | 21 |
+| [test-huggingface-build.sh](/test-huggingface-build.sh) | Shell Script | 147 | 24 | 32 | 203 |
 | [test\_oauth\_flow.py](/test_oauth_flow.py) | Python | 52 | 6 | 13 | 71 |
 | [tests/test\_agents.py](/tests/test_agents.py) | Python | 57 | 16 | 24 | 97 |
 | [update-repo-urls.sh](/update-repo-urls.sh) | Shell Script | 36 | 5 | 7 | 48 |
@@ -250,36 +333,52 @@ Total : 322 files,  394405 codes, 7100 comments, 15381 blanks, all 416886 lines
 | [visualization/heatmap.py](/visualization/heatmap.py) | Python | 229 | 162 | 34 | 425 |
 | [website/DOCUMENTATION\_MIGRATION.md](/website/DOCUMENTATION_MIGRATION.md) | Markdown | 167 | 0 | 37 | 204 |
 | [website/README.md](/website/README.md) | Markdown | 49 | 0 | 25 | 74 |
-| [website/blog/authors.yml](/website/blog/authors.yml) | YAML | 23 | 1 | 2 | 26 |
-| [website/blog/tags.yml](/website/blog/tags.yml) | YAML | 16 | 0 | 4 | 20 |
-| [website/docs/architecture.md](/website/docs/architecture.md) | Markdown | 163 | 0 | 44 | 207 |
+| [website/blog/2026-04-06-data-model-expansion.md](/website/blog/2026-04-06-data-model-expansion.md) | Markdown | 57 | 0 | 25 | 82 |
+| [website/blog/2026-04-13-citations-migration.md](/website/blog/2026-04-13-citations-migration.md) | Markdown | 92 | 0 | 31 | 123 |
+| [website/blog/2026-04-20-homepage-navigation-fixes.md](/website/blog/2026-04-20-homepage-navigation-fixes.md) | Markdown | 122 | 0 | 39 | 161 |
+| [website/blog/authors.yml](/website/blog/authors.yml) | YAML | 8 | 0 | 2 | 10 |
+| [website/blog/tags.yml](/website/blog/tags.yml) | YAML | 28 | 0 | 8 | 36 |
+| [website/docs/architecture.md](/website/docs/architecture.md) | Markdown | 164 | 0 | 44 | 208 |
 | [website/docs/case-studies/tuscaloosa-complete.md](/website/docs/case-studies/tuscaloosa-complete.md) | Markdown | 269 | 0 | 86 | 355 |
 | [website/docs/case-studies/tuscaloosa-discovery.md](/website/docs/case-studies/tuscaloosa-discovery.md) | Markdown | 335 | 0 | 113 | 448 |
 | [website/docs/case-studies/tuscaloosa-pipeline.md](/website/docs/case-studies/tuscaloosa-pipeline.md) | Markdown | 870 | 0 | 268 | 1,138 |
-| [website/docs/dashboard.md](/website/docs/dashboard.md) | Markdown | 94 | 0 | 40 | 134 |
 | [website/docs/data-sources/\_civic-tech-sources.md](/website/docs/data-sources/_civic-tech-sources.md) | Markdown | 189 | 0 | 67 | 256 |
 | [website/docs/data-sources/\_confirmed-datasets.md](/website/docs/data-sources/_confirmed-datasets.md) | Markdown | 250 | 0 | 91 | 341 |
-| [website/docs/data-sources/census-data.md](/website/docs/data-sources/census-data.md) | Markdown | 69 | 0 | 32 | 101 |
-| [website/docs/data-sources/huggingface-datasets.md](/website/docs/data-sources/huggingface-datasets.md) | Markdown | 278 | 0 | 91 | 369 |
-| [website/docs/data-sources/jurisdiction-discovery.md](/website/docs/data-sources/jurisdiction-discovery.md) | Markdown | 450 | 0 | 131 | 581 |
-| [website/docs/data-sources/nonprofit-sources.md](/website/docs/data-sources/nonprofit-sources.md) | Markdown | 161 | 0 | 64 | 225 |
-| [website/docs/data-sources/open-source-repositories.md](/website/docs/data-sources/open-source-repositories.md) | Markdown | 281 | 0 | 90 | 371 |
-| [website/docs/data-sources/overview.md](/website/docs/data-sources/overview.md) | Markdown | 205 | 0 | 71 | 276 |
-| [website/docs/data-sources/url-datasets.md](/website/docs/data-sources/url-datasets.md) | Markdown | 155 | 0 | 50 | 205 |
-| [website/docs/data-sources/video-channels.md](/website/docs/data-sources/video-channels.md) | Markdown | 458 | 0 | 151 | 609 |
-| [website/docs/data-sources/video-sources.md](/website/docs/data-sources/video-sources.md) | Markdown | 313 | 0 | 125 | 438 |
-| [website/docs/data-sources/youtube-discovery.md](/website/docs/data-sources/youtube-discovery.md) | Markdown | 337 | 0 | 102 | 439 |
+| [website/docs/data-sources/ballot-election-sources.md](/website/docs/data-sources/ballot-election-sources.md) | Markdown | 304 | 0 | 73 | 377 |
+| [website/docs/data-sources/census-data.md](/website/docs/data-sources/census-data.md) | Markdown | 72 | 0 | 33 | 105 |
+| [website/docs/data-sources/charity-navigator.md](/website/docs/data-sources/charity-navigator.md) | Markdown | 297 | 0 | 102 | 399 |
+| [website/docs/data-sources/citations.md](/website/docs/data-sources/citations.md) | Markdown | 1,826 | 0 | 444 | 2,270 |
+| [website/docs/data-sources/data-model-erd.md](/website/docs/data-sources/data-model-erd.md) | Markdown | 3,146 | 0 | 402 | 3,548 |
+| [website/docs/data-sources/factcheck-sources.md](/website/docs/data-sources/factcheck-sources.md) | Markdown | 522 | 0 | 127 | 649 |
+| [website/docs/data-sources/form-990-xml.md](/website/docs/data-sources/form-990-xml.md) | Markdown | 606 | 0 | 180 | 786 |
+| [website/docs/data-sources/huggingface-datasets.md](/website/docs/data-sources/huggingface-datasets.md) | Markdown | 281 | 0 | 92 | 373 |
+| [website/docs/data-sources/irs-bulk-data.md](/website/docs/data-sources/irs-bulk-data.md) | Markdown | 318 | 0 | 115 | 433 |
+| [website/docs/data-sources/jurisdiction-discovery.md](/website/docs/data-sources/jurisdiction-discovery.md) | Markdown | 453 | 0 | 132 | 585 |
+| [website/docs/data-sources/nonprofit-sources.md](/website/docs/data-sources/nonprofit-sources.md) | Markdown | 251 | 0 | 92 | 343 |
+| [website/docs/data-sources/open-source-repositories.md](/website/docs/data-sources/open-source-repositories.md) | Markdown | 284 | 0 | 91 | 375 |
+| [website/docs/data-sources/overview.md](/website/docs/data-sources/overview.md) | Markdown | 215 | 0 | 74 | 289 |
+| [website/docs/data-sources/polling-survey-sources.md](/website/docs/data-sources/polling-survey-sources.md) | Markdown | 411 | 0 | 117 | 528 |
+| [website/docs/data-sources/url-datasets.md](/website/docs/data-sources/url-datasets.md) | Markdown | 158 | 0 | 51 | 209 |
+| [website/docs/data-sources/video-channels.md](/website/docs/data-sources/video-channels.md) | Markdown | 461 | 0 | 152 | 613 |
+| [website/docs/data-sources/video-sources.md](/website/docs/data-sources/video-sources.md) | Markdown | 316 | 0 | 126 | 442 |
+| [website/docs/data-sources/youtube-discovery.md](/website/docs/data-sources/youtube-discovery.md) | Markdown | 340 | 0 | 103 | 443 |
 | [website/docs/deployment/authentication-setup.md](/website/docs/deployment/authentication-setup.md) | Markdown | 326 | 0 | 124 | 450 |
-| [website/docs/deployment/costs.md](/website/docs/deployment/costs.md) | Markdown | 176 | 0 | 61 | 237 |
+| [website/docs/deployment/build-protection.md](/website/docs/deployment/build-protection.md) | Markdown | 246 | 0 | 88 | 334 |
+| [website/docs/deployment/build-verification.md](/website/docs/deployment/build-verification.md) | Markdown | 173 | 0 | 60 | 233 |
+| [website/docs/deployment/costs.md](/website/docs/deployment/costs.md) | Markdown | 179 | 0 | 62 | 241 |
 | [website/docs/deployment/databricks-apps.md](/website/docs/deployment/databricks-apps.md) | Markdown | 298 | 0 | 104 | 402 |
 | [website/docs/deployment/databricks-migration.md](/website/docs/deployment/databricks-migration.md) | Markdown | 224 | 0 | 53 | 277 |
+| [website/docs/deployment/docker-troubleshooting.md](/website/docs/deployment/docker-troubleshooting.md) | Markdown | 279 | 0 | 103 | 382 |
 | [website/docs/deployment/huggingface-spaces.md](/website/docs/deployment/huggingface-spaces.md) | Markdown | 253 | 0 | 92 | 345 |
-| [website/docs/deployment/jurisdiction-discovery.md](/website/docs/deployment/jurisdiction-discovery.md) | Markdown | 150 | 0 | 60 | 210 |
+| [website/docs/deployment/jurisdiction-discovery.md](/website/docs/deployment/jurisdiction-discovery.md) | Markdown | 153 | 0 | 61 | 214 |
 | [website/docs/deployment/oauth-providers-setup.md](/website/docs/deployment/oauth-providers-setup.md) | Markdown | 342 | 0 | 143 | 485 |
 | [website/docs/deployment/quickstart-databricks.md](/website/docs/deployment/quickstart-databricks.md) | Markdown | 159 | 0 | 54 | 213 |
 | [website/docs/deployment/rename-repository.md](/website/docs/deployment/rename-repository.md) | Markdown | 219 | 0 | 89 | 308 |
-| [website/docs/deployment/scale.md](/website/docs/deployment/scale.md) | Markdown | 410 | 0 | 126 | 536 |
-| [website/docs/deployment/storage.md](/website/docs/deployment/storage.md) | Markdown | 389 | 0 | 159 | 548 |
+| [website/docs/deployment/scale.md](/website/docs/deployment/scale.md) | Markdown | 413 | 0 | 127 | 540 |
+| [website/docs/deployment/schema-migration.md](/website/docs/deployment/schema-migration.md) | Markdown | 323 | 0 | 51 | 374 |
+| [website/docs/deployment/storage.md](/website/docs/deployment/storage.md) | Markdown | 392 | 0 | 160 | 552 |
+| [website/docs/deployment/variable-migration.md](/website/docs/deployment/variable-migration.md) | Markdown | 121 | 0 | 56 | 177 |
+| [website/docs/development/adding-data-sources.md](/website/docs/development/adding-data-sources.md) | Markdown | 326 | 0 | 121 | 447 |
 | [website/docs/development/changelog.md](/website/docs/development/changelog.md) | Markdown | 112 | 0 | 38 | 150 |
 | [website/docs/development/dashboard-redesign.md](/website/docs/development/dashboard-redesign.md) | Markdown | 87 | 0 | 22 | 109 |
 | [website/docs/development/docs-migration.md](/website/docs/development/docs-migration.md) | Markdown | 73 | 0 | 23 | 96 |
@@ -290,48 +389,86 @@ Total : 322 files,  394405 codes, 7100 comments, 15381 blanks, all 416886 lines
 | [website/docs/development/port-guide.md](/website/docs/development/port-guide.md) | Markdown | 125 | 0 | 41 | 166 |
 | [website/docs/development/react-refactoring.md](/website/docs/development/react-refactoring.md) | Markdown | 433 | 0 | 118 | 551 |
 | [website/docs/development/readme-migration.md](/website/docs/development/readme-migration.md) | Markdown | 131 | 0 | 40 | 171 |
+| [website/docs/development/real-time-statistics.md](/website/docs/development/real-time-statistics.md) | Markdown | 457 | 0 | 128 | 585 |
 | [website/docs/development/refactoring-summary.md](/website/docs/development/refactoring-summary.md) | Markdown | 377 | 0 | 113 | 490 |
-| [website/docs/for-advocates.md](/website/docs/for-advocates.md) | Markdown | 141 | 0 | 67 | 208 |
-| [website/docs/for-developers.md](/website/docs/for-developers.md) | Markdown | 315 | 0 | 109 | 424 |
-| [website/docs/guides/accountability-strategy.md](/website/docs/guides/accountability-strategy.md) | Markdown | 178 | 0 | 76 | 254 |
+| [website/docs/development/schema-migration-summary.md](/website/docs/development/schema-migration-summary.md) | Markdown | 239 | 0 | 60 | 299 |
+| [website/docs/families/community-events.md](/website/docs/families/community-events.md) | Markdown | 289 | 0 | 82 | 371 |
+| [website/docs/families/community-resources.md](/website/docs/families/community-resources.md) | Markdown | 120 | 0 | 31 | 151 |
+| [website/docs/families/service-requests.md](/website/docs/families/service-requests.md) | Markdown | 380 | 0 | 91 | 471 |
+| [website/docs/families/training-education.md](/website/docs/families/training-education.md) | Markdown | 383 | 0 | 105 | 488 |
+| [website/docs/families/voter-registration.md](/website/docs/families/voter-registration.md) | Markdown | 380 | 0 | 111 | 491 |
+| [website/docs/for-advocates.md](/website/docs/for-advocates.md) | Markdown | 153 | 0 | 70 | 223 |
+| [website/docs/for-developers.md](/website/docs/for-developers.md) | Markdown | 330 | 0 | 112 | 442 |
+| [website/docs/for-families.md](/website/docs/for-families.md) | Markdown | 317 | 0 | 97 | 414 |
+| [website/docs/guides/accountability-strategy.md](/website/docs/guides/accountability-strategy.md) | Markdown | 181 | 0 | 77 | 258 |
+| [website/docs/guides/api-troubleshooting.md](/website/docs/guides/api-troubleshooting.md) | Markdown | 154 | 0 | 62 | 216 |
+| [website/docs/guides/contacts-officials.md](/website/docs/guides/contacts-officials.md) | Markdown | 370 | 0 | 143 | 513 |
 | [website/docs/guides/document-libraries.md](/website/docs/guides/document-libraries.md) | Markdown | 118 | 0 | 44 | 162 |
+| [website/docs/guides/enterprise-tech-integration.md](/website/docs/guides/enterprise-tech-integration.md) | Markdown | 213 | 0 | 85 | 298 |
+| [website/docs/guides/form-990-enrichment.md](/website/docs/guides/form-990-enrichment.md) | Markdown | 182 | 0 | 52 | 234 |
+| [website/docs/guides/gold-table-pipeline.md](/website/docs/guides/gold-table-pipeline.md) | Markdown | 201 | 0 | 92 | 293 |
 | [website/docs/guides/handling-formats.md](/website/docs/guides/handling-formats.md) | Markdown | 508 | 0 | 152 | 660 |
+| [website/docs/guides/huggingface-datasets.md](/website/docs/guides/huggingface-datasets.md) | Markdown | 400 | 0 | 105 | 505 |
 | [website/docs/guides/huggingface-features.md](/website/docs/guides/huggingface-features.md) | Markdown | 186 | 0 | 76 | 262 |
+| [website/docs/guides/huggingface-integration.md](/website/docs/guides/huggingface-integration.md) | Markdown | 250 | 0 | 97 | 347 |
 | [website/docs/guides/huggingface-limits.md](/website/docs/guides/huggingface-limits.md) | Markdown | 338 | 0 | 111 | 449 |
 | [website/docs/guides/huggingface-publishing.md](/website/docs/guides/huggingface-publishing.md) | Markdown | 318 | 0 | 129 | 447 |
 | [website/docs/guides/huggingface-quickstart.md](/website/docs/guides/huggingface-quickstart.md) | Markdown | 290 | 0 | 112 | 402 |
-| [website/docs/guides/impact-navigation.md](/website/docs/guides/impact-navigation.md) | Markdown | 249 | 0 | 100 | 349 |
+| [website/docs/guides/impact-navigation.md](/website/docs/guides/impact-navigation.md) | Markdown | 252 | 0 | 101 | 353 |
 | [website/docs/guides/jurisdiction-setup.md](/website/docs/guides/jurisdiction-setup.md) | Markdown | 408 | 0 | 151 | 559 |
-| [website/docs/guides/political-economy.md](/website/docs/guides/political-economy.md) | Markdown | 266 | 0 | 89 | 355 |
+| [website/docs/guides/legislative-tracking-maps.md](/website/docs/guides/legislative-tracking-maps.md) | Markdown | 551 | 0 | 206 | 757 |
+| [website/docs/guides/logo-enrichment.md](/website/docs/guides/logo-enrichment.md) | Markdown | 272 | 0 | 86 | 358 |
+| [website/docs/guides/nonprofit-officers-contacts.md](/website/docs/guides/nonprofit-officers-contacts.md) | Markdown | 312 | 0 | 106 | 418 |
+| [website/docs/guides/open-states-legislative-data.md](/website/docs/guides/open-states-legislative-data.md) | Markdown | 780 | 0 | 154 | 934 |
+| [website/docs/guides/partitioned-datasets.md](/website/docs/guides/partitioned-datasets.md) | Markdown | 221 | 0 | 69 | 290 |
+| [website/docs/guides/political-economy.md](/website/docs/guides/political-economy.md) | Markdown | 269 | 0 | 90 | 359 |
 | [website/docs/guides/scraper-improvements.md](/website/docs/guides/scraper-improvements.md) | Markdown | 234 | 0 | 71 | 305 |
 | [website/docs/guides/search-patterns.md](/website/docs/guides/search-patterns.md) | Markdown | 684 | 0 | 170 | 854 |
 | [website/docs/guides/split-screen.md](/website/docs/guides/split-screen.md) | Markdown | 293 | 0 | 81 | 374 |
+| [website/docs/guides/state-split-data.md](/website/docs/guides/state-split-data.md) | Markdown | 128 | 0 | 44 | 172 |
+| [website/docs/guides/unified-search.md](/website/docs/guides/unified-search.md) | Markdown | 226 | 0 | 52 | 278 |
 | [website/docs/integrations/dataverse-summary.md](/website/docs/integrations/dataverse-summary.md) | Markdown | 170 | 0 | 57 | 227 |
 | [website/docs/integrations/dataverse.md](/website/docs/integrations/dataverse.md) | Markdown | 334 | 0 | 112 | 446 |
 | [website/docs/integrations/eboard-automated.md](/website/docs/integrations/eboard-automated.md) | Markdown | 304 | 0 | 98 | 402 |
 | [website/docs/integrations/eboard-cookies.md](/website/docs/integrations/eboard-cookies.md) | Markdown | 184 | 0 | 63 | 247 |
 | [website/docs/integrations/eboard-manual.md](/website/docs/integrations/eboard-manual.md) | Markdown | 95 | 0 | 31 | 126 |
+| [website/docs/integrations/fec-campaign-finance.md](/website/docs/integrations/fec-campaign-finance.md) | Markdown | 356 | 0 | 134 | 490 |
+| [website/docs/integrations/fec-integration-summary.md](/website/docs/integrations/fec-integration-summary.md) | Markdown | 172 | 0 | 55 | 227 |
+| [website/docs/integrations/fec-political-contributions.md](/website/docs/integrations/fec-political-contributions.md) | Markdown | 285 | 0 | 85 | 370 |
 | [website/docs/integrations/frontend.md](/website/docs/integrations/frontend.md) | Markdown | 332 | 0 | 113 | 445 |
+| [website/docs/integrations/grants-gov-api.md](/website/docs/integrations/grants-gov-api.md) | Markdown | 232 | 0 | 77 | 309 |
 | [website/docs/integrations/localview.md](/website/docs/integrations/localview.md) | Markdown | 177 | 0 | 76 | 253 |
 | [website/docs/integrations/overview.md](/website/docs/integrations/overview.md) | Markdown | 450 | 0 | 107 | 557 |
-| [website/docs/intro.md](/website/docs/intro.md) | Markdown | 339 | 0 | 119 | 458 |
-| [website/docs/quick-reference.md](/website/docs/quick-reference.md) | Markdown | 92 | 0 | 29 | 121 |
-| [website/docs/quickstart.md](/website/docs/quickstart.md) | Markdown | 143 | 0 | 64 | 207 |
-| [website/docusaurus.config.ts](/website/docusaurus.config.ts) | TypeScript | 134 | 16 | 11 | 161 |
-| [website/package-lock.json](/website/package-lock.json) | JSON | 19,524 | 0 | 1 | 19,525 |
-| [website/package.json](/website/package.json) | JSON | 49 | 0 | 1 | 50 |
-| [website/sidebars.ts](/website/sidebars.ts) | TypeScript | 127 | 11 | 5 | 143 |
+| [website/docs/intro.md](/website/docs/intro.md) | Markdown | 199 | 0 | 65 | 264 |
+| [website/docs/legal-compliance.md](/website/docs/legal-compliance.md) | Markdown | 490 | 0 | 171 | 661 |
+| [website/docs/legal/README.md](/website/docs/legal/README.md) | Markdown | 103 | 0 | 35 | 138 |
+| [website/docs/legal/data-provider-terms.md](/website/docs/legal/data-provider-terms.md) | Markdown | 840 | 0 | 267 | 1,107 |
+| [website/docs/legal/index.md](/website/docs/legal/index.md) | Markdown | 308 | 0 | 113 | 421 |
+| [website/docs/legal/legal-documentation-complete.md](/website/docs/legal/legal-documentation-complete.md) | Markdown | 198 | 2 | 53 | 253 |
+| [website/docs/legal/legal-documentation-summary.md](/website/docs/legal/legal-documentation-summary.md) | Markdown | 176 | 0 | 47 | 223 |
+| [website/docs/legal/privacy-policy.md](/website/docs/legal/privacy-policy.md) | Markdown | 314 | 0 | 128 | 442 |
+| [website/docs/legal/terms-of-service.md](/website/docs/legal/terms-of-service.md) | Markdown | 258 | 0 | 108 | 366 |
+| [website/docs/open-navigator.md](/website/docs/open-navigator.md) | Markdown | 98 | 0 | 40 | 138 |
+| [website/docs/quick-reference.md](/website/docs/quick-reference.md) | Markdown | 93 | 0 | 29 | 122 |
+| [website/docs/quickstart.md](/website/docs/quickstart.md) | Markdown | 144 | 0 | 64 | 208 |
+| [website/docusaurus.config.ts](/website/docusaurus.config.ts) | TypeScript | 200 | 24 | 14 | 238 |
+| [website/package-lock.json](/website/package-lock.json) | JSON | 20,802 | 0 | 1 | 20,803 |
+| [website/package.json](/website/package.json) | JSON | 52 | 0 | 1 | 53 |
+| [website/sidebars.ts](/website/sidebars.ts) | TypeScript | 412 | 22 | 9 | 443 |
 | [website/src/components/HomepageFeatures/index.tsx](/website/src/components/HomepageFeatures/index.tsx) | TypeScript JSX | 67 | 0 | 5 | 72 |
 | [website/src/components/HomepageFeatures/styles.module.css](/website/src/components/HomepageFeatures/styles.module.css) | PostCSS | 10 | 0 | 2 | 12 |
-| [website/src/css/custom.css](/website/src/css/custom.css) | PostCSS | 101 | 16 | 19 | 136 |
-| [website/src/pages/dashboard.tsx](/website/src/pages/dashboard.tsx) | TypeScript JSX | 117 | 2 | 10 | 129 |
+| [website/src/components/ZoomableMermaid/index.tsx](/website/src/components/ZoomableMermaid/index.tsx) | TypeScript JSX | 64 | 0 | 3 | 67 |
+| [website/src/components/ZoomableMermaid/styles.module.css](/website/src/components/ZoomableMermaid/styles.module.css) | PostCSS | 147 | 3 | 24 | 174 |
+| [website/src/css/custom.css](/website/src/css/custom.css) | PostCSS | 196 | 25 | 37 | 258 |
+| [website/src/pages/dashboard.tsx](/website/src/pages/dashboard.tsx) | TypeScript JSX | 72 | 2 | 8 | 82 |
 | [website/src/pages/index.module.css](/website/src/pages/index.module.css) | PostCSS | 16 | 4 | 4 | 24 |
-| [website/src/pages/index.tsx](/website/src/pages/index.tsx) | TypeScript JSX | 351 | 3 | 20 | 374 |
+| [website/src/pages/index.tsx](/website/src/pages/index.tsx) | TypeScript JSX | 358 | 4 | 22 | 384 |
 | [website/static/img/communityone\_logo.svg](/website/static/img/communityone_logo.svg) | XML | 13 | 5 | 5 | 23 |
 | [website/static/img/logo.svg](/website/static/img/logo.svg) | XML | 1 | 0 | 0 | 1 |
 | [website/static/img/undraw\_docusaurus\_mountain.svg](/website/static/img/undraw_docusaurus_mountain.svg) | XML | 171 | 0 | 1 | 172 |
 | [website/static/img/undraw\_docusaurus\_react.svg](/website/static/img/undraw_docusaurus_react.svg) | XML | 170 | 0 | 1 | 171 |
 | [website/static/img/undraw\_docusaurus\_tree.svg](/website/static/img/undraw_docusaurus_tree.svg) | XML | 40 | 0 | 1 | 41 |
+| [website/test-admonition.md](/website/test-admonition.md) | Markdown | 13 | 0 | 5 | 18 |
 | [website/tsconfig.json](/website/tsconfig.json) | JSON with Comments | 9 | 3 | 1 | 13 |
 
 [Summary](results.md) / Details / [Diff Summary](diff.md) / [Diff Details](diff-details.md)

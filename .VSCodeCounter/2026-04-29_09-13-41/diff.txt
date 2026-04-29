@@ -1,0 +1,221 @@
+Date : 2026-04-29 09:13:41
+Directory : /home/developer/projects/oral-health-policy-pulse
+Total : 145 files,  -273253 codes, 2761 comments, 4830 blanks, all -265662 lines
+
+Languages
++------------------+------------+------------+------------+------------+------------+
+| language         | files      | code       | comment    | blank      | total      |
++------------------+------------+------------+------------+------------+------------+
+| Markdown         |         44 |     10,346 |          2 |      3,073 |     13,421 |
+| Python           |         31 |      5,204 |      2,413 |      1,342 |      8,959 |
+| TypeScript JSX   |         16 |      3,022 |        149 |        208 |      3,379 |
+| Shell Script     |         12 |        632 |        108 |        147 |        887 |
+| MS SQL           |          2 |        291 |         45 |         20 |        356 |
+| TypeScript       |          5 |        180 |         32 |         14 |        226 |
+| HTML             |          3 |         94 |          2 |         15 |        111 |
+| Properties       |          2 |         34 |          4 |          5 |         43 |
+| Docker           |          1 |          6 |          5 |          5 |         16 |
+| YAML             |          1 |          1 |          1 |          0 |          2 |
+| pip requirements |          1 |          1 |          0 |          0 |          1 |
+| PostCSS          |          2 |          0 |          0 |          0 |          0 |
+| JavaScript       |          2 |         -1 |          0 |          1 |          0 |
+| JSON             |         23 |   -293,063 |          0 |          0 |   -293,063 |
++------------------+------------+------------+------------+------------+------------+
+
+Directories
++---------------------------------------------------------------------------------------------------------------+------------+------------+------------+------------+------------+
+| path                                                                                                          | files      | code       | comment    | blank      | total      |
++---------------------------------------------------------------------------------------------------------------+------------+------------+------------+------------+------------+
+| .                                                                                                             |        145 |   -273,253 |      2,761 |      4,830 |   -265,662 |
+| . (Files)                                                                                                     |         12 |        987 |        115 |        270 |      1,372 |
+| .github                                                                                                       |          2 |         12 |          1 |          2 |         15 |
+| .github (Files)                                                                                               |          1 |         11 |          0 |          2 |         13 |
+| .github/workflows                                                                                             |          1 |          1 |          1 |          0 |          2 |
+| .huggingface                                                                                                  |          4 |         38 |          9 |          9 |         56 |
+| api                                                                                                           |         10 |      1,123 |        778 |        244 |      2,145 |
+| api (Files)                                                                                                   |          1 |          6 |          0 |          0 |          6 |
+| api/routes                                                                                                    |          4 |      1,111 |        777 |        242 |      2,130 |
+| api/static                                                                                                    |          5 |          6 |          1 |          2 |          9 |
+| api/static/assets                                                                                             |          4 |         -1 |          0 |          1 |          0 |
+| databricks                                                                                                    |          3 |        317 |         45 |         30 |        392 |
+| discovery                                                                                                     |          3 |        687 |        422 |        188 |      1,297 |
+| docs                                                                                                          |          1 |        252 |          0 |         91 |        343 |
+| examples                                                                                                      |          8 |      1,991 |        151 |        558 |      2,700 |
+| frontend                                                                                                      |         19 |      3,129 |        171 |        219 |      3,519 |
+| frontend (Files)                                                                                              |          2 |         16 |          1 |          1 |         18 |
+| frontend/src                                                                                                  |         17 |      3,113 |        170 |        218 |      3,501 |
+| frontend/src (Files)                                                                                          |          2 |          8 |          0 |          0 |          8 |
+| frontend/src/components                                                                                       |          4 |        447 |         28 |         40 |        515 |
+| frontend/src/contexts                                                                                         |          1 |          7 |          3 |          4 |         14 |
+| frontend/src/pages                                                                                            |          8 |      2,555 |        117 |        162 |      2,834 |
+| frontend/src/utils                                                                                            |          2 |         96 |         22 |         12 |        130 |
+| output                                                                                                        |         22 |   -293,064 |          0 |          0 |   -293,064 |
+| output/tuscaloosa                                                                                             |         12 |   -293,054 |          0 |          0 |   -293,054 |
+| output/tuscaloosa_city_schools                                                                                |         10 |        -10 |          0 |          0 |        -10 |
+| pipeline                                                                                                      |          4 |        687 |        301 |        171 |      1,159 |
+| scripts                                                                                                       |         20 |      2,225 |        755 |        577 |      3,557 |
+| website                                                                                                       |         37 |      8,363 |         13 |      2,471 |     10,847 |
+| website (Files)                                                                                               |          3 |         76 |         10 |          2 |         88 |
+| website/docs                                                                                                  |         33 |      8,282 |          2 |      2,467 |     10,751 |
+| website/docs (Files)                                                                                          |          4 |        491 |          0 |        171 |        662 |
+| website/docs/data-sources                                                                                     |          3 |        696 |          0 |        114 |        810 |
+| website/docs/deployment                                                                                       |          6 |        508 |          0 |        115 |        623 |
+| website/docs/development                                                                                      |          3 |      1,022 |          0 |        309 |      1,331 |
+| website/docs/guides                                                                                           |          6 |      2,323 |          0 |        656 |      2,979 |
+| website/docs/integrations                                                                                     |          4 |      1,045 |          0 |        351 |      1,396 |
+| website/docs/legal                                                                                            |          7 |      2,197 |          2 |        751 |      2,950 |
+| website/src                                                                                                   |          1 |          5 |          1 |          2 |          8 |
+| website/src/pages                                                                                             |          1 |          5 |          1 |          2 |          8 |
++---------------------------------------------------------------------------------------------------------------+------------+------------+------------+------------+------------+
+
+Files
++---------------------------------------------------------------------------------------------------------------+------------------+------------+------------+------------+------------+
+| filename                                                                                                      | language         | code       | comment    | blank      | total      |
++---------------------------------------------------------------------------------------------------------------+------------------+------------+------------+------------+------------+
+| /home/developer/projects/oral-health-policy-pulse/.github/copilot-instructions.md                             | Markdown         |         11 |          0 |          2 |         13 |
+| /home/developer/projects/oral-health-policy-pulse/.github/workflows/ci-build-test.yml                         | YAML             |          1 |          1 |          0 |          2 |
+| /home/developer/projects/oral-health-policy-pulse/.huggingface/README.md                                      | Markdown         |        -19 |          0 |         -2 |        -21 |
+| /home/developer/projects/oral-health-policy-pulse/.huggingface/nginx.conf                                     | Properties       |         15 |          4 |          3 |         22 |
+| /home/developer/projects/oral-health-policy-pulse/.huggingface/start.sh                                       | Shell Script     |         23 |          5 |          6 |         34 |
+| /home/developer/projects/oral-health-policy-pulse/.huggingface/supervisord.conf                               | Properties       |         19 |          0 |          2 |         21 |
+| /home/developer/projects/oral-health-policy-pulse/CITATIONS.md                                                | Markdown         |        388 |          0 |         90 |        478 |
+| /home/developer/projects/oral-health-policy-pulse/Dockerfile                                                  | Docker           |          6 |          5 |          5 |         16 |
+| /home/developer/projects/oral-health-policy-pulse/README_HF.md                                                | Markdown         |          2 |          0 |          0 |          2 |
+| /home/developer/projects/oral-health-policy-pulse/api/main.py                                                 | Python           |          6 |          0 |          0 |          6 |
+| /home/developer/projects/oral-health-policy-pulse/api/routes/contact.py                                       | Python           |         41 |         65 |         13 |        119 |
+| /home/developer/projects/oral-health-policy-pulse/api/routes/hf_search.py                                     | Python           |         90 |         67 |         26 |        183 |
+| /home/developer/projects/oral-health-policy-pulse/api/routes/search.py                                        | Python           |        697 |        549 |        146 |      1,392 |
+| /home/developer/projects/oral-health-policy-pulse/api/routes/stats.py                                         | Python           |        283 |         96 |         57 |        436 |
+| /home/developer/projects/oral-health-policy-pulse/api/static/assets/index-8H-PWUk9.js                         | JavaScript       |       -187 |          0 |         -2 |       -189 |
+| /home/developer/projects/oral-health-policy-pulse/api/static/assets/index-CpjJ73BY.css                        | PostCSS          |         -1 |          0 |         -1 |         -2 |
+| /home/developer/projects/oral-health-policy-pulse/api/static/assets/index-DrgVaTBR.js                         | JavaScript       |        186 |          0 |          3 |        189 |
+| /home/developer/projects/oral-health-policy-pulse/api/static/assets/index-F9fqvDye.css                        | PostCSS          |          1 |          0 |          1 |          2 |
+| /home/developer/projects/oral-health-policy-pulse/api/static/index.html                                       | HTML             |          7 |          1 |          1 |          9 |
+| /home/developer/projects/oral-health-policy-pulse/databricks/README.md                                        | Markdown         |         26 |          0 |         10 |         36 |
+| /home/developer/projects/oral-health-policy-pulse/databricks/communityone_schema.sql                          | MS SQL           |        501 |         88 |         53 |        642 |
+| /home/developer/projects/oral-health-policy-pulse/databricks/oral_health_schema.sql                           | MS SQL           |       -210 |        -43 |        -33 |       -286 |
+| /home/developer/projects/oral-health-policy-pulse/debug-dropdown.html                                         | HTML             |         80 |          0 |         13 |         93 |
+| /home/developer/projects/oral-health-policy-pulse/delete_and_publish_all_datasets.py                          | Python           |        140 |         41 |         47 |        228 |
+| /home/developer/projects/oral-health-policy-pulse/deploy-huggingface.sh                                       | Shell Script     |         32 |          9 |          3 |         44 |
+| /home/developer/projects/oral-health-policy-pulse/discovery/fec_integration.py                                | Python           |        300 |        164 |         77 |        541 |
+| /home/developer/projects/oral-health-policy-pulse/discovery/grants_gov_integration.py                         | Python           |        218 |        115 |         61 |        394 |
+| /home/developer/projects/oral-health-policy-pulse/discovery/voter_data_integration.py                         | Python           |        169 |        143 |         50 |        362 |
+| /home/developer/projects/oral-health-policy-pulse/docs/BULK_VS_API.md                                         | Markdown         |        252 |          0 |         91 |        343 |
+| /home/developer/projects/oral-health-policy-pulse/enrich_alabama_nonprofits.sh                                | Shell Script     |         18 |          3 |          7 |         28 |
+| /home/developer/projects/oral-health-policy-pulse/examples/GRANTS_GOV_VALUE.md                                | Markdown         |        181 |          0 |         48 |        229 |
+| /home/developer/projects/oral-health-policy-pulse/examples/POLITICAL_FINANCE_QUICK_START.md                   | Markdown         |        308 |          0 |         94 |        402 |
+| /home/developer/projects/oral-health-policy-pulse/examples/POLITICAL_INFLUENCE_INTEGRATION.md                 | Markdown         |        384 |          0 |         91 |        475 |
+| /home/developer/projects/oral-health-policy-pulse/examples/README.md                                          | Markdown         |        361 |          0 |        113 |        474 |
+| /home/developer/projects/oral-health-policy-pulse/examples/demo_fec_integration.py                            | Python           |        180 |         54 |         55 |        289 |
+| /home/developer/projects/oral-health-policy-pulse/examples/demo_grants_gov.py                                 | Python           |        204 |         35 |         52 |        291 |
+| /home/developer/projects/oral-health-policy-pulse/examples/demo_political_influence.py                        | Python           |        260 |         32 |         60 |        352 |
+| /home/developer/projects/oral-health-policy-pulse/examples/legislative_map_demo.py                            | Python           |        113 |         30 |         45 |        188 |
+| /home/developer/projects/oral-health-policy-pulse/fix_and_publish_failed.py                                   | Python           |         93 |         18 |         32 |        143 |
+| /home/developer/projects/oral-health-policy-pulse/frontend/index.html                                         | HTML             |          7 |          1 |          1 |          9 |
+| /home/developer/projects/oral-health-policy-pulse/frontend/src/App.tsx                                        | TypeScript JSX   |          6 |          0 |          0 |          6 |
+| /home/developer/projects/oral-health-policy-pulse/frontend/src/components/AddressLookup.tsx                   | TypeScript JSX   |        189 |         11 |         19 |        219 |
+| /home/developer/projects/oral-health-policy-pulse/frontend/src/components/JurisdictionDiscovery.tsx           | TypeScript JSX   |        239 |         13 |         17 |        269 |
+| /home/developer/projects/oral-health-policy-pulse/frontend/src/components/Layout.tsx                          | TypeScript JSX   |         10 |          0 |          0 |         10 |
+| /home/developer/projects/oral-health-policy-pulse/frontend/src/components/ScrollToTop.tsx                     | TypeScript JSX   |          9 |          4 |          4 |         17 |
+| /home/developer/projects/oral-health-policy-pulse/frontend/src/contexts/LocationContext.tsx                   | TypeScript JSX   |          7 |          3 |          4 |         14 |
+| /home/developer/projects/oral-health-policy-pulse/frontend/src/main.tsx                                       | TypeScript JSX   |          2 |          0 |          0 |          2 |
+| /home/developer/projects/oral-health-policy-pulse/frontend/src/pages/Explore.tsx                              | TypeScript JSX   |          2 |          0 |          0 |          2 |
+| /home/developer/projects/oral-health-policy-pulse/frontend/src/pages/Home.tsx                                 | TypeScript JSX   |        148 |          7 |          9 |        164 |
+| /home/developer/projects/oral-health-policy-pulse/frontend/src/pages/HomeModern.tsx                           | TypeScript JSX   |        516 |         15 |         16 |        547 |
+| /home/developer/projects/oral-health-policy-pulse/frontend/src/pages/JurisdictionsSearch.tsx                  | TypeScript JSX   |        595 |         26 |         43 |        664 |
+| /home/developer/projects/oral-health-policy-pulse/frontend/src/pages/Nonprofits.tsx                           | TypeScript JSX   |          6 |          1 |          0 |          7 |
+| /home/developer/projects/oral-health-policy-pulse/frontend/src/pages/NonprofitsHF.tsx                         | TypeScript JSX   |          0 |          3 |          2 |          5 |
+| /home/developer/projects/oral-health-policy-pulse/frontend/src/pages/PeopleFinder.tsx                         | TypeScript JSX   |        -42 |          2 |          4 |        -36 |
+| /home/developer/projects/oral-health-policy-pulse/frontend/src/pages/UnifiedSearch.tsx                        | TypeScript JSX   |      1,330 |         63 |         88 |      1,481 |
+| /home/developer/projects/oral-health-policy-pulse/frontend/src/utils/formatters.ts                            | TypeScript       |         26 |         10 |          6 |         42 |
+| /home/developer/projects/oral-health-policy-pulse/frontend/src/utils/stateMapping.ts                          | TypeScript       |         70 |         12 |          6 |         88 |
+| /home/developer/projects/oral-health-policy-pulse/frontend/vite.config.ts                                     | TypeScript       |          9 |          0 |          0 |          9 |
+| /home/developer/projects/oral-health-policy-pulse/output/tuscaloosa/generic_20260423_180616.json              | JSON             |     -1,052 |          0 |          0 |     -1,052 |
+| /home/developer/projects/oral-health-policy-pulse/output/tuscaloosa/generic_20260423_180619.json              | JSON             |         -1 |          0 |          0 |         -1 |
+| /home/developer/projects/oral-health-policy-pulse/output/tuscaloosa/granicus_20260423_180621.json             | JSON             |         -1 |          0 |          0 |         -1 |
+| /home/developer/projects/oral-health-policy-pulse/output/tuscaloosa/legistar_20260423_180620.json             | JSON             |         -1 |          0 |          0 |         -1 |
+| /home/developer/projects/oral-health-policy-pulse/output/tuscaloosa/suiteonemedia_20260423_181708.json        | JSON             |       -512 |          0 |          0 |       -512 |
+| /home/developer/projects/oral-health-policy-pulse/output/tuscaloosa/suiteonemedia_20260423_182340.json        | JSON             |       -748 |          0 |          0 |       -748 |
+| /home/developer/projects/oral-health-policy-pulse/output/tuscaloosa/suiteonemedia_20260423_182351.json        | JSON             |       -748 |          0 |          0 |       -748 |
+| /home/developer/projects/oral-health-policy-pulse/output/tuscaloosa/suiteonemedia_20260423_210412.json        | JSON             |       -375 |          0 |          0 |       -375 |
+| /home/developer/projects/oral-health-policy-pulse/output/tuscaloosa/suiteonemedia_20260423_210613.json        | JSON             |       -375 |          0 |          0 |       -375 |
+| /home/developer/projects/oral-health-policy-pulse/output/tuscaloosa/suiteonemedia_20260424_112916.json        | JSON             |    -96,372 |          0 |          0 |    -96,372 |
+| /home/developer/projects/oral-health-policy-pulse/output/tuscaloosa/suiteonemedia_20260424_144825.json        | JSON             |    -96,338 |          0 |          0 |    -96,338 |
+| /home/developer/projects/oral-health-policy-pulse/output/tuscaloosa/suiteonemedia_20260424_224908.json        | JSON             |    -96,531 |          0 |          0 |    -96,531 |
+| /home/developer/projects/oral-health-policy-pulse/output/tuscaloosa_city_schools/eboard_20260423_223435.json  | JSON             |         -1 |          0 |          0 |         -1 |
+| /home/developer/projects/oral-health-policy-pulse/output/tuscaloosa_city_schools/eboard_20260423_224726.json  | JSON             |         -1 |          0 |          0 |         -1 |
+| /home/developer/projects/oral-health-policy-pulse/output/tuscaloosa_city_schools/eboard_20260423_224818.json  | JSON             |         -1 |          0 |          0 |         -1 |
+| /home/developer/projects/oral-health-policy-pulse/output/tuscaloosa_city_schools/eboard_20260423_231344.json  | JSON             |         -1 |          0 |          0 |         -1 |
+| /home/developer/projects/oral-health-policy-pulse/output/tuscaloosa_city_schools/eboard_20260423_231421.json  | JSON             |         -1 |          0 |          0 |         -1 |
+| /home/developer/projects/oral-health-policy-pulse/output/tuscaloosa_city_schools/eboard_20260423_231511.json  | JSON             |         -1 |          0 |          0 |         -1 |
+| /home/developer/projects/oral-health-policy-pulse/output/tuscaloosa_city_schools/eboard_20260424_151807.json  | JSON             |         -1 |          0 |          0 |         -1 |
+| /home/developer/projects/oral-health-policy-pulse/output/tuscaloosa_city_schools/eboard_20260424_155458.json  | JSON             |         -1 |          0 |          0 |         -1 |
+| /home/developer/projects/oral-health-policy-pulse/output/tuscaloosa_city_schools/eboard_20260424_155609.json  | JSON             |         -1 |          0 |          0 |         -1 |
+| /home/developer/projects/oral-health-policy-pulse/output/tuscaloosa_city_schools/generic_20260423_223006.json | JSON             |         -1 |          0 |          0 |         -1 |
+| /home/developer/projects/oral-health-policy-pulse/pipeline/create_campaigns_gold_tables.py                    | Python           |        359 |        133 |         91 |        583 |
+| /home/developer/projects/oral-health-policy-pulse/pipeline/create_contacts_gold_tables.py                     | Python           |        135 |         57 |         37 |        229 |
+| /home/developer/projects/oral-health-policy-pulse/pipeline/create_grants_gold_tables.py                       | Python           |        182 |        110 |         43 |        335 |
+| /home/developer/projects/oral-health-policy-pulse/pipeline/create_meetings_gold_tables.py                     | Python           |         11 |          1 |          0 |         12 |
+| /home/developer/projects/oral-health-policy-pulse/publish_gold_datasets.py                                    | Python           |        101 |         20 |         33 |        154 |
+| /home/developer/projects/oral-health-policy-pulse/requirements.txt                                            | pip requirements |          1 |          0 |          0 |          1 |
+| /home/developer/projects/oral-health-policy-pulse/retry_failed_datasets.py                                    | Python           |        111 |         17 |         35 |        163 |
+| /home/developer/projects/oral-health-policy-pulse/scripts/README_LEGISLATIVE_TRACKING.md                      | Markdown         |        170 |          0 |         69 |        239 |
+| /home/developer/projects/oral-health-policy-pulse/scripts/auto_enrich_nonprofits.sh                           | Shell Script     |         17 |          4 |          5 |         26 |
+| /home/developer/projects/oral-health-policy-pulse/scripts/batch_download_990s.py                              | Python           |        116 |         27 |         32 |        175 |
+| /home/developer/projects/oral-health-policy-pulse/scripts/build_990_local_index.py                            | Python           |        154 |         32 |         42 |        228 |
+| /home/developer/projects/oral-health-policy-pulse/scripts/bulk_legislative_download.py                        | Python           |        255 |        148 |         76 |        479 |
+| /home/developer/projects/oral-health-policy-pulse/scripts/check_state_data.py                                 | Python           |         98 |         15 |         24 |        137 |
+| /home/developer/projects/oral-health-policy-pulse/scripts/cleanup_disk_space.sh                               | Shell Script     |         83 |         12 |         18 |        113 |
+| /home/developer/projects/oral-health-policy-pulse/scripts/create_nonprofit_officer_contacts.py                | Python           |         99 |         26 |         28 |        153 |
+| /home/developer/projects/oral-health-policy-pulse/scripts/download_990_zips.sh                                | Shell Script     |         95 |         10 |         20 |        125 |
+| /home/developer/projects/oral-health-policy-pulse/scripts/enrich_all_states_local.sh                          | Shell Script     |         74 |          8 |         16 |         98 |
+| /home/developer/projects/oral-health-policy-pulse/scripts/enrich_ma_990_fast.py                               | Python           |         62 |        107 |         17 |        186 |
+| /home/developer/projects/oral-health-policy-pulse/scripts/enrich_nonprofits_bigquery.py                       | Python           |         62 |         58 |          2 |        122 |
+| /home/developer/projects/oral-health-policy-pulse/scripts/enrich_nonprofits_gt990.py                          | Python           |        130 |         31 |         26 |        187 |
+| /home/developer/projects/oral-health-policy-pulse/scripts/enrich_nonprofits_logodev.py                        | Python           |        239 |        112 |         60 |        411 |
+| /home/developer/projects/oral-health-policy-pulse/scripts/enrich_nonprofits_no_auth.sh                        | Shell Script     |         77 |         13 |         13 |        103 |
+| /home/developer/projects/oral-health-policy-pulse/scripts/extract_990_dev_states.sh                           | Shell Script     |        101 |         24 |         27 |        152 |
+| /home/developer/projects/oral-health-policy-pulse/scripts/extract_990_zips.sh                                 | Shell Script     |         62 |         11 |         15 |         88 |
+| /home/developer/projects/oral-health-policy-pulse/scripts/extract_contacts_dev_mode.py                        | Python           |          1 |          0 |          0 |          1 |
+| /home/developer/projects/oral-health-policy-pulse/scripts/legislative_tracker.py                              | Python           |        295 |        110 |         75 |        480 |
+| /home/developer/projects/oral-health-policy-pulse/scripts/move_secrets_to_home.sh                             | Shell Script     |         35 |          7 |         12 |         54 |
+| /home/developer/projects/oral-health-policy-pulse/start-all.sh                                                | Shell Script     |         15 |          2 |          5 |         22 |
+| /home/developer/projects/oral-health-policy-pulse/website/docs/dashboard.md                                   | Markdown         |        -96 |          0 |        -40 |       -136 |
+| /home/developer/projects/oral-health-policy-pulse/website/docs/data-sources/citations.md                      | Markdown         |        318 |          0 |         70 |        388 |
+| /home/developer/projects/oral-health-policy-pulse/website/docs/data-sources/data-model-erd.md                 | Markdown         |        291 |          0 |         17 |        308 |
+| /home/developer/projects/oral-health-policy-pulse/website/docs/data-sources/nonprofit-sources.md              | Markdown         |         87 |          0 |         27 |        114 |
+| /home/developer/projects/oral-health-policy-pulse/website/docs/deployment/build-verification.md               | Markdown         |        173 |          0 |         60 |        233 |
+| /home/developer/projects/oral-health-policy-pulse/website/docs/deployment/costs.md                            | Markdown         |          3 |          0 |          1 |          4 |
+| /home/developer/projects/oral-health-policy-pulse/website/docs/deployment/jurisdiction-discovery.md           | Markdown         |          3 |          0 |          1 |          4 |
+| /home/developer/projects/oral-health-policy-pulse/website/docs/deployment/scale.md                            | Markdown         |          3 |          0 |          1 |          4 |
+| /home/developer/projects/oral-health-policy-pulse/website/docs/deployment/schema-migration.md                 | Markdown         |        323 |          0 |         51 |        374 |
+| /home/developer/projects/oral-health-policy-pulse/website/docs/deployment/storage.md                          | Markdown         |          3 |          0 |          1 |          4 |
+| /home/developer/projects/oral-health-policy-pulse/website/docs/development/adding-data-sources.md             | Markdown         |        326 |          0 |        121 |        447 |
+| /home/developer/projects/oral-health-policy-pulse/website/docs/development/real-time-statistics.md            | Markdown         |        457 |          0 |        128 |        585 |
+| /home/developer/projects/oral-health-policy-pulse/website/docs/development/schema-migration-summary.md        | Markdown         |        239 |          0 |         60 |        299 |
+| /home/developer/projects/oral-health-policy-pulse/website/docs/for-advocates.md                               | Markdown         |         -1 |          0 |          0 |         -1 |
+| /home/developer/projects/oral-health-policy-pulse/website/docs/guides/form-990-enrichment.md                  | Markdown         |        182 |          0 |         52 |        234 |
+| /home/developer/projects/oral-health-policy-pulse/website/docs/guides/legislative-tracking-maps.md            | Markdown         |        551 |          0 |        206 |        757 |
+| /home/developer/projects/oral-health-policy-pulse/website/docs/guides/logo-enrichment.md                      | Markdown         |        272 |          0 |         86 |        358 |
+| /home/developer/projects/oral-health-policy-pulse/website/docs/guides/nonprofit-officers-contacts.md          | Markdown         |        312 |          0 |        106 |        418 |
+| /home/developer/projects/oral-health-policy-pulse/website/docs/guides/open-states-legislative-data.md         | Markdown         |        780 |          0 |        154 |        934 |
+| /home/developer/projects/oral-health-policy-pulse/website/docs/guides/unified-search.md                       | Markdown         |        226 |          0 |         52 |        278 |
+| /home/developer/projects/oral-health-policy-pulse/website/docs/integrations/fec-campaign-finance.md           | Markdown         |        356 |          0 |        134 |        490 |
+| /home/developer/projects/oral-health-policy-pulse/website/docs/integrations/fec-integration-summary.md        | Markdown         |        172 |          0 |         55 |        227 |
+| /home/developer/projects/oral-health-policy-pulse/website/docs/integrations/fec-political-contributions.md    | Markdown         |        285 |          0 |         85 |        370 |
+| /home/developer/projects/oral-health-policy-pulse/website/docs/integrations/grants-gov-api.md                 | Markdown         |        232 |          0 |         77 |        309 |
+| /home/developer/projects/oral-health-policy-pulse/website/docs/legal-compliance.md                            | Markdown         |        490 |          0 |        171 |        661 |
+| /home/developer/projects/oral-health-policy-pulse/website/docs/legal/README.md                                | Markdown         |        103 |          0 |         35 |        138 |
+| /home/developer/projects/oral-health-policy-pulse/website/docs/legal/data-provider-terms.md                   | Markdown         |        840 |          0 |        267 |      1,107 |
+| /home/developer/projects/oral-health-policy-pulse/website/docs/legal/index.md                                 | Markdown         |        308 |          0 |        113 |        421 |
+| /home/developer/projects/oral-health-policy-pulse/website/docs/legal/legal-documentation-complete.md          | Markdown         |        198 |          2 |         53 |        253 |
+| /home/developer/projects/oral-health-policy-pulse/website/docs/legal/legal-documentation-summary.md           | Markdown         |        176 |          0 |         47 |        223 |
+| /home/developer/projects/oral-health-policy-pulse/website/docs/legal/privacy-policy.md                        | Markdown         |        314 |          0 |        128 |        442 |
+| /home/developer/projects/oral-health-policy-pulse/website/docs/legal/terms-of-service.md                      | Markdown         |        258 |          0 |        108 |        366 |
+| /home/developer/projects/oral-health-policy-pulse/website/docs/open-navigator.md                              | Markdown         |         98 |          0 |         40 |        138 |
+| /home/developer/projects/oral-health-policy-pulse/website/docusaurus.config.ts                                | TypeScript       |         20 |          7 |          1 |         28 |
+| /home/developer/projects/oral-health-policy-pulse/website/package.json                                        | JSON             |          1 |          0 |          0 |          1 |
+| /home/developer/projects/oral-health-policy-pulse/website/sidebars.ts                                         | TypeScript       |         55 |          3 |          1 |         59 |
+| /home/developer/projects/oral-health-policy-pulse/website/src/pages/index.tsx                                 | TypeScript JSX   |          5 |          1 |          2 |          8 |
+| Total                                                                                                         |                  |   -273,253 |      2,761 |      4,830 |   -265,662 |
++---------------------------------------------------------------------------------------------------------------+------------------+------------+------------+------------+------------+
