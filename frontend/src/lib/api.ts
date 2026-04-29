@@ -7,17 +7,25 @@ let API_BASE_URL: string
 
 // Determine the correct API base URL
 if (import.meta.env.PROD) {
-  // Production: ALWAYS use relative path to inherit protocol from page
-  // This prevents mixed content errors - if page is HTTPS, API calls will be HTTPS
+  // Production: ALWAYS use relative path - IGNORE all environment variables
+  // This prevents HuggingFace Spaces build secrets from injecting HTTP URLs
   API_BASE_URL = '/api'
-  console.log('🌐 [API] Production mode: Using relative path (inherits protocol from page):', API_BASE_URL)
+  console.log('🌐 [API] Production mode: HARDCODED relative path:', API_BASE_URL)
 } else {
   // Development: Use environment variable or default to localhost
-  API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api'
-  console.log('🔧 [API] Development mode: Using', API_BASE_URL)
+  const envUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000/api'
+  // Even in dev, strip http:// if page is https://
+  if (typeof window !== 'undefined' && window.location.protocol === 'https:' && envUrl.startsWith('http://')) {
+    API_BASE_URL = envUrl.replace('http://', 'https://')
+    console.log('🔧 [API] Development mode (upgraded to HTTPS):', API_BASE_URL)
+  } else {
+    API_BASE_URL = envUrl
+    console.log('🔧 [API] Development mode:', API_BASE_URL)
+  }
 }
 
 console.log('📡 [API] Final base URL:', API_BASE_URL)
+console.log('🔒 [API] Page protocol:', typeof window !== 'undefined' ? window.location.protocol : 'N/A')
 
 // Create axios instance with base URL
 const api = axios.create({
@@ -36,18 +44,28 @@ api.interceptors.request.use(
       config.headers.Authorization = `Bearer ${token}`
     }
     
-    // BULLETPROOF HTTPS ENFORCEMENT: Never allow HTTP requests in production
-    // Only upgrade if we see absolute http:// URLs (relative paths are fine)
+    // NUCLEAR OPTION: Block ALL absolute HTTP URLs in production
     if (import.meta.env.PROD) {
-      // Force HTTPS on absolute URLs only
+      // Check config.url (the specific endpoint being called)
       if (config.url && config.url.startsWith('http://')) {
+        console.error('❌ [API] BLOCKED HTTP request in production:', config.url)
+        // Force upgrade to HTTPS
         config.url = config.url.replace('http://', 'https://')
         console.warn('🔒 [API] FORCED HTTP→HTTPS upgrade on URL:', config.url)
       }
       
+      // Check config.baseURL (should be /api but double-check)
       if (config.baseURL && config.baseURL.startsWith('http://')) {
+        console.error('❌ [API] BLOCKED HTTP baseURL in production:', config.baseURL)
+        // Force upgrade to HTTPS
         config.baseURL = config.baseURL.replace('http://', 'https://')
         console.warn('🔒 [API] FORCED HTTP→HTTPS upgrade on baseURL:', config.baseURL)
+      }
+      
+      // Final check: If baseURL is somehow not relative, force it
+      if (config.baseURL && !config.baseURL.startsWith('/') && !config.baseURL.startsWith('https://')) {
+        console.error('❌ [API] Invalid baseURL in production, forcing /api:', config.baseURL)
+        config.baseURL = '/api'
       }
     }
     
