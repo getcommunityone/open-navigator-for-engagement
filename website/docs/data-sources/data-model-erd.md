@@ -53,20 +53,23 @@ open-navigator-data/
 │   ├── municipal_websites # City/county websites
 │   └── state_portals      # State government sites
 │
-├── meetings/               # 📋 Meetings, events & trainings
-│   ├── government_meetings # City council, school board, etc.
-│   ├── public_hearings    # Public comment sessions
-│   ├── community_events   # Town halls, forums, engagement
-│   ├── trainings          # Professional development, workshops
-│   ├── agendas            # Meeting agendas (text extracted)
-│   ├── minutes            # Meeting minutes (text extracted)
-│   ├── videos             # YouTube/Vimeo video metadata
-│   └── documents          # Associated documents
+├── events/                 # 📋 Meetings, Hearings & Public Events
+│   ├── events             # Government meetings, public hearings, community forums
+│   ├── event_participants # Officials and organizations participating in events
+│   ├── event_agenda_items # Individual agenda topics discussed
+│   ├── event_documents    # Agendas, minutes, presentations, handouts
+│   ├── event_media        # Video recordings, livestreams, audio files
+│   └── event_bills        # Bills discussed or considered at meetings
 │
-├── officials/              # 👥 Elected officials & leaders
-│   ├── local_officials    # City/county officials (mayors, councils)
-│   ├── state_legislators  # From Open States API
-│   └── school_board       # School board members
+├── contacts/               # 👥 All People - Officials, Candidates, Donors, Constituents
+│   ├── officials          # Elected and appointed officials (mayors, council members, legislators)
+│   ├── official_roles     # Current and historical positions held
+│   ├── official_contacts  # Email, phone, office addresses
+│   ├── official_identifiers # External IDs (Twitter, OpenStates, Ballotpedia)
+│   ├── official_links     # Websites, social media profiles
+│   ├── candidates         # Political candidates (House, Senate, President - FEC data)
+│   ├── nonprofit_donors   # Nonprofit leadership political giving (FEC analysis)
+│   └── constituents       # Donors, volunteers, members, beneficiaries (all people)
 │
 ├── nonprofits/             # 🏢 Nonprofit organizations & churches
 │   ├── irs_eobmf          # IRS EO-BMF bulk data (1.9M+ organizations) - PRIMARY SOURCE
@@ -119,10 +122,8 @@ open-navigator-data/
 │   └── election_influences # Pre/post-election decision patterns
 │
 ├── campaigns/              # 💰 Political campaign finance (FEC data)
-│   ├── candidates         # Federal candidates (House, Senate, President)
 │   ├── committees         # PACs, Super PACs, campaign committees
-│   ├── contributions      # Individual political contributions $200+
-│   └── nonprofit_donors   # Nonprofit leadership political giving analysis
+│   └── contributions      # Individual political contributions $200+
 │
 ├── civic/                  # 🗳️ Google Civic & Wikidata
 │   ├── civic_divisions    # OCD divisions
@@ -135,23 +136,20 @@ open-navigator-data/
 │   ├── local_measures      # City/county ballot questions
 │   └── election_results    # Historical voting outcomes
 │
-├── legislation/            # 📜 State & Local Legislative Data (Open States/Plural Policy)
-│   ├── legislators         # 7,300+ state legislators (all 50 states + DC, PR)
-│   ├── legislator_roles    # Legislative roles (term, district, chamber, party)
-│   ├── legislator_offices  # Contact info (district/capitol offices, phone, email)
-│   ├── committees          # Legislative committees (standing, select, joint)
-│   ├── committee_memberships # Legislator committee assignments & roles
-│   ├── legislative_sessions # Session identifiers, years, special sessions
-│   ├── bills               # State bills with full text (100K+ bills from 2020+)
-│   ├── bill_sponsors       # Primary sponsors & co-sponsors per bill
-│   ├── bill_subjects       # Bill topic classification
-│   ├── bill_actions        # Bill history (introduced, committee, floor, signed)
-│   ├── bill_versions       # Different versions of bill text (as introduced, amended, enacted)
-│   ├── votes               # Roll call votes on bills & amendments
-│   ├── vote_events         # Vote metadata (date, chamber, motion, result)
-│   ├── legislator_votes    # Individual legislator positions (yes/no/abstain/absent)
-│   ├── local_ordinances    # Municipal codes & resolutions
-│   └── policy_tracking     # Bill status & outcomes
+├── bills/                  # 📜 Legislation & Lawmaking
+│   ├── bills              # Bills and resolutions (1.5M+ from all 50 states)
+│   ├── bill_actions       # Bill history (introduced, committee, floor vote, signed)
+│   ├── bill_sponsorships  # Primary sponsors and co-sponsors
+│   ├── bill_abstracts     # Bill summaries and descriptions
+│   ├── bill_versions      # Different versions of bill text (introduced, amended, enrolled)
+│   ├── bill_version_links # Links to PDF/HTML bill text
+│   ├── bill_documents     # Supporting documents (fiscal notes, amendments, analysis)
+│   ├── bill_document_links # Links to supporting documents
+│   ├── bill_subjects      # Subject/topic tags per bill
+│   ├── legislative_sessions # Session identifiers (2023 Regular, 2024 Special, etc.)
+│   ├── vote_events        # Roll call votes on bills
+│   ├── vote_counts        # Vote tallies (yes, no, abstain, absent)
+│   └── individual_votes   # Individual legislator votes (yes/no/abstain)
 │
 ├── topics/                 # 🎯 Advocacy causes & campaigns
 │   ├── topic_definitions   # Validated survey questions from Roper Center
@@ -236,7 +234,9 @@ jurisdictions_school_districts.parquet
 social_twitter.parquet
 social_facebook.parquet
 videos_youtube_channels.parquet
-meetings_government_meetings.parquet
+events_events.parquet
+contacts_officials.parquet
+bills_bills.parquet
 nonprofits_organizations.parquet
 nonprofits_financials.parquet
 nonprofits_programs.parquet
@@ -245,31 +245,43 @@ nonprofits_irs_eobmf.parquet
 nonprofits_constituents.parquet
 nonprofits_donations.parquet
 nonprofits_campaigns.parquet        # Nonprofit fundraising campaigns (NOT political)
-campaigns_candidates.parquet        # Political candidates (FEC)
+contacts_candidates.parquet         # Political candidates (FEC)
+contacts_nonprofit_donors.parquet   # Nonprofit leadership political giving (FEC analysis)
+contacts_constituents.parquet       # Donors, volunteers, members, beneficiaries
 campaigns_committees.parquet        # Political committees/PACs (FEC)
 campaigns_contributions.parquet     # Political contributions (FEC)
-campaigns_nonprofit_donors.parquet  # Nonprofit leadership political giving (FEC analysis)
 nonprofits_memberships.parquet
 nonprofits_volunteer_activities.parquet
 nonprofits_program_delivery.parquet
 nonprofits_program_outcomes.parquet
 grants_federal_grants.parquet
-legislation_legislators.parquet
-legislation_legislator_roles.parquet
-legislation_legislator_offices.parquet
-legislation_committees.parquet
-legislation_committee_memberships.parquet
-legislation_legislative_sessions.parquet
-legislation_bills.parquet
-legislation_bill_sponsors.parquet
-legislation_bill_subjects.parquet
-legislation_bill_actions.parquet
-legislation_bill_versions.parquet
-legislation_votes.parquet
-legislation_vote_events.parquet
-legislation_legislator_votes.parquet
-legislation_local_ordinances.parquet
-legislation_policy_tracking.parquet
+contacts_officials.parquet
+contacts_official_roles.parquet
+contacts_official_contacts.parquet
+contacts_official_identifiers.parquet
+contacts_official_links.parquet
+contacts_candidates.parquet
+contacts_nonprofit_donors.parquet
+contacts_constituents.parquet
+bills_bills.parquet
+bills_bill_actions.parquet
+bills_bill_sponsorships.parquet
+bills_bill_abstracts.parquet
+bills_bill_versions.parquet
+bills_bill_version_links.parquet
+bills_bill_documents.parquet
+bills_bill_document_links.parquet
+bills_bill_subjects.parquet
+bills_legislative_sessions.parquet
+bills_vote_events.parquet
+bills_vote_counts.parquet
+bills_individual_votes.parquet
+events_events.parquet
+events_event_participants.parquet
+events_event_agenda_items.parquet
+events_event_documents.parquet
+events_event_media.parquet
+events_event_bills.parquet
 budgets_city_budgets.parquet
 surveys_national_polls.parquet
 surveys_roper_questions.parquet
@@ -337,17 +349,24 @@ standards-schema-org.parquet
 8. **Municipal Securities Rulemaking Board (EMMA)** → Bond debt data
 9. **YouTube API** → Channel statistics
 10. **Open States PostgreSQL Database** → Complete legislative data (~10 GB monthly dump)
-    - **7,300+ state legislators** across all 50 states + DC + Puerto Rico
-    - **100,000+ bills** with full text from 2020+
-    - **Committee assignments** for all legislators
-    - **Roll call votes** on all bills with individual legislator positions
-    - **Bill sponsorships** (primary sponsors and co-sponsors)
-    - **Bill actions** (committee referrals, amendments, floor votes, signing)
-    - **Multiple bill versions** (as introduced, committee substitute, enrolled)
-    - **Legislator offices** (district and capitol contact info)
-    - **Party affiliations** and term history
+    - **8,600+ people** (legislators, governors, mayors) across all 50 states + DC + Puerto Rico
+    - **1.5M+ bills** with full text and history
+    - **13M+ bill actions** (introduced, committee, amendments, floor votes, signed)
+    - **7.2M+ sponsorships** (primary sponsors and co-sponsors)
+    - **3.5M+ bill versions** (as introduced, committee substitute, enrolled, enacted)
+    - **180K+ events** (legislative meetings, hearings, committee sessions)
+    - **835K+ event participants** (who spoke, testified, or attended)
+    - **524K+ agenda items** from meetings
+    - **Vote events** with individual legislator positions
+    - **Organizations** (legislative bodies, committees)
+    - **Jurisdictions** (states, territories)
     - Updated monthly from https://data.openstates.org/postgres/monthly/
-11. **Wikidata SPARQL** → Entity relationships
+11. **OpenStates People Repository** → Current legislator contact info
+    - GitHub repo: https://github.com/openstates/people
+    - YAML files with email, phone, district offices
+    - Social media profiles and website links
+    - Updated daily via automated scrapers
+12. **Wikidata SPARQL** → Entity relationships
 12. **DBpedia** → Wikipedia structured data
 13. **Google Civic** → Representatives
 14. **OpenFEC API** → Political contributions, candidates, committees (campaign finance)

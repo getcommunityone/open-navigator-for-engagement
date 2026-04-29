@@ -451,31 +451,75 @@ This is separate from the word-finding API and has different pricing.
 
 ---
 
-### Open States API
+### Open States / Plural Policy ⭐
 
-**What we use:** State and local legislative information, bill tracking.
+**Organization:** Plural Policy (formerly Open States Foundation)  
+**What we use:** State and local legislative information - bulk downloads of bills, votes, legislators, and legislative sessions for all 50 states.
 
-- **Source:** https://openstates.org/
-- **Parent Organization:** Plural (https://open.pluralpolicy.com/)
-- **Bulk Downloads:** https://open.pluralpolicy.com/data/ ⭐ **Recommended**
-- **Coverage:** 100,000+ state bills, 7,300+ state legislators
-- **License:** Public Domain (bulk data) / Varies by state (some content)
-- **API Key:** Required for API access (free, 50K requests/month)
+- **Website:** https://openstates.org/
+- **API Documentation:** https://openstates.org/api/
+- **Bulk Downloads:** https://open.pluralpolicy.com/data/ ⭐ **Recommended approach**
+- **Scrapers Repository:** https://github.com/openstates/openstates-scrapers
+- **Local Database Setup:** https://docs.openstates.org/contributing/local-database/
+- **Code of Conduct:** https://docs.openstates.org/code-of-conduct/
+- **Schema Documentation:** https://github.com/openstates/people/blob/master/schema.md
 
-**Bulk Data Options:**
-- **CSV:** Complete legislative sessions per state (https://data.openstates.org/session/csv/)
-- **JSON:** Bills with full text (https://data.openstates.org/session/json/)
-- **PostgreSQL:** Monthly database dumps (https://data.openstates.org/postgres/monthly/)
-- **No rate limits** - Bulk downloads encouraged for analysis
+**Coverage:**
+- **All 50 states** + DC + Puerto Rico
+- **7,300+ state legislators** with committee assignments
+- **Millions of bills** with full text, votes, and sponsors
+- **Monthly PostgreSQL dumps** (9.8GB+) for complete local analysis
+- **Video sources** (YouTube channels, Granicus portals)
+
+**License:** 
+- **Bulk data:** Public Domain (preferred method)
+- **API content:** Varies by state
+- **API Key:** Free tier (50,000 requests/month)
+
+**Bulk Data Formats:**
+1. **CSV:** Complete legislative sessions per state
+   - URL: https://data.openstates.org/session/csv/
+   - Best for: Spreadsheet analysis, quick exploration
+2. **JSON:** Bills with full text and metadata
+   - URL: https://data.openstates.org/session/json/
+   - Best for: Application integration, detailed parsing
+3. **PostgreSQL:** Monthly database dumps
+   - URL: https://data.openstates.org/postgres/monthly/
+   - Best for: SQL analysis, local development, complete schema
+   - Size: 9.8GB+ (complete legislative database)
+   - No rate limits on bulk downloads
+
+**What We Use:**
+- PostgreSQL monthly dumps for local database (see `scripts/bulk_legislative_download.py`)
+- CSV/JSON session data for specific state analysis
+- Video source discovery (YouTube channels, Granicus portals)
+- Legislator contact information and committee assignments
+
+**Potential Contributions:**
+Our project could contribute back to the OpenStates ecosystem:
+- **Scraper patterns** for video sources and meeting archives
+- **Meeting video discovery** to enhance their data
+- **Granicus/YouTube integrations** for automated tracking
+- We follow their [Code of Conduct](https://docs.openstates.org/code-of-conduct/) for all contributions
+
+**Local Database Setup:**
+We use the PostgreSQL dumps following their [local database documentation](https://docs.openstates.org/contributing/local-database/):
+```bash
+# Download monthly dump
+python scripts/bulk_legislative_download.py --postgres --month 2026-04
+
+# Restore to PostgreSQL
+./scripts/setup_openstates_db.sh
+```
 
 **BibTeX:**
 ```bibtex
-@misc{plural_openstates_2024,
-  author = {{Plural Policy}},
-  title = {Open States: Legislative Data for All 50 States},
-  year = {2024},
-  url = {https://open.pluralpolicy.com/},
-  note = {Bulk data downloads available at https://open.pluralpolicy.com/data/}
+@software{openstates,
+    title = {Open States},
+    author = {{Plural Policy}},
+    year = {2024},
+    url = {https://openstates.org/},
+    note = {Comprehensive state legislative data for all 50 U.S. states}
 }
 ```
 

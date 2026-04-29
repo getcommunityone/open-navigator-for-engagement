@@ -57,6 +57,25 @@ Feature requests are welcome! Please:
 - Keep functions focused and single-purpose
 - Use meaningful variable names
 
+## Code of Conduct
+
+This project values respectful, inclusive collaboration. We align with the principles of:
+- **Open States Code of Conduct**: https://docs.openstates.org/code-of-conduct/
+- Be respectful and professional
+- Welcome diverse perspectives
+- Focus on what's best for the community
+- Show empathy towards other contributors
+
+## Contributing to Upstream Projects
+
+We use data and patterns from several open source civic tech projects. When contributing scraper patterns or improvements back to upstream projects like **OpenStates**, please:
+
+1. **Follow their standards**: https://github.com/openstates/openstates-scrapers
+2. **Reference their documentation**: https://docs.openstates.org/contributing/local-database/
+3. **Respect their Code of Conduct**: https://docs.openstates.org/code-of-conduct/
+4. **Test locally** before submitting pull requests
+5. **Document data sources** used in scraper development
+
 ## Testing
 
 All new features should include tests. Run the test suite with:

@@ -137,20 +137,31 @@ class Cause(Base):
         return f"<Cause {self.name}>"
 
 
-class Leader(Base):
-    """Public leaders (elected officials, decision makers, community advocates)"""
-    __tablename__ = "leaders"
+class Official(Base):
+    """Public officials (elected, appointed) - renamed from Leader to match OpenStates"""
+    __tablename__ = "officials"
     
     id = Column(Integer, primary_key=True, index=True)
+    ocd_person_id = Column(String(255), unique=True, index=True, nullable=True)  # OpenCivicData ID
     name = Column(String(255), nullable=False, index=True)
     slug = Column(String(255), unique=True, index=True, nullable=False)
-    title = Column(String(255), nullable=True)  # 'Mayor', 'City Council Member', 'Community Organizer'
+    family_name = Column(String(100), nullable=True)
+    given_name = Column(String(100), nullable=True)
+    sort_name = Column(String(255), nullable=True)
+    
+    # Bio and presentation
+    title = Column(String(255), nullable=True)  # 'Mayor', 'State Senator', 'City Council Member'
     bio = Column(Text, nullable=True)
     photo_url = Column(String(500), nullable=True)
+    gender = Column(String(20), nullable=True)
+    birth_date = Column(DateTime, nullable=True)
     
-    # Position details
-    position_type = Column(String(100), nullable=True)  # 'elected', 'appointed', 'advocate', 'staff'
-    office = Column(String(255), nullable=True)  # 'Office of the Mayor', 'City Council District 3'
+    # Current role (primary position)
+    position_type = Column(String(100), nullable=True)  # 'elected', 'appointed'
+    office = Column(String(255), nullable=True)  # 'Office of the Mayor', 'State Senate District 12'
+    party = Column(String(100), nullable=True)  # 'Democratic', 'Republican', 'Independent'
+    chamber = Column(String(50), nullable=True)  # 'upper', 'lower', 'executive'
+    district = Column(String(50), nullable=True)  # District number or name
     
     # Location/Jurisdiction
     state = Column(String(100), nullable=True)
@@ -175,12 +186,17 @@ class Leader(Base):
     is_verified = Column(Boolean, default=False)
     verified_at = Column(DateTime, nullable=True)
     
+    # Term dates
+    term_start_date = Column(DateTime, nullable=True)
+    term_end_date = Column(DateTime, nullable=True)
+    is_current = Column(Boolean, default=True)
+    
     # Timestamps
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
     def __repr__(self):
-        return f"<Leader {self.name}>"
+        return f"<Official {self.name}>"
 
 
 # ============================================================================
@@ -203,20 +219,20 @@ class UserFollow(Base):
         return f"<UserFollow {self.follower_id} -> {self.following_id}>"
 
 
-class LeaderFollow(Base):
-    """User following a leader"""
-    __tablename__ = "leader_follows"
+class OfficialFollow(Base):
+    """User following an official (renamed from LeaderFollow)"""
+    __tablename__ = "official_follows"
     __table_args__ = (
-        UniqueConstraint('user_id', 'leader_id', name='unique_leader_follow'),
+        UniqueConstraint('user_id', 'official_id', name='unique_official_follow'),
     )
     
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey('users.id', ondelete='CASCADE'), nullable=False, index=True)
-    leader_id = Column(Integer, ForeignKey('leaders.id', ondelete='CASCADE'), nullable=False, index=True)
+    official_id = Column(Integer, ForeignKey('officials.id', ondelete='CASCADE'), nullable=False, index=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     
     def __repr__(self):
-        return f"<LeaderFollow user:{self.user_id} -> leader:{self.leader_id}>"
+        return f"<OfficialFollow user:{self.user_id} -> official:{self.official_id}>"
 
 
 class OrganizationFollow(Base):

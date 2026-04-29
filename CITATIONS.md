@@ -48,11 +48,49 @@ July 2023, Toronto, Canada.
 - Source: https://www.census.gov/
 - License: Public Domain (U.S. Government)
 
-### **Open States API**
-- State and local legislative information
+### **Open States / Plural Policy** ⭐
+- Comprehensive state and local legislative information
+- Organization: Plural Policy (formerly Open States Foundation)
 - Source: https://openstates.org/
+- API: https://openstates.org/api/
+- Data Downloads: https://open.pluralpolicy.com/data/
 - License: Various (check per state)
-- API Key: Required for access
+- API Key: Required for access (free tier: 50,000 requests/month)
+
+**Coverage:**
+- All 50 states + DC + Puerto Rico
+- 7,300+ state legislators
+- Millions of bills, votes, and legislative sessions
+- Monthly PostgreSQL database dumps (9.8GB+)
+
+**What we use:**
+- Bulk legislative session downloads (CSV/JSON/PostgreSQL)
+- State legislator data with committee assignments
+- Bill tracking and voting records
+- Legislative video sources (YouTube channels, Granicus portals)
+
+**Resources:**
+- Open Data: https://open.pluralpolicy.com/data/
+- Scrapers Repository: https://github.com/openstates/openstates-scrapers
+- Local Database Setup: https://docs.openstates.org/contributing/local-database/
+- Code of Conduct: https://docs.openstates.org/code-of-conduct/
+- Schema Documentation: https://github.com/openstates/people/blob/master/schema.md
+
+**BibTeX:**
+```bibtex
+@software{openstates,
+    title = {Open States},
+    author = {{Plural Policy}},
+    year = {2024},
+    url = {https://openstates.org/},
+    note = {Comprehensive state legislative data for all 50 U.S. states}
+}
+```
+
+**Potential Contributions:**
+- Our scraper patterns could be contributed to openstates-scrapers
+- Video source discovery could enhance their data
+- We follow their Code of Conduct for all contributions
 
 ### **Harvard Dataverse**
 - Meeting datasets and civic engagement research
