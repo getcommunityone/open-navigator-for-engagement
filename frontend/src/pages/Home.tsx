@@ -2,7 +2,7 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { useState, Fragment, useEffect } from 'react'
 import { Tab } from '@headlessui/react'
 import { useQuery } from '@tanstack/react-query'
-import axios from 'axios'
+import api from '../lib/api'
 import { 
   MagnifyingGlassIcon, 
   DocumentTextIcon, 
@@ -48,7 +48,7 @@ export default function Home() {
         return null;
       }
       
-      const url = '/api/search/';
+      const url = '/search/';
       const params: any = {
         q: keyword,
         types: 'causes,contacts,organizations',
@@ -62,7 +62,7 @@ export default function Home() {
       }
       
       console.log('📤 [Home] API Request:', url, params);
-      const response = await axios.get(url, { params });
+      const response = await api.get(url, { params });
       console.log('📥 [Home] API Response:', response.data);
       console.log('📊 [Home] Total results:', response.data.total_results);
       return response.data;

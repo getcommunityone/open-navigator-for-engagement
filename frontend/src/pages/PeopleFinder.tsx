@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import axios from 'axios'
+import api from '../lib/api'
 import { MagnifyingGlassIcon, UserGroupIcon, AcademicCapIcon, UsersIcon, CodeBracketIcon } from '@heroicons/react/24/outline'
 import { useLocation } from '../contexts/LocationContext'
 import FollowButton from '../components/FollowButton'
@@ -84,7 +84,7 @@ export default function PeopleFinder() {
         params.state = location.state
       }
       
-      const response = await axios.get('/api/search/', { params })
+      const response = await api.get('/search/', { params })
       return response.data
     },
     staleTime: 60000, // Cache for 1 minute

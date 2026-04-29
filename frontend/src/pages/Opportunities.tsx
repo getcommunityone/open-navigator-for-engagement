@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import axios from 'axios'
+import api from '../lib/api'
 
 interface Opportunity {
   id: string
@@ -27,14 +27,14 @@ export default function Opportunities() {
       const params = new URLSearchParams()
       if (urgencyFilter) params.append('urgency', urgencyFilter)
       
-      const response = await axios.get(`/api/opportunities?${params}`)
+      const response = await api.get(`/opportunities?${params}`)
       return response.data.opportunities || []
     },
   })
 
   const handleGenerateEmail = async (oppId: string) => {
     try {
-      const response = await axios.post(`/api/advocacy/email/${oppId}`)
+      const response = await api.post(`/advocacy/email/${oppId}`)
       // Download the generated email
       const blob = new Blob([response.data.content], { type: 'text/plain' })
       const url = window.URL.createObjectURL(blob)

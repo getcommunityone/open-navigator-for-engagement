@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, Fragment } from 'react'
 import { useSearchParams, Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import axios from 'axios'
+import api from '../lib/api'
 import { Menu, Transition } from '@headlessui/react'
 import { 
   MagnifyingGlassIcon, 
@@ -143,7 +143,7 @@ export default function JurisdictionsSearch() {
         params.jurisdiction_levels = selectedLevels.join(',')
       }
       
-      const response = await axios.get('/api/search/', { params })
+      const response = await api.get('/search/', { params })
       return response.data
     },
     // Enable if we have query OR filters (browse mode)

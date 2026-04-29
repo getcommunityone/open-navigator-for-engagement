@@ -2,7 +2,7 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { useState, useEffect, Fragment } from 'react'
 import { Tab } from '@headlessui/react'
 import { useQuery } from '@tanstack/react-query'
-import axios from 'axios'
+import api from '../lib/api'
 import { 
   MagnifyingGlassIcon, 
   DocumentTextIcon, 
@@ -76,7 +76,7 @@ export default function HomeModern() {
           if (location.city) params.city = location.city;
         }
       }
-      const response = await axios.get('/api/stats', { params });
+      const response = await api.get('/stats', { params });
       return response.data.data;
     },
     staleTime: 1000 * 60 * 60, // Cache for 1 hour
@@ -107,7 +107,7 @@ export default function HomeModern() {
       }
       
       console.log('📤 [HomeModern] API Request:', url, params);
-      const response = await axios.get(url, { params });
+      const response = await api.get(url, { params });
       console.log('📥 [HomeModern] API Response:', response.data);
       console.log('📊 [HomeModern] Total results:', response.data.total_results);
       console.log('🎯 [HomeModern] Causes:', response.data.results.causes.length);

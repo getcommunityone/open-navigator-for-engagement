@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import axios from 'axios'
+import api from '../lib/api'
 import { UserPlusIcon, UserMinusIcon } from '@heroicons/react/24/outline'
 import { CheckIcon } from '@heroicons/react/24/solid'
 
@@ -30,8 +30,8 @@ export default function FollowButton({
 
   const followMutation = useMutation({
     mutationFn: async () => {
-      const endpoint = `/api/social/follow/${type}/${id}`
-      const response = await axios.post(endpoint)
+      const endpoint = `/social/follow/${type}/${id}`
+      const response = await api.post(endpoint)
       return response.data
     },
     onSuccess: (data) => {
@@ -46,8 +46,8 @@ export default function FollowButton({
 
   const unfollowMutation = useMutation({
     mutationFn: async () => {
-      const endpoint = `/api/social/follow/${type}/${id}`
-      const response = await axios.delete(endpoint)
+      const endpoint = `/social/follow/${type}/${id}`
+      const response = await api.delete(endpoint)
       return response.data
     },
     onSuccess: (data) => {

@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, Fragment } from 'react'
 import { useNavigate, useSearchParams, Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import axios from 'axios'
+import api from '../lib/api'
 import { Menu, Transition } from '@headlessui/react'
 import { 
   MagnifyingGlassIcon, 
@@ -198,7 +198,7 @@ export default function UnifiedSearch() {
         params.state = effectiveState
       }
       
-      const response = await axios.get('/api/search/', { params })
+      const response = await api.get('/search/', { params })
       return response.data
     },
     enabled: query.length >= 2 && showSuggestions,
@@ -238,7 +238,7 @@ export default function UnifiedSearch() {
         params.ntee_code = nteeCategory
       }
       
-      const response = await axios.get('/api/search/', { params })
+      const response = await api.get('/search/', { params })
       return response.data
     },
     // Enable if we have query OR filters (browse mode)

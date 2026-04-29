@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
-import axios from 'axios'
+import api from '../lib/api'
 import { UserGroupIcon, UserPlusIcon } from '@heroicons/react/24/outline'
 import { Link } from 'react-router-dom'
 
@@ -27,7 +27,7 @@ export default function SocialStats({
     queryKey: ['social', 'stats', userId],
     queryFn: async () => {
       const params = userId ? `?user_id=${userId}` : ''
-      const response = await axios.get(`/api/social/stats${params}`)
+      const response = await api.get(`/social/stats${params}`)
       return response.data
     }
   })

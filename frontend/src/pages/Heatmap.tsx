@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { MapContainer, TileLayer, CircleMarker, Popup } from 'react-leaflet'
 import { useQuery } from '@tanstack/react-query'
-import axios from 'axios'
+import api from '../lib/api'
 import 'leaflet/dist/leaflet.css'
 
 interface Opportunity {
@@ -33,7 +33,7 @@ export default function Heatmap() {
       if (selectedState) params.append('state', selectedState)
       if (selectedTopic) params.append('topic', selectedTopic)
       
-      const response = await axios.get(`/api/opportunities?${params}`)
+      const response = await api.get(`/opportunities?${params}`)
       return response.data.opportunities || []
     },
   })

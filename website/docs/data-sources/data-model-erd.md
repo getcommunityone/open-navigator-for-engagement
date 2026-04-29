@@ -54,7 +54,7 @@ open-navigator-data/
 │   └── state_portals      # State government sites
 │
 ├── events/                 # 📋 Meetings, Hearings & Public Events
-│   ├── events             # Government meetings, public hearings, community forums
+│   ├── events             # Government meetings, public hearings, community forums, town halls
 │   ├── event_participants # Officials and organizations participating in events
 │   ├── event_agenda_items # Individual agenda topics discussed
 │   ├── event_documents    # Agendas, minutes, presentations, handouts
@@ -469,7 +469,7 @@ erDiagram
     %% Schema.org type: AdministrativeArea
     %% OCD-ID format: ocd-division/country:us/state:al/place:birmingham
     
-    JURISDICTION ||--o{ MEETING : hosts
+    JURISDICTION ||--o{ EVENT : hosts
     JURISDICTION ||--o{ LEADER : employs
     JURISDICTION ||--o{ YOUTUBE_CHANNEL : operates
     JURISDICTION ||--o{ SOCIAL_MEDIA : maintains
@@ -558,81 +558,151 @@ erDiagram
     }
     
     %% ========================================
-    %% MEETINGS & DOCUMENTS
+    %% EVENTS & MEETINGS (Event Hierarchy)
     %% ========================================
-    %% Schema.org types: Event, VideoObject, DigitalDocument
+    %% Schema.org types: Event, GovernmentEvent, VideoObject, DigitalDocument
+    %% Event is the parent entity - Meeting is a subclass/subtype
     
-    MEETING ||--o{ AGENDA : contains
-    MEETING ||--o{ MINUTES : produces
-    MEETING ||--o{ VIDEO : recorded_as
-    MEETING ||--o{ DOCUMENT : references
-    MEETING {
-        string meeting_id PK
+    %% EVENT - Parent entity for all public events
+    JURISDICTION ||--o{ EVENT : hosts
+    EVENT ||--o{ EVENT_PARTICIPANT : includes
+    EVENT ||--o{ EVENT_AGENDA_ITEM : contains
+    EVENT ||--o{ EVENT_DOCUMENT : produces
+    EVENT ||--o{ EVENT_MEDIA : recorded_as
+    EVENT ||--o{ EVENT_BILL : discusses
+    EVENT {
+        string event_id PK
         string jurisdiction_id FK
-        string meeting_type
-        string event_category
-        datetime meeting_date
+        string event_type "meeting/hearing/forum/workshop/town_hall"
+        string event_category "legislative/planning/public_health/education"
+        string meeting_type "regular/special/emergency/work_session/executive"
+        string platform "legistar/granicus/zoom/youtube_live"
+        string meeting_number "Sequential identifier"
+        datetime event_date
         datetime end_date
-        string meeting_title
-        string body_name
-        string status
-        string platform
+        string event_title
+        string body_name "City Council/Planning Commission/School Board"
+        string status "scheduled/in_progress/completed/cancelled/postponed"
+        string location_type "in_person/virtual/hybrid"
+        string venue_name
+        string venue_address
+        string agenda_packet_url
+        string minutes_url
         string source_url
-        boolean oral_health_related
-        string training_topic
-        string target_audience
-        string presenter
         boolean requires_registration
         float registration_fee
         int max_capacity
-        string location_type
+        string presenter
+        string training_topic
+        string target_audience
+        int agenda_item_count
+        int document_count
+        boolean has_video
+        boolean has_transcript
+        boolean oral_health_related
+        string data_source "openstates/legistar/granicus/manual"
+        datetime agenda_published_at
+        datetime minutes_approved_at
+        datetime created_at
         datetime extracted_at
     }
     
-    AGENDA {
-        string agenda_id PK
-        string meeting_id FK
+    %% EVENT_PARTICIPANT - Who participated in the event
+    EVENT_PARTICIPANT {
+        string participant_id PK
+        string event_id FK
+        string participant_name
+        string participant_type "official/legislator/staff/public/expert/advocate"
+        string organization_name
+        string organization_id FK "Links to ORGANIZATION or LEADER"
+        string role "chair/member/speaker/witness/observer"
+        string participation_type "voting/testifying/presenting/attending"
+        int speaking_order
+        int speaking_duration_seconds
+        string remarks_summary
+        datetime participation_date
+    }
+    
+    %% EVENT_AGENDA_ITEM - Individual topics discussed at event
+    EVENT_AGENDA_ITEM {
+        string agenda_item_id PK
+        string event_id FK
+        string item_number "1.A/2.B/etc"
+        string title
+        string description
+        string item_type "action/discussion/report/public_comment/consent"
+        string sponsor_name
+        string department "Public Works/Health Dept/Finance"
+        int sequence_order
+        int estimated_duration_minutes
+        int actual_duration_minutes
+        string outcome "approved/rejected/tabled/amended/continued"
+        string vote_result "5-2/unanimous/voice vote"
+        boolean requires_public_hearing
+        datetime scheduled_time
+        string keywords_found
+        boolean oral_health_related
+    }
+    
+    %% EVENT_DOCUMENT - All documents (agendas, minutes, presentations, handouts)
+    %% Consolidates former AGENDA, MINUTES, DOCUMENT entities
+    EVENT_DOCUMENT {
+        string document_id PK
+        string event_id FK
+        string agenda_item_id FK "Optional - links to specific agenda item"
+        string document_type "agenda/minutes/presentation/handout/staff_report/ordinance/resolution"
         string title
         string full_text
-        string pdf_url
-        int page_count
-        string keywords_found
-        datetime published_at
-    }
-    
-    MINUTES {
-        string minutes_id PK
-        string meeting_id FK
-        string full_text
-        string pdf_url
         string summary_text
-        string action_items
-        string votes
-        datetime approved_at
+        string file_url
+        string pdf_url
+        string file_type "pdf/docx/pptx/txt"
+        int file_size_bytes
+        int page_count
+        string action_items "For minutes - extracted action items"
+        string votes "For minutes - vote records"
+        string keywords_found
+        boolean oral_health_related
+        datetime published_at
+        datetime approved_at "For minutes"
+        datetime uploaded_at
     }
     
-    VIDEO {
-        string video_id PK
-        string meeting_id FK
-        string platform
-        string video_url
+    %% EVENT_MEDIA - Video recordings, livestreams, audio files
+    %% Consolidates former VIDEO entity
+    EVENT_MEDIA {
+        string media_id PK
+        string event_id FK
+        string media_type "video/audio/livestream/recording"
+        string platform "youtube/vimeo/granicus/zoom"
+        string media_url
+        string embed_url
         string thumbnail_url
         int duration_seconds
         int view_count
         string transcript_text
+        string transcript_url
+        string caption_language "en/es/etc"
+        boolean has_captions
+        string video_quality "720p/1080p/4K"
         datetime published_at
+        datetime recorded_at
     }
     
-    DOCUMENT {
-        string document_id PK
-        string meeting_id FK
-        string document_type
-        string title
-        string content_text
-        string file_url
-        string file_type
-        int file_size_bytes
-        datetime uploaded_at
+    %% EVENT_BILL - Bills discussed or voted on at event
+    %% Links events to legislative bills
+    EVENT_BILL {
+        string event_bill_id PK
+        string event_id FK
+        string bill_id FK "Links to BILL entity"
+        string agenda_item_id FK "Optional - specific agenda item"
+        string action_taken "introduced/discussed/committee_vote/floor_vote/signed"
+        string vote_result "passed/failed/tabled"
+        int yes_votes
+        int no_votes
+        int abstain_votes
+        string discussion_summary
+        datetime action_date
     }
     
     %% ========================================
@@ -645,7 +715,7 @@ erDiagram
     %%   Step 4: Deferral Pattern (Temporal Voting Analysis)
     %% See: extraction/decision_analyzer.py, extraction/budget_analyzer.py
     
-    MEETING ||--o{ POLICY_DECISION : produces
+    EVENT ||--o{ POLICY_DECISION : produces
     POLICY_DECISION ||--o{ DECISION_FRAME : framed_as
     POLICY_DECISION ||--o{ DECISION_OPTION : considered
     POLICY_DECISION ||--o{ DECISION_TRADEOFF : discussed
@@ -653,7 +723,8 @@ erDiagram
     POLICY_DECISION ||--o{ DECISION_VOTE : voted_on
     POLICY_DECISION {
         string decision_id PK
-        string meeting_id FK
+        string event_id FK "Links to EVENT"
+        string agenda_item_id FK "Optional - links to specific agenda item"
         string decision_summary
         string outcome "approved/rejected/tabled/amended"
         string chosen_option
@@ -664,7 +735,7 @@ erDiagram
         string implementation_timeline
         string cost_estimate
         float confidence_score
-        datetime meeting_date
+        datetime event_date
         datetime extracted_at
     }
     
@@ -769,22 +840,22 @@ erDiagram
     BUDGET_DELTA {
         string delta_id PK
         string line_item_id FK
-        int meeting_mentions "How many times discussed"
+        int event_mentions "How many times discussed at events"
         string praise_level "High/Medium/Low/None"
         string funding_change "Expansion/Stagnant/Decreased"
         string delta_type "Expansion/Lip Service/Hidden Priority/Aligned"
         float delta_score "-1 to +1: rhetoric vs reality gap"
-        string stated_rationale "What they said in meetings"
+        string stated_rationale "What they said at events"
         string inferred_rationale "What budget reveals"
         string underlying_logic "Genuine/Performative/Bureaucratic"
         datetime analyzed_at
     }
     
     %% QUANTITATIVE INDICATORS
-    MEETING ||--o{ KEYWORD_DENSITY : measured_by
+    EVENT ||--o{ KEYWORD_DENSITY : measured_by
     KEYWORD_DENSITY {
         string density_id PK
-        string meeting_id FK
+        string event_id FK "Links to EVENT"
         string keyword "grant/taxpayer/emergency/equity"
         string keyword_category "funding_source/urgency/values"
         int occurrence_count
@@ -840,7 +911,8 @@ erDiagram
     VOTE {
         string vote_id PK
         string leader_id FK
-        string meeting_id FK
+        string event_id FK "Links to EVENT"
+        string agenda_item_id FK "Optional - links to specific agenda item"
         string item_description
         string vote_value
         datetime vote_date
