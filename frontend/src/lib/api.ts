@@ -7,21 +7,20 @@ let API_BASE_URL: string
 
 // Determine the correct API base URL
 if (import.meta.env.PROD) {
-  // Production: Always use relative path for same-origin requests
-  API_BASE_URL = '/api'
-  console.log('🌐 [API] Production mode: Using relative path /api')
+  // Production: Use protocol-relative or HTTPS-forced URL
+  if (typeof window !== 'undefined') {
+    // Force HTTPS in production
+    API_BASE_URL = `${window.location.protocol}//${window.location.host}/api`
+    console.log('🌐 [API] Production mode: Using same-origin HTTPS URL:', API_BASE_URL)
+  } else {
+    // SSR fallback
+    API_BASE_URL = '/api'
+    console.log('🌐 [API] Production mode (SSR): Using relative path /api')
+  }
 } else {
   // Development: Use environment variable or default to localhost
   API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api'
   console.log('🔧 [API] Development mode: Using', API_BASE_URL)
-}
-
-// Additional safety: Fix mixed content if page is HTTPS and URL starts with http://
-if (typeof window !== 'undefined' && window.location.protocol === 'https:') {
-  if (API_BASE_URL.startsWith('http://')) {
-    API_BASE_URL = API_BASE_URL.replace('http://', 'https://')
-    console.log('🔒 [API] Upgraded HTTP to HTTPS for mixed content security:', API_BASE_URL)
-  }
 }
 
 console.log('📡 [API] Final base URL:', API_BASE_URL)
