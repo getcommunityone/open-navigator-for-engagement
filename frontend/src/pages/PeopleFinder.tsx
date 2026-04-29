@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import api from '../lib/api'
 import { MagnifyingGlassIcon, UserGroupIcon, AcademicCapIcon, UsersIcon, CodeBracketIcon } from '@heroicons/react/24/outline'
@@ -68,23 +68,29 @@ const roleCategories = {
 export default function PeopleFinder() {
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedRole, setSelectedRole] = useState<PersonRole | 'all'>('all')
+  const [selectedCity, setSelectedCity] = useState<string>('all')
+  const [currentPage, setCurrentPage] = useState(1)
   const { location } = useLocation()
 
+  // Default to Alabama if no location is set
+  const defaultState = 'AL'
+  const effectiveState = location?.state || defaultState
+  
+  // Use location.city as default if available
+  const defaultCity = location?.city || null
+
   // Fetch contacts from API
-  const { data: contactsData, isLoading } = useQuery({
-    queryKey: ['people-finder', location?.state],
+  const { data: contactsData, isLoading, error } = useQuery({
+    queryKey: ['people-finder', effectiveState, currentPage],
     queryFn: async () => {
       const params: any = {
-        q: 'mayor', // Search for mayors and other officials (broad search)
         types: 'contacts',
-        limit: 1000 // Get many results
+        limit: 100, // API max is 100
+        state: effectiveState,
+        page: currentPage
       }
       
-      if (location && location.state) {
-        params.state = location.state
-      }
-      
-      const response = await api.get('/search/', { params })
+      const response = await api.get('/search', { params })
       return response.data
     },
     staleTime: 60000, // Cache for 1 minute
@@ -101,6 +107,35 @@ export default function PeopleFinder() {
     contact: undefined,
   }))
 
+  // Debug logging
+  if (contactsData && !isLoading) {
+    console.log('PeopleFinder Debug:', {
+      effectiveState,
+      defaultCity,
+      totalResults: contactsData.total_results,
+      contactsReturned: contactsData.results?.contacts?.length || 0,
+      peopleConverted: people.length,
+      sampleContact: contactsData.results?.contacts?.[0]
+    })
+  }
+
+  // Get unique cities for filter dropdown
+  const cities = Array.from(new Set(people.map(p => p.organization).filter(Boolean))).sort()
+  
+  // Auto-select user's city if they have a location set
+  useEffect(() => {
+    if (defaultCity && cities.includes(defaultCity) && selectedCity === 'all') {
+      setSelectedCity(defaultCity)
+    }
+  }, [defaultCity, cities, selectedCity])
+  
+  // Add summary counts by city
+  const cityCounts = people.reduce((acc, person) => {
+    const city = person.organization || 'Unknown'
+    acc[city] = (acc[city] || 0) + 1
+    return acc
+  }, {} as Record<string, number>)
+
   const filteredPeople = people.filter(person => {
     const matchesSearch = searchQuery === '' || 
       person.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -110,7 +145,10 @@ export default function PeopleFinder() {
     
     const matchesRole = selectedRole === 'all' || person.role === selectedRole
     
-    return matchesSearch && matchesRole
+    // City filter
+    const matchesCity = selectedCity === 'all' || person.organization === selectedCity
+    
+    return matchesSearch && matchesRole && matchesCity
   })
 
   return (
@@ -121,8 +159,9 @@ export default function PeopleFinder() {
         </h1>
         <p className="text-gray-600">
           Discover elected officials, decision makers, and community leaders
-          {location && location.state && (
-            <span className="font-medium text-primary-600"> in {location.state}</span>
+          <span className="font-medium text-primary-600"> in {effectiveState}</span>
+          {!location?.state && (
+            <span className="text-sm text-gray-500 ml-2">(default state - set your location to customize)</span>
           )}
         </p>
       </div>
@@ -134,10 +173,27 @@ export default function PeopleFinder() {
         </div>
       )}
 
-      {/* Search Bar */}
-      {!isLoading && (
+      {/* Error State */}
+      {error && (
+        <div className="bg-red-50 border border-red-200 rounded-lg p-6 mb-8">
+          <h3 className="text-red-800 font-semibold mb-2">Error loading contacts</h3>
+          <p className="text-red-600 text-sm">
+            {error instanceof Error ? error.message : 'Failed to load contacts from the API'}
+          </p>
+          <button 
+            onClick={() => window.location.reload()} 
+            className="mt-3 px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
+          >
+            Reload Page
+          </button>
+        </div>
+      )}
+
+      {/* Search Bar and Filters */}
+      {!isLoading && !error && (
         <>
-      <div className="mb-8">
+      <div className="mb-6 space-y-4">
+        {/* Search Input */}
         <div className="relative">
           <input
             type="text"
@@ -147,6 +203,59 @@ export default function PeopleFinder() {
             className="w-full px-4 py-3 pl-12 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent text-gray-900"
           />
           <MagnifyingGlassIcon className="absolute left-4 top-3.5 h-6 w-6 text-gray-400" />
+        </div>
+
+        {/* City Filter Dropdown */}
+        <div className="flex gap-4 items-center">
+          <label htmlFor="city-filter" className="text-sm font-medium text-gray-700">
+            Filter by City/Jurisdiction:
+          </label>
+          <select
+            id="city-filter"
+            value={selectedCity}
+            onChange={(e) => {
+              setSelectedCity(e.target.value)
+              setCurrentPage(1) // Reset to first page when filter changes
+            }}
+            className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-gray-900"
+          >
+            <option value="all">All Cities ({people.length} officials)</option>
+            {cities.map((city) => (
+              <option key={city} value={city}>
+                {city} ({cityCounts[city]} officials)
+              </option>
+            ))}
+          </select>
+
+          {/* Clear Filters */}
+          {(selectedCity !== 'all' || searchQuery !== '' || selectedRole !== 'all') && (
+            <button
+              onClick={() => {
+                setSelectedCity('all')
+                setSearchQuery('')
+                setSelectedRole('all')
+                setCurrentPage(1)
+              }}
+              className="px-4 py-2 text-sm text-gray-600 hover:text-gray-900 underline"
+            >
+              Clear all filters
+            </button>
+          )}
+        </div>
+
+        {/* Summary Info */}
+        <div className="flex items-center gap-4 text-sm text-gray-600">
+          <span>
+            Showing {filteredPeople.length} of {people.length} officials
+          </span>
+          {selectedCity !== 'all' && (
+            <span className="font-medium text-primary-600">
+              • Filtered to {selectedCity}
+            </span>
+          )}
+          <span className="text-gray-400">
+            • Page {currentPage} • {effectiveState}
+          </span>
         </div>
       </div>
 
@@ -222,10 +331,35 @@ export default function PeopleFinder() {
 
       {/* Results */}
       <div>
-        <h2 className="text-xl font-semibold mb-4" style={{ color: '#354F52' }}>
-          {selectedRole === 'all' ? 'All People' : roleCategories[selectedRole].title}
-          <span className="text-gray-500 font-normal ml-2">({filteredPeople.length} results)</span>
-        </h2>
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-xl font-semibold" style={{ color: '#354F52' }}>
+            {selectedRole === 'all' ? 'All People' : roleCategories[selectedRole].title}
+            <span className="text-gray-500 font-normal ml-2">({filteredPeople.length} results)</span>
+          </h2>
+
+          {/* Pagination Controls */}
+          {contactsData && contactsData.pagination && (
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                disabled={!contactsData.pagination.has_prev}
+                className="px-3 py-1 border rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+              >
+                ← Prev
+              </button>
+              <span className="text-sm text-gray-600">
+                Page {currentPage} of {contactsData.pagination.total_pages}
+              </span>
+              <button
+                onClick={() => setCurrentPage(p => p + 1)}
+                disabled={!contactsData.pagination.has_next}
+                className="px-3 py-1 border rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+              >
+                Next →
+              </button>
+            </div>
+          )}
+        </div>
 
         {filteredPeople.length === 0 ? (
           <div className="bg-white rounded-lg shadow-md p-8 text-center">

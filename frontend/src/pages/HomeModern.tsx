@@ -93,7 +93,7 @@ export default function HomeModern() {
         return null;
       }
       
-      const url = '/api/search/';
+      const url = '/search/';
       const params: any = {
         q: keyword,
         types: 'causes,contacts,organizations',
@@ -284,9 +284,9 @@ export default function HomeModern() {
     },
     {
       icon: MapIcon,
-      title: 'Demographics & Data',
-      description: 'Census demographics, income, education, housing, and health data for every jurisdiction',
-      link: '/heatmap',
+      title: 'Policy Map',
+      description: 'Track state legislation and bills across all sessions. Search 13,000+ bills by topic and status',
+      link: '/policy-map',
       color: '#4A90E2'
     },
     {

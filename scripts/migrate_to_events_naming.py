@@ -33,13 +33,20 @@ logger = logging.getLogger(__name__)
 
 # Renaming map
 RENAME_MAP = {
-    "meetings.parquet": "events_events.parquet",
-    "meetings_calendar.parquet": "events_events.parquet",  # Will be merged if both exist
-    "meetings_transcripts.parquet": "events_event_documents.parquet",
-    "meetings_topics.parquet": "events_event_agenda_items.parquet",
-    "meetings_demographics.parquet": "events_event_participants.parquet",
-    "meetings_decisions.parquet": "events_event_bills.parquet",
-    "contacts_meeting_attendance.parquet": "events_event_participants.parquet",  # Merge with participants
+    "meetings.parquet": "events.parquet",
+    "meetings_calendar.parquet": "events.parquet",  # Will be merged if both exist
+    "meetings_transcripts.parquet": "event_documents.parquet",
+    "meetings_topics.parquet": "event_agenda_items.parquet",
+    "meetings_demographics.parquet": "event_participants.parquet",
+    "meetings_decisions.parquet": "event_bills.parquet",
+    "contacts_meeting_attendance.parquet": "event_participants.parquet",  # Merge with participants
+    # Rename old events_event_* to new event_* naming
+    "events_events.parquet": "events.parquet",
+    "events_event_documents.parquet": "event_documents.parquet",
+    "events_event_participants.parquet": "event_participants.parquet",
+    "events_event_agenda_items.parquet": "event_agenda_items.parquet",
+    "events_event_bills.parquet": "event_bills.parquet",
+    "events_event_media.parquet": "event_media.parquet",
 }
 
 
@@ -69,7 +76,10 @@ def cleanup_backups(directory: Path, dry_run: bool = False):
     
     print(f"\nFound {len(backup_dirs)} backup directories:")
     for backup_dir in backup_dirs:
-        print(f"  📦 {backup_dir.relative_to(Path.cwd())}")
+        try:
+            print(f"  📦 {backup_dir.relative_to(Path.cwd())}")
+        except ValueError:
+            print(f"  📦 {backup_dir}")
         if backup_dir.is_dir():
             file_count = len(list(backup_dir.glob("*.parquet")))
             print(f"     ({file_count} files)")
@@ -89,7 +99,10 @@ def cleanup_backups(directory: Path, dry_run: bool = False):
     for backup_dir in backup_dirs:
         try:
             shutil.rmtree(backup_dir)
-            print(f"✅ Deleted: {backup_dir.relative_to(Path.cwd())}")
+            try:
+                print(f"✅ Deleted: {backup_dir.relative_to(Path.cwd())}")
+            except ValueError:
+                print(f"✅ Deleted: {backup_dir}")
             deleted += 1
         except Exception as e:
             print(f"❌ Error deleting {backup_dir}: {e}")

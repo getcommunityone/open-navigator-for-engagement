@@ -276,12 +276,12 @@ bills_legislative_sessions.parquet
 bills_vote_events.parquet
 bills_vote_counts.parquet
 bills_individual_votes.parquet
-events_events.parquet
-events_event_participants.parquet
-events_event_agenda_items.parquet
-events_event_documents.parquet
-events_event_media.parquet
-events_event_bills.parquet
+events.parquet
+event_participants.parquet
+event_agenda_items.parquet
+event_documents.parquet
+event_media.parquet
+event_bills.parquet
 budgets_city_budgets.parquet
 surveys_national_polls.parquet
 surveys_roper_questions.parquet
@@ -558,10 +558,10 @@ erDiagram
     }
     
     %% ========================================
-    %% EVENTS & MEETINGS (Event Hierarchy)
+    %% EVENTS & MEETINGS
     %% ========================================
     %% Schema.org types: Event, GovernmentEvent, VideoObject, DigitalDocument
-    %% Event is the parent entity - Meeting is a subclass/subtype
+    %% Parquet files: events.parquet, event_documents.parquet, event_participants.parquet, etc.
     
     %% EVENT - Parent entity for all public events
     JURISDICTION ||--o{ EVENT : hosts

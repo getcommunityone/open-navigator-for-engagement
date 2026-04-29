@@ -5,15 +5,15 @@ This script processes meeting/event data from the cache layer (2006-2023) and cr
 curated gold tables for analysis and dashboards.
 
 Gold Tables Created:
-1. events - Event dates, locations, jurisdictions (data/gold/national/)
-2. event_documents - Full searchable meeting text and documents (data/gold/national/)
-3. event_agenda_items - Extracted topics and agenda items
-4. event_participants - Link events to jurisdiction demographics and attendees
-5. event_bills - Identified policy decisions and votes
+1. events_events - Event dates, locations, jurisdictions (data/gold/national/)
+2. events_event_documents - Full searchable meeting text and documents (data/gold/national/)
+3. events_event_agenda_items - Extracted topics and agenda items
+4. events_event_participants - Link events to jurisdiction demographics and attendees
+5. events_event_bills - Identified policy decisions and votes
 
 Input: data/cache/localview/meetings.YYYY.parquet (2006-2023)
-Output: data/gold/national/event_*.parquet (national-level aggregated data)
-        data/gold/states/{STATE}/event_*.parquet (state-partitioned data)
+Output: data/gold/national/events_*.parquet (national-level aggregated data)
+        data/gold/states/{STATE}/events_*.parquet (state-partitioned data)
 """
 
 import pandas as pd
@@ -71,14 +71,14 @@ class EventGoldTableCreator:
         
         return combined_df
     
-    def create_events(self, df: pd.DataFrame) -> pd.DataFrame:
+    def create_events_events(self, df: pd.DataFrame) -> pd.DataFrame:
         """
-        Create events gold table
+        Create events_events gold table
         
         Columns: event_id, jurisdiction, channel_type, event_date, year, 
                  location, duration, record_count
         """
-        logger.info("Creating events gold table...")
+        logger.info("Creating events_events gold table...")
         
         # Extract date information
         calendar_data = []
@@ -100,15 +100,15 @@ class EventGoldTableCreator:
         # Save to parquet in national directory
         national_dir = self.gold_dir / "national"
         national_dir.mkdir(parents=True, exist_ok=True)
-        output_path = national_dir / "events.parquet"
+        output_path = national_dir / "events_events.parquet"
         calendar_df.to_parquet(output_path, index=False)
         logger.success(f"Created {output_path} with {len(calendar_df):,} records")
         
         return calendar_df
     
-    def create_event_documents(self, df: pd.DataFrame) -> pd.DataFrame:
+    def create_events_event_documents(self, df: pd.DataFrame) -> pd.DataFrame:
         """
-        Create event_documents gold table
+        Create events_event_documents gold table
         
         Columns: event_id, document_id, jurisdiction, transcript_text, text_clean,
                  word_count, has_captions, document_type
@@ -141,15 +141,15 @@ class EventGoldTableCreator:
         # Save to parquet in national directory
         national_dir = self.gold_dir / "national"
         national_dir.mkdir(parents=True, exist_ok=True)
-        output_path = national_dir / "event_documents.parquet"
+        output_path = national_dir / "events_event_documents.parquet"
         transcript_df.to_parquet(output_path, index=False)
         logger.success(f"Created {output_path} with {len(transcript_df):,} records")
         
         return transcript_df
     
-    def create_event_participants(self, df: pd.DataFrame) -> pd.DataFrame:
+    def create_events_event_participants(self, df: pd.DataFrame) -> pd.DataFrame:
         """
-        Create event_participants gold table
+        Create events_event_participants gold table
         
         Links event data with demographic context from census data
         """
@@ -185,7 +185,7 @@ class EventGoldTableCreator:
         # Save to parquet in national directory
         national_dir = self.gold_dir / "national"
         national_dir.mkdir(parents=True, exist_ok=True)
-        output_path = national_dir / "event_participants.parquet"
+        output_path = national_dir / "events_event_participants.parquet"
         demo_df.to_parquet(output_path, index=False)
         logger.success(f"Created {output_path} with {len(demo_df):,} records")
         
@@ -219,9 +219,9 @@ class EventGoldTableCreator:
         
         return topics
     
-    def create_event_agenda_items(self, df: pd.DataFrame) -> pd.DataFrame:
+    def create_events_event_agenda_items(self, df: pd.DataFrame) -> pd.DataFrame:
         """
-        Create event_agenda_items gold table
+        Create events_event_agenda_items gold table
         
         Extract and categorize topics discussed in events/meetings
         """
@@ -249,7 +249,7 @@ class EventGoldTableCreator:
         # Save to parquet in national directory
         national_dir = self.gold_dir / "national"
         national_dir.mkdir(parents=True, exist_ok=True)
-        output_path = national_dir / "event_agenda_items.parquet"
+        output_path = national_dir / "events_event_agenda_items.parquet"
         topic_df.to_parquet(output_path, index=False)
         logger.success(f"Created {output_path} with {len(topic_df):,} records")
         
@@ -282,9 +282,9 @@ class EventGoldTableCreator:
         
         return decisions
     
-    def create_event_bills(self, df: pd.DataFrame) -> pd.DataFrame:
+    def create_events_event_bills(self, df: pd.DataFrame) -> pd.DataFrame:
         """
-        Create event_bills gold table
+        Create events_event_bills gold table
         
         Extract policy decisions, votes, and resolutions
         """
@@ -312,7 +312,7 @@ class EventGoldTableCreator:
         # Save to parquet in national directory
         national_dir = self.gold_dir / "national"
         national_dir.mkdir(parents=True, exist_ok=True)
-        output_path = national_dir / "event_bills.parquet"
+        output_path = national_dir / "events_event_bills.parquet"
         decision_df.to_parquet(output_path, index=False)
         logger.success(f"Created {output_path} with {len(decision_df):,} records")
         
@@ -332,11 +332,11 @@ class EventGoldTableCreator:
             return
         
         # Create each gold table
-        self.create_events(df)
-        self.create_event_documents(df)
-        self.create_event_participants(df)
-        self.create_event_agenda_items(df)
-        self.create_event_bills(df)
+        self.create_events_events(df)
+        self.create_events_event_documents(df)
+        self.create_events_event_participants(df)
+        self.create_events_event_agenda_items(df)
+        self.create_events_event_bills(df)
         
         logger.success("=" * 60)
         logger.success("ALL EVENT GOLD TABLES CREATED!")
@@ -344,7 +344,7 @@ class EventGoldTableCreator:
         
         # Show summary from national directory
         national_dir = self.gold_dir / "national"
-        gold_files = list(national_dir.glob("event*.parquet"))
+        gold_files = list(national_dir.glob("events_*.parquet"))
         logger.info(f"\nCreated {len(gold_files)} gold tables in {national_dir}:")
         for file in sorted(gold_files):
             df_check = pd.read_parquet(file)

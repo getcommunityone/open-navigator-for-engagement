@@ -140,11 +140,16 @@ def calculate_stats(state: Optional[str] = None,
     # Count events/meetings (try new naming first, fallback to old)
     if state:
         # Try new naming first
-        event_pattern = f'states/{state}/events_events.parquet'
+        event_pattern = f'states/{state}/events.parquet'
         event_file = Path(f'data/gold/{event_pattern}')
         
         if not event_file.exists():
-            # Fallback to old naming
+            # Try old events_events naming
+            event_pattern = f'states/{state}/events_events.parquet'
+            event_file = Path(f'data/gold/{event_pattern}')
+        
+        if not event_file.exists():
+            # Fallback to original meetings naming
             event_pattern = f'states/{state}/meetings.parquet'
             event_file = Path(f'data/gold/{event_pattern}')
         
@@ -160,9 +165,12 @@ def calculate_stats(state: Optional[str] = None,
             meetings = count_parquet_records(event_pattern)
     else:
         # Try new naming first for all states
-        meetings = count_parquet_records('states/*/events_events.parquet')
+        meetings = count_parquet_records('states/*/events.parquet')
         if meetings == 0:
-            # Fallback to old naming
+            # Try old events_events naming
+            meetings = count_parquet_records('states/*/events_events.parquet')
+        if meetings == 0:
+            # Fallback to original meetings naming
             meetings = count_parquet_records('states/*/meetings.parquet')
     
     # Count contacts

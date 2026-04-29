@@ -18,9 +18,11 @@ Usage:
 
 import psycopg2
 import pandas as pd
+import json
+import re
 from pathlib import Path
 from loguru import logger
-from typing import List
+from typing import List, Dict, Any
 
 # Dev states for initial export
 DEV_STATES = ['WA', 'MA', 'AL', 'GA', 'WI']
@@ -57,6 +59,89 @@ def get_state_jurisdiction(conn, state: str) -> str:
         return None
 
 
+def parse_jurisdiction_name(ocd_id: str) -> str:
+    """Extract city/jurisdiction name from OCD ID.
+    
+    Examples:
+        ocd-jurisdiction/country:us/state:al/place:tuscaloosa/government -> Tuscaloosa
+        ocd-jurisdiction/country:us/state:al/government -> Alabama
+    """
+    if not ocd_id or pd.isna(ocd_id):
+        return None
+        
+    # Extract place name from OCD ID
+    match = re.search(r'/place:([^/]+)/', ocd_id)
+    if match:
+        place = match.group(1)
+        # Convert snake_case to Title Case
+        return place.replace('_', ' ').title()
+    
+    # Extract state if no place
+    match = re.search(r'/state:([^/]+)/', ocd_id)
+    if match:
+        return match.group(1).upper()
+    
+    return None
+
+
+def extract_contact_info(source_data_json: str) -> Dict[str, Any]:
+    """Extract contact information from the source_data JSON field.
+    
+    For state legislators: checks contact_details array
+    For mayors/municipal: checks offices array
+    
+    Returns:
+        Dict with email, phone, address, city_jurisdiction
+    """
+    if not source_data_json or pd.isna(source_data_json):
+        return {'email': None, 'phone': None, 'address': None, 'city_jurisdiction': None}
+    
+    try:
+        data = json.loads(source_data_json) if isinstance(source_data_json, str) else source_data_json
+    except (json.JSONDecodeError, TypeError):
+        return {'email': None, 'phone': None, 'address': None, 'city_jurisdiction': None}
+    
+    email = None
+    phone = None
+    address = None
+    city_jurisdiction = None
+    
+    # Try to get email from top level
+    if 'email' in data:
+        email = data['email']
+    
+    # Try contact_details (state legislators)
+    contact_details = data.get('contact_details', [])
+    for contact in contact_details:
+        if contact.get('note') == 'Capitol Office':
+            email = email or contact.get('email')
+            phone = phone or contact.get('voice')
+            address = address or contact.get('address')
+    
+    # Try offices array (mayors/municipal officials)
+    offices = data.get('offices', [])
+    for office in offices:
+        if office.get('classification') == 'primary':
+            email = email or office.get('email')
+            phone = phone or office.get('voice')
+            address = address or office.get('address')
+    
+    # Get jurisdiction/city from roles
+    roles = data.get('roles', [])
+    if roles:
+        role = roles[0]  # Get current/first role
+        jurisdiction_ocd = role.get('jurisdiction')
+        if jurisdiction_ocd:
+            city_jurisdiction = parse_jurisdiction_name(jurisdiction_ocd)
+    
+    return {
+        'email': email,
+        'phone': phone,
+        'address': address,
+        'city_jurisdiction': city_jurisdiction
+    }
+
+
 def export_contacts_officials(conn, state: str, state_dir: Path):
     """Export officials/legislators (people) from openstates_people table."""
     logger.info(f"  Exporting contacts_officials for {state}...")
@@ -86,10 +171,29 @@ def export_contacts_officials(conn, state: str, state_dir: Path):
         logger.warning(f"  No officials found for {state}")
         return None
     
+    # Extract contact info from JSON source_data
+    logger.info(f"  Parsing contact information from source data...")
+    contact_info = df['source_data'].apply(extract_contact_info)
+    
+    # Update columns with extracted data
+    df['email'] = df['email'].fillna(contact_info.apply(lambda x: x['email']))
+    df['phone'] = df['phone'].fillna(contact_info.apply(lambda x: x['phone']))
+    df['address'] = df['address'].fillna(contact_info.apply(lambda x: x['address']))
+    df['city_jurisdiction'] = contact_info.apply(lambda x: x['city_jurisdiction'])
+    
+    # Parse jurisdiction name from OCD ID
+    df['jurisdiction_name'] = df['jurisdiction'].apply(parse_jurisdiction_name)
+    
+    # Clean up address formatting (remove semicolons)
+    df['address'] = df['address'].apply(lambda x: x.replace(';', ', ') if x and isinstance(x, str) else x)
+    
     output_path = state_dir / "contacts_officials.parquet"
     df.to_parquet(output_path, index=False, engine='pyarrow', compression='snappy')
     
     logger.info(f"  ✅ Exported {len(df):,} officials")
+    logger.info(f"  📧 With email: {df['email'].notna().sum()}")
+    logger.info(f"  📞 With phone: {df['phone'].notna().sum()}")
+    logger.info(f"  📍 With address: {df['address'].notna().sum()}")
     
     return df
 

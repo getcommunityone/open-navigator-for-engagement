@@ -11,8 +11,8 @@ from datetime import datetime
 from api.database import get_db
 from api.auth import get_current_user
 from api.models import (
-    User, Leader, Organization, Cause,
-    UserFollow, LeaderFollow, OrganizationFollow, CauseFollow
+    User, Official, Organization, Cause,
+    UserFollow, OfficialFollow, OrganizationFollow, CauseFollow
 )
 
 router = APIRouter(prefix="/api/social", tags=["social"])
@@ -35,7 +35,7 @@ class FollowerStats(BaseModel):
     followers: int
     following: int
     following_users: int
-    following_leaders: int
+    following_officials: int
     following_organizations: int
     following_causes: int
 
@@ -52,8 +52,8 @@ class UserSummary(BaseModel):
         from_attributes = True
 
 
-class LeaderSummary(BaseModel):
-    """Brief leader info for lists"""
+class OfficialSummary(BaseModel):
+    """Brief official info for lists"""
     id: int
     name: str
     slug: str
@@ -184,83 +184,83 @@ async def unfollow_user(
     )
 
 
-@router.post("/follow/leader/{leader_id}")
-async def follow_leader(
-    leader_id: int,
+@router.post("/follow/official/{official_id}")
+async def follow_official(
+    official_id: int,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ) -> FollowResponse:
-    """Follow a leader"""
+    """Follow an official"""
     
-    # Check if leader exists
-    leader = db.query(Leader).filter(Leader.id == leader_id).first()
-    if not leader:
-        raise HTTPException(status_code=404, detail="Leader not found")
+    # Check if official exists
+    official = db.query(Official).filter(Official.id == official_id).first()
+    if not official:
+        raise HTTPException(status_code=404, detail="Official not found")
     
     # Check if already following
-    existing = db.query(LeaderFollow).filter(
-        LeaderFollow.user_id == current_user.id,
-        LeaderFollow.leader_id == leader_id
+    existing = db.query(OfficialFollow).filter(
+        OfficialFollow.user_id == current_user.id,
+        OfficialFollow.official_id == official_id
     ).first()
     
     if existing:
         return FollowResponse(
             success=True,
             following=True,
-            follower_count=leader.follower_count,
-            message="Already following this leader"
+            follower_count=official.follower_count,
+            message="Already following this official"
         )
     
     # Create follow
-    follow = LeaderFollow(user_id=current_user.id, leader_id=leader_id)
+    follow = OfficialFollow(user_id=current_user.id, official_id=official_id)
     db.add(follow)
     
     # Update follower count
-    leader.follower_count += 1
+    official.follower_count += 1
     db.commit()
     
     return FollowResponse(
         success=True,
         following=True,
-        follower_count=leader.follower_count,
-        message="Successfully followed leader"
+        follower_count=official.follower_count,
+        message="Successfully followed official"
     )
 
 
-@router.delete("/follow/leader/{leader_id}")
-async def unfollow_leader(
-    leader_id: int,
+@router.delete("/follow/official/{official_id}")
+async def unfollow_official(
+    official_id: int,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ) -> FollowResponse:
-    """Unfollow a leader"""
+    """Unfollow an official"""
     
-    leader = db.query(Leader).filter(Leader.id == leader_id).first()
-    if not leader:
-        raise HTTPException(status_code=404, detail="Leader not found")
+    official = db.query(Official).filter(Official.id == official_id).first()
+    if not official:
+        raise HTTPException(status_code=404, detail="Official not found")
     
-    follow = db.query(LeaderFollow).filter(
-        LeaderFollow.user_id == current_user.id,
-        LeaderFollow.leader_id == leader_id
+    follow = db.query(OfficialFollow).filter(
+        OfficialFollow.user_id == current_user.id,
+        OfficialFollow.official_id == official_id
     ).first()
     
     if not follow:
         return FollowResponse(
             success=True,
             following=False,
-            follower_count=leader.follower_count,
-            message="Not following this leader"
+            follower_count=official.follower_count,
+            message="Not following this official"
         )
     
     db.delete(follow)
-    leader.follower_count = max(0, leader.follower_count - 1)
+    official.follower_count = max(0, official.follower_count - 1)
     db.commit()
     
     return FollowResponse(
         success=True,
         following=False,
-        follower_count=leader.follower_count,
-        message="Successfully unfollowed leader"
+        follower_count=official.follower_count,
+        message="Successfully unfollowed official"
     )
 
 
@@ -438,9 +438,9 @@ async def check_following_status(
         ).first() is not None
     
     if leader_id:
-        result['leader'] = db.query(LeaderFollow).filter(
-            LeaderFollow.user_id == current_user.id,
-            LeaderFollow.leader_id == leader_id
+        result['official'] = db.query(OfficialFollow).filter(
+            OfficialFollow.user_id == current_user.id,
+            OfficialFollow.official_id == leader_id
         ).first() is not None
     
     if org_id:
@@ -477,37 +477,37 @@ async def get_follower_stats(
     
     # Count following (users this person follows)
     following_users = db.query(UserFollow).filter(UserFollow.follower_id == target_id).count()
-    following_leaders = db.query(LeaderFollow).filter(LeaderFollow.user_id == target_id).count()
+    following_officials = db.query(OfficialFollow).filter(OfficialFollow.user_id == target_id).count()
     following_orgs = db.query(OrganizationFollow).filter(OrganizationFollow.user_id == target_id).count()
     following_causes = db.query(CauseFollow).filter(CauseFollow.user_id == target_id).count()
     
-    total_following = following_users + following_leaders + following_orgs + following_causes
+    total_following = following_users + following_officials + following_orgs + following_causes
     
     return FollowerStats(
         followers=followers,
         following=total_following,
         following_users=following_users,
-        following_leaders=following_leaders,
+        following_officials=following_officials,
         following_organizations=following_orgs,
         following_causes=following_causes
     )
 
 
-@router.get("/following/leaders")
-async def get_following_leaders(
+@router.get("/following/officials")
+async def get_following_officials(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
-) -> List[LeaderSummary]:
-    """Get list of leaders the current user is following"""
+) -> List[OfficialSummary]:
+    """Get list of officials the current user is following"""
     
-    leaders = db.query(Leader).join(
-        LeaderFollow,
-        LeaderFollow.leader_id == Leader.id
+    officials = db.query(Official).join(
+        OfficialFollow,
+        OfficialFollow.official_id == Official.id
     ).filter(
-        LeaderFollow.user_id == current_user.id
+        OfficialFollow.user_id == current_user.id
     ).all()
     
-    return [LeaderSummary.from_orm(leader) for leader in leaders]
+    return [OfficialSummary.from_orm(official) for official in officials]
 
 
 @router.get("/following/organizations")

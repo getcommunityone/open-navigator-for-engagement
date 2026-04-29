@@ -290,21 +290,155 @@ def search_contacts_duckdb(query: str, state: Optional[str] = None, limit: int =
     """
     Search contacts using DuckDB (supports local files or remote HTTP parquet).
     This is the fallback when HF Search API is unavailable.
+    Supports browse mode when query is empty.
     """
     results = []
+    
+    # Determine if this is browse mode (no query) or search mode
+    is_browse_mode = not query or query.strip() == ''
     
     try:
         # Initialize DuckDB connection
         conn = duckdb.connect()
         
-        # Search 1: Local Officials
+        # Search 1: State Officials (OpenStates - state legislators, mayors, etc.)
+        if state:
+            officials_file_path = GOLD_DIR / "states" / state / "contacts_officials.parquet"
+            officials_file_paths = [officials_file_path]
+        else:
+            officials_file_paths = list(GOLD_DIR.glob("states/*/contacts_officials.parquet"))[:5]
+        
+        logger.info(f"Searching {len(officials_file_paths)} state official contact files (OpenStates) - browse_mode={is_browse_mode}")
+        
+        for file_path in officials_file_paths:
+            if not file_path.exists():
+                continue
+                
+            # Get data source (local or remote URL)
+            data_source = get_data_source(file_path, use_remote=IS_HF_SPACES)
+            
+            try:
+                if is_browse_mode:
+                    # Browse mode: return all officials, prioritize mayors
+                    sql = """
+                        SELECT 
+                            full_name as name,
+                            role_type as title,
+                            city_jurisdiction as jurisdiction,
+                            state,
+                            email,
+                            phone,
+                            CASE 
+                                WHEN LOWER(role_type) = 'mayor' THEN 2.0
+                                WHEN LOWER(role_type) LIKE '%council%' THEN 1.8
+                                WHEN LOWER(role_type) LIKE '%commission%' THEN 1.7
+                                ELSE 1.5
+                            END as score
+                        FROM read_parquet(?)
+                        ORDER BY score DESC, full_name ASC
+                        LIMIT ?
+                    """
+                    
+                    rows = conn.execute(sql, [data_source, limit]).fetchall()
+                else:
+                    # Search mode: relevance scoring
+                    sql = """
+                        SELECT 
+                            full_name as name,
+                            role_type as title,
+                            city_jurisdiction as jurisdiction,
+                            state,
+                            email,
+                            phone,
+                            GREATEST(
+                                CASE 
+                                    WHEN LOWER(full_name) LIKE LOWER(?) THEN 1.5
+                                    WHEN LOWER(full_name) LIKE LOWER(?) THEN 1.0
+                                    ELSE 0.0
+                                END,
+                                CASE 
+                                    WHEN LOWER(role_type) LIKE LOWER(?) THEN 1.5
+                                    WHEN LOWER(role_type) LIKE LOWER(?) THEN 1.0
+                                    ELSE 0.0
+                                END,
+                                CASE 
+                                    WHEN LOWER(city_jurisdiction) LIKE LOWER(?) THEN 1.5
+                                    WHEN LOWER(city_jurisdiction) LIKE LOWER(?) THEN 1.0
+                                    ELSE 0.0
+                                END,
+                                CASE 
+                                    WHEN LOWER(jurisdiction_name) LIKE LOWER(?) THEN 1.5
+                                    WHEN LOWER(jurisdiction_name) LIKE LOWER(?) THEN 1.0
+                                    ELSE 0.0
+                                END
+                            ) as score
+                        FROM read_parquet(?)
+                        WHERE LOWER(full_name) LIKE LOWER(?) 
+                           OR LOWER(role_type) LIKE LOWER(?) 
+                           OR LOWER(city_jurisdiction) LIKE LOWER(?)
+                           OR LOWER(jurisdiction_name) LIKE LOWER(?)
+                        ORDER BY score DESC
+                        LIMIT ?
+                    """
+                    
+                    query_pattern = f'%{query}%'
+                    query_start = f'{query}%'
+                    
+                    rows = conn.execute(sql, [
+                        query_start, query_pattern,  # name scoring
+                        query_start, query_pattern,  # role_type scoring
+                        query_start, query_pattern,  # city_jurisdiction scoring
+                        query_start, query_pattern,  # jurisdiction_name scoring
+                        data_source,                 # file path or URL
+                        query_pattern, query_pattern, query_pattern, query_pattern,  # WHERE clause
+                        limit
+                    ]).fetchall()
+                
+                # Convert to SearchResult objects
+                for row in rows:
+                    name, title, jurisdiction, state_code, email, phone, score = row
+                    
+                    if score > 0.3:  # Relevance threshold
+                        contact_info = []
+                        if email:
+                            contact_info.append(f"📧 {email}")
+                        if phone:
+                            contact_info.append(f"📞 {phone}")
+                        
+                        description = f"State official in {jurisdiction}" if jurisdiction else f"State official in {state_code}"
+                        if contact_info:
+                            description += f" • {' • '.join(contact_info)}"
+                        
+                        results.append(SearchResult(
+                            result_type="contact",
+                            title=name if name else "Unknown",
+                            subtitle=f"{title.title() if title else 'Official'} - {jurisdiction or state_code}",
+                            description=description,
+                            url=f"/people/{name.replace(' ', '-') if name else 'unknown'}",
+                            score=score,
+                            metadata={
+                                "title": title,
+                                "jurisdiction": jurisdiction,
+                                "state": state_code,
+                                "name": name,
+                                "email": email,
+                                "phone": phone,
+                                "contact_type": "state_official",
+                                "data_source": "OpenStates"
+                            }
+                        ))
+                
+            except Exception as e:
+                logger.debug(f"Error searching state officials {file_path}: {e}")
+        
+        # Search 2: Local Officials (from meeting transcripts)
         if state:
             local_file_path = GOLD_DIR / "states" / state / "contacts_local_officials.parquet"
             local_file_paths = [local_file_path]
         else:
             local_file_paths = list(GOLD_DIR.glob("states/*/contacts_local_officials.parquet"))[:5]
         
-        logger.info(f"Searching {len(local_file_paths)} local official contact files")
+        logger.info(f"Searching {len(local_file_paths)} local official contact files (meeting transcripts)")
         
         for file_path in local_file_paths:
             # Get data source (local or remote URL)
@@ -378,7 +512,7 @@ def search_contacts_duckdb(query: str, state: Optional[str] = None, limit: int =
             except Exception as e:
                 logger.debug(f"Error searching {file_path}: {e}")
         
-        # Search nonprofit officers from state directories
+        # Search 3: Nonprofit Officers from state directories
         nonprofit_files = []
         
         # If state specified, search that state's directory
@@ -552,11 +686,15 @@ def search_meetings(query: str, state: Optional[str] = None, limit: int = 10) ->
     try:
         # Search state event/meeting files (try new naming first, fallback to old)
         if state:
-            meeting_files = list(GOLD_DIR.glob(f"states/{state}/events_events.parquet"))
+            meeting_files = list(GOLD_DIR.glob(f"states/{state}/events.parquet"))
+            if not meeting_files:
+                meeting_files = list(GOLD_DIR.glob(f"states/{state}/events_events.parquet"))
             if not meeting_files:
                 meeting_files = list(GOLD_DIR.glob(f"states/{state}/meetings.parquet"))
         else:
-            meeting_files = list(GOLD_DIR.glob("states/*/events_events.parquet"))
+            meeting_files = list(GOLD_DIR.glob("states/*/events.parquet"))
+            if not meeting_files:
+                meeting_files = list(GOLD_DIR.glob("states/*/events_events.parquet"))
             if not meeting_files:
                 meeting_files = list(GOLD_DIR.glob("states/*/meetings.parquet"))
         

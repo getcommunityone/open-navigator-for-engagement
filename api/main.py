@@ -103,6 +103,7 @@ from api.routes import social as social_routes
 from api.routes import search as search_routes
 from api.routes import stats as stats_routes
 from api.routes import contact as contact_routes
+from api.routes import bills as bills_routes
 from api.database import init_db
 
 app.include_router(auth_routes.router)
@@ -110,6 +111,7 @@ app.include_router(social_routes.router)
 app.include_router(search_routes.router)
 app.include_router(stats_routes.router, prefix="/api", tags=["stats"])
 app.include_router(contact_routes.router)
+app.include_router(bills_routes.router)
 
 # Custom Swagger UI with logo
 @app.get("/docs", include_in_schema=False)

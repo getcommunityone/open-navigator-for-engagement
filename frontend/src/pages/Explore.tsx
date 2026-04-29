@@ -55,12 +55,12 @@ const policyMakerOptions: ExploreCard[] = [
     stats: '100K+ officials',
   },
   {
-    title: 'Demographics & Data',
-    description: 'Access Census demographics, income, education, housing, and health insurance data by jurisdiction.',
+    title: 'Policy Map',
+    description: 'Track state legislation and bills across all sessions. Search and filter 13,000+ bills by topic, session, and status.',
     icon: MapIcon,
-    path: '/heatmap',
+    path: '/policy-map',
     color: '#CAD2C5',
-    stats: '90K+ jurisdictions',
+    stats: '13K+ bills',
   },
 ];
 
