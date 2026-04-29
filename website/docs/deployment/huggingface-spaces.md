@@ -18,6 +18,33 @@ This deployment runs **all three apps** in a single Docker Space:
 
 All served through nginx reverse proxy on port 7860 (Hugging Face Spaces default).
 
+## 🚀 Quick Start for Developers
+
+**TL;DR** - Deploy in 3 commands:
+
+```bash
+# 1. Set your Hugging Face username in .env
+echo "HF_USERNAME=your_username" >> .env
+
+# 2. Run the deployment script (includes testing)
+./deploy-huggingface.sh
+
+# 3. Configure your Space
+# - Go to https://huggingface.co/spaces/YOUR_USERNAME/www.communityone.com
+# - Settings → Resource configuration → Select "CPU Basic"
+# - Settings → Variables and secrets → Add your API keys
+```
+
+The script will:
+1. ✅ Test Docusaurus build (catches config errors)
+2. ✅ Test Docker build locally (validates deployment)
+3. ✅ Create the Space on Hugging Face
+4. ✅ Push your code
+5. ✅ Trigger automatic build (~10-15 minutes)
+
+**Note**: This project uses **Apache 2.0 license** (updated from MIT in April 2026).
+
+
 ## 💰 Cost Breakdown
 
 ### Required:
@@ -61,7 +88,7 @@ Dockerfile.huggingface       # Multi-stage Docker build
 1. Go to [huggingface.co/new-space](https://huggingface.co/new-space)
 2. Configure:
    - **Space name**: `open-navigator-for-engagement`
-   - **License**: `MIT`
+   - **License**: `Apache 2.0`
    - **Space SDK**: Select `Docker`
    - **Visibility**: Public or Private
 3. Click **Create Space**

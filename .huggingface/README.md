@@ -111,7 +111,7 @@ No personal information or private data is collected or stored.
 
 ## 📝 License
 
-MIT License - Free for commercial and non-commercial use
+Apache License 2.0 - Free for commercial and non-commercial use
 
 ## 🤝 Contributing
 
