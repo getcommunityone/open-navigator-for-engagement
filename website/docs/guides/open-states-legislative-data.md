@@ -13,32 +13,47 @@ Complete guide to using the Open States PostgreSQL dump downloaded from Plural P
 - Python 3.12+ with venv
 - ~15 GB free disk space
 
-**Full Setup (15-20 minutes):**
+**Full Setup (20-30 minutes):**
 
 ```bash
-# 1. Download the PostgreSQL dump (~10 GB, takes 5-10 min)
+# 1. Download BOTH schema and data files (~10 GB total, takes 5-10 min)
 python scripts/bulk_legislative_download.py --postgres --month 2026-04
+
+# This downloads TWO files:
+#   - 2026-04-schema.pgdump  (~50 MB) - creates tables
+#   - 2026-04-public.pgdump  (~10 GB) - contains data
 
 # 2. Create database
 createdb openstates
 
-# 3. Restore dump (takes 5-15 minutes)
+# 3. Restore schema first (creates all tables, ~30 seconds)
 pg_restore \
   --dbname=openstates \
+  --clean \
+  --if-exists \
+  --no-owner \
+  --no-privileges \
+  data/cache/legislation_bulk/postgres/2026-04-schema.pgdump
+
+# 4. Restore data (takes 10-15 minutes for 9.8 GB)
+pg_restore \
+  --dbname=openstates \
+  --data-only \
+  --disable-triggers \
   --no-owner \
   --no-privileges \
   data/cache/legislation_bulk/postgres/2026-04-public.pgdump
 
-# 4. Verify tables loaded
+# 5. Verify tables loaded
 psql openstates -c "\dt" | grep opencivicdata
 
-# 5. Test query
+# 6. Test query
 psql openstates -c "SELECT COUNT(*) FROM opencivicdata_person;"
 
-# 6. Add to .env file
+# 7. Add to .env file
 echo "OPENSTATES_DATABASE_URL=postgresql://postgres:postgres@localhost:5432/openstates" >> .env
 
-# 7. Test Python connection
+# 8. Test Python connection
 python -c "
 from dotenv import load_dotenv
 import os
@@ -61,15 +76,27 @@ You're ready to query legislative data!
 
 ## �📥 Download the Data
 
-The PostgreSQL dump contains complete legislative data for all 50 states + DC + Puerto Rico:
+The PostgreSQL dump requires **TWO separate files** from OpenStates:
+
+1. **Schema file** (~50 MB): Creates all database tables, indexes, and constraints
+2. **Data file** (~10 GB): Contains all the actual legislative data
 
 ```bash
-# Download latest monthly dump (~10 GB)
+# Download both files for the latest month
 python scripts/bulk_legislative_download.py --postgres --month 2026-04
 
-# Output location
-# data/cache/legislation_bulk/postgres/2026-04-public.pgdump
+# Files saved to:
+# data/cache/legislation_bulk/postgres/2026-04-schema.pgdump (schema)
+# data/cache/legislation_bulk/postgres/2026-04-public.pgdump (data)
 ```
+
+**Why two files?**
+
+OpenStates separates schema and data for flexibility:
+- **Schema file**: Small, updates rarely, creates table structure
+- **Data file**: Large, updated monthly, contains all records
+
+This allows you to update data without recreating the schema each time.
 
 **What's Included:**
 - **7,300+ state legislators** with complete profiles
@@ -87,32 +114,63 @@ python scripts/bulk_legislative_download.py --postgres --month 2026-04
 
 **Prerequisites:**
 - PostgreSQL 15+ installed ([Download here](https://www.postgresql.org/download/))
-- Download completed (see above section)
+- Both schema and data files downloaded (see above section)
 
-**Setup Steps:**
+**Setup Steps (Two-Step Restore):**
 
 ```bash
 # 1. Create database
 createdb openstates
 
-# 2. Restore dump (takes 5-15 minutes for 10 GB)
+# 2. Restore SCHEMA first (creates tables, indexes, constraints)
 pg_restore \
   --dbname=openstates \
+  --clean \
+  --if-exists \
+  --no-owner \
+  --no-privileges \
+  data/cache/legislation_bulk/postgres/2026-04-schema.pgdump
+
+# This takes ~30 seconds and creates all tables
+
+# 3. Restore DATA (loads all records into tables)
+pg_restore \
+  --dbname=openstates \
+  --data-only \
+  --disable-triggers \
   --no-owner \
   --no-privileges \
   data/cache/legislation_bulk/postgres/2026-04-public.pgdump
 
-# 3. Verify restoration
-psql openstates -c "\dt"  # List all tables
+# This takes 10-15 minutes for 9.8 GB of data
 
-# 4. Test query
+# 4. Verify restoration
+psql openstates -c "\dt"  # List all tables (should see 30+ opencivicdata_* tables)
+
+# 5. Test query
 psql openstates -c "SELECT COUNT(*) FROM opencivicdata_person;"
+# Expected: ~7,300+ legislators
 ```
 
 **Add to `.env`:**
 ```bash
 OPENSTATES_DATABASE_URL=postgresql://postgres:postgres@localhost:5432/openstates
 ```
+
+**Automated Script:**
+
+For convenience, use the provided setup script that does both steps:
+
+```bash
+./scripts/setup_openstates_db.sh
+```
+
+This script:
+- ✅ Checks that both schema and data files exist
+- ✅ Creates the database if needed
+- ✅ Restores schema first, then data
+- ✅ Verifies the restore was successful
+- ✅ Shows table counts
 
 **Troubleshooting:**
 ```bash
@@ -137,11 +195,24 @@ docker run -d \
   -v $(pwd)/data/cache/legislation_bulk/postgres:/dumps \
   postgres:15
 
-# Restore the dump
+# Restore SCHEMA first
 docker exec -i openstates-db \
   pg_restore \
   --dbname=openstates \
   --username=postgres \
+  --clean \
+  --if-exists \
+  --no-owner \
+  --no-privileges \
+  /dumps/2026-04-schema.pgdump
+
+# Restore DATA second
+docker exec -i openstates-db \
+  pg_restore \
+  --dbname=openstates \
+  --username=postgres \
+  --data-only \
+  --disable-triggers \
   --no-owner \
   --no-privileges \
   /dumps/2026-04-public.pgdump

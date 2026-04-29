@@ -141,7 +141,7 @@ const config: Config = {
           label: 'Developers',
         },
         {
-          to: 'data-sources/citations',
+          to: 'docs/data-sources/citations',
           label: 'Data and Terms',
           position: 'left',
         },
@@ -161,19 +161,19 @@ const config: Config = {
           items: [
             {
               label: 'Getting Started',
-              to: 'intro',
+              to: 'docs/intro',
             },
             {
               label: 'Citations & Data Sources',
-              to: 'data-sources/citations',
+              to: 'docs/data-sources/citations',
             },
             {
               label: 'Data Sources',
-              to: 'data-sources',
+              to: 'docs/data-sources',
             },
             {
               label: 'API Reference',
-              to: 'api',
+              to: 'docs/api',
             },
           ],
         },
@@ -182,7 +182,7 @@ const config: Config = {
           items: [
             {
               label: 'Launch Open Navigator',
-              to: 'dashboard',
+              href: process.env.APP_URL || (process.env.NODE_ENV === 'development' ? 'http://localhost:5173' : 'https://www.communityone.com'),
             },
             {
               label: 'GitHub',
@@ -199,15 +199,15 @@ const config: Config = {
           items: [
             {
               label: 'Privacy Policy',
-              to: 'legal/privacy-policy',
+              to: 'docs/legal/privacy-policy',
             },
             {
               label: 'Terms of Service',
-              to: 'legal/terms-of-service',
+              to: 'docs/legal/terms-of-service',
             },
             {
               label: 'Data Provider Terms',
-              to: 'legal/data-provider-terms',
+              to: 'docs/legal/data-provider-terms',
             },
           ],
         },

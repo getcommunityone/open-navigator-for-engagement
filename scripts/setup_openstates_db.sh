@@ -5,23 +5,17 @@ set -e  # Exit on error
 # Loads the 9.8GB legislative data dump from Open States
 # Contains: 50+ tables with bills, legislators, votes, committees for all 50 states
 
-# ⚠️  KNOWN ISSUE: The PostgreSQL dump from data.openstates.org is DATA-ONLY
-# It doesn't include CREATE TABLE statements (schema definitions).
-# The dump was created with PostgreSQL 17 but contains only COPY commands.
+# ✅ REQUIRES TWO FILES:
+# 1. Schema file: Creates tables, indexes, constraints (~50 MB)
+# 2. Data file: Contains all the actual data (~10 GB)
 #
-# WORKAROUND OPTIONS:
-# 1. Use CSV/JSON bulk downloads instead:
-#    python scripts/bulk_legislative_download.py --year 2024 --format csv
-# 2. Install openstates-core and run Django migrations to create schema first
-# 3. Extract schema from OpenStates GitHub repository
+# Download both with:
+#   python scripts/bulk_legislative_download.py --postgres --month 2026-04
 #
-# This script documents the issue. For production use, consider CSV/JSON format.
+# This script restores schema first, then data.
 
 echo "🏛️  OpenStates Database Setup"
 echo "===================================="
-echo ""
-echo "⚠️  WARNING: PostgreSQL dump is data-only (no schema)"
-echo "This script will fail unless schema is created first."
 echo ""
 
 # Configuration
@@ -30,7 +24,8 @@ DB_USER="postgres"
 DB_PASSWORD="postgres"
 DB_HOST="localhost"
 DB_PORT="5433"  # PostgreSQL 17 container
-DUMP_FILE="data/cache/legislation_bulk/postgres/2026-04-public.pgdump"
+SCHEMA_FILE="data/cache/legislation_bulk/postgres/2026-04-schema.pgdump"
+DATA_FILE="data/cache/legislation_bulk/postgres/2026-04-public.pgdump"
 
 # Colors for output
 RED='\033[0;31m'
@@ -38,18 +33,32 @@ GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 NC='\033[0m' # No Color
 
-# Check if dump file exists
-if [ ! -f "$DUMP_FILE" ]; then
-    echo -e "${RED}❌ Error: Dump file not found at $DUMP_FILE${NC}"
+# Check if schema file exists
+if [ ! -f "$SCHEMA_FILE" ]; then
+    echo -e "${RED}❌ Error: Schema file not found at $SCHEMA_FILE${NC}"
     echo ""
-    echo "Download it first with:"
+    echo "Download both schema and data files with:"
     echo "  python scripts/bulk_legislative_download.py --postgres --month 2026-04"
     exit 1
 fi
 
-echo -e "${GREEN}✓${NC} Found dump file: $DUMP_FILE"
-DUMP_SIZE=$(du -h "$DUMP_FILE" | cut -f1)
-echo -e "  Size: $DUMP_SIZE"
+echo -e "${GREEN}✓${NC} Found schema file: $SCHEMA_FILE"
+SCHEMA_SIZE=$(du -h "$SCHEMA_FILE" | cut -f1)
+echo -e "  Size: $SCHEMA_SIZE"
+echo ""
+
+# Check if data file exists
+if [ ! -f "$DATA_FILE" ]; then
+    echo -e "${RED}❌ Error: Data file not found at $DATA_FILE${NC}"
+    echo ""
+    echo "Download both schema and data files with:"
+    echo "  python scripts/bulk_legislative_download.py --postgres --month 2026-04"
+    exit 1
+fi
+
+echo -e "${GREEN}✓${NC} Found data file: $DATA_FILE"
+DATA_SIZE=$(du -h "$DATA_FILE" | cut -f1)
+echo -e "  Size: $DATA_SIZE"
 echo ""
 
 # Check if PostgreSQL is running
@@ -88,9 +97,8 @@ if ! PGPASSWORD=$DB_PASSWORD psql -h $DB_HOST -p $DB_PORT -U $DB_USER -lqt | cut
     echo ""
 fi
 
-# Restore the dump
-echo "🔄 Restoring OpenStates data dump..."
-echo "   This will take several minutes (9.8GB of data)..."
+# Restore the schema and data
+echo "🔄 Restoring OpenStates database (2-step process)..."
 echo ""
 
 # Use pg_restore with verbose output
@@ -100,7 +108,9 @@ echo ""
 # --no-acl: Don't set access privileges
 export PGPASSWORD=$DB_PASSWORD
 
-echo "Starting restore at $(date)..."
+# Step 1: Restore schema (creates tables, indexes, constraints)
+echo "📋 Step 1/2: Restoring schema (creates all tables)..."
+echo "Started at $(date)..."
 pg_restore \
     -h $DB_HOST \
     -p $DB_PORT \
@@ -111,7 +121,7 @@ pg_restore \
     --no-owner \
     --no-acl \
     --verbose \
-    "$DUMP_FILE" 2>&1 | while read line; do
+    "$SCHEMA_FILE" 2>&1 | while read line; do
         # Only show important messages
         if echo "$line" | grep -qE "^processing|^creating|^ERROR|^WARNING"; then
             echo "  $line"
@@ -119,7 +129,31 @@ pg_restore \
     done
 
 echo ""
-echo "Restore completed at $(date)"
+echo -e "${GREEN}✓${NC} Schema restored at $(date)"
+echo ""
+
+# Step 2: Restore data (this takes longer, ~10-15 minutes)
+echo "📊 Step 2/2: Restoring data (this will take 10-15 minutes for 9.8GB)..."
+echo "Started at $(date)..."
+pg_restore \
+    -h $DB_HOST \
+    -p $DB_PORT \
+    -U $DB_USER \
+    -d $DB_NAME \
+    --data-only \
+    --no-owner \
+    --no-acl \
+    --disable-triggers \
+    --verbose \
+    "$DATA_FILE" 2>&1 | while read line; do
+        # Only show important messages
+        if echo "$line" | grep -qE "^processing|^restoring data|^ERROR|^WARNING"; then
+            echo "  $line"
+        fi
+    done
+
+echo ""
+echo "Data restore completed at $(date)"
 echo ""
 
 # Verify the restore

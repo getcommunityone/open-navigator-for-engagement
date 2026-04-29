@@ -55,6 +55,7 @@ class BulkLegislativeDownloader:
     CSV_BASE = "https://data.openstates.org"
     JSON_BASE = "https://data.openstates.org"
     POSTGRES_BASE = "https://data.openstates.org/postgres/monthly"
+    POSTGRES_SCHEMA_BASE = "https://data.openstates.org/postgres/schema"
     
     # All state codes
     STATES = [
@@ -210,11 +211,15 @@ class BulkLegislativeDownloader:
                 logger.error(f"  Error downloading {session_id}: {e}")
                 return None
     
-    async def download_postgres_dump(self, month: Optional[str] = None) -> Optional[Path]:
+    async def download_postgres_dump(self, month: Optional[str] = None) -> Optional[tuple[Path, Path]]:
         """
         Download PostgreSQL database dump (entire Open States database!).
         
-        This is a LARGE file (~10 GB) but gives you the complete dataset including:
+        Downloads TWO files:
+        1. Schema file: Creates all tables, indexes, constraints (~50 MB)
+        2. Data file: Contains all the actual data (~10 GB)
+        
+        This is a LARGE download (~10 GB) but gives you the complete dataset including:
         - All 7,300+ state legislators with full details
         - All bills and votes from 2020+ across all 50 states
         - Committee memberships and assignments
@@ -224,57 +229,101 @@ class BulkLegislativeDownloader:
             month: Month in YYYY-MM format (default: current month)
             
         Returns:
-            Path to downloaded .pgdump file
+            Tuple of (schema_file_path, data_file_path) or None if failed
         """
         if month is None:
             month = datetime.now().strftime("%Y-%m")
         
-        url = f"{self.POSTGRES_BASE}/{month}-public.pgdump"
-        output_file = self.postgres_dir / f"{month}-public.pgdump"
+        schema_url = f"{self.POSTGRES_SCHEMA_BASE}/{month}-schema.pgdump"
+        data_url = f"{self.POSTGRES_BASE}/{month}-public.pgdump"
         
-        if output_file.exists():
-            logger.info(f"✓ Already downloaded: {output_file.name}")
-            return output_file
+        schema_file = self.postgres_dir / f"{month}-schema.pgdump"
+        data_file = self.postgres_dir / f"{month}-public.pgdump"
         
-        logger.info(f"Downloading PostgreSQL dump for {month}...")
-        logger.warning("This is a LARGE file (~10 GB) - may take a while!")
+        logger.info(f"Downloading OpenStates PostgreSQL dump for {month}...")
+        logger.info("This requires TWO files:")
+        logger.info("  1. Schema file: ~50 MB (creates tables)")
+        logger.info("  2. Data file: ~10 GB (contains all data)")
+        logger.info("")
+        
+        # Download schema file first
+        logger.info("📥 Step 1/2: Downloading schema file...")
+        if schema_file.exists():
+            logger.info(f"  ✓ Already downloaded: {schema_file.name}")
+        else:
+            async with httpx.AsyncClient(timeout=600.0, follow_redirects=True) as client:
+                try:
+                    async with client.stream('GET', schema_url) as response:
+                        if response.status_code == 404:
+                            logger.error(f"Schema file not available for {month}")
+                            logger.info("Try a different month or check https://data.openstates.org/postgres/schema/")
+                            return None
+                        
+                        response.raise_for_status()
+                        total_size = int(response.headers.get('content-length', 0))
+                        
+                        with open(schema_file, 'wb') as f:
+                            downloaded = 0
+                            async for chunk in response.aiter_bytes(chunk_size=8192):
+                                f.write(chunk)
+                                downloaded += len(chunk)
+                        
+                        logger.info(f"  ✅ Schema saved: {schema_file.name} ({downloaded / 1024 / 1024:.1f} MB)")
+                
+                except Exception as e:
+                    logger.error(f"Error downloading schema file: {e}")
+                    return None
+        
+        # Download data file
+        logger.info("\n📥 Step 2/2: Downloading data file...")
+        logger.warning("This is LARGE (~10 GB) and may take a while!")
         logger.info("Database includes:")
         logger.info("  - 7,300+ state legislators")
         logger.info("  - All bills & votes (2020+)")
         logger.info("  - Committee data")
         logger.info("  - Full bill text")
+        logger.info("")
         
-        async with httpx.AsyncClient(timeout=3600.0, follow_redirects=True) as client:
-            try:
-                # Stream download for large files
-                async with client.stream('GET', url) as response:
-                    if response.status_code == 404:
-                        logger.error(f"Dump not available for {month}")
-                        logger.info("Try a different month or check https://data.openstates.org/postgres/monthly/")
-                        return None
-                    
-                    response.raise_for_status()
-                    
-                    total_size = int(response.headers.get('content-length', 0))
-                    
-                    with open(output_file, 'wb') as f:
-                        downloaded = 0
-                        async for chunk in response.aiter_bytes(chunk_size=8192):
-                            f.write(chunk)
-                            downloaded += len(chunk)
-                            
-                            if total_size > 0:
-                                pct = (downloaded / total_size) * 100
-                                if downloaded % (10 * 1024 * 1024) == 0:  # Log every 10MB
-                                    logger.info(f"  Progress: {pct:.1f}% ({downloaded / 1024 / 1024:.1f} MB)")
-                    
-                    logger.info(f"  ✅ Saved to {output_file.name} ({downloaded / 1024 / 1024:.1f} MB)")
-                    
-                    return output_file
-                    
-            except Exception as e:
-                logger.error(f"Error downloading PostgreSQL dump: {e}")
-                return None
+        if data_file.exists():
+            logger.info(f"  ✓ Already downloaded: {data_file.name}")
+        else:
+            async with httpx.AsyncClient(timeout=3600.0, follow_redirects=True) as client:
+                try:
+                    async with client.stream('GET', data_url) as response:
+                        if response.status_code == 404:
+                            logger.error(f"Data dump not available for {month}")
+                            logger.info("Try a different month or check https://data.openstates.org/postgres/monthly/")
+                            return None
+                        
+                        response.raise_for_status()
+                        total_size = int(response.headers.get('content-length', 0))
+                        
+                        with open(data_file, 'wb') as f:
+                            downloaded = 0
+                            async for chunk in response.aiter_bytes(chunk_size=8192):
+                                f.write(chunk)
+                                downloaded += len(chunk)
+                                
+                                if total_size > 0:
+                                    pct = (downloaded / total_size) * 100
+                                    if downloaded % (50 * 1024 * 1024) == 0:  # Log every 50MB
+                                        logger.info(f"  Progress: {pct:.1f}% ({downloaded / 1024 / 1024:.1f} MB)")
+                        
+                        logger.info(f"  ✅ Data saved: {data_file.name} ({downloaded / 1024 / 1024:.1f} MB)")
+                
+                except Exception as e:
+                    logger.error(f"Error downloading data file: {e}")
+                    if schema_file.exists():
+                        logger.info(f"Schema file is available at: {schema_file}")
+                    return None
+        
+        logger.info("\n✅ Both files downloaded successfully!")
+        logger.info(f"  Schema: {schema_file}")
+        logger.info(f"  Data:   {data_file}")
+        logger.info("\nNext step: Load into PostgreSQL with:")
+        logger.info(f"  ./scripts/setup_openstates_db.sh")
+        
+        return (schema_file, data_file)
     
     async def download_legislators(
         self,
