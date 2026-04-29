@@ -9,6 +9,8 @@ tags: [data-model, civic-tech, community]
 
 This week marks a significant milestone for Open Navigator for Engagement as we've dramatically expanded our data model to cover civic technology projects, hackathons, and community-driven governance frameworks.
 
+{/* truncate */}
+
 ## 🎯 What We Accomplished
 
 ### 1. Added 8 New Civic Tech Entities

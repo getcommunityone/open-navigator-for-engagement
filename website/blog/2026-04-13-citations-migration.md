@@ -9,6 +9,8 @@ tags: [citations, documentation, data-model]
 
 This week we completed a major documentation overhaul - migrating all citations from scattered markdown files into a comprehensive, properly attributed documentation hub with BibTeX references and license information.
 
+{/* truncate */}
+
 ## ✅ What We Accomplished
 
 ### 1. Comprehensive Citations Page

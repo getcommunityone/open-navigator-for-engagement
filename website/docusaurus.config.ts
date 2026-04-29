@@ -169,11 +169,11 @@ const config: Config = {
             },
             {
               label: 'Data Sources',
-              to: 'docs/data-sources',
+              to: 'docs/data-sources/overview',
             },
             {
-              label: 'API Reference',
-              to: 'docs/api',
+              label: 'For Developers',
+              to: 'docs/for-developers',
             },
           ],
         },

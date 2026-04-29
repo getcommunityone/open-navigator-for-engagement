@@ -1,6 +1,7 @@
 ---
 sidebar_position: 100
 sidebar_label: Legal & Compliance
+slug: /legal-compliance
 ---
 
 # Legal Compliance & Data Use Policies

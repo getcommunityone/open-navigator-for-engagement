@@ -9,6 +9,8 @@ tags: [documentation, deployment]
 
 This week we tackled critical UX issues affecting the documentation site - fixing routing conflicts, restoring the homepage with logo, and updating all navigation links to work correctly.
 
+{/* truncate */}
+
 ## 🔧 What We Fixed
 
 ### 1. Homepage "Page Not Found" Error
