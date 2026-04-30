@@ -76,10 +76,16 @@ def classify_bill_type(title: str, classification: list, topic: Optional[str] = 
         # CRITICAL: Must check these BEFORE "mandate"/"require" to avoid misclassification
         # e.g., "prohibit fluoride" should be "removal", not "mandate"
         if any(word in title_lower for word in [
-            'prohibit', 'prohibition', 'ban', 'banning',
-            'discontinue', 'cease', 'eliminate',
+            'prohibit', 'prohibition', 'prohibited', 'prohibiting',
+            'ban', 'banning', 'banned',
+            'discontinue', 'discontinuation',
+            'cease', 'ceasing',
+            'eliminate', 'elimination',
             'removal', 'remove', 'removing',
-            'prevent', 'preventing'
+            'prevent', 'preventing',
+            'repeal', 'repealing', 'repealed',
+            'optional', 'opt-out', 'opt out',
+            'fluoride-free', 'fluoride free'
         ]):
             # But check if it's "prohibit removal" (double negative = pro-fluoride)
             if any(phrase in title_lower for phrase in ['prohibit removal', 'prevent removal', 'ban removal']):

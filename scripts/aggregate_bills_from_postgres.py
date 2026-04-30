@@ -68,10 +68,16 @@ def classify_bill_type(title: str, topic: str) -> str:
     if 'fluoride' in topic_lower or 'fluoride' in title_lower:
         # FIRST: Check for REMOVAL/BAN/PROHIBITION (negative sentiment)
         if any(word in title_lower for word in [
-            'prohibit', 'prohibition', 'ban', 'banning',
-            'discontinue', 'cease', 'eliminate',
+            'prohibit', 'prohibition', 'prohibited', 'prohibiting',
+            'ban', 'banning', 'banned',
+            'discontinue', 'discontinuation',
+            'cease', 'ceasing',
+            'eliminate', 'elimination',
             'removal', 'remove', 'removing',
-            'prevent', 'preventing'
+            'prevent', 'preventing',
+            'repeal', 'repealing', 'repealed',
+            'optional', 'opt-out', 'opt out',
+            'fluoride-free', 'fluoride free'
         ]):
             # But check if it's "prohibit removal" (double negative = pro-fluoride)
             if any(phrase in title_lower for phrase in ['prohibit removal', 'prevent removal', 'ban removal']):
