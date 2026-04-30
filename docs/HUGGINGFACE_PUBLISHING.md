@@ -47,7 +47,7 @@ Add to your `.env` file:
 # HuggingFace Configuration
 HUGGINGFACE_TOKEN=hf_your_write_token_here
 HF_ORGANIZATION=CommunityOne  # Optional: your org name
-HF_DATASET_PREFIX=oral-health-policy-pulse
+HF_DATASET_PREFIX=open-navigator
 ```
 
 ### 3. Install Dependencies

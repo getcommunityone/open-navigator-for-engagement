@@ -229,7 +229,7 @@ npm install --save-dev gh-pages
 
 # Add to package.json:
 {
-  "homepage": "https://yourusername.github.io/oral-health-policy-pulse",
+  "homepage": "https://yourusername.github.io/open-navigator",
   "scripts": {
     "predeploy": "npm run build",
     "deploy": "gh-pages -d build"

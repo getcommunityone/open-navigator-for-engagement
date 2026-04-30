@@ -56,7 +56,7 @@ Add to `.env`:
 ```bash
 HUGGINGFACE_TOKEN=hf_your_write_token_here
 HF_ORGANIZATION=CommunityOne
-HF_DATASET_PREFIX=oral-health-policy-pulse
+HF_DATASET_PREFIX=open-navigator
 ```
 
 ### 3. Install Dependencies

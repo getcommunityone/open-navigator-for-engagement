@@ -77,7 +77,7 @@ The Oral Health Policy Pulse application has been refactored as a **React + Fast
 
 ```bash
 # Clone and setup
-cd oral-health-policy-pulse
+cd open-navigator
 ./scripts/setup-local.sh
 ```
 
@@ -146,7 +146,7 @@ This script will:
 
 Once deployed, access at:
 ```
-https://your-workspace.cloud.databricks.com/apps/oral-health-policy-pulse
+https://your-workspace.cloud.databricks.com/apps/open-navigator
 ```
 
 ---
@@ -260,13 +260,13 @@ Once deployed, access interactive API docs at:
 ### View App Logs
 
 ```bash
-databricks apps logs oral-health-policy-pulse
+databricks apps logs open-navigator
 ```
 
 ### Check App Status
 
 ```bash
-databricks apps get oral-health-policy-pulse
+databricks apps get open-navigator
 ```
 
 ### Monitor Model Serving
@@ -311,7 +311,7 @@ databricks secrets put --scope oral-health-app --key openai_key --string-value "
 
 **Check logs:**
 ```bash
-databricks apps logs oral-health-policy-pulse --follow
+databricks apps logs open-navigator --follow
 ```
 
 ---

@@ -24,7 +24,7 @@ const config: Config = {
   // GitHub pages deployment config.
   // If you aren't using GitHub pages, you don't need these.
   organizationName: 'getcommunityone', // Usually your GitHub org/user name.
-  projectName: 'oral-health-policy-pulse', // Usually your repo name.
+  projectName: 'open-navigator', // Usually your repo name.
 
   onBrokenLinks: 'warn',
 

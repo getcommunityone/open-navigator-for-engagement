@@ -22,7 +22,7 @@ export OPENAI_API_KEY=sk-...
 ./scripts/deploy-databricks-app.sh
 
 # 3. Access your app
-# https://your-workspace.cloud.databricks.com/apps/oral-health-policy-pulse
+# https://your-workspace.cloud.databricks.com/apps/open-navigator
 ```
 
 That's it! 🎉
@@ -66,7 +66,7 @@ python scripts/test-app.py
 ## 📁 Project Structure
 
 ```
-oral-health-policy-pulse/
+open-navigator/
 ├── frontend/                 # React app
 │   ├── src/
 │   │   ├── pages/           # Dashboard, Heatmap, etc.
@@ -97,7 +97,7 @@ oral-health-policy-pulse/
 
 ### View App Logs
 ```bash
-databricks apps logs oral-health-policy-pulse --follow
+databricks apps logs open-navigator --follow
 ```
 
 ### Update Frontend
@@ -193,7 +193,7 @@ Check that backend is running on :8000 and frontend proxies to it.
 
 ## 🆘 Need Help?
 
-1. Check logs: `databricks apps logs oral-health-policy-pulse`
+1. Check logs: `databricks apps logs open-navigator`
 2. Review docs in the `/docs` folder
 3. Open an issue on GitHub
 
@@ -203,7 +203,7 @@ Check that backend is running on :8000 and frontend proxies to it.
 
 - Use `npm run dev` for instant hot reload during UI development
 - Deploy often - deployment takes ~2 minutes
-- Monitor with `databricks apps get oral-health-policy-pulse`
+- Monitor with `databricks apps get open-navigator`
 - Scale to zero saves costs when idle
 - Use Chrome DevTools to debug React components
 
