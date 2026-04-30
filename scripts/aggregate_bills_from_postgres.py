@@ -272,6 +272,10 @@ def aggregate_state_bills(conn, state: str, topic: str) -> dict:
             varnish_pattern = r'varnish|sealant|dental.*coverage|medicaid.*dental|medical assistance.*dental'
             df = df[~df['title'].str.lower().str.contains(varnish_pattern, na=False, regex=True)]
             
+            # Exclude firefighting foam bills (industrial chemicals, not water)
+            foam_pattern = r'fire.*foam|firefighting.*foam|foam.*fluorinated|fire.*marshal.*fluorinated'
+            df = df[~df['title'].str.lower().str.contains(foam_pattern, na=False, regex=True)]
+            
             if len(df) == 0:
                 return None
         
