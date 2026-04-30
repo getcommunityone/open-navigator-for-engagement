@@ -124,8 +124,20 @@ export default function UnifiedSearch() {
   const [expandedJurisdictions, setExpandedJurisdictions] = useState<Set<number>>(new Set())
   const [expandedOrganizations, setExpandedOrganizations] = useState<Set<string>>(new Set())
   
+  // Debounced query for autocomplete
+  const [debouncedQuery, setDebouncedQuery] = useState(query)
+  
   const searchInputRef = useRef<HTMLInputElement>(null)
   const { user, isAuthenticated, login, logout, isLoading } = useAuth()
+
+  // Debounce the query for autocomplete (300ms delay)
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedQuery(query)
+    }, 300)
+    
+    return () => clearTimeout(timer)
+  }, [query])
 
   // Initialize from URL parameters on mount
   useEffect(() => {
@@ -181,14 +193,14 @@ export default function UnifiedSearch() {
     }
   }, [searchParams, effectiveState])
 
-  // Preview/autocomplete query for search suggestions
+  // Preview/autocomplete query for search suggestions (uses debounced query)
   const { data: previewResults } = useQuery<SearchResponse>({
-    queryKey: ['search-preview', query, effectiveState],
+    queryKey: ['search-preview', debouncedQuery, effectiveState],
     queryFn: async () => {
-      if (!query || query.length < 2) return null
+      if (!debouncedQuery || debouncedQuery.length < 2) return null
       
       const params: any = {
-        q: query,
+        q: debouncedQuery,
         types: 'causes,contacts,organizations',
         limit: 3
       }
@@ -201,8 +213,8 @@ export default function UnifiedSearch() {
       const response = await api.get('/search/', { params })
       return response.data
     },
-    enabled: query.length >= 2 && showSuggestions,
-    staleTime: 1000 // Cache for 1 second to avoid excessive requests
+    enabled: debouncedQuery.length >= 2 && showSuggestions,
+    staleTime: 5000 // Cache for 5 seconds to avoid excessive requests
   })
 
   // Main search results
