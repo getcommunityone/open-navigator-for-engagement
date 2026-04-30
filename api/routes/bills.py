@@ -5,13 +5,13 @@ from fastapi import APIRouter, Query, HTTPException
 from fastapi.responses import JSONResponse
 from typing import Optional, List, Dict
 import duckdb
-import psycopg2
 import pandas as pd
 from pathlib import Path
 from loguru import logger
 import re
 import os
 import sys
+import traceback
 
 from api.errors import ErrorDetail, parse_error
 from api.routes.search import load_parquet_cached
@@ -719,7 +719,7 @@ async def get_bill_map_data_on_demand(
 @router.get("/{bill_id}")
 async def get_bill_details(bill_id: str):
     """
-    Get detailed information about a specific bill.
+    Get detailed information about a specific bill from gold parquet files.
     
     Args:
         bill_id: Bill identifier in format {state}-{bill_number} (e.g., "LA-SB 4")
@@ -736,110 +736,104 @@ async def get_bill_details(bill_id: str):
         state = parts[0].upper()
         bill_number = parts[1]
         
-        # Connect to OpenStates postgres database
-        db_url = os.getenv('OPENSTATES_DATABASE_URL', 'postgresql://postgres:postgres@localhost:5433/openstates')
+        # Build file paths for bills data from gold layer
+        bills_file = GOLD_DIR / "states" / state / "bills_bills.parquet"
+        actions_file = GOLD_DIR / "states" / state / "bills_bill_actions.parquet"
+        sponsors_file = GOLD_DIR / "states" / state / "bills_bill_sponsorships.parquet"
+        
+        # Get data sources (local or remote HuggingFace URL)
+        bills_source = get_data_source(bills_file, use_remote=IS_HF_SPACES)
+        actions_source = get_data_source(actions_file, use_remote=IS_HF_SPACES)
+        sponsors_source = get_data_source(sponsors_file, use_remote=IS_HF_SPACES)
+        
+        # Connect to DuckDB for querying parquet files
+        conn = duckdb.connect()
         
         try:
-            conn = psycopg2.connect(db_url)
-            cursor = conn.cursor()
-            
             # Query for the specific bill
-            query = """
+            bill_query = """
                 SELECT 
-                    b.identifier as bill_number,
-                    b.title,
-                    b.classification,
-                    b.latest_action_description,
-                    b.latest_action_date,
-                    b.created_at as first_action_date,
-                    s.identifier as session,
-                    s.name as session_name,
-                    j.name as jurisdiction,
-                    b.openstates_url,
-                    SUBSTRING(j.id FROM 'ocd-jurisdiction/country:us/state:([a-z]{2})') as state_code
-                FROM opencivicdata_bill b
-                JOIN opencivicdata_legislativesession s ON b.legislative_session_id = s.id
-                JOIN opencivicdata_jurisdiction j ON s.jurisdiction_id = j.id
-                WHERE j.id LIKE %s
-                    AND b.identifier = %s
+                    bill_id,
+                    bill_number,
+                    title,
+                    classification,
+                    latest_action_description,
+                    latest_action_date,
+                    first_action_date,
+                    session,
+                    session_name,
+                    jurisdiction_name,
+                    openstates_url
+                FROM read_parquet(?)
+                WHERE bill_number = ?
                 LIMIT 1
             """
             
-            jurisdiction_pattern = f'ocd-jurisdiction/country:us/state:{state.lower()}/%'
-            cursor.execute(query, (jurisdiction_pattern, bill_number))
-            row = cursor.fetchone()
+            result = conn.execute(bill_query, [bills_source, bill_number]).fetchone()
             
-            if not row:
-                cursor.close()
+            if not result:
                 conn.close()
                 raise HTTPException(status_code=404, detail=f"Bill {bill_number} not found in {state}")
             
-            # Parse result
+            # Parse bill data
             bill_data = {
-                "bill_id": bill_id,
-                "bill_number": row[0],
-                "title": row[1],
-                "classification": row[2] if row[2] else [],
-                "latest_action": row[3],
-                "latest_action_date": str(row[4]) if row[4] else None,
-                "first_action_date": str(row[5]) if row[5] else None,
-                "session": row[6],
-                "session_name": row[7],
-                "jurisdiction": row[8],
-                "openstates_url": row[9],
+                "bill_id": result[0] if result[0] else bill_id,
+                "bill_number": result[1],
+                "title": result[2],
+                "classification": result[3] if result[3] else [],
+                "latest_action": result[4],
+                "latest_action_date": result[5],
+                "first_action_date": result[6],
+                "session": result[7],
+                "session_name": result[8],
+                "jurisdiction": result[9],
+                "openstates_url": result[10],
                 "state": state,
             }
             
-            # Get sponsors
-            sponsor_query = """
-                SELECT p.name, bs.primary_sponsor, bs.classification
-                FROM opencivicdata_billsponsorship bs
-                JOIN opencivicdata_person p ON bs.person_id = p.id
-                WHERE bs.bill_id = (
-                    SELECT b.id FROM opencivicdata_bill b
-                    JOIN opencivicdata_legislativesession s ON b.legislative_session_id = s.id
-                    JOIN opencivicdata_jurisdiction j ON s.jurisdiction_id = j.id
-                    WHERE j.id LIKE %s AND b.identifier = %s
-                )
-                ORDER BY bs.primary_sponsor DESC
-            """
-            cursor.execute(sponsor_query, (jurisdiction_pattern, bill_number))
-            sponsors = cursor.fetchall()
+            # Get sponsors if available
+            try:
+                sponsor_query = """
+                    SELECT name, primary_sponsor, classification
+                    FROM read_parquet(?)
+                    WHERE bill_id = ?
+                    ORDER BY primary_sponsor DESC
+                """
+                sponsor_rows = conn.execute(sponsor_query, [sponsors_source, bill_data["bill_id"]]).fetchall()
+                
+                bill_data["sponsors"] = [
+                    {"name": s[0], "primary": bool(s[1]), "classification": s[2]}
+                    for s in sponsor_rows
+                ]
+            except Exception as e:
+                logger.warning(f"Could not load sponsors for {bill_id}: {e}")
+                bill_data["sponsors"] = []
             
-            bill_data["sponsors"] = [
-                {"name": s[0], "primary": s[1], "classification": s[2]}
-                for s in sponsors
-            ]
+            # Get actions if available
+            try:
+                actions_query = """
+                    SELECT description, date, classification
+                    FROM read_parquet(?)
+                    WHERE bill_id = ?
+                    ORDER BY date DESC
+                    LIMIT 10
+                """
+                action_rows = conn.execute(actions_query, [actions_source, bill_data["bill_id"]]).fetchall()
+                
+                bill_data["actions"] = [
+                    {"description": a[0], "date": a[1], "classification": a[2]}
+                    for a in action_rows
+                ]
+            except Exception as e:
+                logger.warning(f"Could not load actions for {bill_id}: {e}")
+                bill_data["actions"] = []
             
-            # Get recent actions (last 5)
-            actions_query = """
-                SELECT description, date, classification
-                FROM opencivicdata_billaction
-                WHERE bill_id = (
-                    SELECT b.id FROM opencivicdata_bill b
-                    JOIN opencivicdata_legislativesession s ON b.legislative_session_id = s.id
-                    JOIN opencivicdata_jurisdiction j ON s.jurisdiction_id = j.id
-                    WHERE j.id LIKE %s AND b.identifier = %s
-                )
-                ORDER BY date DESC
-                LIMIT 10
-            """
-            cursor.execute(actions_query, (jurisdiction_pattern, bill_number))
-            actions = cursor.fetchall()
-            
-            bill_data["actions"] = [
-                {"description": a[0], "date": str(a[1]) if a[1] else None, "classification": a[2]}
-                for a in actions
-            ]
-            
-            cursor.close()
             conn.close()
-            
             return bill_data
             
-        except psycopg2.Error as e:
-            logger.error(f"Database error: {e}")
-            raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
+        except Exception as e:
+            conn.close()
+            raise
         
     except HTTPException:
         raise
