@@ -209,6 +209,30 @@ echo "🌟 Creating Hugging Face Space (if it doesn't exist)..."
 hf repo create --type space --space-sdk docker "${HF_USERNAME}/${SPACE_NAME}" --exist-ok || true
 echo ""
 
+# Update cache-bust timestamps to force fresh build
+echo "🔄 Updating cache-bust timestamps to force fresh build..."
+TIMESTAMP=$(date +%Y-%m-%d-%H-%M)
+COMMIT_HASH=$(git rev-parse --short HEAD)
+CACHE_BUST="${TIMESTAMP}-${COMMIT_HASH}"
+
+echo "  Timestamp: $TIMESTAMP"
+echo "  Commit: $COMMIT_HASH"
+echo "  Cache-bust: $CACHE_BUST"
+
+# Update Docusaurus cache-bust
+sed -i.bak "s/ARG CACHE_BUST=.*/ARG CACHE_BUST=${CACHE_BUST}/" Dockerfile
+sed -i.bak "s/echo \"Cache bust: .*/echo \"Cache bust: ${CACHE_BUST}\" \&\&/" Dockerfile
+
+# Update Frontend cache-bust  
+sed -i.bak "s/ARG CACHE_BUST_FRONTEND=.*/ARG CACHE_BUST_FRONTEND=${CACHE_BUST}/" Dockerfile
+sed -i.bak "s/echo \"Frontend build cache bust: .*/echo \"Frontend build cache bust: \$CACHE_BUST_FRONTEND\" \&\& npm run build/" Dockerfile
+
+# Remove backup files
+rm -f Dockerfile.bak
+
+echo "✅ Cache-bust timestamps updated to: $CACHE_BUST"
+echo ""
+
 # Create deployment branch
 echo "🔧 Preparing deployment branch..."
 # Make sure we're on main and it's up to date
