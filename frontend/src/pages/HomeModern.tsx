@@ -89,10 +89,13 @@ export default function HomeModern() {
   }
 
   // Fetch all stats at once for all scopes (city, county, state) - more efficient
-  const { data: allStatsData } = useQuery({
+  const { data: allStatsData, isLoading: statsLoading } = useQuery({
     queryKey: ['platform-stats-all', location?.state, location?.county, location?.city],
     queryFn: async () => {
-      if (!location) return null;
+      if (!location || !location.state) {
+        console.log('📊 [HomeModern] No location set, skipping stats fetch');
+        return null;
+      }
       
       console.log('📊 [HomeModern] Fetching stats for location:', location);
       
@@ -122,18 +125,16 @@ export default function HomeModern() {
                 return null;
               })
           : Promise.resolve(null),
-        // State stats
-        location.state 
-          ? api.get('/stats', { params: { state: location.state } })
-              .then(res => {
-                console.log('📊 [HomeModern] State stats:', res.data.data);
-                return res.data.data;
-              })
-              .catch(err => {
-                console.error('❌ [HomeModern] State stats error:', err);
-                return null;
-              })
-          : Promise.resolve(null)
+        // State stats - ALWAYS fetch if we have a state
+        api.get('/stats', { params: { state: location.state } })
+          .then(res => {
+            console.log('📊 [HomeModern] State stats:', res.data.data);
+            return res.data.data;
+          })
+          .catch(err => {
+            console.error('❌ [HomeModern] State stats error:', err);
+            return null;
+          })
       ]);
       
       const result = {
@@ -146,7 +147,7 @@ export default function HomeModern() {
       console.log('📊 [HomeModern] All stats loaded:', result);
       return result;
     },
-    enabled: !!location,
+    enabled: !!(location && location.state), // Only fetch when we have at least a state
     staleTime: 1000 * 60 * 60, // Cache for 1 hour
     refetchOnWindowFocus: false
   });
@@ -154,7 +155,7 @@ export default function HomeModern() {
   // Get the stats for the currently selected scope
   const statsData = allStatsData?.[searchScope as keyof typeof allStatsData];
   
-  console.log('📊 [HomeModern] Current scope:', searchScope, 'Stats data:', statsData);
+  console.log('📊 [HomeModern] Current scope:', searchScope, 'Stats data:', statsData, 'Loading:', statsLoading);
 
   // Live search preview (type-ahead with actual results from API)
   const { data: previewResults, isLoading: previewLoading, error: previewError } = useQuery({

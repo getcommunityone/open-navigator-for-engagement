@@ -1,8 +1,7 @@
-import { useState, useRef, useEffect, Fragment } from 'react'
-import { useNavigate, useSearchParams, Link } from 'react-router-dom'
+import { useState, useRef, useEffect } from 'react'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import api from '../lib/api'
-import { Menu, Transition } from '@headlessui/react'
 import { 
   MagnifyingGlassIcon, 
   UserIcon, 
