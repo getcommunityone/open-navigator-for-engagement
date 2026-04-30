@@ -372,7 +372,7 @@ export default function USMap({ stateData, onStateClick, legend }: USMapProps) {
                                   className="block text-xs hover:bg-gray-700/50 rounded px-2 py-1 transition-colors group"
                                 >
                                   <div className="flex items-center justify-between gap-2">
-                                    <span className="font-mono text-blue-300 group-hover:text-blue-200">
+                                    <span className="font-mono text-blue-300 group-hover:text-blue-200 font-semibold">
                                       {bill.bill_number}
                                     </span>
                                     <span className={`
@@ -381,12 +381,12 @@ export default function USMap({ stateData, onStateClick, legend }: USMapProps) {
                                         bill.status === 'failed' ? 'bg-red-500/20 text-red-300' : 
                                         'bg-yellow-500/20 text-yellow-300'}
                                     `}>
-                                      {bill.status === 'enacted' ? '✓' : 
-                                       bill.status === 'failed' ? '✗' : '⏳'}
+                                      {bill.status === 'enacted' ? '✓ Enacted' : 
+                                       bill.status === 'failed' ? '✗ Failed' : '⏳ Pending'}
                                     </span>
                                   </div>
-                                  <div className="text-gray-300 line-clamp-1 text-[11px] mt-0.5">
-                                    {bill.title}
+                                  <div className="text-gray-400 text-[10px] mt-0.5">
+                                    {bill.action || 'Click for details'}
                                   </div>
                                 </Link>
                               ))}

@@ -15,9 +15,11 @@ interface BillDetail {
   latest_action: string
   jurisdiction: string
   state: string
+  openstates_url?: string
   sponsors?: Array<{
     name: string
     primary: boolean
+    classification?: string
   }>
   actions?: Array<{
     date: string
@@ -58,13 +60,21 @@ export default function BillDetail() {
   }
 
   if (error || !bill) {
+    const errorMessage = error instanceof Error 
+      ? error.message 
+      : (error as any)?.response?.data?.detail 
+      ? (error as any).response.data.detail 
+      : (error as any)?.message 
+      ? (error as any).message 
+      : 'Unable to load bill details'
+    
     return (
       <div className="min-h-screen bg-gray-50 py-8">
         <div className="max-w-4xl mx-auto px-4">
           <div className="bg-red-50 border border-red-200 rounded-lg p-8 text-center">
             <div className="text-red-600 text-5xl mb-4">⚠️</div>
             <h3 className="text-lg font-semibold text-red-900 mb-2">Bill not found</h3>
-            <p className="text-red-700 mb-4">{error ? String(error) : 'Unable to load bill details'}</p>
+            <p className="text-red-700 mb-4">{errorMessage}</p>
             <Link
               to="/policy-map"
               className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
@@ -212,24 +222,32 @@ export default function BillDetail() {
         )}
 
         {/* Source Links */}
-        {bill.sources && bill.sources.length > 0 && (
-          <div className="bg-white rounded-lg shadow-sm p-6">
-            <h2 className="text-lg font-bold text-gray-900 mb-4">Official Sources</h2>
-            <div className="space-y-2">
-              {bill.sources.map((source, idx) => (
-                <a
-                  key={idx}
-                  href={source.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="block text-blue-600 hover:text-blue-700 text-sm hover:underline"
-                >
-                  {source.note || 'View on Legislature Website'} →
-                </a>
-              ))}
-            </div>
+        <div className="bg-white rounded-lg shadow-sm p-6">
+          <h2 className="text-lg font-bold text-gray-900 mb-4">Official Sources</h2>
+          <div className="space-y-2">
+            {bill.openstates_url && (
+              <a
+                href={bill.openstates_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="block text-blue-600 hover:text-blue-700 text-sm hover:underline"
+              >
+                View on OpenStates →
+              </a>
+            )}
+            {bill.sources && bill.sources.map((source: any, idx: number) => (
+              <a
+                key={idx}
+                href={source.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="block text-blue-600 hover:text-blue-700 text-sm hover:underline"
+              >
+                {source.note || 'View on Legislature Website'} →
+              </a>
+            ))}
           </div>
-        )}
+        </div>
       </div>
     </div>
   )

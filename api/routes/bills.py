@@ -5,6 +5,7 @@ from fastapi import APIRouter, Query, HTTPException
 from fastapi.responses import JSONResponse
 from typing import Optional, List, Dict
 import duckdb
+import psycopg2
 import pandas as pd
 from pathlib import Path
 from loguru import logger
@@ -735,50 +736,114 @@ async def get_bill_details(bill_id: str):
         state = parts[0].upper()
         bill_number = parts[1]
         
-        # Load bills data for the state
-        bills_file = GOLD_DIR / "states" / state.lower() / "bills_bills.parquet"
+        # Connect to OpenStates postgres database
+        db_url = os.getenv('OPENSTATES_DATABASE_URL', 'postgresql://postgres:postgres@localhost:5433/openstates')
         
-        if not bills_file.exists() and not IS_HF_SPACES:
-            raise HTTPException(status_code=404, detail=f"No bill data found for state {state}")
-        
-        # Get data source (local or remote)
-        data_source = get_data_source(bills_file, use_remote=IS_HF_SPACES)
-        
-        # Query for the specific bill
-        conn = duckdb.connect()
-        query = f"""
-            SELECT *
-            FROM read_parquet('{data_source}')
-            WHERE bill_number = '{bill_number}'
-            LIMIT 1
-        """
-        
-        df = conn.execute(query).fetchdf()
-        conn.close()
-        
-        if len(df) == 0:
-            raise HTTPException(status_code=404, detail=f"Bill {bill_number} not found in {state}")
-        
-        # Convert to dict
-        bill = df.iloc[0].to_dict()
-        
-        # Clean up the response
-        return {
-            "bill_id": bill_id,
-            "bill_number": bill.get("bill_number"),
-            "title": bill.get("title"),
-            "classification": bill.get("classification", []),
-            "session": bill.get("session"),
-            "session_name": bill.get("session_name"),
-            "first_action_date": str(bill.get("first_action_date")) if bill.get("first_action_date") else None,
-            "latest_action_date": str(bill.get("latest_action_date")) if bill.get("latest_action_date") else None,
-            "latest_action": bill.get("latest_action_description"),
-            "jurisdiction": bill.get("jurisdiction"),
-            "state": state,
-        }
+        try:
+            conn = psycopg2.connect(db_url)
+            cursor = conn.cursor()
+            
+            # Query for the specific bill
+            query = """
+                SELECT 
+                    b.identifier as bill_number,
+                    b.title,
+                    b.classification,
+                    b.latest_action_description,
+                    b.latest_action_date,
+                    b.created_at as first_action_date,
+                    s.identifier as session,
+                    s.name as session_name,
+                    j.name as jurisdiction,
+                    b.openstates_url,
+                    SUBSTRING(j.id FROM 'ocd-jurisdiction/country:us/state:([a-z]{2})') as state_code
+                FROM opencivicdata_bill b
+                JOIN opencivicdata_legislativesession s ON b.legislative_session_id = s.id
+                JOIN opencivicdata_jurisdiction j ON s.jurisdiction_id = j.id
+                WHERE j.id LIKE %s
+                    AND b.identifier = %s
+                LIMIT 1
+            """
+            
+            jurisdiction_pattern = f'ocd-jurisdiction/country:us/state:{state.lower()}/%'
+            cursor.execute(query, (jurisdiction_pattern, bill_number))
+            row = cursor.fetchone()
+            
+            if not row:
+                cursor.close()
+                conn.close()
+                raise HTTPException(status_code=404, detail=f"Bill {bill_number} not found in {state}")
+            
+            # Parse result
+            bill_data = {
+                "bill_id": bill_id,
+                "bill_number": row[0],
+                "title": row[1],
+                "classification": row[2] if row[2] else [],
+                "latest_action": row[3],
+                "latest_action_date": str(row[4]) if row[4] else None,
+                "first_action_date": str(row[5]) if row[5] else None,
+                "session": row[6],
+                "session_name": row[7],
+                "jurisdiction": row[8],
+                "openstates_url": row[9],
+                "state": state,
+            }
+            
+            # Get sponsors
+            sponsor_query = """
+                SELECT p.name, bs.primary_sponsor, bs.classification
+                FROM opencivicdata_billsponsorship bs
+                JOIN opencivicdata_person p ON bs.person_id = p.id
+                WHERE bs.bill_id = (
+                    SELECT b.id FROM opencivicdata_bill b
+                    JOIN opencivicdata_legislativesession s ON b.legislative_session_id = s.id
+                    JOIN opencivicdata_jurisdiction j ON s.jurisdiction_id = j.id
+                    WHERE j.id LIKE %s AND b.identifier = %s
+                )
+                ORDER BY bs.primary_sponsor DESC
+            """
+            cursor.execute(sponsor_query, (jurisdiction_pattern, bill_number))
+            sponsors = cursor.fetchall()
+            
+            bill_data["sponsors"] = [
+                {"name": s[0], "primary": s[1], "classification": s[2]}
+                for s in sponsors
+            ]
+            
+            # Get recent actions (last 5)
+            actions_query = """
+                SELECT description, date, classification
+                FROM opencivicdata_billaction
+                WHERE bill_id = (
+                    SELECT b.id FROM opencivicdata_bill b
+                    JOIN opencivicdata_legislativesession s ON b.legislative_session_id = s.id
+                    JOIN opencivicdata_jurisdiction j ON s.jurisdiction_id = j.id
+                    WHERE j.id LIKE %s AND b.identifier = %s
+                )
+                ORDER BY date DESC
+                LIMIT 10
+            """
+            cursor.execute(actions_query, (jurisdiction_pattern, bill_number))
+            actions = cursor.fetchall()
+            
+            bill_data["actions"] = [
+                {"description": a[0], "date": str(a[1]) if a[1] else None, "classification": a[2]}
+                for a in actions
+            ]
+            
+            cursor.close()
+            conn.close()
+            
+            return bill_data
+            
+        except psycopg2.Error as e:
+            logger.error(f"Database error: {e}")
+            raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
         
     except HTTPException:
         raise
     except Exception as e:
         logger.error(f"Bill details error: {e}")
+        logger.error(traceback.format_exc())
         raise HTTPException(status_code=500, detail=str(e))
