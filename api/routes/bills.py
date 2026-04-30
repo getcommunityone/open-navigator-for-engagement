@@ -762,8 +762,7 @@ async def get_bill_details(bill_id: str):
                     first_action_date,
                     session,
                     session_name,
-                    jurisdiction_name,
-                    openstates_url
+                    jurisdiction_name
                 FROM read_parquet(?)
                 WHERE bill_number = ?
                 LIMIT 1
@@ -787,7 +786,6 @@ async def get_bill_details(bill_id: str):
                 "session": result[7],
                 "session_name": result[8],
                 "jurisdiction": result[9],
-                "openstates_url": result[10],
                 "state": state,
             }
             
