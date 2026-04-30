@@ -810,7 +810,7 @@ def count_organizations(state: Optional[str] = None, ntee_code: Optional[str] = 
         where_sql = " AND ".join(where_clauses) if where_clauses else "TRUE"
         
         # Count query
-        count_sql = f"SELECT COUNT(*) FROM '{file_path}' WHERE {where_sql}"
+        count_sql = f"SELECT COUNT(*) FROM '{data_source}' WHERE {where_sql}"
         result = conn.execute(count_sql, params).fetchone()
         conn.close()
         
@@ -843,17 +843,15 @@ def search_organizations(query: str, state: Optional[str] = None, ntee_code: Opt
         else:
             file_pattern = f"{GOLD_DIR}/national/nonprofits_organizations.parquet"
         
-        # Check if file exists
+        # Get data source (local or remote HuggingFace URL)
         file_path = Path(file_pattern)
-        if not file_path.exists():
-            logger.warning(f"File not found: {file_pattern}")
-            return results
+        data_source = get_data_source(file_path, use_remote=IS_HF_SPACES)
         
         # Initialize DuckDB connection
         conn = duckdb.connect()
         
         # First, check what columns exist in this file
-        columns_query = f"DESCRIBE SELECT * FROM '{file_path}' LIMIT 0"
+        columns_query = f"DESCRIBE SELECT * FROM '{data_source}' LIMIT 0"
         available_columns = set([row[0] for row in conn.execute(columns_query).fetchall()])
         
         # Detect column name variations (handle different schemas)
@@ -1013,7 +1011,7 @@ def search_organizations(query: str, state: Optional[str] = None, ntee_code: Opt
                         WHEN LOWER({name_col}) LIKE LOWER(?) THEN 1.0
                         ELSE 0.5
                     END as score
-                FROM '{file_path}'
+                FROM '{data_source}'
                 WHERE {where_sql}
                 ORDER BY {order_by_sql}
                 LIMIT ? OFFSET ?
@@ -1026,7 +1024,7 @@ def search_organizations(query: str, state: Optional[str] = None, ntee_code: Opt
                 SELECT 
                     {columns_sql},
                     1.0 as score
-                FROM '{file_path}'
+                FROM '{data_source}'
                 WHERE {where_sql}
                 ORDER BY {order_by_sql}
                 LIMIT ? OFFSET ?
@@ -1224,45 +1222,45 @@ def search_causes(query: str, limit: int = 10) -> List[SearchResult]:
     results = []
     
     try:
-        # Search NTEE codes
+        # Get data source (local or remote HuggingFace URL)
         ntee_file = GOLD_DIR / "reference" / "causes_ntee_codes.parquet"
-        logger.info(f"Searching causes in: {ntee_file}, exists: {ntee_file.exists()}")
+        data_source = get_data_source(ntee_file, use_remote=IS_HF_SPACES)
+        logger.info(f"Searching causes using: {data_source}")
         
-        if ntee_file.exists():
-            df = pd.read_parquet(ntee_file)
-            logger.info(f"Loaded {len(df)} NTEE codes, columns: {df.columns.tolist()}")
+        df = pd.read_parquet(data_source)
+        logger.info(f"Loaded {len(df)} NTEE codes, columns: {df.columns.tolist()}")
+        
+        for _, row in df.iterrows():
+            code = str(row.get('ntee_code', ''))
+            description = str(row.get('description', ''))
+            ntee_type = str(row.get('ntee_type', ''))
             
-            for _, row in df.iterrows():
-                code = str(row.get('ntee_code', ''))
-                description = str(row.get('description', ''))
-                ntee_type = str(row.get('ntee_type', ''))
-                
-                # Browse mode: return all causes
-                # Search mode: filter by relevance
-                if query and query.strip():
-                    score = max(
-                        calculate_relevance_score(description, query),
-                        calculate_relevance_score(code, query)
-                    )
-                    if score <= 0.3:
-                        continue  # Skip low relevance results
-                else:
-                    score = 1.0  # Default score for browse mode
-                
-                results.append(SearchResult(
-                    result_type="cause",
-                    title=description,
-                    subtitle=f"NTEE Code: {code}",
-                    description=f"Category type: {ntee_type}",
-                    url=f"/nonprofits?ntee_code={code}",
-                    score=score,
-                    metadata={
-                        "ntee_code": code,
-                        "ntee_type": ntee_type
-                    }
-                ))
+            # Browse mode: return all causes
+            # Search mode: filter by relevance
+            if query and query.strip():
+                score = max(
+                    calculate_relevance_score(description, query),
+                    calculate_relevance_score(code, query)
+                )
+                if score <= 0.3:
+                    continue  # Skip low relevance results
+            else:
+                score = 1.0  # Default score for browse mode
             
-            logger.info(f"Found {len(results)} cause results for query '{query}'")
+            results.append(SearchResult(
+                result_type="cause",
+                title=description,
+                subtitle=f"NTEE Code: {code}",
+                description=f"Category type: {ntee_type}",
+                url=f"/nonprofits?ntee_code={code}",
+                score=score,
+                metadata={
+                    "ntee_code": code,
+                    "ntee_type": ntee_type
+                }
+            ))
+        
+        logger.info(f"Found {len(results)} cause results for query '{query}'")
     
     except Exception as e:
         logger.error(f"Cause search error: {e}")
