@@ -181,7 +181,8 @@ from api.routes import search as search_routes
 # Use Neon database for fast stats queries (500x faster than parquet)
 from api.routes import stats_neon as stats_routes  # Was: stats
 from api.routes import contact as contact_routes
-from api.routes import bills as bills_routes
+# Use hybrid approach for bills: Neon for map, parquet for drill-down (saves space)
+from api.routes import bills_neon as bills_routes  # Was: bills
 from api.database import init_db
 
 app.include_router(auth_routes.router)

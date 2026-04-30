@@ -34,21 +34,21 @@ psql -U "$DB_USER" -tc "SELECT 1 FROM pg_database WHERE datname = '$DB_NAME'" | 
 echo "✅ Database ready: $DB_NAME"
 echo ""
 
-# Update .env if it doesn't have LOCAL_DATABASE_URL
+# Update .env if it doesn't have NEON_DATABASE_URL_DEV
 if [ -f .env ]; then
-    if ! grep -q "LOCAL_DATABASE_URL" .env; then
-        echo "📝 Adding LOCAL_DATABASE_URL to .env"
+    if ! grep -q "NEON_DATABASE_URL_DEV" .env; then
+        echo "📝 Adding NEON_DATABASE_URL_DEV to .env"
         echo "" >> .env
-        echo "# Local PostgreSQL for fast stats (development)" >> .env
-        echo "LOCAL_DATABASE_URL=postgresql://$DB_USER:$DB_USER@localhost:5432/$DB_NAME" >> .env
+        echo "# Development PostgreSQL for fast stats" >> .env
+        echo "NEON_DATABASE_URL_DEV=postgresql://$DB_USER:$DB_USER@localhost:5432/$DB_NAME" >> .env
     else
-        echo "✅ LOCAL_DATABASE_URL already in .env"
+        echo "✅ NEON_DATABASE_URL_DEV already in .env"
     fi
 else
     echo "⚠️  No .env file found. Creating from .env.example..."
     cp .env.example .env
-    # Update the LOCAL_DATABASE_URL line
-    sed -i "s|LOCAL_DATABASE_URL=.*|LOCAL_DATABASE_URL=postgresql://$DB_USER:$DB_USER@localhost:5432/$DB_NAME|" .env
+    # Update the NEON_DATABASE_URL_DEV line
+    sed -i "s|NEON_DATABASE_URL_DEV=.*|NEON_DATABASE_URL_DEV=postgresql://$DB_USER:$DB_USER@localhost:5432/$DB_NAME|" .env
 fi
 
 echo ""

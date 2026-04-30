@@ -21,9 +21,9 @@ echo ""
 # Configuration
 DB_NAME="openstates"
 DB_USER="postgres"
-DB_PASSWORD="postgres"
+DB_PASSWORD="password"
 DB_HOST="localhost"
-DB_PORT="5433"  # PostgreSQL 17 container
+DB_PORT="5432"  # PostgreSQL container (charming_mestorf)
 SCHEMA_FILE="data/cache/legislation_bulk/postgres/2026-04-schema.pgdump"
 DATA_FILE="data/cache/legislation_bulk/postgres/2026-04-public.pgdump"
 

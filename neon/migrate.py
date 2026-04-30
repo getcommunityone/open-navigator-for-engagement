@@ -16,10 +16,15 @@ from loguru import logger
 # Load environment variables
 load_dotenv()
 
-# Database connection
+# Database connection - prioritize dev over production
+NEON_DATABASE_URL_DEV = os.getenv('NEON_DATABASE_URL_DEV')
 NEON_DATABASE_URL = os.getenv('NEON_DATABASE_URL')
-if not NEON_DATABASE_URL:
-    raise ValueError("NEON_DATABASE_URL not set in environment")
+DATABASE_URL = NEON_DATABASE_URL_DEV or NEON_DATABASE_URL
+
+if not DATABASE_URL:
+    raise ValueError("Neither NEON_DATABASE_URL_DEV nor NEON_DATABASE_URL set in environment")
+
+logger.info(f"Using: {'DEV' if NEON_DATABASE_URL_DEV else 'PROD'} database")
 
 # Paths
 GOLD_DIR = Path("data/gold")
@@ -56,7 +61,7 @@ def clean_numeric(value):
 
 def get_db_connection():
     """Get database connection"""
-    return psycopg2.connect(NEON_DATABASE_URL)
+    return psycopg2.connect(DATABASE_URL)
 
 
 def execute_schema(conn):
