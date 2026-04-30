@@ -70,7 +70,17 @@ def classify_bill_type(title: str, classification: list, topic: Optional[str] = 
     title_lower = title.lower()
     topic_lower = topic.lower() if topic else ""
     
-    # Fluoridation-specific classifications
+    # EXCEPTION: Fluoride varnish/dental coverage bills (not water fluoridation)
+    # Check this BEFORE water fluoridation classification
+    if any(word in title_lower for word in ['varnish', 'sealant', 'dental', 'medicaid', 'medical assistance']) and 'fluoride' in title_lower:
+        if any(word in title_lower for word in ['coverage', 'expand', 'expansion', 'benefit']):
+            return 'coverage_expansion'
+        elif any(word in title_lower for word in ['screening', 'examination', 'check']):
+            return 'screening'
+        # If it mentions dental/varnish but unclear type, it's dental "other" not fluoridation
+        return 'other'
+    
+    # Fluoridation-specific classifications (WATER fluoridation only)
     if 'fluoride' in topic_lower or 'fluoride' in title_lower:
         # FIRST: Check for REMOVAL/BAN/PROHIBITION (negative sentiment)
         # CRITICAL: Must check these BEFORE "mandate"/"require" to avoid misclassification

@@ -64,7 +64,17 @@ def classify_bill_type(title: str, topic: str) -> str:
     title_lower = title.lower()
     topic_lower = topic.lower() if topic else ""
     
-    # Fluoridation-specific classifications
+    # EXCEPTION: Fluoride varnish/dental coverage bills (not water fluoridation)
+    # Check this BEFORE water fluoridation classification
+    if any(word in title_lower for word in ['varnish', 'sealant', 'dental', 'medicaid', 'medical assistance']) and 'fluoride' in title_lower:
+        if any(word in title_lower for word in ['coverage', 'expand', 'expansion', 'benefit']):
+            return 'coverage_expansion'
+        elif any(word in title_lower for word in ['screening', 'examination', 'check']):
+            return 'screening'
+        # If it mentions dental/varnish but unclear type, it's dental "other" not fluoridation
+        return 'other'
+    
+    # Fluoridation-specific classifications (WATER fluoridation only)
     if 'fluoride' in topic_lower or 'fluoride' in title_lower:
         # FIRST: Check for REMOVAL/BAN/PROHIBITION (negative sentiment)
         if any(word in title_lower for word in [
@@ -255,6 +265,15 @@ def aggregate_state_bills(conn, state: str, topic: str) -> dict:
         
         if len(df) == 0:
             return None
+        
+        # For fluoride topic, exclude varnish/dental coverage bills (they're not about water fluoridation)
+        if topic == 'fluoride':
+            # Exclude bills that are clearly about dental coverage, not water fluoridation
+            varnish_pattern = r'varnish|sealant|dental.*coverage|medicaid.*dental|medical assistance.*dental'
+            df = df[~df['title'].str.lower().str.contains(varnish_pattern, na=False, regex=True)]
+            
+            if len(df) == 0:
+                return None
         
         # Classify bills
         df['type'] = df['title'].apply(lambda t: classify_bill_type(t, topic))
