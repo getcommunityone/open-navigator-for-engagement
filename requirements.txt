@@ -63,6 +63,7 @@ python-jose[cryptography]==3.3.0  # JWT tokens
 passlib[bcrypt]==1.7.4            # Password hashing
 itsdangerous==2.1.2                # Secure tokens
 psycopg2-binary==2.9.9             # PostgreSQL driver
+asyncpg==0.29.0                    # Async PostgreSQL driver (for Neon)
 
 # Visualization
 plotly==5.18.0
