@@ -7,12 +7,8 @@ import {
   XMarkIcon,
   AdjustmentsHorizontalIcon,
   CheckIcon,
-  MapPinIcon,
-  ChevronDownIcon,
-  Cog6ToothIcon,
-  ArrowRightOnRectangleIcon
+  MapPinIcon
 } from '@heroicons/react/24/outline'
-import { useAuth } from '../contexts/AuthContext'
 import JurisdictionDiscovery from '../components/JurisdictionDiscovery'
 
 interface JurisdictionResult {
@@ -85,7 +81,6 @@ export default function JurisdictionsSearch() {
   const [showFilters, setShowFilters] = useState(false)
   
   const searchInputRef = useRef<HTMLInputElement>(null)
-  const { user, isAuthenticated, login, logout, isLoading } = useAuth()
 
   // Initialize from URL parameters on mount
   useEffect(() => {
