@@ -1,3 +1,7 @@
+---
+sidebar_position: 5
+---
+
 # Legislative Tracking Maps
 
 Create interactive choropleth maps showing state-level legislative activity across multiple social issues.
@@ -194,7 +198,7 @@ with pd.ExcelWriter('analysis.xlsx') as writer:
 
 ## 📚 Full Documentation
 
-See [Legislative Tracking Maps Guide](../website/docs/guides/legislative-tracking-maps.md) for:
+See [Legislative Tracking Maps Guide](legislative-tracking-maps.md) for:
 - Detailed API documentation
 - Categorization logic
 - Color scheme reference
@@ -232,7 +236,3 @@ See [Legislative Tracking Maps Guide](../website/docs/guides/legislative-trackin
 - Automate daily updates with cron
 - Track committee hearings and votes
 - Add email alerts for bill status changes
-
----
-
-**Need help?** See full documentation at [website/docs/guides/legislative-tracking-maps.md](../website/docs/guides/legislative-tracking-maps.md)

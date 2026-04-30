@@ -1,3 +1,7 @@
+---
+sidebar_position: 3
+---
+
 # File Migration to Events Naming Convention
 
 This guide shows how to use the migration script to rename old meeting/contact files to the new events_ naming convention.
