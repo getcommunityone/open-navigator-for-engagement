@@ -19,3 +19,12 @@ api/static/
 
 # Testing
 coverage/
+
+# Terminal corruption / garbage files from pager issues
+*fluorid*
+*lativesession*
+*misclassification*
+*tgres*
+*readlines*
+s more
+= *

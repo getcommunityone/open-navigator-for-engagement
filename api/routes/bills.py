@@ -72,11 +72,26 @@ def classify_bill_type(title: str, classification: list, topic: Optional[str] = 
     
     # Fluoridation-specific classifications
     if 'fluoride' in topic_lower or 'fluoride' in title_lower:
-        if any(word in title_lower for word in ['mandate', 'require', 'shall add', 'must fluoridate']):
-            return 'mandate'
-        elif any(word in title_lower for word in ['remove', 'discontinue', 'cease', 'eliminate', 'prohibit fluorid', 'ban fluorid']):
+        # FIRST: Check for REMOVAL/BAN/PROHIBITION (negative sentiment)
+        # CRITICAL: Must check these BEFORE "mandate"/"require" to avoid misclassification
+        # e.g., "prohibit fluoride" should be "removal", not "mandate"
+        if any(word in title_lower for word in [
+            'prohibit', 'prohibition', 'ban', 'banning',
+            'discontinue', 'cease', 'eliminate',
+            'removal', 'remove', 'removing',
+            'prevent', 'preventing'
+        ]):
+            # But check if it's "prohibit removal" (double negative = pro-fluoride)
+            if any(phrase in title_lower for phrase in ['prohibit removal', 'prevent removal', 'ban removal']):
+                return 'mandate'  # Prohibiting removal = mandate to keep
             return 'removal'
-        elif any(word in title_lower for word in ['fund', 'appropriation', 'grant', 'reimburse', 'subsidy']):
+        
+        # SECOND: Check for MANDATE/REQUIRE (positive sentiment)
+        elif any(word in title_lower for word in ['mandate', 'mandating', 'require', 'requiring', 'shall add', 'must fluoridate', 'must add']):
+            return 'mandate'
+        
+        # THIRD: Check for funding
+        elif any(word in title_lower for word in ['fund', 'funding', 'appropriation', 'grant', 'reimburse', 'subsidy']):
             return 'funding'
         elif any(word in title_lower for word in ['study', 'research', 'analysis', 'assess', 'evaluate']):
             return 'study'
