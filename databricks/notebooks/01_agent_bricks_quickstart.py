@@ -51,7 +51,7 @@ print(f"✅ Using Unity Catalog: {CATALOG}.{SCHEMA}")
 
 # Import agent
 import sys
-sys.path.append("/Workspace/Repos/your-repo/oral-health-policy-pulse")
+sys.path.append("/Workspace/Repos/your-repo/open-navigator")
 
 from agents.mlflow_classifier import PolicyClassifierAgent
 

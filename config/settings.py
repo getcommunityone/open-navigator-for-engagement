@@ -30,7 +30,7 @@ class Settings(BaseSettings):
     
     # HuggingFace Configuration
     hf_organization: Optional[str] = Field(None, description="HuggingFace organization name (e.g., 'CommunityOne')")
-    hf_dataset_prefix: str = Field("oral-health-policy-pulse", description="Prefix for dataset names")
+    hf_dataset_prefix: str = Field("open-navigator", description="Prefix for dataset names")
     
     # Databricks Configuration
     databricks_host: Optional[str] = Field(None, description="Databricks workspace URL")
@@ -39,7 +39,7 @@ class Settings(BaseSettings):
     
     # Delta Lake Configuration
     # For local mode: use "data/delta" 
-    # For Databricks: use "dbfs:/oral-health-policy-pulse"
+    # For Databricks: use "dbfs:/open-navigator"
     delta_lake_path: str = Field("data/delta", description="Delta Lake base path")
     catalog_name: str = Field("oral_health", description="Unity Catalog name")
     schema_name: str = Field("policy_analysis", description="Schema name")
@@ -69,7 +69,7 @@ class Settings(BaseSettings):
     
     # Logging
     log_level: str = Field("INFO", description="Logging level")
-    log_file: str = Field("logs/oral-health-policy-pulse.log", description="Log file path")
+    log_file: str = Field("logs/open-navigator.log", description="Log file path")
     
     # API Configuration
     api_host: str = Field("0.0.0.0", description="API host")

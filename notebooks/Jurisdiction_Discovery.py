@@ -32,7 +32,7 @@ import sys
 from pathlib import Path
 
 # Add project root to path
-sys.path.insert(0, "/Workspace/Repos/oral-health-policy-pulse")
+sys.path.insert(0, "/Workspace/Repos/open-navigator")
 
 from discovery.discovery_pipeline import DiscoveryPipeline
 from config import settings

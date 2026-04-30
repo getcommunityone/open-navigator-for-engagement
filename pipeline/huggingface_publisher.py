@@ -100,7 +100,7 @@ class HuggingFacePublisher:
             dataset_name: Name of the dataset
             
         Returns:
-            Full repo ID (e.g., "CommunityOne/oral-health-policy-pulse-census-gid")
+            Full repo ID (e.g., "CommunityOne/open-navigator-census-gid")
         """
         full_name = f"{self.dataset_prefix}-{dataset_name}"
         

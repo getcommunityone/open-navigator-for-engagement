@@ -306,7 +306,7 @@ results = await orchestrator.execute_pipeline(targets)
 ## Project Structure
 
 ```
-oral-health-policy-pulse/
+open-navigator/
 ├── agents/                 # Multi-agent AI system
 ├── api/                   # FastAPI application
 ├── frontend/             # React application (Open Navigator)

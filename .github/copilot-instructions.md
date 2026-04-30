@@ -69,16 +69,16 @@ When creating or editing documentation:
 /home/developer/projects/open-navigator/VARIABLE_MIGRATION.md
 
 # ✅ CORRECT
-/home/developer/projects/oral-health-policy-pulse/website/docs/deployment/variable-migration.md
+/home/developer/projects/open-navigator/website/docs/deployment/variable-migration.md
 ```
 
 **When asked to document a new feature:**
 ```bash
 # ❌ WRONG
-/home/developer/projects/oral-health-policy-pulse/NEW_FEATURE.md
+/home/developer/projects/open-navigator/NEW_FEATURE.md
 
 # ✅ CORRECT
-/home/developer/projects/oral-health-policy-pulse/website/docs/guides/new-feature.md
+/home/developer/projects/open-navigator/website/docs/guides/new-feature.md
 ```
 
 ### Sidebar Organization
@@ -143,7 +143,7 @@ When suggesting deployment or setup:
 ### Data Management Rules
 
 **CRITICAL - DO NOT DELETE APPLICATION CACHE:**
-- ❌ **NEVER** recommend deleting `/home/developer/projects/oral-health-policy-pulse/data/cache/`
+- ❌ **NEVER** recommend deleting `/home/developer/projects/open-navigator/data/cache/`
 - ❌ **NEVER** suggest `rm -rf data/cache` or similar commands
 - This directory contains critical application data from data processing pipelines
 - Deleting it will cause data loss and require expensive reprocessing
