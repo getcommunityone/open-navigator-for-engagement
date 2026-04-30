@@ -309,10 +309,12 @@ def aggregate_state_bills(conn, state: str, topic: str) -> dict:
         sample_bills = []
         for _, row in df.head(3).iterrows():
             sample_bills.append({
+                'bill_number': row['bill_number'],
                 'title': row['title'],
                 'status': row['status'],
                 'type': row['type'],
-                'action': row['latest_action_description'] or ''
+                'action': row['latest_action_description'] or '',
+                'state': row['state']
             })
         
         # Determine primary type (most common)

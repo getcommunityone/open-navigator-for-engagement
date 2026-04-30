@@ -1,8 +1,18 @@
 // @ts-nocheck
 import { useState } from 'react'
+import { Link } from 'react-router-dom'
 import { ComposableMap, Geographies, Geography } from 'react-simple-maps'
 
 const geoUrl = 'https://cdn.jsdelivr.net/npm/us-atlas@3/states-10m.json'
+
+interface BillSample {
+  bill_number: string
+  title: string
+  status: string
+  type: string
+  action: string
+  state: string
+}
 
 interface StateData {
   state: string
@@ -21,6 +31,7 @@ interface StateData {
   primary_type: string
   primary_status: string
   map_category: string
+  sample_bills?: BillSample[]
 }
 
 interface USMapProps {

@@ -24,6 +24,7 @@ import FactChecking from './pages/FactChecking'
 import UnifiedSearch from './pages/UnifiedSearch'
 import JurisdictionsSearch from './pages/JurisdictionsSearch'
 import PolicyMap from './pages/PolicyMap'
+import BillDetail from './pages/BillDetail'
 
 function App() {
   return (
@@ -46,6 +47,7 @@ function App() {
         <Route path="people" element={<PeopleFinder />} />
         <Route path="heatmap" element={<Heatmap />} />
         <Route path="policy-map" element={<PolicyMap />} />
+        <Route path="bill/:billId" element={<BillDetail />} />
         <Route path="documents" element={<Documents />} />
         <Route path="opportunities" element={<Opportunities />} />
         <Route path="nonprofits" element={<Nonprofits />} />
