@@ -15,11 +15,8 @@ import {
   ChevronDownIcon,
   ChevronUpIcon,
   GlobeAltIcon,
-  VideoCameraIcon,
-  Cog6ToothIcon,
-  ArrowRightOnRectangleIcon
+  VideoCameraIcon
 } from '@heroicons/react/24/outline'
-import { useAuth } from '../contexts/AuthContext'
 import { formatCurrency } from '../utils/formatters'
 
 interface SearchResult {
@@ -127,7 +124,6 @@ export default function UnifiedSearch() {
   const [debouncedQuery, setDebouncedQuery] = useState(query)
   
   const searchInputRef = useRef<HTMLInputElement>(null)
-  const { user, isAuthenticated, login, logout, isLoading } = useAuth()
 
   // Debounce the query for autocomplete (300ms delay)
   useEffect(() => {
