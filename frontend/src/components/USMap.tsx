@@ -1,5 +1,5 @@
 // @ts-nocheck
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { Link } from 'react-router-dom'
 import { ComposableMap, Geographies, Geography } from 'react-simple-maps'
 
@@ -168,6 +168,7 @@ const getPatternForState = (stateCode: string, stateData: Record<string, StateDa
 export default function USMap({ stateData, onStateClick, legend }: USMapProps) {
   const [hoveredState, setHoveredState] = useState<string | null>(null)
   const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 })
+  const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   
   // Get unique types from actual state data if legend not provided
   const legislationTypes = legend?.types || {}
@@ -178,18 +179,50 @@ export default function USMap({ stateData, onStateClick, legend }: USMapProps) {
   }
   
   const handleMouseEnter = (event: any, stateCode: string) => {
-    // Show tooltip for this state (or switch to new state)
-    setHoveredState(stateCode)
-    const bounds = event.target.getBoundingClientRect()
-    setTooltipPosition({
-      x: bounds.left + bounds.width / 2,
-      y: bounds.top
-    })
+    // Clear any pending state change
+    if (hoverTimeoutRef.current) {
+      clearTimeout(hoverTimeoutRef.current)
+      hoverTimeoutRef.current = null
+    }
+    
+    // If no tooltip showing, show immediately
+    if (!hoveredState) {
+      setHoveredState(stateCode)
+      const bounds = event.target.getBoundingClientRect()
+      setTooltipPosition({
+        x: bounds.left + bounds.width / 2,
+        y: bounds.top
+      })
+    } 
+    // If tooltip already showing for different state, delay switch
+    // This prevents accidental switches when moving mouse to tooltip
+    else if (hoveredState !== stateCode) {
+      hoverTimeoutRef.current = setTimeout(() => {
+        setHoveredState(stateCode)
+        const bounds = event.target.getBoundingClientRect()
+        setTooltipPosition({
+          x: bounds.left + bounds.width / 2,
+          y: bounds.top
+        })
+      }, 200) // 200ms delay prevents accidental switches
+    }
+  }
+  
+  const handleMouseLeave = () => {
+    // Clear any pending state change when leaving
+    if (hoverTimeoutRef.current) {
+      clearTimeout(hoverTimeoutRef.current)
+      hoverTimeoutRef.current = null
+    }
   }
   
   // Close button handler
   const handleCloseTooltip = () => {
     setHoveredState(null)
+    if (hoverTimeoutRef.current) {
+      clearTimeout(hoverTimeoutRef.current)
+      hoverTimeoutRef.current = null
+    }
   }
   
   const hoveredData = hoveredState ? stateData[hoveredState] : null
@@ -251,6 +284,7 @@ export default function USMap({ stateData, onStateClick, legend }: USMapProps) {
                   }}
                   onClick={() => onStateClick?.(stateCode)}
                   onMouseEnter={(event) => handleMouseEnter(event, stateCode)}
+                  onMouseLeave={handleMouseLeave}
                 />
               )
             })
