@@ -9,6 +9,18 @@ echo "  3. API Backend (FastAPI) - Port 8000"
 echo "  4. Nginx Reverse Proxy - Port 7860 (HF Spaces public port)"
 echo ""
 
+# DEBUG: Check environment variable
+echo "🔍 Environment Check:"
+echo "   HF_SPACES = ${HF_SPACES:-NOT SET}"
+if [ "$HF_SPACES" = "1" ]; then
+    echo "   ✅ HF_SPACES is correctly set to 1"
+else
+    echo "   ❌ WARNING: HF_SPACES is not set to 1"
+    echo "   Setting HF_SPACES=1 now..."
+    export HF_SPACES=1
+fi
+echo ""
+
 # Create required directories
 mkdir -p /app/logs /app/data /var/log/supervisor
 

@@ -14,13 +14,13 @@ RUN npm config set fetch-retry-mintimeout 20000 && \
     npm ci --prefer-offline --no-audit || npm install --prefer-offline --no-audit
 
 # Add cache-busting argument to force rebuild when needed
-ARG CACHE_BUST=2026-04-27-12-00-fix-double-docs-prefix
+ARG CACHE_BUST=2026-04-30-00-30-add-hf-validation
 
 COPY website/ ./
 
 # Verify environment variable is set and build
 RUN echo "Building Docusaurus with DOCUSAURUS_BASE_URL=$DOCUSAURUS_BASE_URL" && \
-    echo "Cache bust: 2026-04-27-12-00-fix-double-docs-prefix" && \
+    echo "Cache bust: 2026-04-30-00-30-add-hf-validation" && \
     npm run build && \
     echo "Verifying baseUrl in build output..." && \
     grep -r "baseUrl" build/ | head -5 || true
