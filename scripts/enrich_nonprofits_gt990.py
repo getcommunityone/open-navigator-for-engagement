@@ -41,7 +41,7 @@ Usage:
 
 Attribution:
 - GivingTuesday 990 Data Infrastructure: https://990data.givingtuesday.org/
-- Open Navigator for Engagement: https://github.com/getcommunityone/open-navigator-for-engagement
+- Open Navigator: https://github.com/getcommunityone/open-navigator
 """
 
 import asyncio

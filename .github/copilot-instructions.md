@@ -57,16 +57,16 @@ When creating or editing documentation:
 **When asked to create troubleshooting documentation:**
 ```bash
 # ❌ WRONG
-/home/developer/projects/oral-health-policy-pulse/DOCKER_BUILD_TROUBLESHOOTING.md
+/home/developer/projects/open-navigator/DOCKER_BUILD_TROUBLESHOOTING.md
 
 # ✅ CORRECT
-/home/developer/projects/oral-health-policy-pulse/website/docs/deployment/docker-troubleshooting.md
+/home/developer/projects/open-navigator/website/docs/deployment/docker-troubleshooting.md
 ```
 
 **When asked to create a migration guide:**
 ```bash
 # ❌ WRONG
-/home/developer/projects/oral-health-policy-pulse/VARIABLE_MIGRATION.md
+/home/developer/projects/open-navigator/VARIABLE_MIGRATION.md
 
 # ✅ CORRECT
 /home/developer/projects/oral-health-policy-pulse/website/docs/deployment/variable-migration.md

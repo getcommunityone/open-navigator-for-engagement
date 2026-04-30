@@ -36,7 +36,7 @@ async def submit_contact(request: ContactRequest):
     Requires GITHUB_TOKEN and GITHUB_REPO environment variables.
     """
     github_token = os.getenv("GITHUB_TOKEN")
-    github_repo = os.getenv("GITHUB_REPO", "getcommunityone/open-navigator-for-engagement")
+    github_repo = os.getenv("GITHUB_REPO", "getcommunityone/open-navigator")
     
     if not github_token:
         logger.warning("GitHub token not configured - contact form submission failed")

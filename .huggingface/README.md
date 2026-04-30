@@ -77,7 +77,7 @@ All services are reverse-proxied through nginx on port 7860.
 
 ## 🔗 Links
 
-- **Repository**: [github.com/getcommunityone/open-navigator-for-engagement](https://github.com/getcommunityone/open-navigator-for-engagement)
+- **Repository**: [github.com/getcommunityone/open-navigator](https://github.com/getcommunityone/open-navigator)
 - **Documentation**: Click "📚 Browse Documentation" on the homepage
 - **API Docs**: `/redoc` endpoint
 - **Website**: [www.communityone.com](https://www.communityone.com)
@@ -92,8 +92,8 @@ We welcome contributions! See CONTRIBUTING.md in the repository for guidelines.
 
 ## 💬 Support
 
-- **Issues**: [GitHub Issues](https://github.com/getcommunityone/open-navigator-for-engagement/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/getcommunityone/open-navigator-for-engagement/discussions)
+- **Issues**: [GitHub Issues](https://github.com/getcommunityone/open-navigator/issues)
+- **Discussions**: [GitHub Discussions](https://github.com/getcommunityone/open-navigator/discussions)
 - **Email**: hello@communityone.com
 
 ---

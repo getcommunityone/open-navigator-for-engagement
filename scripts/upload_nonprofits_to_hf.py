@@ -323,7 +323,7 @@ Major categories included:
 
 ## Maintainer
 
-Created and maintained by [Open Navigator for Engagement](https://github.com/getcommunityone/open-navigator-for-engagement)
+Created and maintained by [Open Navigator](https://github.com/getcommunityone/open-navigator)
 """
         
         # Upload README

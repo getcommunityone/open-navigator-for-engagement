@@ -85,8 +85,8 @@ The `deploy-huggingface.sh` script automatically:
 
 ```bash
 # Clone repository
-git clone https://github.com/getcommunityone/open-navigator-for-engagement.git
-cd oral-health-policy-pulse
+git clone https://github.com/getcommunityone/open-navigator.git
+cd open-navigator
 
 # Install dependencies
 ./install.sh                          # Python backend

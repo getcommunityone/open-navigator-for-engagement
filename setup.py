@@ -7,14 +7,14 @@ readme_file = Path(__file__).parent / "README.md"
 long_description = readme_file.read_text(encoding="utf-8") if readme_file.exists() else ""
 
 setup(
-    name="oral-health-policy-pulse",
+    name="open-navigator",
     version="1.0.0",
     author="Community One",
     author_email="support@communityone.org",
     description="CommunityOne: The open path to everything local",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    url="https://github.com/getcommunityone/open-navigator-for-engagement",
+    url="https://github.com/getcommunityone/open-navigator",
     packages=find_packages(exclude=["tests", "examples", "notebooks"]),
     classifiers=[
         "Development Status :: 4 - Beta",
@@ -93,8 +93,8 @@ setup(
         "": ["*.md", "*.txt", "*.json"],
     },
     project_urls={
-        "Bug Reports": "https://github.com/getcommunityone/open-navigator-for-engagement/issues",
-        "Source": "https://github.com/getcommunityone/open-navigator-for-engagement",
-        "Documentation": "https://github.com/getcommunityone/open-navigator-for-engagement#readme",
+        "Bug Reports": "https://github.com/getcommunityone/open-navigator/issues",
+        "Source": "https://github.com/getcommunityone/open-navigator",
+        "Documentation": "https://github.com/getcommunityone/open-navigator#readme",
     },
 )

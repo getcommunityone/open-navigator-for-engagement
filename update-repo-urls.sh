@@ -1,13 +1,13 @@
 #!/bin/bash
 
 # Script to update repository URLs after renaming
-# From: oral-health-policy-pulse
-# To: open-navigator-for-engagement
+# From: oral-health-policy-pulse / open-navigator-for-engagement
+# To: open-navigator
 
 echo "🔄 Updating repository URLs..."
 
-OLD_REPO="oral-health-policy-pulse"
-NEW_REPO="open-navigator-for-engagement"
+OLD_REPO="open-navigator-for-engagement"
+NEW_REPO="open-navigator"
 GITHUB_ORG="getcommunityone"
 
 # Find and replace in all relevant files
