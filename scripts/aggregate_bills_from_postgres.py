@@ -332,7 +332,10 @@ def main():
             'state': agg['state'],
             'topic': agg['topic'],
             'total_bills': agg['total_bills'],
-            'sample_bills': agg['sample_bills']
+            'sample_bills': agg['sample_bills'],
+            'primary_type': agg['primary_type'],
+            'primary_status': agg['primary_status'],
+            'map_category': agg['map_category']
         }
         
         # Add type counts as separate columns
