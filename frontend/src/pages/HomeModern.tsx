@@ -88,30 +88,73 @@ export default function HomeModern() {
     }
   }
 
-  // Fetch real stats from API - updates based on selected location and scope
-  const { data: statsData } = useQuery({
-    queryKey: ['platform-stats', searchScope, location?.state, location?.county, location?.city],
+  // Fetch all stats at once for all scopes (city, county, state) - more efficient
+  const { data: allStatsData } = useQuery({
+    queryKey: ['platform-stats-all', location?.state, location?.county, location?.city],
     queryFn: async () => {
-      const params: any = {};
-      if (location) {
-        // Only send location params relevant to the selected scope
-        if (searchScope === 'state' && location.state) {
-          params.state = location.state;
-        } else if (searchScope === 'county' && location.state && location.county) {
-          params.state = location.state;
-          params.county = location.county;
-        } else if ((searchScope === 'city' || searchScope === 'community') && location.state) {
-          params.state = location.state;
-          if (location.county) params.county = location.county;
-          if (location.city) params.city = location.city;
-        }
-      }
-      const response = await api.get('/stats', { params });
-      return response.data.data;
+      if (!location) return null;
+      
+      console.log('📊 [HomeModern] Fetching stats for location:', location);
+      
+      // Fetch stats for all scopes in parallel
+      const [cityStats, countyStats, stateStats] = await Promise.all([
+        // City stats
+        location.city 
+          ? api.get('/stats', { params: { state: location.state, county: location.county, city: location.city } })
+              .then(res => {
+                console.log('📊 [HomeModern] City stats:', res.data.data);
+                return res.data.data;
+              })
+              .catch(err => {
+                console.error('❌ [HomeModern] City stats error:', err);
+                return null;
+              })
+          : Promise.resolve(null),
+        // County stats
+        location.county 
+          ? api.get('/stats', { params: { state: location.state, county: location.county } })
+              .then(res => {
+                console.log('📊 [HomeModern] County stats:', res.data.data);
+                return res.data.data;
+              })
+              .catch(err => {
+                console.error('❌ [HomeModern] County stats error:', err);
+                return null;
+              })
+          : Promise.resolve(null),
+        // State stats
+        location.state 
+          ? api.get('/stats', { params: { state: location.state } })
+              .then(res => {
+                console.log('📊 [HomeModern] State stats:', res.data.data);
+                return res.data.data;
+              })
+              .catch(err => {
+                console.error('❌ [HomeModern] State stats error:', err);
+                return null;
+              })
+          : Promise.resolve(null)
+      ]);
+      
+      const result = {
+        city: cityStats,
+        county: countyStats,
+        state: stateStats,
+        community: cityStats // Use city stats for community/school board
+      };
+      
+      console.log('📊 [HomeModern] All stats loaded:', result);
+      return result;
     },
+    enabled: !!location,
     staleTime: 1000 * 60 * 60, // Cache for 1 hour
     refetchOnWindowFocus: false
-  })
+  });
+
+  // Get the stats for the currently selected scope
+  const statsData = allStatsData?.[searchScope as keyof typeof allStatsData];
+  
+  console.log('📊 [HomeModern] Current scope:', searchScope, 'Stats data:', statsData);
 
   // Live search preview (type-ahead with actual results from API)
   const { data: previewResults, isLoading: previewLoading, error: previewError } = useQuery({
