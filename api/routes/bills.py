@@ -449,30 +449,29 @@ async def get_bill_map_data(
         for _, row in df.iterrows():
             state_code = row['state']
             
-            # Reconstruct nested dicts
-            type_cols = [c for c in df.columns if c.startswith('type_')]
+            # Reconstruct nested dicts (exclude type_status_counts which is already a dict)
+            type_cols = [c for c in df.columns if c.startswith('type_') and c != 'type_status_counts']
             status_cols = [c for c in df.columns if c.startswith('status_')]
             
-            type_counts = {c.replace('type_', ''): int(row[c]) for c in type_cols}
-            status_counts = {c.replace('status_', ''): int(row[c]) for c in status_cols}
+            # Handle NaN values - convert to 0
+            type_counts = {c.replace('type_', ''): int(row[c]) if not pd.isna(row[c]) else 0 for c in type_cols}
+            status_counts = {c.replace('status_', ''): int(row[c]) if not pd.isna(row[c]) else 0 for c in status_cols}
             
-            # Extract sample_bills (stored as list of dicts in parquet)
+            # Extract sample_bills (stored as numpy array in parquet)
             sample_bills = []
             if 'sample_bills' in row.index:
                 bills_data = row['sample_bills']
-                # Handle different formats: list, string, or NaN
-                if isinstance(bills_data, list):
-                    sample_bills = bills_data
+                # Pandas stores list columns as numpy arrays
+                if hasattr(bills_data, '__iter__') and not isinstance(bills_data, str):
+                    try:
+                        # Convert numpy array or list to Python list
+                        sample_bills = [dict(bill) for bill in bills_data if bill]
+                    except:
+                        sample_bills = []
                 elif isinstance(bills_data, str):
                     import json
                     try:
                         sample_bills = json.loads(bills_data)
-                    except:
-                        sample_bills = []
-                elif not pd.isna(bills_data):
-                    # Might be a numpy array or other iterable
-                    try:
-                        sample_bills = list(bills_data)
                     except:
                         sample_bills = []
             
