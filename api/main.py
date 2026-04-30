@@ -1146,6 +1146,13 @@ async def startup_event():
     logger.info(f"Log Level: {settings.log_level}")
     logger.info(f"Log File: {settings.log_file}")
     
+    # Check if running on HuggingFace Spaces
+    IS_HF_SPACES = os.getenv("HF_SPACES") == "1"
+    if IS_HF_SPACES:
+        logger.info(f"🤗 Running on HuggingFace Spaces")
+    else:
+        logger.info(f"💻 Running in local/standard environment")
+    
     # Validate critical data files
     logger.info("")
     logger.info("📊 VALIDATING DATA AVAILABILITY...")
@@ -1214,9 +1221,48 @@ async def startup_event():
     else:
         logger.warning("  ⚠️  No state data directory found")
     
+    # Validate HuggingFace datasets if running on HF Spaces
+    if IS_HF_SPACES:
+        logger.info("")
+        logger.info("🤗 VALIDATING HUGGINGFACE DATASETS...")
+        logger.info("-" * 80)
+        
+        # Check a sample of critical datasets
+        import requests
+        from routes.bills import get_hf_dataset_url
+        
+        test_datasets = [
+            ("states-ma-bills-bills", "Massachusetts Bills"),
+            ("states-al-bills-bills", "Alabama Bills"),
+            ("states-ma-contacts-local-officials", "Massachusetts Local Officials"),
+        ]
+        
+        hf_datasets_ok = 0
+        for dataset_name, display_name in test_datasets:
+            url = get_hf_dataset_url(dataset_name)
+            try:
+                response = requests.head(url, timeout=10, allow_redirects=True)
+                if response.status_code == 200:
+                    logger.info(f"  ✅ {display_name}: Accessible")
+                    hf_datasets_ok += 1
+                else:
+                    logger.error(f"  ❌ {display_name}: HTTP {response.status_code}")
+                    logger.error(f"     URL: {url}")
+            except Exception as e:
+                logger.error(f"  ❌ {display_name}: {type(e).__name__} - {e}")
+                logger.error(f"     URL: {url}")
+        
+        logger.info("")
+        logger.info(f"  📊 HuggingFace datasets validated: {hf_datasets_ok}/{len(test_datasets)}")
+        
+        if hf_datasets_ok < len(test_datasets):
+            logger.warning("  ⚠️  Some datasets are not accessible - API may have limited functionality")
+    
     logger.info("")
     logger.info("="*80)
     logger.info(f"✅ API READY - {len(critical_files)}/{len(reference_checks)} critical files available")
+    if IS_HF_SPACES:
+        logger.info(f"✅ HuggingFace datasets validated")
     logger.info("="*80)
     logger.info("")
 
