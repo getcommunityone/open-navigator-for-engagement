@@ -429,6 +429,295 @@ def load_reference_data(conn):
     return True
 
 
+def load_jurisdictions_search(conn):
+    """Load jurisdictions (cities, counties, townships, school districts)"""
+    logger.info("🏛️  Loading jurisdictions search data...")
+    
+    cursor = conn.cursor()
+    total_loaded = 0
+    
+    # Load cities
+    cities_file = GOLD_DIR / "reference" / "jurisdictions_cities.parquet"
+    if cities_file.exists():
+        df = pd.read_parquet(cities_file)
+        records = [
+            (row.get('NAME', ''), 'city', row.get('USPS', ''), None,  # name, type, state, county
+             row.get('GEOID'), None,  # geoid, fips_code
+             None, clean_numeric(row.get('ALAND_SQMI')),  # population, area_sq_miles
+             'census', datetime.now())
+            for _, row in df.iterrows()
+        ]
+        
+        execute_values(cursor, """
+            INSERT INTO jurisdictions_search 
+            (name, type, state, county, geoid, fips_code, population, area_sq_miles, source, last_updated)
+            VALUES %s
+            ON CONFLICT (name, type, state, county) DO UPDATE SET
+                geoid = EXCLUDED.geoid,
+                area_sq_miles = EXCLUDED.area_sq_miles
+        """, records)
+        
+        total_loaded += len(records)
+        logger.info(f"  Loaded {len(records):,} cities")
+    
+    # Load counties
+    counties_file = GOLD_DIR / "reference" / "jurisdictions_counties.parquet"
+    if counties_file.exists():
+        df = pd.read_parquet(counties_file)
+        records = [
+            (row.get('NAME', ''), 'county', row.get('USPS', ''), None,
+             row.get('GEOID'), None,
+             None, clean_numeric(row.get('ALAND_SQMI')),
+             'census', datetime.now())
+            for _, row in df.iterrows()
+        ]
+        
+        execute_values(cursor, """
+            INSERT INTO jurisdictions_search 
+            (name, type, state, county, geoid, fips_code, population, area_sq_miles, source, last_updated)
+            VALUES %s
+            ON CONFLICT (name, type, state, county) DO UPDATE SET
+                geoid = EXCLUDED.geoid,
+                area_sq_miles = EXCLUDED.area_sq_miles
+        """, records)
+        
+        total_loaded += len(records)
+        logger.info(f"  Loaded {len(records):,} counties")
+    
+    # Load townships
+    townships_file = GOLD_DIR / "reference" / "jurisdictions_townships.parquet"
+    if townships_file.exists():
+        df = pd.read_parquet(townships_file)
+        records = [
+            (row.get('NAME', ''), 'township', row.get('USPS', ''), None,
+             row.get('GEOID'), None,
+             None, clean_numeric(row.get('ALAND_SQMI')),
+             'census', datetime.now())
+            for _, row in df.iterrows()
+        ]
+        
+        execute_values(cursor, """
+            INSERT INTO jurisdictions_search 
+            (name, type, state, county, geoid, fips_code, population, area_sq_miles, source, last_updated)
+            VALUES %s
+            ON CONFLICT (name, type, state, county) DO UPDATE SET
+                geoid = EXCLUDED.geoid,
+                area_sq_miles = EXCLUDED.area_sq_miles
+        """, records)
+        
+        total_loaded += len(records)
+        logger.info(f"  Loaded {len(records):,} townships")
+    
+    # Load school districts
+    districts_file = GOLD_DIR / "reference" / "jurisdictions_school_districts.parquet"
+    if districts_file.exists():
+        df = pd.read_parquet(districts_file)
+        records = [
+            (row.get('NAME', ''), 'school_district', row.get('STATE', ''), None,
+             row.get('GEOID'), None,
+             None, clean_numeric(row.get('ALAND_SQMI')),
+             'census', datetime.now())
+            for _, row in df.iterrows()
+        ]
+        
+        execute_values(cursor, """
+            INSERT INTO jurisdictions_search 
+            (name, type, state, county, geoid, fips_code, population, area_sq_miles, source, last_updated)
+            VALUES %s
+            ON CONFLICT (name, type, state, county) DO UPDATE SET
+                geoid = EXCLUDED.geoid,
+                area_sq_miles = EXCLUDED.area_sq_miles
+        """, records)
+        
+        total_loaded += len(records)
+        logger.info(f"  Loaded {len(records):,} school districts")
+    
+    conn.commit()
+    logger.success(f"✅ Loaded {total_loaded:,} jurisdictions into search table")
+    record_sync(conn, 'jurisdictions_search', total_loaded)
+    return True
+
+
+def load_events_search(conn, limit_states=None):
+    """Load events from states"""
+    logger.info("📅 Loading events search data...")
+    
+    states_to_load = limit_states or []
+    
+    # If no limit, scan all states
+    if not limit_states:
+        states_dir = GOLD_DIR / "states"
+        if states_dir.exists():
+            states_to_load = [d.name for d in states_dir.iterdir() if d.is_dir()]
+    
+    total_loaded = 0
+    cursor = conn.cursor()
+    
+    for state in states_to_load:
+        events_file = GOLD_DIR / "states" / state / "events.parquet"
+        if not events_file.exists():
+            continue
+        
+        logger.info(f"  Loading events from {state}...")
+        df = pd.read_parquet(events_file)
+        
+        records = []
+        for _, row in df.iterrows():
+            # Parse start_date to extract date and time
+            start_date = row.get('start_date')
+            event_date = None
+            event_time = None
+            if start_date:
+                try:
+                    if isinstance(start_date, str):
+                        from dateutil import parser
+                        dt = parser.parse(start_date)
+                        event_date = dt.date()
+                        event_time = dt.time()
+                    elif hasattr(start_date, 'date'):
+                        event_date = start_date.date()
+                        event_time = start_date.time()
+                except:
+                    pass
+            
+            record = (
+                row.get('event_name', ''),
+                row.get('description', ''),
+                event_date,
+                event_time,
+                row.get('jurisdiction_name', ''),
+                None,  # jurisdiction_type
+                state,
+                None,  # city
+                row.get('location_id'),  # location
+                row.get('classification', ''),  # meeting_type
+                row.get('status', ''),
+                None,  # agenda_url
+                None,  # minutes_url
+                None,  # video_url
+                'openstates',
+                datetime.now()
+            )
+            records.append(record)
+        
+        if records:
+            execute_values(cursor, """
+                INSERT INTO events_search 
+                (title, description, event_date, event_time, jurisdiction_name, jurisdiction_type,
+                 state, city, location, meeting_type, status, agenda_url, minutes_url, video_url,
+                 source, last_updated)
+                VALUES %s
+            """, records)
+            
+            total_loaded += len(records)
+            logger.info(f"    Loaded {len(records):,} events from {state}")
+    
+    conn.commit()
+    logger.success(f"✅ Loaded {total_loaded:,} events into search table")
+    record_sync(conn, 'events_search', total_loaded)
+    return True
+
+
+def load_contacts_search(conn, limit_states=None):
+    """Load contacts (officials, nonprofit officers) from states"""
+    logger.info("👥 Loading contacts search data...")
+    
+    states_to_load = limit_states or []
+    
+    # If no limit, scan all states
+    if not limit_states:
+        states_dir = GOLD_DIR / "states"
+        if states_dir.exists():
+            states_to_load = [d.name for d in states_dir.iterdir() if d.is_dir()]
+    
+    total_loaded = 0
+    cursor = conn.cursor()
+    
+    for state in states_to_load:
+        # Load local officials
+        officials_file = GOLD_DIR / "states" / state / "contacts_local_officials.parquet"
+        if officials_file.exists():
+            df = pd.read_parquet(officials_file)
+            
+            records = []
+            for _, row in df.iterrows():
+                record = (
+                    row.get('name', ''),
+                    row.get('title', ''),
+                    row.get('jurisdiction', ''),  # organization_name
+                    None,  # organization_ein
+                    None,  # email
+                    None,  # phone
+                    None,  # street_address
+                    None,  # city
+                    state,
+                    None,  # zip_code
+                    'government_official',  # role_type
+                    None,  # compensation
+                    None,  # hours_per_week
+                    'meeting_transcript',
+                    None,  # tax_year
+                    datetime.now()
+                )
+                records.append(record)
+            
+            if records:
+                execute_values(cursor, """
+                    INSERT INTO contacts_search 
+                    (name, title, organization_name, organization_ein, email, phone,
+                     street_address, city, state, zip_code, role_type, compensation,
+                     hours_per_week, source, tax_year, last_updated)
+                    VALUES %s
+                """, records)
+                
+                total_loaded += len(records)
+                logger.info(f"  Loaded {len(records):,} officials from {state}")
+        
+        # Load nonprofit officers (if exists)
+        officers_file = GOLD_DIR / "states" / state / "contacts_nonprofit_officers.parquet"
+        if officers_file.exists():
+            df = pd.read_parquet(officers_file)
+            
+            records = []
+            for _, row in df.iterrows():
+                record = (
+                    row.get('name', ''),
+                    row.get('title', ''),
+                    row.get('organization_name', ''),
+                    row.get('ein', ''),  # organization_ein
+                    None,  # email
+                    None,  # phone
+                    None,  # street_address
+                    None,  # city
+                    state,
+                    None,  # zip_code
+                    'nonprofit_officer',  # role_type
+                    clean_numeric(row.get('compensation')),
+                    clean_numeric(row.get('hours_per_week')),
+                    'irs_form990',
+                    row.get('tax_year'),
+                    datetime.now()
+                )
+                records.append(record)
+            
+            if records:
+                execute_values(cursor, """
+                    INSERT INTO contacts_search 
+                    (name, title, organization_name, organization_ein, email, phone,
+                     street_address, city, state, zip_code, role_type, compensation,
+                     hours_per_week, source, tax_year, last_updated)
+                    VALUES %s
+                """, records)
+                
+                total_loaded += len(records)
+                logger.info(f"  Loaded {len(records):,} nonprofit officers from {state}")
+    
+    conn.commit()
+    logger.success(f"✅ Loaded {total_loaded:,} contacts into search table")
+    record_sync(conn, 'contacts_search', total_loaded)
+    return True
+
+
 def record_sync(conn, table_name: str, records_synced: int, status: str = 'success', error: Optional[str] = None):
     """Record sync status"""
     cursor = conn.cursor()
@@ -469,6 +758,18 @@ def main():
         logger.info("⚠️  Loading only MA nonprofits (full load would be 3M+ records)")
         logger.info("   To load all states, modify limit_states parameter")
         if not load_nonprofits_search(conn, limit_states=['MA']):
+            return 1
+        
+        # Step 5: Load jurisdictions (all jurisdictions - reference data)
+        if not load_jurisdictions_search(conn):
+            return 1
+        
+        # Step 6: Load events (MA only, same as nonprofits)
+        if not load_events_search(conn, limit_states=['MA']):
+            return 1
+        
+        # Step 7: Load contacts (MA only, same as nonprofits)
+        if not load_contacts_search(conn, limit_states=['MA']):
             return 1
         
         # Show summary
