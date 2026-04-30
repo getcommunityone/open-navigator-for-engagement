@@ -86,11 +86,26 @@ def classify_bill_type(title: str, classification: list, topic: Optional[str] = 
                 return 'mandate'  # Prohibiting removal = mandate to keep
             return 'removal'
         
-        # SECOND: Check for MANDATE/REQUIRE (positive sentiment)
-        elif any(word in title_lower for word in ['mandate', 'mandating', 'require', 'requiring', 'shall add', 'must fluoridate', 'must add']):
+        # SECOND: Check for notification/monitoring (before "require" check)
+        # Bills like "notification required" are about monitoring, not mandating fluoridation
+        elif any(phrase in title_lower for phrase in [
+            'notification', 'notify', 'notifying',
+            'report to', 'reporting', 'report when',
+            'monitor', 'monitoring'
+        ]):
+            return 'study'
+        
+        # THIRD: Check for MANDATE/REQUIRE (positive sentiment)
+        # Be specific - just "require" alone isn't enough, need context
+        elif any(phrase in title_lower for phrase in [
+            'mandate', 'mandating', 'shall fluoridate', 'shall add fluoride',
+            'must fluoridate', 'must add fluoride',
+            'require fluoridation', 'require water system to fluoridate',
+            'require addition of fluoride'
+        ]):
             return 'mandate'
         
-        # THIRD: Check for funding
+        # FOURTH: Check for funding
         elif any(word in title_lower for word in ['fund', 'funding', 'appropriation', 'grant', 'reimburse', 'subsidy']):
             return 'funding'
         elif any(word in title_lower for word in ['study', 'research', 'analysis', 'assess', 'evaluate']):
