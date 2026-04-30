@@ -1229,7 +1229,7 @@ async def startup_event():
         
         # Check a sample of critical datasets
         import requests
-        from routes.bills import get_hf_dataset_url
+        from api.routes.bills import get_hf_dataset_url
         
         test_datasets = [
             ("states-ma-bills-bills", "Massachusetts Bills"),
