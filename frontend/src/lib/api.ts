@@ -1,13 +1,21 @@
 // Native fetch-based API client - No axios dependency!
 // Handles relative URLs correctly without HTTP/HTTPS conversion issues
 
-// Environment-aware API base URL
+// Environment-aware API base URL with NUCLEAR OPTION for production
 let API_BASE_URL: string
 
 if (import.meta.env.PROD) {
-  // Production: Use relative path - fetch handles this correctly!
+  // 🚨 NUCLEAR OPTION: HARDCODE /api in production - IGNORE ALL ENVIRONMENT VARIABLES
+  // This prevents HuggingFace build secrets from injecting http:// URLs
   API_BASE_URL = '/api'
-  console.log('🌐 [API] Production mode: Relative path (fetch handles correctly):', API_BASE_URL)
+  console.log('🌐 [API] Production mode: HARDCODED relative path:', API_BASE_URL)
+  console.log('🚨 [API] Ignoring all environment variables (nuclear option enabled)')
+  
+  // SAFETY CHECK: If somehow an http:// URL got through, log a warning
+  if (typeof import.meta.env.VITE_API_URL === 'string' && import.meta.env.VITE_API_URL.startsWith('http://')) {
+    console.warn('⚠️ [API] BLOCKED http:// URL from environment:', import.meta.env.VITE_API_URL)
+    console.warn('⚠️ [API] Using hardcoded /api instead')
+  }
 } else {
   // Development: Use environment variable or default to localhost
   API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api'
@@ -38,6 +46,15 @@ class APIClient {
   ): Promise<APIResponse<T>> {
     // Build full URL
     const fullUrl = url.startsWith('http') ? url : `${this.baseURL}${url}`
+    
+    // 🚨 PRODUCTION SAFETY CHECK: Block any http:// URLs
+    if (import.meta.env.PROD && fullUrl.startsWith('http://')) {
+      const httpsUrl = fullUrl.replace('http://', 'https://')
+      console.error('❌ [API] BLOCKED insecure HTTP request in production:', fullUrl)
+      console.error('❌ [API] This would cause Mixed Content errors')
+      console.error('❌ [API] Upgrading to HTTPS:', httpsUrl)
+      throw new Error(`BLOCKED: Attempted to make insecure HTTP request in production: ${fullUrl}`)
+    }
     
     console.log('🔍 [FETCH] Request URL:', fullUrl)
     console.log('🔍 [FETCH] Method:', options.method || 'GET')
