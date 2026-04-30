@@ -29,7 +29,7 @@ GOLD_DIR = project_root / "data" / "gold"
 OUTPUT_FILE = GOLD_DIR / "national" / "bills_map_aggregates.parquet"
 
 # Topics to pre-aggregate
-TOPICS = ['fluorid', 'dental', 'oral health', 'medicaid', 'education', 'health']
+TOPICS = ['fluoride', 'dental', 'oral health', 'medicaid', 'education', 'health']
 
 # All US states
 ALL_STATES = [

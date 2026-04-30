@@ -71,7 +71,7 @@ def classify_bill_type(title: str, classification: list, topic: Optional[str] = 
     topic_lower = topic.lower() if topic else ""
     
     # Fluoridation-specific classifications
-    if 'fluorid' in topic_lower or 'fluorid' in title_lower:
+    if 'fluoride' in topic_lower or 'fluoride' in title_lower:
         if any(word in title_lower for word in ['mandate', 'require', 'shall add', 'must fluoridate']):
             return 'mandate'
         elif any(word in title_lower for word in ['remove', 'discontinue', 'cease', 'eliminate', 'prohibit fluorid', 'ban fluorid']):
@@ -153,7 +153,7 @@ def get_legend_for_topic(topic: Optional[str]) -> dict:
     """
     topic_lower = topic.lower() if topic else ""
     
-    if 'fluorid' in topic_lower:
+    if 'fluoride' in topic_lower:
         return {
             "mandate": "Mandate Fluoridation",
             "removal": "Remove Fluoridation",

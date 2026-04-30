@@ -538,7 +538,7 @@ async def get_api_opportunities(
                 
                 # Determine urgency based on keywords
                 title_lower = title.lower() if title else ""
-                if 'fluorid' in title_lower or 'water' in title_lower:
+                if 'fluoride' in title_lower or 'water' in title_lower:
                     urgency_level = 'critical'
                     confidence = 0.9
                     topic_type = 'water_fluoridation'

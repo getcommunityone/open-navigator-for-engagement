@@ -208,7 +208,7 @@ export default function PolicyMap() {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {/* Fluoridation Card */}
               <button
-                onClick={() => handleTopicSelect('fluorid')}
+                onClick={() => handleTopicSelect('fluoride')}
                 className="bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition-all hover:scale-105 text-left border-2 border-transparent hover:border-blue-500"
               >
                 <div className="text-5xl mb-4">💧</div>
@@ -319,7 +319,7 @@ export default function PolicyMap() {
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <span className="text-2xl">
-                    {selectedTopic === 'fluorid' && '💧'}
+                    {selectedTopic === 'fluoride' && '💧'}
                     {selectedTopic === 'dental' && '🦷'}
                     {selectedTopic === 'oral health' && '😁'}
                     {selectedTopic === 'medicaid' && '🏥'}
@@ -329,7 +329,7 @@ export default function PolicyMap() {
                   <div>
                     <div className="text-sm text-gray-600">Viewing legislation for:</div>
                     <div className="text-lg font-bold text-gray-900 capitalize">
-                      {selectedTopic === 'fluorid' ? 'Water Fluoridation' :
+                      {selectedTopic === 'fluoride' ? 'Water Fluoridation' :
                        selectedTopic === 'dental' ? 'Dental Health' :
                        selectedTopic === 'oral health' ? 'Oral Health' :
                        selectedTopic === 'medicaid' ? 'Medicaid' :
@@ -441,7 +441,7 @@ export default function PolicyMap() {
                 )}
               </h2>
               <p className="text-base text-gray-600">
-                {selectedTopic === 'fluorid' && (
+                {selectedTopic === 'fluoride' && (
                   <>See which states mandate water fluoridation, which have removed it, and where funding or studies are underway. Each state's color shows the primary type of legislation, while darker/lighter shades indicate whether bills have been enacted, are pending, or have failed.</>
                 )}
                 {selectedTopic === 'dental' && (
