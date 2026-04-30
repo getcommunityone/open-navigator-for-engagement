@@ -120,7 +120,7 @@ Ready to discover and process nonprofit data from free APIs.
 ### Run Both Pipelines
 
 ```bash
-cd /home/developer/projects/oral-health-policy-pulse
+cd /home/developer/projects/open-navigator
 source .venv/bin/activate
 python scripts/create_all_gold_tables.py
 ```

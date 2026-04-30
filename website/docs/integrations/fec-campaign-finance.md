@@ -92,7 +92,7 @@ The FEC integration creates 4 gold tables per state:
 ### Run Demo Script
 
 ```bash
-cd /home/developer/projects/oral-health-policy-pulse
+cd /home/developer/projects/open-navigator
 source .venv/bin/activate
 
 # Basic demo (using DEMO_KEY)

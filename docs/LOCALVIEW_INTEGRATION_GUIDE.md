@@ -28,7 +28,7 @@ Once the page loads:
 
 Click the **"Download"** button for each file:
 - Download all CSV/TAB files related to municipalities, meetings, and videos
-- Save them to: `/home/developer/projects/oral-health-policy-pulse/data/cache/localview/`
+- Save them to: `/home/developer/projects/open-navigator/data/cache/localview/`
 
 **Expected files** (names may vary):
 ```
@@ -77,7 +77,7 @@ The LocalView dataset typically includes:
 Once you've downloaded the files to `data/cache/localview/`, run:
 
 ```bash
-cd /home/developer/projects/oral-health-policy-pulse
+cd /home/developer/projects/open-navigator
 source venv/bin/activate
 
 # Run the ingestion script

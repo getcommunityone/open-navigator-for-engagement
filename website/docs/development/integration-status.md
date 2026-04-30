@@ -39,7 +39,7 @@ def extract_video_urls_from_instance(instance: dict) -> Dict[str, str]:
 
 ### To Run:
 ```bash
-cd /home/developer/projects/oral-health-policy-pulse
+cd /home/developer/projects/open-navigator
 source venv/bin/activate
 pip install datasets  # HuggingFace datasets library
 python discovery/meetingbank_ingestion.py
@@ -75,7 +75,7 @@ Complete integration that clones City Scrapers repos and extracts URLs from spid
 
 ### To Run:
 ```bash
-cd /home/developer/projects/oral-health-policy-pulse
+cd /home/developer/projects/open-navigator
 source venv/bin/activate
 python discovery/city_scrapers_urls.py
 ```
@@ -118,7 +118,7 @@ Get your key free at: https://openstates.org/accounts/signup/
 
 ### To Run:
 ```bash
-cd /home/developer/projects/oral-health-policy-pulse
+cd /home/developer/projects/open-navigator
 source venv/bin/activate
 export OPENSTATES_API_KEY=your-key  # or add to .env
 python discovery/openstates_sources.py
@@ -163,7 +163,7 @@ python discovery/openstates_sources.py
 
 ### Step 1: Install Dependencies
 ```bash
-cd /home/developer/projects/oral-health-policy-pulse
+cd /home/developer/projects/open-navigator
 source venv/bin/activate
 
 # Install HuggingFace datasets library and requests (if not already installed)
@@ -185,7 +185,7 @@ echo "OPENSTATES_API_KEY=your-key-here" >> .env
 
 ### Step 3: Run MeetingBank Integration
 ```bash
-cd /home/developer/projects/oral-health-policy-pulse
+cd /home/developer/projects/open-navigator
 source venv/bin/activate
 python discovery/meetingbank_ingestion.py
 ```
@@ -194,7 +194,7 @@ python discovery/meetingbank_ingestion.py
 
 ### Step 4: Run City Scrapers Integration
 ```bash
-cd /home/developer/projects/oral-health-policy-pulse
+cd /home/developer/projects/open-navigator
 source venv/bin/activate
 python discovery/city_scrapers_urls.py
 ```
@@ -205,7 +205,7 @@ python discovery/city_scrapers_urls.py
 
 ### Step 5: Run Open States Integration
 ```bash
-cd /home/developer/projects/oral-health-policy-pulse
+cd /home/developer/projects/open-navigator
 source venv/bin/activate
 python discovery/openstates_sources.py
 ```

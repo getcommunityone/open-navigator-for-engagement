@@ -227,7 +227,7 @@ Types: Causes
 
 ### Start the API
 ```bash
-cd /home/developer/projects/oral-health-policy-pulse
+cd /home/developer/projects/open-navigator
 source .venv/bin/activate
 uvicorn api.main:app --reload --port 8000
 ```

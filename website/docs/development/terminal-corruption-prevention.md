@@ -27,7 +27,7 @@ bash scripts/cleanup_frontend_junk.sh
 **2. Reset your terminal:**
 ```bash
 reset
-cd /home/developer/projects/oral-health-policy-pulse
+cd /home/developer/projects/open-navigator
 ```
 
 ## Prevention (CRITICAL)
@@ -58,7 +58,7 @@ source ~/.bashrc  # or source ~/.zshrc
 
 2. **Run commands from project root:**
    ```bash
-   cd /home/developer/projects/oral-health-policy-pulse
+   cd /home/developer/projects/open-navigator
    # NOT from frontend/, api/, etc.
    ```
 

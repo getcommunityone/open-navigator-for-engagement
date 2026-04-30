@@ -72,7 +72,7 @@ gh repo edit --visibility public
 **Check for sensitive data:**
 ```bash
 # Search for potential secrets
-cd /home/developer/projects/oral-health-policy-pulse
+cd /home/developer/projects/open-navigator
 
 # Check .env files (should be in .gitignore)
 git ls-files | grep -E '\.env$'
@@ -109,7 +109,7 @@ config/local.py
 After renaming on GitHub:
 
 ```bash
-cd /home/developer/projects/oral-health-policy-pulse
+cd /home/developer/projects/open-navigator
 
 # Check current remote
 git remote -v
@@ -133,7 +133,7 @@ git fetch
 Run the provided script to update all repository URLs in your code:
 
 ```bash
-cd /home/developer/projects/oral-health-policy-pulse
+cd /home/developer/projects/open-navigator
 
 # Make script executable
 chmod +x update-repo-urls.sh

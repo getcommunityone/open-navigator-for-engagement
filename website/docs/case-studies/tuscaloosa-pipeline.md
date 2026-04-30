@@ -10,7 +10,7 @@ This guide shows how to run the complete 4-step pipeline for Tuscaloosa, AL.
 
 ```bash
 source .venv/bin/activate
-cd /home/developer/projects/oral-health-policy-pulse
+cd /home/developer/projects/open-navigator
 ```
 
 ---
@@ -480,7 +480,7 @@ Run scraper daily to get new meetings:
 
 ```bash
 # Add to crontab
-0 6 * * * cd /home/developer/projects/oral-health-policy-pulse && source .venv/bin/activate && python main.py scrape --state AL --municipality Tuscaloosa --url https://tuscaloosaal.suiteonemedia.com --platform suiteonemedia --max-events 10
+0 6 * * * cd /home/developer/projects/open-navigator && source .venv/bin/activate && python main.py scrape --state AL --municipality Tuscaloosa --url https://tuscaloosaal.suiteonemedia.com --platform suiteonemedia --max-events 10
 ```
 
 ### View Current Status

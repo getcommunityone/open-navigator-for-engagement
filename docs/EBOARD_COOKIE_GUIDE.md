@@ -30,7 +30,7 @@ This guide shows you how to bypass Incapsula bot protection using **manual sessi
 
 5. **Save to File:**
    ```bash
-   cd /home/developer/projects/oral-health-policy-pulse
+   cd /home/developer/projects/open-navigator
    nano eboard_cookies.json
    ```
    - Paste the copied cookies
@@ -56,7 +56,7 @@ This guide shows you how to bypass Incapsula bot protection using **manual sessi
 
 4. **Create JSON File:**
    ```bash
-   cd /home/developer/projects/oral-health-policy-pulse
+   cd /home/developer/projects/open-navigator
    nano eboard_cookies.json
    ```
 
@@ -89,7 +89,7 @@ This guide shows you how to bypass Incapsula bot protection using **manual sessi
 ## Step 2: Verify Cookie File
 
 ```bash
-cd /home/developer/projects/oral-health-policy-pulse
+cd /home/developer/projects/open-navigator
 
 # Check file exists
 ls -la eboard_cookies.json

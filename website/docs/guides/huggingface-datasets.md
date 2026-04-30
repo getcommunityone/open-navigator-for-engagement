@@ -41,7 +41,7 @@ HUGGINGFACE_TOKEN=hf_your_write_token_here
 ### Upload All Nonprofit Tables
 
 ```bash
-cd /home/developer/projects/oral-health-policy-pulse
+cd /home/developer/projects/open-navigator
 
 # Upload all 4 tables (organizations, financials, programs, locations)
 python scripts/upload_nonprofits_to_hf.py --all

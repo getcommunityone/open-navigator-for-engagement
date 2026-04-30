@@ -535,7 +535,7 @@ As we add more states, projections become more accurate:
 
 ```bash
 # 1. Start API
-cd /home/developer/projects/oral-health-policy-pulse
+cd /home/developer/projects/open-navigator
 source .venv/bin/activate
 uvicorn api.main:app --host 0.0.0.0 --port 8000 --reload
 

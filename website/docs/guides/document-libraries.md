@@ -7,7 +7,7 @@
 ## 🚀 QUICK INSTALL
 
 ```bash
-cd /home/developer/projects/oral-health-policy-pulse
+cd /home/developer/projects/open-navigator
 source venv/bin/activate
 
 # Install all document processing libraries

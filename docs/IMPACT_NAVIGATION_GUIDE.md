@@ -5,7 +5,7 @@ The frontend has been transformed from a technical data audit to a **citizen mob
 ## Quick Start
 
 ```bash
-cd /home/developer/projects/oral-health-policy-pulse/frontend/policy-dashboards
+cd /home/developer/projects/open-navigator/frontend/policy-dashboards
 npm start
 ```
 
@@ -122,7 +122,7 @@ To populate with actual Tuscaloosa data:
 
 ```bash
 # Run Python analysis (auto-exports to frontend)
-cd /home/developer/projects/oral-health-policy-pulse
+cd /home/developer/projects/open-navigator
 source .venv/bin/activate
 python examples/tuscaloosa_accountability_report.py
 ```

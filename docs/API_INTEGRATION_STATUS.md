@@ -453,7 +453,7 @@ class GoogleCivicAPI:
 
 1. **Test Ballotpedia integration:**
    ```bash
-   cd /home/developer/projects/oral-health-policy-pulse
+   cd /home/developer/projects/open-navigator
    source .venv/bin/activate
    python discovery/ballotpedia_integration.py
    ```

@@ -107,7 +107,7 @@ Detailed analysis of 11 civic tech projects with:
 
 ### Run the Full Demo
 ```bash
-cd /home/developer/projects/oral-health-policy-pulse
+cd /home/developer/projects/open-navigator
 source venv/bin/activate
 python examples/full_demo.py
 ```

@@ -411,7 +411,7 @@ NACo may provide bulk data export or API access for research/public benefit proj
 pip install httpx beautifulsoup4
 
 # 2. Run standalone test
-cd /home/developer/projects/oral-health-policy-pulse
+cd /home/developer/projects/open-navigator
 python discovery/social_media_discovery.py
 
 # Expected output:

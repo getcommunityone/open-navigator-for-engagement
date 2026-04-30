@@ -6,7 +6,7 @@ Complete guide for integrating the React Policy Accountability Dashboards with t
 
 ```bash
 # 1. Generate data from Python analysis
-cd /home/developer/projects/oral-health-policy-pulse
+cd /home/developer/projects/open-navigator
 source .venv/bin/activate
 python examples/tuscaloosa_accountability_report.py
 

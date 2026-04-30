@@ -18,7 +18,7 @@ We implemented **two layers of protection**:
 
 ### 1. Pre-Deployment Build Verification
 
-The [deploy-huggingface.sh](/home/developer/projects/oral-health-policy-pulse/deploy-huggingface.sh) script now tests builds BEFORE pushing to HuggingFace:
+The [deploy-huggingface.sh](/home/developer/projects/open-navigator/deploy-huggingface.sh) script now tests builds BEFORE pushing to HuggingFace:
 
 ```bash
 ./deploy-huggingface.sh
@@ -42,7 +42,7 @@ The [deploy-huggingface.sh](/home/developer/projects/oral-health-policy-pulse/de
 
 ### 2. GitHub Actions CI/CD
 
-The [.github/workflows/ci-build-test.yml](/home/developer/projects/oral-health-policy-pulse/.github/workflows/ci-build-test.yml) workflow automatically tests:
+The [.github/workflows/ci-build-test.yml](/home/developer/projects/open-navigator/.github/workflows/ci-build-test.yml) workflow automatically tests:
 
 - ✅ Frontend TypeScript build
 - ✅ **Docusaurus documentation build** ← catches config errors

@@ -83,11 +83,11 @@ python main.py publish-to-hf --dataset discovered-urls
 ### Dataset URLs
 
 Your datasets will be available at:
-- https://huggingface.co/datasets/CommunityOne/oral-health-policy-pulse-census-gid
-- https://huggingface.co/datasets/CommunityOne/oral-health-policy-pulse-gov-domains
-- https://huggingface.co/datasets/CommunityOne/oral-health-policy-pulse-nces-schools
-- https://huggingface.co/datasets/CommunityOne/oral-health-policy-pulse-discovered-urls
-- https://huggingface.co/datasets/CommunityOne/oral-health-policy-pulse-scraping-targets
+- https://huggingface.co/datasets/CommunityOne/open-navigator-census-gid
+- https://huggingface.co/datasets/CommunityOne/open-navigator-gov-domains
+- https://huggingface.co/datasets/CommunityOne/open-navigator-nces-schools
+- https://huggingface.co/datasets/CommunityOne/open-navigator-discovered-urls
+- https://huggingface.co/datasets/CommunityOne/open-navigator-scraping-targets
 
 ### Public Access
 
@@ -97,10 +97,10 @@ Anyone can load your datasets:
 from datasets import load_dataset
 
 # Load census data
-census = load_dataset("CommunityOne/oral-health-policy-pulse-census-gid")
+census = load_dataset("CommunityOne/open-navigator-census-gid")
 
 # Load discovered URLs
-urls = load_dataset("CommunityOne/oral-health-policy-pulse-discovered-urls")
+urls = load_dataset("CommunityOne/open-navigator-discovered-urls")
 
 # Access specific split
 counties = census["counties"]
@@ -117,7 +117,7 @@ print(f"Total counties: {len(counties)}")
 from datasets import load_dataset
 import pandas as pd
 
-census = load_dataset("CommunityOne/oral-health-policy-pulse-census-gid")
+census = load_dataset("CommunityOne/open-navigator-census-gid")
 df = pd.DataFrame(census["municipalities"])
 
 # Cities by state
@@ -127,14 +127,14 @@ df.groupby("state_name")["population"].sum().sort_values(ascending=False)
 ### For Civic Hackers
 ```python
 # Get all county .gov domains
-domains = load_dataset("CommunityOne/oral-health-policy-pulse-gov-domains")
+domains = load_dataset("CommunityOne/open-navigator-gov-domains")
 counties = domains.filter(lambda x: x['Domain Type'] == 'County')
 ```
 
 ### For Data Scientists
 ```python
 # High-confidence discovered URLs
-urls = load_dataset("CommunityOne/oral-health-policy-pulse-discovered-urls")
+urls = load_dataset("CommunityOne/open-navigator-discovered-urls")
 high_conf = urls.filter(lambda x: x['confidence_score'] > 0.8)
 ```
 

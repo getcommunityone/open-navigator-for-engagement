@@ -28,7 +28,7 @@ Visit: https://huggingface.co/settings/tokens
 
 **Create a Write Token:**
 1. Click "New token"
-2. **Name:** "oral-health-policy-pulse-upload"
+2. **Name:** "open-navigator-upload"
 3. **Token type:** Write ⚠️ (required for publishing)
 4. **Repository permissions:** All repositories
 5. Copy the token (starts with `hf_`)
@@ -71,11 +71,11 @@ python main.py publish-to-hf --dataset all
 🚀 Publishing datasets to HuggingFace Hub...
 
 📊 Published Datasets:
-  ✓ census: https://huggingface.co/datasets/CommunityOne/oral-health-policy-pulse-census-gid
-  ✓ gov_domains: https://huggingface.co/datasets/CommunityOne/oral-health-policy-pulse-gov-domains
-  ✓ nces_schools: https://huggingface.co/datasets/CommunityOne/oral-health-policy-pulse-nces-schools
-  ✓ discovered_urls: https://huggingface.co/datasets/CommunityOne/oral-health-policy-pulse-discovered-urls
-  ✓ scraping_targets: https://huggingface.co/datasets/CommunityOne/oral-health-policy-pulse-scraping-targets
+  ✓ census: https://huggingface.co/datasets/CommunityOne/open-navigator-census-gid
+  ✓ gov_domains: https://huggingface.co/datasets/CommunityOne/open-navigator-gov-domains
+  ✓ nces_schools: https://huggingface.co/datasets/CommunityOne/open-navigator-nces-schools
+  ✓ discovered_urls: https://huggingface.co/datasets/CommunityOne/open-navigator-discovered-urls
+  ✓ scraping_targets: https://huggingface.co/datasets/CommunityOne/open-navigator-scraping-targets
 
 🎉 Publishing complete!
 ```
@@ -140,9 +140,9 @@ for name, info in results.items():
 ### View on HuggingFace Hub
 
 Visit your dataset pages:
-- https://huggingface.co/datasets/YOUR_ORG/oral-health-policy-pulse-census-gid
-- https://huggingface.co/datasets/YOUR_ORG/oral-health-policy-pulse-gov-domains
-- https://huggingface.co/datasets/YOUR_ORG/oral-health-policy-pulse-discovered-urls
+- https://huggingface.co/datasets/YOUR_ORG/open-navigator-census-gid
+- https://huggingface.co/datasets/YOUR_ORG/open-navigator-gov-domains
+- https://huggingface.co/datasets/YOUR_ORG/open-navigator-discovered-urls
 
 ### Load in Python
 
@@ -150,10 +150,10 @@ Visit your dataset pages:
 from datasets import load_dataset
 
 # Load census data
-census = load_dataset("CommunityOne/oral-health-policy-pulse-census-gid")
+census = load_dataset("CommunityOne/open-navigator-census-gid")
 
 # Load discovered URLs
-urls = load_dataset("CommunityOne/oral-health-policy-pulse-discovered-urls")
+urls = load_dataset("CommunityOne/open-navigator-discovered-urls")
 
 # Access specific split
 counties = census["counties"]
@@ -166,7 +166,7 @@ print(f"Total counties: {len(counties)}")
 library(datasets)
 
 # Load dataset
-census <- load_dataset("CommunityOne/oral-health-policy-pulse-census-gid")
+census <- load_dataset("CommunityOne/open-navigator-census-gid")
 
 # View data
 head(census$counties)
@@ -176,7 +176,7 @@ head(census$counties)
 
 ```bash
 curl https://datasets-server.huggingface.co/rows \
-  -d dataset=CommunityOne/oral-health-policy-pulse-census-gid \
+  -d dataset=CommunityOne/open-navigator-census-gid \
   -d config=counties \
   -d split=train
 ```
@@ -301,7 +301,7 @@ HuggingFace automatically tracks versions:
 
 ```python
 dataset = load_dataset(
-    "CommunityOne/oral-health-policy-pulse-discovered-urls",
+    "CommunityOne/open-navigator-discovered-urls",
     revision="main"  # or specific commit hash
 )
 ```
@@ -338,8 +338,8 @@ Your datasets will be named:
 {organization}/{prefix}-{dataset-name}
 
 Examples:
-  CommunityOne/oral-health-policy-pulse-census-gid
-  CommunityOne/oral-health-policy-pulse-discovered-urls
+  CommunityOne/open-navigator-census-gid
+  CommunityOne/open-navigator-discovered-urls
 ```
 
 ---
@@ -349,21 +349,21 @@ Examples:
 **For Researchers:**
 ```python
 # Load all discovered government URLs
-urls = load_dataset("CommunityOne/oral-health-policy-pulse-discovered-urls")
+urls = load_dataset("CommunityOne/open-navigator-discovered-urls")
 high_confidence = urls.filter(lambda x: x['confidence_score'] > 0.8)
 ```
 
 **For Civic Hackers:**
 ```python
 # Get all .gov domains by type
-domains = load_dataset("CommunityOne/oral-health-policy-pulse-gov-domains")
+domains = load_dataset("CommunityOne/open-navigator-gov-domains")
 counties = domains.filter(lambda x: x['Domain Type'] == 'County')
 ```
 
 **For Data Scientists:**
 ```python
 # Analyze jurisdiction coverage
-census = load_dataset("CommunityOne/oral-health-policy-pulse-census-gid")
+census = load_dataset("CommunityOne/open-navigator-census-gid")
 import pandas as pd
 df = pd.DataFrame(census["counties"])
 df.groupby("state_name")["population"].sum()
@@ -387,7 +387,7 @@ python main.py publish-to-hf --dataset census --sample --private
 python main.py publish-to-hf --dataset all
 
 # 5. View on HuggingFace
-open https://huggingface.co/datasets/CommunityOne/oral-health-policy-pulse-discovered-urls
+open https://huggingface.co/datasets/CommunityOne/open-navigator-discovered-urls
 ```
 
 ---

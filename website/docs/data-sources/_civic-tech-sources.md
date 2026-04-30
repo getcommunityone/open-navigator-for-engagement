@@ -58,7 +58,7 @@ Each spider file contains `start_urls` with:
 
 ### To Run:
 ```bash
-cd /home/developer/projects/oral-health-policy-pulse
+cd /home/developer/projects/open-navigator
 source venv/bin/activate
 python discovery/city_scrapers_urls.py
 ```

@@ -288,7 +288,7 @@ interface SocialStatsProps {
 ### Run Database Migration
 
 ```bash
-cd /home/developer/projects/oral-health-policy-pulse
+cd /home/developer/projects/open-navigator
 source .venv/bin/activate
 python scripts/migrate_social_features.py
 ```

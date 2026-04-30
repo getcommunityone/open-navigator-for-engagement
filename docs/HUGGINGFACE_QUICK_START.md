@@ -67,7 +67,7 @@ export HF_TOKEN="hf_YOUR_TOKEN_HERE"
 
 ```bash
 # Go to your project
-cd /home/developer/projects/oral-health-policy-pulse
+cd /home/developer/projects/open-navigator
 
 # Activate environment
 source venv/bin/activate

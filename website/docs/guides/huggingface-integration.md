@@ -48,7 +48,7 @@ pip install huggingface_hub datasets pyarrow
 ### Step 4: Upload Datasets
 
 ```bash
-cd /home/developer/projects/oral-health-policy-pulse
+cd /home/developer/projects/open-navigator
 
 # Upload all 4 nonprofit tables
 python scripts/upload_nonprofits_to_hf.py --all

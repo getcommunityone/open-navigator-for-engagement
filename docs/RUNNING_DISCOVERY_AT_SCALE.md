@@ -32,7 +32,7 @@
 ### 1. Test with a Single State (Alabama)
 
 ```bash
-cd /home/developer/projects/oral-health-policy-pulse
+cd /home/developer/projects/open-navigator
 
 # Activate environment
 source venv/bin/activate
