@@ -51,7 +51,7 @@ ALL_STATES = [
 DB_URL = os.getenv('OPENSTATES_DATABASE_URL', 'postgresql://postgres:postgres@localhost:5433/openstates')
 
 
-def classify_bill_type(title: str, topic: str) -> str:
+def classify_bill_type(title: str, topic: str, bill_number: str = None, state: str = None) -> str:
     """
     Classify bill type based on title and topic with improved sentiment analysis.
     
@@ -63,6 +63,16 @@ def classify_bill_type(title: str, topic: str) -> str:
     """
     title_lower = title.lower()
     topic_lower = topic.lower() if topic else ""
+    
+    # MANUAL OVERRIDES: Known bills with generic titles that need manual classification
+    # These are verified by external sources (CareQuest, FAN, bill text analysis)
+    if bill_number and state:
+        state_upper = state.upper()
+        bill_upper = bill_number.upper()
+        
+        # Louisiana SB 4 (2026) - Confirmed by CareQuest as outright ban
+        if state_upper == 'LA' and bill_upper == 'SB 4':
+            return 'removal'
     
     # EXCEPTION: Fluoride varnish/dental coverage bills (not water fluoridation)
     # Check this BEFORE water fluoridation classification
@@ -280,7 +290,7 @@ def aggregate_state_bills(conn, state: str, topic: str) -> dict:
                 return None
         
         # Classify bills
-        df['type'] = df['title'].apply(lambda t: classify_bill_type(t, topic))
+        df['type'] = df.apply(lambda row: classify_bill_type(row['title'], topic, row['bill_number'], row['state']), axis=1)
         df['status'] = df.apply(lambda row: determine_status(row['latest_action_description'], row['classification']), axis=1)
         
         # Count by type
