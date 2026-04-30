@@ -1,5 +1,5 @@
 // @ts-nocheck
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { Link } from 'react-router-dom'
 import { ComposableMap, Geographies, Geography } from 'react-simple-maps'
 
@@ -167,6 +167,8 @@ const getPatternForState = (stateCode: string, stateData: Record<string, StateDa
 export default function USMap({ stateData, onStateClick, legend }: USMapProps) {
   const [hoveredState, setHoveredState] = useState<string | null>(null)
   const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 })
+  const [isTooltipHovered, setIsTooltipHovered] = useState(false)
+  const hideTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   
   // Get unique types from actual state data if legend not provided
   const legislationTypes = legend?.types || {}
@@ -177,6 +179,11 @@ export default function USMap({ stateData, onStateClick, legend }: USMapProps) {
   }
   
   const handleMouseEnter = (event: any, stateCode: string) => {
+    // Clear any pending hide timeout
+    if (hideTimeoutRef.current) {
+      clearTimeout(hideTimeoutRef.current)
+      hideTimeoutRef.current = null
+    }
     setHoveredState(stateCode)
     const bounds = event.target.getBoundingClientRect()
     setTooltipPosition({
@@ -186,6 +193,25 @@ export default function USMap({ stateData, onStateClick, legend }: USMapProps) {
   }
   
   const handleMouseLeave = () => {
+    // Delay hiding to allow mouse to move to tooltip
+    hideTimeoutRef.current = setTimeout(() => {
+      if (!isTooltipHovered) {
+        setHoveredState(null)
+      }
+    }, 200) // 200ms delay
+  }
+  
+  const handleTooltipMouseEnter = () => {
+    setIsTooltipHovered(true)
+    // Clear any pending hide timeout
+    if (hideTimeoutRef.current) {
+      clearTimeout(hideTimeoutRef.current)
+      hideTimeoutRef.current = null
+    }
+  }
+  
+  const handleTooltipMouseLeave = () => {
+    setIsTooltipHovered(false)
     setHoveredState(null)
   }
   
@@ -260,6 +286,8 @@ export default function USMap({ stateData, onStateClick, legend }: USMapProps) {
       {hoveredState && hoveredData && (
         <div 
           className="fixed z-50 pointer-events-auto"
+          onMouseEnter={handleTooltipMouseEnter}
+          onMouseLeave={handleTooltipMouseLeave}
           style={{
             left: `${tooltipPosition.x}px`,
             top: `${tooltipPosition.y - 10}px`,
