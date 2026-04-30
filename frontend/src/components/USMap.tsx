@@ -11,6 +11,7 @@ interface BillSample {
   status: string
   type: string
   action: string
+  date?: string  // Format: "Jan 2026"
   state: string
 }
 
@@ -193,12 +194,12 @@ export default function USMap({ stateData, onStateClick, legend }: USMapProps) {
   }
   
   const handleMouseLeave = () => {
-    // Delay hiding to allow mouse to move to tooltip
+    // Longer delay to make it easier to reach tooltip
     hideTimeoutRef.current = setTimeout(() => {
       if (!isTooltipHovered) {
         setHoveredState(null)
       }
-    }, 200) // 200ms delay
+    }, 500) // 500ms delay (increased from 200ms)
   }
   
   const handleTooltipMouseEnter = () => {
@@ -212,7 +213,10 @@ export default function USMap({ stateData, onStateClick, legend }: USMapProps) {
   
   const handleTooltipMouseLeave = () => {
     setIsTooltipHovered(false)
-    setHoveredState(null)
+    // Small delay before hiding when leaving tooltip
+    setTimeout(() => {
+      setHoveredState(null)
+    }, 150)
   }
   
   const hoveredData = hoveredState ? stateData[hoveredState] : null
@@ -290,8 +294,9 @@ export default function USMap({ stateData, onStateClick, legend }: USMapProps) {
           onMouseLeave={handleTooltipMouseLeave}
           style={{
             left: `${tooltipPosition.x}px`,
-            top: `${tooltipPosition.y - 10}px`,
-            transform: 'translate(-50%, -100%)'
+            top: `${tooltipPosition.y - 20}px`,
+            transform: 'translate(-50%, -100%)',
+            paddingBottom: '20px'  // Extra padding creates larger hover area
           }}
         >
           <div className="bg-gray-900 text-white px-4 py-3 rounded-lg shadow-xl max-w-sm border border-gray-700">
@@ -385,8 +390,10 @@ export default function USMap({ stateData, onStateClick, legend }: USMapProps) {
                                        bill.status === 'failed' ? '✗ Failed' : '⏳ Pending'}
                                     </span>
                                   </div>
-                                  <div className="text-gray-400 text-[10px] mt-0.5">
-                                    {bill.action || 'Click for details'}
+                                  <div className="text-gray-400 text-[10px] mt-0.5 flex items-center gap-1">
+                                    {bill.date && <span className="text-gray-500">📅 {bill.date}</span>}
+                                    {bill.date && bill.action && <span className="text-gray-600">•</span>}
+                                    <span className="flex-1 truncate">{bill.action || 'Click for details'}</span>
                                   </div>
                                 </Link>
                               ))}

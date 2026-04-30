@@ -308,12 +308,19 @@ def aggregate_state_bills(conn, state: str, topic: str) -> dict:
         # Get sample bills (top 3 most recent)
         sample_bills = []
         for _, row in df.head(3).iterrows():
+            # Format date as "Jan 2026" or "Pending"
+            date_str = ''
+            if pd.notna(row['latest_action_date']):
+                date_obj = pd.to_datetime(row['latest_action_date'])
+                date_str = date_obj.strftime('%b %Y')
+            
             sample_bills.append({
                 'bill_number': row['bill_number'],
                 'title': row['title'],
                 'status': row['status'],
                 'type': row['type'],
                 'action': row['latest_action_description'] or '',
+                'date': date_str,
                 'state': row['state']
             })
         
