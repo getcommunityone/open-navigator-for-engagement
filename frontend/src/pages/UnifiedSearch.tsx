@@ -194,7 +194,7 @@ export default function UnifiedSearch() {
   }, [searchParams, effectiveState])
 
   // Preview/autocomplete query for search suggestions (uses debounced query)
-  const { data: previewResults } = useQuery<SearchResponse>({
+  const { data: previewResults, isFetching: isFetchingPreview } = useQuery<SearchResponse>({
     queryKey: ['search-preview', debouncedQuery, effectiveState],
     queryFn: async () => {
       if (!debouncedQuery || debouncedQuery.length < 2) return null
@@ -743,9 +743,20 @@ export default function UnifiedSearch() {
             </div>
             
             {/* Rich Preview Dropdown with Grouped Results */}
-            {showSuggestions && previewResults && previewResults.total_results > 0 && (
+            {showSuggestions && query.length >= 2 && (
               <div className="absolute z-10 w-full mt-2 bg-white border border-gray-200 rounded-lg shadow-xl max-h-96 overflow-y-auto">
                 
+                {/* Loading State */}
+                {(isFetchingPreview || query !== debouncedQuery) && (
+                  <div className="px-4 py-8 text-center">
+                    <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600 mb-2"></div>
+                    <p className="text-sm text-gray-600">Searching...</p>
+                  </div>
+                )}
+                
+                {/* Results */}
+                {!isFetchingPreview && query === debouncedQuery && previewResults && previewResults.total_results > 0 && (
+                  <>
                 {/* Causes Section */}
                 {previewResults.results.causes.length > 0 && (
                   <div className="border-b border-gray-200">
@@ -876,6 +887,16 @@ export default function UnifiedSearch() {
                     See all {previewResults.total_results} results →
                   </button>
                 </div>
+                  </>
+                )}
+                
+                {/* No Results State */}
+                {!isFetchingPreview && query === debouncedQuery && previewResults && previewResults.total_results === 0 && (
+                  <div className="px-4 py-8 text-center">
+                    <p className="text-gray-600">No results found for "{query}"</p>
+                    <p className="text-sm text-gray-500 mt-1">Try a different search term</p>
+                  </div>
+                )}
               </div>
             )}
           </form>
