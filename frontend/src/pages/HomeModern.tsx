@@ -1,5 +1,5 @@
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
-import { useState, useEffect, Fragment } from 'react'
+import { useState, useEffect, Fragment, useRef } from 'react'
 import { Tab } from '@headlessui/react'
 import { useQuery } from '@tanstack/react-query'
 import api from '../lib/api'
@@ -33,12 +33,42 @@ export default function HomeModern() {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const [keyword, setKeyword] = useState('')
+  const [debouncedKeyword, setDebouncedKeyword] = useState('')
   const [activeSection, setActiveSection] = useState('hero')
   const [selectedTab, setSelectedTab] = useState(0)
   const [searchScope, setSearchScope] = useState('city')
   const [showSuggestions, setShowSuggestions] = useState(false)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const { location, setLocation} = useLocationContext()
+  const searchContainerRef = useRef<HTMLDivElement>(null)
+
+  // Debounce keyword input (300ms delay)
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      console.log('⏱️ [HomeModern] Debounced keyword update:', keyword);
+      setDebouncedKeyword(keyword);
+    }, 300);
+
+    return () => {
+      clearTimeout(timer);
+    };
+  }, [keyword]);
+
+  // Close suggestions dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (searchContainerRef.current && !searchContainerRef.current.contains(event.target as Node)) {
+        setShowSuggestions(false);
+      }
+    };
+
+    if (showSuggestions) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => {
+        document.removeEventListener('mousedown', handleClickOutside);
+      };
+    }
+  }, [showSuggestions]);
 
   // Environment-aware URLs for docs and API
   // In development: Docusaurus on localhost:3000/docs, API on localhost:8000
@@ -85,17 +115,17 @@ export default function HomeModern() {
 
   // Live search preview (type-ahead with actual results from API)
   const { data: previewResults, isLoading: previewLoading, error: previewError } = useQuery({
-    queryKey: ['search-preview-home', keyword, location?.state],
+    queryKey: ['search-preview-home', debouncedKeyword, location?.state],
     queryFn: async () => {
-      console.log('🔍 [HomeModern] Fetching preview for:', keyword, 'in state:', location?.state);
-      if (!keyword || keyword.length < 2) {
+      console.log('🔍 [HomeModern] Fetching preview for:', debouncedKeyword, 'in state:', location?.state);
+      if (!debouncedKeyword || debouncedKeyword.length < 2) {
         console.log('⚠️ [HomeModern] Query too short, skipping');
         return null;
       }
       
       const url = '/search/';
       const params: any = {
-        q: keyword,
+        q: debouncedKeyword,
         types: 'causes,contacts,organizations',
         limit: 3
       };
@@ -123,7 +153,7 @@ export default function HomeModern() {
         throw error;
       }
     },
-    enabled: keyword.length >= 2 && showSuggestions,
+    enabled: debouncedKeyword.length >= 2 && showSuggestions,
     staleTime: 1000, // Cache for 1 second to avoid excessive requests
     retry: false // Don't retry failed requests to see errors immediately
   });
@@ -619,13 +649,12 @@ export default function HomeModern() {
                           <label className="block text-left text-sm font-medium text-gray-900 mb-2">
                             Search for topics, people, organizations, or causes
                           </label>
-                          <div className="relative">
+                          <div className="relative" ref={searchContainerRef}>
                             <input
                               type="text"
                               placeholder="Try: mayor, dental clinic, food bank, affordable housing..."
                               value={keyword}
                               onChange={handleKeywordChange}
-                              onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
                               onFocus={() => {
                                 if (keyword.length >= 2) {
                                   setShowSuggestions(true)
@@ -634,6 +663,16 @@ export default function HomeModern() {
                               className="w-full px-4 py-3 text-lg border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#354F52] focus:border-transparent bg-white text-gray-900"
                             />
                             
+                            {/* Loading State - Shows immediately when typing */}
+                            {showSuggestions && !previewResults && !previewError && (
+                              <div className="absolute z-50 w-full mt-2 border-2 border-gray-300 rounded-lg shadow-2xl" style={{ backgroundColor: '#ffffff' }}>
+                                <div className="px-4 py-8 flex flex-col items-center justify-center gap-3">
+                                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
+                                  <p className="text-sm text-gray-600">Searching...</p>
+                                </div>
+                              </div>
+                            )}
+
                             {/* Error Message */}
                             {showSuggestions && previewError && (
                               <div className="absolute z-50 w-full mt-2 border-2 border-red-300 rounded-lg shadow-2xl" style={{ backgroundColor: '#FEF2F2' }}>
@@ -790,6 +829,17 @@ export default function HomeModern() {
                                   >
                                     See all {previewResults.total_results} results →
                                   </button>
+                                </div>
+                              </div>
+                            )}
+
+                            {/* No Results State */}
+                            {showSuggestions && !previewError && !previewLoading && previewResults && previewResults.total_results === 0 && (
+                              <div className="absolute z-50 w-full mt-2 border-2 border-gray-300 rounded-lg shadow-2xl" style={{ backgroundColor: '#ffffff' }}>
+                                <div className="px-4 py-6 text-center">
+                                  <MagnifyingGlassIcon className="h-12 w-12 text-gray-400 mx-auto mb-3" />
+                                  <p className="text-sm font-medium text-gray-900 mb-1">No results found</p>
+                                  <p className="text-xs text-gray-600">Try different keywords or check your spelling</p>
                                 </div>
                               </div>
                             )}
