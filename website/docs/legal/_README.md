@@ -1,6 +1,6 @@
 # Legal Documentation
 
-This directory contains all legal policies and terms of service for Open Navigator for Engagement.
+This directory contains all legal policies and terms of service for Open Navigator.
 
 ## 📋 Documents
 

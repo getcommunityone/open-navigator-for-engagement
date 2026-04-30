@@ -118,7 +118,7 @@ Use Cases:
 - Use case 1
 - Use case 2
 
-Author: Open Navigator for Engagement
+Author: Open Navigator
 License: MIT
 """
 ```

@@ -69,7 +69,7 @@ python main.py serve
 1. Go to HuggingFace Settings → Applications
 2. Click **"Create an OAuth app"**
 3. Fill in:
-   - **Application name**: `Open Navigator for Engagement`
+   - **Application name**: `Open Navigator`
    - **Homepage URL**: `https://www.communityone.com`
    - **Redirect URI**: 
      - Development: `http://localhost:8000/auth/callback/huggingface`
@@ -106,7 +106,7 @@ HUGGINGFACE_CLIENT_SECRET=hf_oauth_secret_xxx
 3. **Configure OAuth consent screen**
    - Go to APIs & Services → OAuth consent screen
    - User Type: **External**
-   - App name: `Open Navigator for Engagement`
+   - App name: `Open Navigator`
    - User support email: Your email
    - Developer contact: Your email
    - Scopes: `email`, `profile`, `openid`
@@ -141,7 +141,7 @@ GOOGLE_CLIENT_SECRET=GOCSPX-xxxxx
 1. **Create a new app**
    - Click **"Create App"**
    - Type: **Consumer**
-   - App Name: `Open Navigator for Engagement`
+   - App Name: `Open Navigator`
 
 2. **Add Facebook Login**
    - Dashboard → Add Product
@@ -179,7 +179,7 @@ FACEBOOK_APP_SECRET=xxxxxxxxxxxxx
    - Click **"New OAuth App"**
 
 2. **Fill in details**
-   - **Application name**: `Open Navigator for Engagement`
+   - **Application name**: `Open Navigator`
    - **Homepage URL**: `https://www.communityone.com`
    - **Authorization callback URL**:
      - Development: `http://localhost:8000/auth/callback/github`

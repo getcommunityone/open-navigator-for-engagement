@@ -1,5 +1,5 @@
 ---
-title: CommunityOne - Open Navigator for Engagement
+title: CommunityOne - Open Navigator
 emoji: 🏛️
 colorFrom: blue
 colorTo: green
@@ -15,7 +15,7 @@ tags:
   - open-data
 ---
 
-# 🏛️ CommunityOne - Open Navigator for Engagement
+# 🏛️ CommunityOne - Open Navigator
 
 **Track 90,000+ jurisdictions. Monitor 3M+ nonprofits. Amplify your voice.**
 

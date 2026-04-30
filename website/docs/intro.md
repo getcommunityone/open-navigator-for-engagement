@@ -5,7 +5,7 @@ displayed_sidebar: gettingStartedSidebar
 
 # Introduction
 
-Welcome to **Open Navigator for Engagement** - an AI-powered platform that analyzes municipal meeting minutes and financial documents to identify policy opportunities for advocacy.
+Welcome to **Open Navigator** - an AI-powered platform that analyzes municipal meeting minutes and financial documents to identify policy opportunities for advocacy.
 
 :::tip[All Data is Cited & Properly Attributed]
 Every dataset, standard, and research source used in this platform is properly cited with complete attribution, licenses, and BibTeX references.

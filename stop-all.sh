@@ -1,13 +1,13 @@
 #!/bin/bash
 
-# Stop All Services for Open Navigator for Engagement
+# Stop All Services for Open Navigator
 
 set -e
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR"
 
-echo "🛑 Stopping Open Navigator for Engagement"
+echo "🛑 Stopping Open Navigator"
 echo "========================================="
 echo ""
 

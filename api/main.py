@@ -54,7 +54,7 @@ logger.add(
 
 # Initialize FastAPI app
 app = FastAPI(
-    title="Open Navigator for Engagement API",
+    title="Open Navigator API",
     description="Multi-agent system for analyzing local government oral health policy discussions",
     version="1.0.0",
     docs_url=None,  # Disable default docs to use custom
@@ -280,7 +280,7 @@ async def root():
     <!DOCTYPE html>
     <html>
         <head>
-            <title>Open Navigator for Engagement API</title>
+            <title>Open Navigator API</title>
             <style>
                 body { 
                     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
@@ -344,7 +344,7 @@ async def root():
             <div class="header">
                 <img src="/static/communityone_logo.svg" alt="CommunityOne Logo" class="logo">
                 <div>
-                    <h1>Open Navigator for Engagement API</h1>
+                    <h1>Open Navigator API</h1>
                     <p class="tagline">CommunityOne: The open path to everything local</p>
                 </div>
             </div>
@@ -670,7 +670,7 @@ async def get_heatmap(
         # Generate map
         m = heatmap_generator.create_folium_map(
             opportunities,
-            title="Open Navigator for Engagement - Advocacy Heatmap"
+            title="Open Navigator - Advocacy Heatmap"
         )
         
         # Return HTML
@@ -1142,7 +1142,7 @@ async def grade_decisions_batch(
 async def startup_event():
     """Initialize system on startup with data validation."""
     logger.info("="*80)
-    logger.info("🚀 STARTING OPEN NAVIGATOR FOR ENGAGEMENT API")
+    logger.info("🚀 STARTING Open Navigator API")
     logger.info("="*80)
     logger.info(f"Configuration: {settings.catalog_name}.{settings.schema_name}")
     logger.info(f"Log Level: {settings.log_level}")

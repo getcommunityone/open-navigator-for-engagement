@@ -67,7 +67,7 @@ API now validates data availability on startup:
 
 ```
 ================================================================================
-🚀 STARTING OPEN NAVIGATOR FOR ENGAGEMENT API
+🚀 STARTING Open Navigator API
 ================================================================================
 Configuration: oral_health.policy_analysis
 Log Level: INFO

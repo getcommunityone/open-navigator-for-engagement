@@ -5,7 +5,7 @@ sidebar_position: 11
 # Legal Documentation Summary
 
 **Created:** April 28, 2026  
-**Purpose:** Comprehensive Terms of Service for Open Navigator for Engagement
+**Purpose:** Comprehensive Terms of Service for Open Navigator
 
 ## 📋 What Was Created
 

@@ -1,6 +1,6 @@
-# Open Navigator for Engagement - Documentation Site
+# Open Navigator - Documentation Site
 
-This directory contains the **Docusaurus documentation website** for the Open Navigator for Engagement project.
+This directory contains the **Docusaurus documentation website** for the Open Navigator project.
 
 ## Quick Start
 

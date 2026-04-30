@@ -1135,10 +1135,10 @@ Special thanks to:
 
 ## 📖 **How to Cite This Project**
 
-If you use Open Navigator for Engagement in your research, please cite:
+If you use Open Navigator in your research, please cite:
 
 ```
-Open Navigator for Engagement
+Open Navigator
 GitHub: https://github.com/getcommunityone/open-navigator-for-engagement
 License: MIT
 ```
@@ -1146,7 +1146,7 @@ License: MIT
 **BibTeX:**
 ```bibtex
 @software{open-navigator-2026,
-    title = {Open Navigator for Engagement},
+    title = {Open Navigator},
     author = {Community One},
     year = {2026},
     url = {https://github.com/getcommunityone/open-navigator-for-engagement},

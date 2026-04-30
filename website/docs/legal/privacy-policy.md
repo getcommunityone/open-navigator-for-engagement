@@ -9,12 +9,12 @@ sidebar_label: Privacy Policy
 **Last Updated:** April 28, 2026
 
 :::info[Your Privacy Matters]
-Open Navigator for Engagement is committed to protecting your privacy. This Privacy Policy explains how we collect, use, and protect your information when you use our Service.
+Open Navigator is committed to protecting your privacy. This Privacy Policy explains how we collect, use, and protect your information when you use our Service.
 :::
 
 ## 1. Introduction
 
-This Privacy Policy describes how CommunityOne ("we," "us," or "our") collects, uses, and discloses information through Open Navigator for Engagement ("the Service"). By using the Service, you agree to the practices described in this Privacy Policy.
+This Privacy Policy describes how CommunityOne ("we," "us," or "our") collects, uses, and discloses information through Open Navigator ("the Service"). By using the Service, you agree to the practices described in this Privacy Policy.
 
 ## 2. Information We Collect
 

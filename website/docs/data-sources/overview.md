@@ -4,7 +4,7 @@ displayed_sidebar: policyMakersSidebar
 
 # Data Sources Overview
 
-This document covers the **official, free, public datasets** used by Open Navigator for Engagement.
+This document covers the **official, free, public datasets** used by Open Navigator.
 
 :::tip[📚 Full Citations & Academic References]
 For complete citations, licenses, and attribution for all data sources, see:

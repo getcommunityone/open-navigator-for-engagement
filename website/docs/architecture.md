@@ -7,7 +7,7 @@ displayed_sidebar: developersSidebar
 
 ## Three Separate Services
 
-Open Navigator for Engagement consists of **three distinct services** that work together:
+Open Navigator consists of **three distinct services** that work together:
 
 ```
 ┌─────────────────────────────────────────────────────────┐

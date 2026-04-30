@@ -61,7 +61,7 @@ The new custom homepage includes:
 
 **Header:**
 - CommunityOne logo (SVG)
-- "Open Navigator for Engagement" branding
+- "Open Navigator" branding
 - Tagline: "Find opportunities in local meetings and budgets"
 
 **Audience Pathways:**

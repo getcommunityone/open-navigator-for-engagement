@@ -9,16 +9,16 @@ sidebar_label: Terms of Service
 **Last Updated:** April 28, 2026
 
 :::info[Important Legal Agreement]
-By accessing or using Open Navigator for Engagement ("the Service"), you agree to be bound by these Terms of Service. If you do not agree to these terms, do not use the Service.
+By accessing or using Open Navigator ("the Service"), you agree to be bound by these Terms of Service. If you do not agree to these terms, do not use the Service.
 :::
 
 ## 1. Acceptance of Terms
 
-These Terms of Service ("Terms") govern your access to and use of Open Navigator for Engagement, a civic engagement platform operated by CommunityOne ("we," "us," or "our"). By accessing or using the Service, you agree to comply with these Terms and all applicable laws and regulations.
+These Terms of Service ("Terms") govern your access to and use of Open Navigator, a civic engagement platform operated by CommunityOne ("we," "us," or "our"). By accessing or using the Service, you agree to comply with these Terms and all applicable laws and regulations.
 
 ## 2. Description of Service
 
-Open Navigator for Engagement provides access to aggregated public data from government sources, nonprofit organizations, and civic engagement platforms to support informed democratic participation. The Service includes:
+Open Navigator provides access to aggregated public data from government sources, nonprofit organizations, and civic engagement platforms to support informed democratic participation. The Service includes:
 
 - Public meeting data and transcripts
 - Nonprofit organization information
@@ -330,7 +330,7 @@ For questions about these Terms of Service:
 
 ## 18. Acknowledgments
 
-Open Navigator for Engagement is built on publicly available data from:
+Open Navigator is built on publicly available data from:
 
 - U.S. Government agencies (IRS, Census Bureau, NCES, FEC)
 - ProPublica, Inc.

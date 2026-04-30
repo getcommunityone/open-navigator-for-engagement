@@ -336,4 +336,4 @@ Before submitting any code to OpenStates, review:
 ---
 
 **Last Updated:** April 29, 2026  
-**Maintained By:** Open Navigator for Engagement team
+**Maintained By:** Open Navigator team

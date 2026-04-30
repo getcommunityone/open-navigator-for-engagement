@@ -4,7 +4,7 @@ sidebar_position: 5
 
 # OAuth Providers Setup
 
-Complete guide to configuring OAuth authentication with Google, Facebook, GitHub, and HuggingFace for Open Navigator for Engagement.
+Complete guide to configuring OAuth authentication with Google, Facebook, GitHub, and HuggingFace for Open Navigator.
 
 ## Overview
 
@@ -59,7 +59,7 @@ Replace `{provider}` with: `google`, `facebook`, `github`, or `huggingface`
 1. Go to **APIs & Services → OAuth consent screen**
 2. Select **"External"** user type → Click "CREATE"
 3. Fill in app information:
-   - **App name:** `Open Navigator for Engagement`
+   - **App name:** `Open Navigator`
    - **User support email:** Your email
    - **App domain:** `www.communityone.com`
    - **Developer contact:** Your email
@@ -125,7 +125,7 @@ GOOGLE_CLIENT_SECRET=GOCSPX-your-secret-here
 2. Click **"Create App"**
 3. Choose **"Other"** → **"Next"** → **"Consumer"** → **"Next"**
 4. Enter details:
-   - **App name:** `Open Navigator for Engagement`
+   - **App name:** `Open Navigator`
    - **Contact email:** Your email
 5. Click **"Create App"**
 
@@ -215,7 +215,7 @@ FACEBOOK_APP_SECRET=your-app-secret-here
 ### Step 2: Configure Application
 
 1. Fill in details:
-   - **Application name:** `Open Navigator for Engagement`
+   - **Application name:** `Open Navigator`
    - **Homepage URL:** `https://www.communityone.com`
    - **Authorization callback URL:** `http://localhost:8000/auth/callback/github`
 
@@ -264,7 +264,7 @@ GITHUB_CLIENT_SECRET=your-client-secret-here
 ### Step 2: Configure Application
 
 1. Fill in details:
-   - **Application name:** `Open Navigator for Engagement`
+   - **Application name:** `Open Navigator`
    - **Homepage URL:** `https://www.communityone.com`
    - **Scopes:** `openid profile email`
 

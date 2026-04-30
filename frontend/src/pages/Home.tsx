@@ -186,7 +186,7 @@ export default function Home() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-20 pb-16">
         <div className="text-center">
           <h1 className="text-5xl font-bold mb-6" style={{ color: '#354F52' }}>
-            Open Navigator for Engagement
+            Open Navigator
           </h1>
           <p className="text-xl mb-12 max-w-3xl mx-auto" style={{ color: '#354F52' }}>
             Track what local governments and charities say, spend—and block.

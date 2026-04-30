@@ -1,6 +1,6 @@
-# Open Navigator for Engagement - Frontend
+# Open Navigator - Frontend
 
-React + TypeScript web interface for the Open Navigator for Engagement application.
+React + TypeScript web interface for the Open Navigator application.
 
 ## Projects
 

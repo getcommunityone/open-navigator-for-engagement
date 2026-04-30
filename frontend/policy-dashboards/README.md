@@ -244,7 +244,7 @@ For questions or issues:
 
 ## License
 
-Part of the Open Navigator for Engagement project.
+Part of the Open Navigator project.
 
 ---
 

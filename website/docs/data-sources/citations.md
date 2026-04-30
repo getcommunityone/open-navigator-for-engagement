@@ -6,7 +6,7 @@ sidebar_label: Data and Citations
 # Data and Citations
 
 :::tip[Why This Page Matters]
-**All data used in Open Navigator for Engagement is properly cited and attributed.** This page provides complete citations, licenses, BibTeX references, and links to original sources for academic research, government data, data sharing standards, and more.
+**All data used in Open Navigator is properly cited and attributed.** This page provides complete citations, licenses, BibTeX references, and links to original sources for academic research, government data, data sharing standards, and more.
 
 **Use this page to:**
 - ✅ Cite data sources in your research or publications
@@ -15,7 +15,7 @@ sidebar_label: Data and Citations
 - ✅ Access API documentation and technical specs
 :::
 
-This page documents all data sources, standards, and research contributions used in **Open Navigator for Engagement**. All datasets and specifications are properly attributed with citations, licenses, and usage notes.
+This page documents all data sources, standards, and research contributions used in **Open Navigator**. All datasets and specifications are properly attributed with citations, licenses, and usage notes.
 
 ## 📑 Quick Navigation
 
@@ -2374,10 +2374,10 @@ We are grateful to the following organizations and individuals:
 
 ## 📖 How to Cite This Project
 
-If you use **Open Navigator for Engagement** in your research, please cite:
+If you use **Open Navigator** in your research, please cite:
 
 ```
-Open Navigator for Engagement
+Open Navigator
 GitHub: https://github.com/getcommunityone/open-navigator-for-engagement
 License: MIT
 ```
@@ -2385,7 +2385,7 @@ License: MIT
 **BibTeX:**
 ```bibtex
 @software{open-navigator-2026,
-    title = {Open Navigator for Engagement},
+    title = {Open Navigator},
     author = {Community One},
     year = {2026},
     url = {https://github.com/getcommunityone/open-navigator-for-engagement},

@@ -7,7 +7,7 @@ slug: /legal-compliance
 # Legal Compliance & Data Use Policies
 
 :::info[Purpose]
-This document ensures **Open Navigator for Engagement** complies with all data source terms of service, API policies, and legal requirements. Every data source is documented with its use policy, licensing terms, and compliance status.
+This document ensures **Open Navigator** complies with all data source terms of service, API policies, and legal requirements. Every data source is documented with its use policy, licensing terms, and compliance status.
 :::
 
 :::tip[Looking for Legal Policies?]
@@ -22,7 +22,7 @@ This page provides **technical compliance details** for developers and data user
 
 ## 📋 Overview
 
-Open Navigator for Engagement is built on **publicly available government data** and **open APIs**. We respect all terms of service, implement proper rate limiting, provide attribution, and comply with all data use policies.
+Open Navigator is built on **publicly available government data** and **open APIs**. We respect all terms of service, implement proper rate limiting, provide attribution, and comply with all data use policies.
 
 **Our Commitments:**
 - ✅ **Transparency** - All data sources are documented and cited
@@ -554,7 +554,7 @@ Data sources:
 - Wikidata (CC0 Public Domain)
 - DBpedia (CC BY-SA 3.0)
 
-Processed and published by: Open Navigator for Engagement
+Processed and published by: Open Navigator
 https://github.com/getcommunityone/open-navigator-for-engagement
 ```
 
@@ -562,7 +562,7 @@ https://github.com/getcommunityone/open-navigator-for-engagement
 
 ## 📜 Software License
 
-**Open Navigator for Engagement** is licensed under the **MIT License**.
+**Open Navigator** is licensed under the **MIT License**.
 
 See [LICENSE](https://github.com/getcommunityone/open-navigator-for-engagement/blob/main/LICENSE) for full text.
 

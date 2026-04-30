@@ -10,7 +10,7 @@ This script adds missing fields to the IRS EO-BMF data:
 NOTE: ProPublica API does NOT provide website or mission statement fields.
 For those, you need to parse Form 990 XML files or use other APIs (Every.org, Charity Navigator).
 
-Author: Open Navigator for Engagement
+Author: Open Navigator
 License: MIT
 """
 

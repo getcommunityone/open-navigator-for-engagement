@@ -4,7 +4,7 @@ displayed_sidebar: policyMakersSidebar
 
 # Nonprofit Data Sources & Reference Sites
 
-This document lists all nonprofit data sources and reference websites used by Open Navigator for Engagement.
+This document lists all nonprofit data sources and reference websites used by Open Navigator.
 
 ---
 

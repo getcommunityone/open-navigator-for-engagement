@@ -19,7 +19,7 @@ from config import settings
 
 # Initialize FastAPI app
 app = FastAPI(
-    title="Open Navigator for Engagement",
+    title="Open Navigator",
     description="AI-powered advocacy opportunity finder",
     version="2.0.0",
     docs_url="/api/docs",

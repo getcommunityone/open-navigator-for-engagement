@@ -5,7 +5,7 @@ import type * as Preset from '@docusaurus/preset-classic';
 // This runs in Node.js - Don't use client-side code here (browser APIs, JSX...)
 
 const config: Config = {
-  title: 'Open Navigator for Engagement',
+  title: 'Open Navigator',
   tagline: 'The open path to everything local',
   favicon: 'img/favicon.ico',
 

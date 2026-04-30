@@ -1,6 +1,6 @@
 # Data Integration Examples
 
-This directory contains working examples and documentation for all major data integrations in the Open Navigator for Engagement platform.
+This directory contains working examples and documentation for all major data integrations in the Open Navigator platform.
 
 ## 🎯 Available Integrations
 

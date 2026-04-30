@@ -13,7 +13,7 @@ This script adds rich metadata from Every.org:
 API Docs: https://www.every.org/nonprofit-api
 Requires: EVERYORG_API_KEY in .env file
 
-Author: Open Navigator for Engagement
+Author: Open Navigator
 License: MIT
 """
 

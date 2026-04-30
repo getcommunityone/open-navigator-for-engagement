@@ -1,6 +1,6 @@
 # Civic Data API Integration Status
 
-Status of major civic data APIs in the Open Navigator for Engagement platform.
+Status of major civic data APIs in the Open Navigator platform.
 
 ## ✅ Fully Integrated APIs
 

@@ -1,7 +1,7 @@
 .PHONY: help install install-frontend install-docs build-frontend build-docs clean test run dev dev-frontend dev-docs start-all stop-all dev-full docker-up docker-down deploy-databricks
 
 help:
-	@echo "🦷 Open Navigator for Engagement - Makefile Commands"
+	@echo "🦷 Open Navigator - Makefile Commands"
 	@echo "===================================================="
 	@echo ""
 	@echo "🚀 Quick Start:"

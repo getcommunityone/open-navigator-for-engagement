@@ -7,7 +7,7 @@ tags: [data-model, civic-tech, community]
 
 # Week 1: Now Tracking 1,000+ Civic Tech Projects, Hackathons, and Community Solutions
 
-This week marks a significant milestone for Open Navigator for Engagement as we've dramatically expanded our data model to cover civic technology projects, hackathons, and community-driven governance frameworks.
+This week marks a significant milestone for Open Navigator as we've dramatically expanded our data model to cover civic technology projects, hackathons, and community-driven governance frameworks.
 
 {/* truncate */}
 

@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Start All Services for Open Navigator for Engagement
+# Start All Services for Open Navigator
 # This script launches the API backend, React dashboard, and Docusaurus docs
 
 set -e
@@ -8,7 +8,7 @@ set -e
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR"
 
-echo "🚀 Starting Open Navigator for Engagement"
+echo "🚀 Starting Open Navigator"
 echo "=========================================="
 echo ""
 

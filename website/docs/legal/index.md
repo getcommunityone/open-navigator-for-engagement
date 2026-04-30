@@ -6,7 +6,7 @@ sidebar_label: Terms and Privacy
 # Terms and Privacy
 
 :::info[Purpose]
-This section contains all legal policies, terms of service, and compliance documentation for Open Navigator for Engagement. Please review these documents carefully before using the Service.
+This section contains all legal policies, terms of service, and compliance documentation for Open Navigator. Please review these documents carefully before using the Service.
 :::
 
 ## 📋 Required Reading
@@ -14,7 +14,7 @@ This section contains all legal policies, terms of service, and compliance docum
 All users must comply with the following documents:
 
 ### [Terms of Service](./terms-of-service.md)
-The main legal agreement governing your use of Open Navigator for Engagement. This document incorporates all third-party data provider terms and establishes your rights and responsibilities.
+The main legal agreement governing your use of Open Navigator. This document incorporates all third-party data provider terms and establishes your rights and responsibilities.
 
 **Key Topics:**
 - Acceptable use policies
@@ -122,7 +122,7 @@ Technical compliance documentation showing our adherence to all data source term
 
 ## ⚖️ Your Responsibilities
 
-When using Open Navigator for Engagement, you agree to:
+When using Open Navigator, you agree to:
 
 1. **Respect Rate Limits**
    - Implement caching where permitted
@@ -322,7 +322,7 @@ These platforms are accessed via web scraping (no API):
 
 ## 📜 Software License
 
-**Open Navigator for Engagement** is open-source software licensed under the **MIT License**.
+**Open Navigator** is open-source software licensed under the **MIT License**.
 
 **Key Points:**
 - ✅ Free for commercial and non-commercial use

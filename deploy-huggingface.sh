@@ -37,7 +37,7 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
-echo "🚀 Open Navigator for Engagement - Hugging Face Deployment"
+echo "🚀 Open Navigator - Hugging Face Deployment"
 echo "==========================================================="
 echo ""
 

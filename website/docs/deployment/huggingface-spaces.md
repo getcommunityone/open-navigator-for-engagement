@@ -4,7 +4,7 @@ sidebar_position: 4
 
 # Hugging Face Spaces Deployment
 
-Complete guide to deploy Open Navigator for Engagement to Hugging Face Spaces with all three applications running together.
+Complete guide to deploy Open Navigator to Hugging Face Spaces with all three applications running together.
 
 ## 📋 What Gets Deployed
 

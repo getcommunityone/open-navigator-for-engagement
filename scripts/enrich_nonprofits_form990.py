@@ -36,7 +36,7 @@ Usage:
         --eins 123456789,987654321 \\
         --concurrent 10
 
-Author: Open Navigator for Engagement
+Author: Open Navigator
 Attribution: Uses Giving Tuesday form-990-xml-parser
 """
 

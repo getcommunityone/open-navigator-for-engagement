@@ -4,7 +4,7 @@ sidebar_position: 5
 
 # Enterprise Tech Integration Guide
 
-This guide documents the enterprise technology platforms and programs that support Open Navigator for Engagement's data infrastructure.
+This guide documents the enterprise technology platforms and programs that support Open Navigator's data infrastructure.
 
 ## Implementation Status Legend
 

@@ -13,7 +13,7 @@ Key Features:
 - Available by state or region (4 regional files)
 - CSV format, ~1.9M+ records total
 
-Author: Open Navigator for Engagement
+Author: Open Navigator
 License: MIT
 """
 

@@ -8,12 +8,12 @@ sidebar_label: Data Provider Terms
 **Last Updated:** April 28, 2026
 
 :::info[Purpose]
-This document provides the complete terms of service, usage policies, and attribution requirements for all third-party data providers used by Open Navigator for Engagement. **Users of our Service must comply with all applicable provider terms.**
+This document provides the complete terms of service, usage policies, and attribution requirements for all third-party data providers used by Open Navigator. **Users of our Service must comply with all applicable provider terms.**
 :::
 
 ## Overview
 
-Open Navigator for Engagement aggregates data from multiple sources. Each source has its own terms of service, usage policies, and attribution requirements. This document consolidates all provider terms to help you stay compliant.
+Open Navigator aggregates data from multiple sources. Each source has its own terms of service, usage policies, and attribution requirements. This document consolidates all provider terms to help you stay compliant.
 
 ## 🏛️ U.S. Government Data Sources (Public Domain)
 

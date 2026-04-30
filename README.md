@@ -1,5 +1,5 @@
 ---
-title: Open Navigator for Engagement
+title: Open Navigator
 emoji: 🏛️
 colorFrom: blue
 colorTo: green
@@ -9,7 +9,7 @@ pinned: false
 license: apache-2.0
 ---
 
-# 🏛️ Open Navigator for Engagement
+# 🏛️ Open Navigator
 
 > **CommunityOne: The open path to everything local**
 >
