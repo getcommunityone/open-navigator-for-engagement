@@ -194,12 +194,12 @@ export default function USMap({ stateData, onStateClick, legend }: USMapProps) {
   }
   
   const handleMouseLeave = () => {
-    // Longer delay to make it easier to reach tooltip
+    // VERY long delay to make tooltip extremely sticky
     hideTimeoutRef.current = setTimeout(() => {
       if (!isTooltipHovered) {
         setHoveredState(null)
       }
-    }, 500) // 500ms delay (increased from 200ms)
+    }, 1000) // 1000ms (1 second) - gives plenty of time to reach tooltip
   }
   
   const handleTooltipMouseEnter = () => {
@@ -213,10 +213,10 @@ export default function USMap({ stateData, onStateClick, legend }: USMapProps) {
   
   const handleTooltipMouseLeave = () => {
     setIsTooltipHovered(false)
-    // Small delay before hiding when leaving tooltip
+    // Delay before hiding when leaving tooltip
     setTimeout(() => {
       setHoveredState(null)
-    }, 150)
+    }, 300)
   }
   
   const hoveredData = hoveredState ? stateData[hoveredState] : null
@@ -294,11 +294,14 @@ export default function USMap({ stateData, onStateClick, legend }: USMapProps) {
           onMouseLeave={handleTooltipMouseLeave}
           style={{
             left: `${tooltipPosition.x}px`,
-            top: `${tooltipPosition.y - 20}px`,
+            top: `${tooltipPosition.y - 10}px`,
             transform: 'translate(-50%, -100%)',
-            paddingBottom: '20px'  // Extra padding creates larger hover area
+            paddingBottom: '30px'  // Large invisible area below tooltip
           }}
         >
+          {/* Invisible bridge between state and tooltip - makes it easier to mouse over */}
+          <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 w-40 h-32 pointer-events-auto" />
+          
           <div className="bg-gray-900 text-white px-4 py-3 rounded-lg shadow-xl max-w-sm border border-gray-700">
             <div className="flex items-center justify-between mb-3">
               <div className="font-bold text-lg">{hoveredState}</div>
