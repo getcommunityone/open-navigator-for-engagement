@@ -1,5 +1,5 @@
 // @ts-nocheck
-import { useState, useRef } from 'react'
+import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { ComposableMap, Geographies, Geography } from 'react-simple-maps'
 
@@ -168,8 +168,6 @@ const getPatternForState = (stateCode: string, stateData: Record<string, StateDa
 export default function USMap({ stateData, onStateClick, legend }: USMapProps) {
   const [hoveredState, setHoveredState] = useState<string | null>(null)
   const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 })
-  const [isTooltipHovered, setIsTooltipHovered] = useState(false)
-  const hideTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   
   // Get unique types from actual state data if legend not provided
   const legislationTypes = legend?.types || {}
@@ -180,11 +178,7 @@ export default function USMap({ stateData, onStateClick, legend }: USMapProps) {
   }
   
   const handleMouseEnter = (event: any, stateCode: string) => {
-    // Clear any pending hide timeout
-    if (hideTimeoutRef.current) {
-      clearTimeout(hideTimeoutRef.current)
-      hideTimeoutRef.current = null
-    }
+    // Show tooltip for this state (or switch to new state)
     setHoveredState(stateCode)
     const bounds = event.target.getBoundingClientRect()
     setTooltipPosition({
@@ -193,30 +187,9 @@ export default function USMap({ stateData, onStateClick, legend }: USMapProps) {
     })
   }
   
-  const handleMouseLeave = () => {
-    // VERY long delay to make tooltip extremely sticky
-    hideTimeoutRef.current = setTimeout(() => {
-      if (!isTooltipHovered) {
-        setHoveredState(null)
-      }
-    }, 1000) // 1000ms (1 second) - gives plenty of time to reach tooltip
-  }
-  
-  const handleTooltipMouseEnter = () => {
-    setIsTooltipHovered(true)
-    // Clear any pending hide timeout
-    if (hideTimeoutRef.current) {
-      clearTimeout(hideTimeoutRef.current)
-      hideTimeoutRef.current = null
-    }
-  }
-  
-  const handleTooltipMouseLeave = () => {
-    setIsTooltipHovered(false)
-    // Delay before hiding when leaving tooltip
-    setTimeout(() => {
-      setHoveredState(null)
-    }, 300)
+  // Close button handler
+  const handleCloseTooltip = () => {
+    setHoveredState(null)
   }
   
   const hoveredData = hoveredState ? stateData[hoveredState] : null
@@ -278,7 +251,6 @@ export default function USMap({ stateData, onStateClick, legend }: USMapProps) {
                   }}
                   onClick={() => onStateClick?.(stateCode)}
                   onMouseEnter={(event) => handleMouseEnter(event, stateCode)}
-                  onMouseLeave={handleMouseLeave}
                 />
               )
             })
@@ -286,23 +258,27 @@ export default function USMap({ stateData, onStateClick, legend }: USMapProps) {
         </Geographies>
       </ComposableMap>
       
-      {/* Tooltip */}
+      {/* Tooltip - Stays visible until hover another state or click close */}
       {hoveredState && hoveredData && (
         <div 
           className="fixed z-50 pointer-events-auto"
-          onMouseEnter={handleTooltipMouseEnter}
-          onMouseLeave={handleTooltipMouseLeave}
           style={{
             left: `${tooltipPosition.x}px`,
             top: `${tooltipPosition.y - 10}px`,
-            transform: 'translate(-50%, -100%)',
-            paddingBottom: '30px'  // Large invisible area below tooltip
+            transform: 'translate(-50%, -100%)'
           }}
         >
-          {/* Invisible bridge between state and tooltip - makes it easier to mouse over */}
-          <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 w-40 h-32 pointer-events-auto" />
-          
           <div className="bg-gray-900 text-white px-4 py-3 rounded-lg shadow-xl max-w-sm border border-gray-700">
+            {/* Close button */}
+            <button
+              onClick={handleCloseTooltip}
+              className="absolute top-2 right-2 text-gray-400 hover:text-white transition-colors"
+              aria-label="Close tooltip"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
             <div className="flex items-center justify-between mb-3">
               <div className="font-bold text-lg">{hoveredState}</div>
               <div className="text-xs text-gray-400">
