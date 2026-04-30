@@ -456,6 +456,17 @@ async def get_bill_map_data(
             type_counts = {c.replace('type_', ''): int(row[c]) for c in type_cols}
             status_counts = {c.replace('status_', ''): int(row[c]) for c in status_cols}
             
+            # Extract sample_bills (stored as list of dicts)
+            sample_bills = row.get('sample_bills', [])
+            if pd.isna(sample_bills):
+                sample_bills = []
+            elif isinstance(sample_bills, str):
+                import json
+                try:
+                    sample_bills = json.loads(sample_bills)
+                except:
+                    sample_bills = []
+            
             state_data[state_code] = {
                 "state": state_code,
                 "total_bills": int(row['total_bills']),
@@ -464,8 +475,8 @@ async def get_bill_map_data(
                 "primary_type": row['primary_type'],
                 "primary_status": row['primary_status'],
                 "map_category": row['map_category'],
-                "sample_bills": row.get('sample_bills', []),  # Top 3 bills for tooltip
-                "last_updated": row.get('last_updated', '')
+                "sample_bills": sample_bills,  # Now properly extracted
+                "last_updated": str(row.get('last_updated', ''))
             }
         
         return {
