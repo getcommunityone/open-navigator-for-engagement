@@ -713,3 +713,72 @@ async def get_bill_map_data_on_demand(
             status_code=500,
             content=error_detail.model_dump()
         )
+
+
+@router.get("/{bill_id}")
+async def get_bill_details(bill_id: str):
+    """
+    Get detailed information about a specific bill.
+    
+    Args:
+        bill_id: Bill identifier in format {state}-{bill_number} (e.g., "LA-SB 4")
+    
+    Returns:
+        Detailed bill information including actions, sponsors, sources
+    """
+    try:
+        # Parse bill_id to extract state and bill number
+        if '-' not in bill_id:
+            raise HTTPException(status_code=400, detail="Invalid bill ID format. Expected: STATE-BILLNUMBER")
+        
+        parts = bill_id.split('-', 1)
+        state = parts[0].upper()
+        bill_number = parts[1]
+        
+        # Load bills data for the state
+        bills_file = GOLD_DIR / "states" / state.lower() / "bills_bills.parquet"
+        
+        if not bills_file.exists() and not IS_HF_SPACES:
+            raise HTTPException(status_code=404, detail=f"No bill data found for state {state}")
+        
+        # Get data source (local or remote)
+        data_source = get_data_source(bills_file, use_remote=IS_HF_SPACES)
+        
+        # Query for the specific bill
+        conn = duckdb.connect()
+        query = f"""
+            SELECT *
+            FROM read_parquet('{data_source}')
+            WHERE bill_number = '{bill_number}'
+            LIMIT 1
+        """
+        
+        df = conn.execute(query).fetchdf()
+        conn.close()
+        
+        if len(df) == 0:
+            raise HTTPException(status_code=404, detail=f"Bill {bill_number} not found in {state}")
+        
+        # Convert to dict
+        bill = df.iloc[0].to_dict()
+        
+        # Clean up the response
+        return {
+            "bill_id": bill_id,
+            "bill_number": bill.get("bill_number"),
+            "title": bill.get("title"),
+            "classification": bill.get("classification", []),
+            "session": bill.get("session"),
+            "session_name": bill.get("session_name"),
+            "first_action_date": str(bill.get("first_action_date")) if bill.get("first_action_date") else None,
+            "latest_action_date": str(bill.get("latest_action_date")) if bill.get("latest_action_date") else None,
+            "latest_action": bill.get("latest_action_description"),
+            "jurisdiction": bill.get("jurisdiction"),
+            "state": state,
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Bill details error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))

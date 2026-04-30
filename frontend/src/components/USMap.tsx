@@ -308,6 +308,68 @@ export default function USMap({ stateData, onStateClick, legend }: USMapProps) {
                   </div>
                 </div>
                 
+                {/* Sample Bills Grouped by Type */}
+                {hoveredData.sample_bills && hoveredData.sample_bills.length > 0 && (
+                  <div className="mb-3 max-h-48 overflow-y-auto">
+                    <div className="text-xs font-medium text-gray-300 mb-2">Recent Bills by Type:</div>
+                    <div className="space-y-2">
+                      {(() => {
+                        // Group bills by type
+                        const billsByType = hoveredData.sample_bills.reduce((acc, bill) => {
+                          if (!acc[bill.type]) acc[bill.type] = []
+                          acc[bill.type].push(bill)
+                          return acc
+                        }, {} as Record<string, BillSample[]>)
+                        
+                        return Object.entries(billsByType).map(([type, bills]) => (
+                          <div key={type} className="bg-gray-800/50 rounded p-2">
+                            <div className="flex items-center gap-2 mb-1.5">
+                              <div className={`
+                                w-2 h-2 rounded-full
+                                ${type === 'removal' ? 'bg-red-500' : 
+                                  type === 'mandate' ? 'bg-green-500' :
+                                  type === 'study' ? 'bg-blue-500' :
+                                  type === 'funding' ? 'bg-yellow-500' :
+                                  'bg-gray-500'}
+                              `} />
+                              <div className="text-xs font-medium text-gray-200">
+                                {legislationTypes[type] || type} ({bills.length})
+                              </div>
+                            </div>
+                            <div className="space-y-1 ml-4">
+                              {bills.map((bill, idx) => (
+                                <Link
+                                  key={idx}
+                                  to={`/bill/${bill.state}-${bill.bill_number}`}
+                                  className="block text-xs hover:bg-gray-700/50 rounded px-2 py-1 transition-colors group"
+                                >
+                                  <div className="flex items-center justify-between gap-2">
+                                    <span className="font-mono text-blue-300 group-hover:text-blue-200">
+                                      {bill.bill_number}
+                                    </span>
+                                    <span className={`
+                                      px-1.5 py-0.5 rounded text-[10px] font-medium
+                                      ${bill.status === 'enacted' ? 'bg-green-500/20 text-green-300' : 
+                                        bill.status === 'failed' ? 'bg-red-500/20 text-red-300' : 
+                                        'bg-yellow-500/20 text-yellow-300'}
+                                    `}>
+                                      {bill.status === 'enacted' ? '✓' : 
+                                       bill.status === 'failed' ? '✗' : '⏳'}
+                                    </span>
+                                  </div>
+                                  <div className="text-gray-300 line-clamp-1 text-[11px] mt-0.5">
+                                    {bill.title}
+                                  </div>
+                                </Link>
+                              ))}
+                            </div>
+                          </div>
+                        ))
+                      })()}
+                    </div>
+                  </div>
+                )}
+                
                 {/* Status Summary */}
                 <div className="grid grid-cols-3 gap-2 mb-3 text-xs">
                   <div className="bg-green-500/10 border border-green-500/30 rounded px-2 py-1.5">
