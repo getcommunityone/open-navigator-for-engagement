@@ -5,6 +5,7 @@ from fastapi import APIRouter, Query, HTTPException
 from fastapi.responses import JSONResponse
 from typing import Optional, List, Dict
 import duckdb
+import pandas as pd
 from pathlib import Path
 from loguru import logger
 import re
@@ -12,6 +13,7 @@ import os
 import sys
 
 from api.errors import ErrorDetail, parse_error
+from api.routes.search import load_parquet_cached
 
 router = APIRouter(prefix="/api/bills", tags=["bills"])
 
@@ -418,12 +420,94 @@ async def get_bill_map_data(
     """
     Get aggregated bill data for choropleth map visualization.
     
-    Returns counts of bills by type (ban, restriction, protection) and status (enacted, failed, pending)
-    for each state.
+    Uses pre-computed national aggregates for instant loading.
+    Returns counts of bills by type and status for each state.
     
     **Examples:**
-    - `/api/bills/map?topic=dental` - Map dental legislation across all states
-    - `/api/bills/map?topic=health&session=2024rs` - Map 2024 health bills
+    - `/api/bills/map?topic=fluorid` - Map fluoridation legislation
+    - `/api/bills/map?topic=dental` - Map dental legislation  
+    """
+    try:
+        # Use pre-aggregated national dataset
+        agg_file = GOLD_DIR / "national" / "bills_map_aggregates.parquet"
+        
+        # Fallback to on-demand aggregation if pre-computed file doesn't exist
+        if not agg_file.exists():
+            logger.warning("Pre-aggregated bill data not found, using on-demand aggregation (slower)")
+            return await get_bill_map_data_on_demand(topic, session)
+        
+        # Load from cached aggregates (fast!)
+        df = load_parquet_cached(str(agg_file))
+        
+        # Filter by topic
+        if topic:
+            df = df[df['topic'] == topic.lower()]
+        
+        # Convert to state_data dict
+        state_data = {}
+        
+        for _, row in df.iterrows():
+            state_code = row['state']
+            
+            # Reconstruct nested dicts
+            type_cols = [c for c in df.columns if c.startswith('type_')]
+            status_cols = [c for c in df.columns if c.startswith('status_')]
+            
+            type_counts = {c.replace('type_', ''): int(row[c]) for c in type_cols}
+            status_counts = {c.replace('status_', ''): int(row[c]) for c in status_cols}
+            
+            state_data[state_code] = {
+                "state": state_code,
+                "total_bills": int(row['total_bills']),
+                "type_counts": type_counts,
+                "status_counts": status_counts,
+                "primary_type": row['primary_type'],
+                "primary_status": row['primary_status'],
+                "map_category": row['map_category'],
+                "sample_bills": row.get('sample_bills', []),  # Top 3 bills for tooltip
+                "last_updated": row.get('last_updated', '')
+            }
+        
+        return {
+            "topic": topic,
+            "session": session,
+            "states": state_data,
+            "total_states": len(state_data),
+            "legend": {
+                "types": get_legend_for_topic(topic),
+                "statuses": {
+                    "enacted": "Enacted",
+                    "failed": "Failed",
+                    "pending": "Pending"
+                }
+            },
+            "cached": True
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Map data error: {e}")
+        
+        error_detail = parse_error(e, context={
+            "data_type": "bill map",
+            "topic": topic,
+            "session": session
+        })
+        
+        return JSONResponse(
+            status_code=500,
+            content=error_detail.model_dump()
+        )
+
+
+async def get_bill_map_data_on_demand(
+    topic: Optional[str] = None,
+    session: Optional[str] = None
+):
+    """
+    LEGACY: On-demand aggregation (slow - loads 50 state files).
+    Only used as fallback if pre-aggregated data doesn't exist.
     """
     try:
         # List of all US state codes to check

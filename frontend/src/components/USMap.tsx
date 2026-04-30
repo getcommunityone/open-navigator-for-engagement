@@ -266,25 +266,54 @@ export default function USMap({ stateData, onStateClick, legend }: USMapProps) {
               {hoveredData.total_bills > 0 && (
                 <>
                   <div className="border-t border-gray-700 my-2 pt-2">
+                    <div className="text-gray-300 text-xs mb-1">Status Breakdown:</div>
+                    <div className="grid grid-cols-3 gap-2 text-xs">
+                      <div className="text-center">
+                        <div className="text-green-400 font-bold">{hoveredData.status_counts.enacted}</div>
+                        <div className="text-gray-400 text-[10px]">Enacted</div>
+                      </div>
+                      <div className="text-center">
+                        <div className="text-yellow-400 font-bold">{hoveredData.status_counts.pending}</div>
+                        <div className="text-gray-400 text-[10px]">Pending</div>
+                      </div>
+                      <div className="text-center">
+                        <div className="text-red-400 font-bold">{hoveredData.status_counts.failed}</div>
+                        <div className="text-gray-400 text-[10px]">Failed</div>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="border-t border-gray-700 my-2 pt-2">
                     <div className="text-gray-300 text-xs mb-1">Primary Type:</div>
-                    <div className="font-semibold">
+                    <div className="font-semibold text-blue-300">
                       {legislationTypes[hoveredData.primary_type] || hoveredData.primary_type}
                     </div>
                   </div>
                   
-                  <div className="flex justify-between gap-4">
-                    <span className="text-gray-300">Status:</span>
-                    <span className="font-semibold capitalize">{hoveredData.primary_status}</span>
-                  </div>
-                  
-                  <div className="border-t border-gray-700 my-2 pt-2">
-                    <div className="text-gray-300 text-xs mb-1">Breakdown:</div>
-                    <div className="grid grid-cols-2 gap-1 text-xs">
-                      <div>✓ Enacted: {hoveredData.status_counts.enacted}</div>
-                      <div>⏳ Pending: {hoveredData.status_counts.pending}</div>
-                      <div className="col-span-2">✗ Failed: {hoveredData.status_counts.failed}</div>
+                  {/* Sample Bills - Show top 2 if available */}
+                  {hoveredData.sample_bills && hoveredData.sample_bills.length > 0 && (
+                    <div className="border-t border-gray-700 my-2 pt-2">
+                      <div className="text-gray-300 text-xs mb-1">Recent Examples:</div>
+                      <div className="space-y-1">
+                        {hoveredData.sample_bills.slice(0, 2).map((bill: any, idx: number) => (
+                          <div key={idx} className="text-[11px] leading-tight">
+                            <div className="flex items-center gap-1 mb-0.5">
+                              <span className={`
+                                px-1.5 py-0.5 rounded text-[9px] font-medium
+                                ${bill.status === 'enacted' ? 'bg-green-500/20 text-green-300' : 
+                                  bill.status === 'failed' ? 'bg-red-500/20 text-red-300' : 
+                                  'bg-yellow-500/20 text-yellow-300'}
+                              `}>
+                                {bill.status}
+                              </span>
+                              <span className="text-gray-400 text-[9px]">{legislationTypes[bill.type] || bill.type}</span>
+                            </div>
+                            <div className="text-gray-200 line-clamp-2">{bill.title}</div>
+                          </div>
+                        ))}
+                      </div>
                     </div>
-                  </div>
+                  )}
                 </>
               )}
               
