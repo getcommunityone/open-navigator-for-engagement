@@ -229,6 +229,69 @@ July 2023, Toronto, Canada.
 - Documentation: http://www.popoloproject.com/specs/
 - License: Creative Commons Attribution 4.0 International
 
+### **BillMap** ⭐
+- Tracks bill text similarity across all 50 U.S. states to identify copy-paste legislation and model bill influence
+- Organization: Sunlight Foundation / @unitedstates community
+- Repository: https://github.com/unitedstates/BillMap
+- Research: Anderson et al., "Detecting Policy Influence in Legislatures" (2019)
+- Paper: https://arxiv.org/abs/1906.03699
+- Live Demo: https://billmap.cs.princeton.edu/
+- License: Open source
+- Coverage: All 50 states, tracks legislative text diffusion across jurisdictions
+- Used for: Identifying model legislation, tracking policy influence, finding similar bills across states
+- Method: Text similarity analysis, n-gram matching, bill text alignment
+
+**What we use:**
+- Bill similarity detection algorithms
+- Model legislation tracking methodology
+- Cross-state policy diffusion analysis
+- Legislative text comparison techniques
+
+**BibTeX:**
+```bibtex
+@article{anderson2019billmap,
+    title = {Detecting Policy Influence in Legislatures},
+    author = {Anderson, Evan and Fowler, Anthony and Grossmann, Matt and Sahn, Alexander and Shiraito, Yuki},
+    journal = {arXiv preprint arXiv:1906.03699},
+    year = {2019},
+    url = {https://arxiv.org/abs/1906.03699}
+}
+```
+
+### **@unitedstates Images Repository** ⭐
+- High-resolution photos of all U.S. Congress members (past and present)
+- Organization: @unitedstates community (Sunlight Foundation legacy project)
+- Repository: https://github.com/unitedstates/images
+- CDN: https://theunitedstates.io/images/congress/
+- License: Public domain (government photos)
+- Coverage: All U.S. Senators and Representatives (1789-present), updated regularly
+- Image Format: JPEG, multiple resolutions (original, 450x550, 225x275)
+- Used for: Legislator profile photos, visual identification, representative directories
+
+**Image URL Format:**
+```
+https://theunitedstates.io/images/congress/original/[bioguide_id].jpg
+https://theunitedstates.io/images/congress/450x550/[bioguide_id].jpg
+https://theunitedstates.io/images/congress/225x275/[bioguide_id].jpg
+```
+
+**Example:**
+```
+https://theunitedstates.io/images/congress/original/P000197.jpg
+(Nancy Pelosi, bioguide_id: P000197)
+```
+
+**What we use:**
+- Legislator profile photos for federal representatives
+- Visual identification in advocacy tools
+- Representative directories and contact pages
+- Cross-referenced with Open States data using bioguide IDs
+
+**Related Projects:**
+- **congress-legislators**: https://github.com/unitedstates/congress-legislators (YAML data files)
+- **congress**: https://github.com/unitedstates/congress (scraping tools)
+- **districts**: https://github.com/unitedstates/districts (GeoJSON boundaries)
+
 ---
 
 ## 💰 **Nonprofit Financial Data**
