@@ -248,79 +248,85 @@ export default function USMap({ stateData, onStateClick, legend }: USMapProps) {
       {/* Tooltip */}
       {hoveredState && hoveredData && (
         <div 
-          className="fixed z-50 pointer-events-none"
+          className="fixed z-50 pointer-events-auto"
           style={{
             left: `${tooltipPosition.x}px`,
             top: `${tooltipPosition.y - 10}px`,
             transform: 'translate(-50%, -100%)'
           }}
         >
-          <div className="bg-gray-900 text-white px-4 py-3 rounded-lg shadow-xl max-w-xs">
-            <div className="font-bold text-base mb-2">{hoveredState}</div>
-            <div className="space-y-1 text-sm">
-              <div className="flex justify-between gap-4">
-                <span className="text-gray-300">Total Bills:</span>
-                <span className="font-semibold">{hoveredData.total_bills.toLocaleString()}</span>
+          <div className="bg-gray-900 text-white px-4 py-3 rounded-lg shadow-xl max-w-sm border border-gray-700">
+            <div className="flex items-center justify-between mb-3">
+              <div className="font-bold text-lg">{hoveredState}</div>
+              <div className="text-xs text-gray-400">
+                {hoveredData.total_bills.toLocaleString()} bill{hoveredData.total_bills !== 1 ? 's' : ''}
               </div>
-              
-              {hoveredData.total_bills > 0 && (
-                <>
-                  <div className="border-t border-gray-700 my-2 pt-2">
-                    <div className="text-gray-300 text-xs mb-1">Status Breakdown:</div>
-                    <div className="grid grid-cols-3 gap-2 text-xs">
-                      <div className="text-center">
-                        <div className="text-green-400 font-bold">{hoveredData.status_counts.enacted}</div>
-                        <div className="text-gray-400 text-[10px]">Enacted</div>
-                      </div>
-                      <div className="text-center">
-                        <div className="text-yellow-400 font-bold">{hoveredData.status_counts.pending}</div>
-                        <div className="text-gray-400 text-[10px]">Pending</div>
-                      </div>
-                      <div className="text-center">
-                        <div className="text-red-400 font-bold">{hoveredData.status_counts.failed}</div>
-                        <div className="text-gray-400 text-[10px]">Failed</div>
-                      </div>
-                    </div>
-                  </div>
-                  
-                  <div className="border-t border-gray-700 my-2 pt-2">
-                    <div className="text-gray-300 text-xs mb-1">Primary Type:</div>
-                    <div className="font-semibold text-blue-300">
-                      {legislationTypes[hoveredData.primary_type] || hoveredData.primary_type}
-                    </div>
-                  </div>
-                  
-                  {/* Sample Bills - Show top 2 if available */}
-                  {hoveredData.sample_bills && hoveredData.sample_bills.length > 0 && (
-                    <div className="border-t border-gray-700 my-2 pt-2">
-                      <div className="text-gray-300 text-xs mb-1">Recent Examples:</div>
-                      <div className="space-y-1">
-                        {hoveredData.sample_bills.slice(0, 2).map((bill: any, idx: number) => (
-                          <div key={idx} className="text-[11px] leading-tight">
-                            <div className="flex items-center gap-1 mb-0.5">
-                              <span className={`
-                                px-1.5 py-0.5 rounded text-[9px] font-medium
-                                ${bill.status === 'enacted' ? 'bg-green-500/20 text-green-300' : 
-                                  bill.status === 'failed' ? 'bg-red-500/20 text-red-300' : 
-                                  'bg-yellow-500/20 text-yellow-300'}
-                              `}>
-                                {bill.status}
-                              </span>
-                              <span className="text-gray-400 text-[9px]">{legislationTypes[bill.type] || bill.type}</span>
-                            </div>
-                            <div className="text-gray-200 line-clamp-2">{bill.title}</div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </>
-              )}
-              
-              {hoveredData.total_bills === 0 && (
-                <div className="text-gray-400 text-xs italic">No legislation found</div>
-              )}
             </div>
+            
+            {hoveredData.total_bills > 0 && (
+              <>
+                {/* Primary Type and Status - Prominent */}
+                <div className="mb-3 p-2 bg-gray-800 rounded-md">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <div className={`
+                        w-3 h-3 rounded-full
+                        ${hoveredData.primary_type === 'removal' ? 'bg-red-500' : 
+                          hoveredData.primary_type === 'mandate' ? 'bg-green-500' :
+                          hoveredData.primary_type === 'study' ? 'bg-blue-500' :
+                          hoveredData.primary_type === 'funding' ? 'bg-yellow-500' :
+                          'bg-gray-500'}
+                      `} />
+                      <div>
+                        <div className="text-sm font-semibold text-white">
+                          {legislationTypes[hoveredData.primary_type] || hoveredData.primary_type}
+                        </div>
+                        <div className="text-xs text-gray-400">Primary Type</div>
+                      </div>
+                    </div>
+                    <div className={`
+                      px-2 py-1 rounded text-xs font-medium
+                      ${hoveredData.primary_status === 'enacted' ? 'bg-green-500/30 text-green-300 border border-green-500/50' : 
+                        hoveredData.primary_status === 'failed' ? 'bg-red-500/30 text-red-300 border border-red-500/50' : 
+                        'bg-yellow-500/30 text-yellow-300 border border-yellow-500/50'}
+                    `}>
+                      {hoveredData.primary_status === 'enacted' ? '✓ Enacted' : 
+                       hoveredData.primary_status === 'failed' ? '✗ Failed' : 
+                       '⏳ Pending'}
+                    </div>
+                  </div>
+                </div>
+                
+                {/* Status Summary */}
+                <div className="grid grid-cols-3 gap-2 mb-3 text-xs">
+                  <div className="bg-green-500/10 border border-green-500/30 rounded px-2 py-1.5">
+                    <div className="text-green-400 font-bold text-base">{hoveredData.status_counts.enacted}</div>
+                    <div className="text-green-300/70">Enacted</div>
+                  </div>
+                  <div className="bg-yellow-500/10 border border-yellow-500/30 rounded px-2 py-1.5">
+                    <div className="text-yellow-400 font-bold text-base">{hoveredData.status_counts.pending}</div>
+                    <div className="text-yellow-300/70">Pending</div>
+                  </div>
+                  <div className="bg-red-500/10 border border-red-500/30 rounded px-2 py-1.5">
+                    <div className="text-red-400 font-bold text-base">{hoveredData.status_counts.failed}</div>
+                    <div className="text-red-300/70">Failed</div>
+                  </div>
+                </div>
+                
+                {/* Drill Down Button */}
+                <button
+                  onClick={() => onStateClick && onStateClick(hoveredState)}
+                  className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium text-sm py-2 px-3 rounded transition-colors flex items-center justify-center gap-2"
+                >
+                  <span>View All Bills</span>
+                  <span className="text-lg">→</span>
+                </button>
+              </>
+            )}
+            
+            {hoveredData.total_bills === 0 && (
+              <div className="text-gray-400 text-sm italic text-center py-2">No legislation found</div>
+            )}
             
             {/* Tooltip arrow */}
             <div 
