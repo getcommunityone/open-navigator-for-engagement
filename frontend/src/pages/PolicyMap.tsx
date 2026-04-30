@@ -1,5 +1,6 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
+import { useSearchParams } from 'react-router-dom'
 import api from '../lib/api'
 import { MagnifyingGlassIcon, MapIcon as MapIconOutline, ListBulletIcon } from '@heroicons/react/24/outline'
 import USMap from '../components/USMap'
@@ -45,12 +46,26 @@ interface StateData {
 }
 
 export default function PolicyMap() {
+  const [searchParams, setSearchParams] = useSearchParams()
   const [viewMode, setViewMode] = useState<'map' | 'list'>('map')
   const [selectedState, setSelectedState] = useState('AL')
   const [selectedSession, setSelectedSession] = useState<string>('')
   const [searchQuery, setSearchQuery] = useState('')
-  const [selectedTopic, setSelectedTopic] = useState('')
-  const [showTopicSelector, setShowTopicSelector] = useState(true)
+  
+  // Read topic from URL, or default to empty (showing topic selector)
+  const topicFromUrl = searchParams.get('topic') || ''
+  const [selectedTopic, setSelectedTopic] = useState(topicFromUrl)
+  const [showTopicSelector, setShowTopicSelector] = useState(!topicFromUrl)
+  
+  // Sync topic changes to URL
+  useEffect(() => {
+    if (selectedTopic) {
+      setSearchParams({ topic: selectedTopic })
+    } else {
+      setSearchParams({})
+    }
+  }, [selectedTopic, setSearchParams])
+  
   const [page, setPage] = useState(1)
   const limit = 20
 
