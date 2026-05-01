@@ -227,6 +227,14 @@ const config: Config = {
               label: 'LinkedIn',
               href: 'https://www.linkedin.com/company/getcommunityone',
             },
+            {
+              label: 'YouTube',
+              href: 'https://www.youtube.com/@getcommunityone',
+            },
+            {
+              label: 'Discord',
+              href: 'https://discord.gg/uH6Dytek',
+            },
           ],
         },
         {
