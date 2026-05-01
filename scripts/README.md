@@ -7,7 +7,9 @@ All scripts are organized into logical subdirectories by function.
 ```
 scripts/
 ├── data/                    # Data processing and migration
+├── datasources/             # Data source integrations and connectors
 ├── deployment/              # Deployment and setup
+├── development/             # Development and debugging tools
 ├── enrichment/              # Data enrichment (990s, nonprofits)
 ├── huggingface/             # HuggingFace dataset management
 └── maintenance/             # Cleanup and maintenance
@@ -22,11 +24,24 @@ Data processing pipelines, migrations, and aggregations.
 - Contact extraction
 - Data splits and partitioning
 
+### [datasources/](datasources/)
+Data source integrations and API connectors.
+- OpenStates integration
+- IRS/nonprofit data processing
+- Census Bureau APIs
+- External data source connectors
+
 ### [deployment/](deployment/)
 Setup scripts for local development and production deployment.
 - Local environment setup
 - Database initialization
 - Databricks deployment
+
+### [development/](development/)
+Development and debugging tools.
+- Debug scripts for scrapers
+- Testing utilities
+- Development helpers
 
 ### [enrichment/](enrichment/)
 Scripts to enrich nonprofit data with additional metadata.

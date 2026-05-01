@@ -316,19 +316,42 @@ async def fetch_map_data_from_neon(
                 "last_updated": row['last_updated'].isoformat() if row['last_updated'] else None
             }
         
+        # Build dynamic legend based on actual data
+        unique_types = set()
+        for state in state_data.values():
+            if state['primary_type']:
+                unique_types.add(state['primary_type'])
+        
+        # Map types to user-friendly names
+        type_labels = {
+            'mandate': 'Mandate',
+            'removal': 'Removal',
+            'study': 'Study',
+            'funding': 'Funding',
+            'coverage_expansion': 'Coverage Expansion',
+            'screening': 'Screening',
+            'provider_access': 'Provider Access',
+            'expansion': 'Expansion',
+            'coverage': 'Coverage',
+            'reimbursement': 'Reimbursement',
+            'eligibility': 'Eligibility',
+            'requirement': 'Requirement',
+            'curriculum': 'Curriculum',
+            'reform': 'Reform',
+            'protection': 'Protection',
+            'restriction': 'Restriction',
+            'other': 'Other'
+        }
+        
+        legend_types = {t: type_labels.get(t, t.replace('_', ' ').title()) for t in unique_types}
+        
         result = {
             "topic": requested_topic,
             "session": session,
             "states": state_data,
             "total_states": len(state_data),
             "legend": {
-                "types": {
-                    "bill": "Bill",
-                    "resolution": "Resolution",
-                    "concurrent_resolution": "Concurrent Resolution",
-                    "joint_resolution": "Joint Resolution",
-                    "constitutional_amendment": "Constitutional Amendment"
-                },
+                "types": legend_types,
                 "statuses": {
                     "enacted": "Enacted",
                     "failed": "Failed",

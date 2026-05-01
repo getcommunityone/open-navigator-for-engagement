@@ -1,0 +1,38 @@
+# Intel Arc-Optimized LLM Environment
+# For Intel Core Ultra 7 with Arc Graphics + NPU + 64GB RAM
+
+# Core ML Libraries
+torch>=2.1.0
+intel-extension-for-pytorch>=2.1.0
+transformers>=4.35.0
+accelerate>=0.24.0
+optimum[openvino]>=1.14.0
+sentence-transformers>=2.2.2
+
+# DuckDB + Extensions
+duckdb>=0.9.2
+duckdb-engine>=0.9.5
+
+# Vector Search
+faiss-cpu>=1.7.4
+numpy>=1.24.0
+
+# Hugging Face
+datasets>=2.14.0
+huggingface_hub>=0.19.0
+
+# Data Processing
+pandas>=2.0.0
+pyarrow>=14.0.0
+polars>=0.19.0
+
+# Utilities
+loguru>=0.7.0
+tqdm>=4.66.0
+python-dotenv>=1.0.0
+
+# SQL
+sqlalchemy>=2.0.0
+
+# Optional: Quantization
+bitsandbytes>=0.41.0

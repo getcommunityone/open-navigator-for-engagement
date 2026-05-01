@@ -170,6 +170,7 @@ export default function USMap({ stateData, onStateClick, legend }: USMapProps) {
   const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 })
   const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const hoveredStateElementRef = useRef<any>(null)
+  const containerRef = useRef<HTMLDivElement>(null)
   
   // Get unique types from actual state data if legend not provided
   const legislationTypes = legend?.types || {}
@@ -179,15 +180,24 @@ export default function USMap({ stateData, onStateClick, legend }: USMapProps) {
     'pending': 'Pending'
   }
   
+  // Helper to calculate position relative to container
+  const calculateRelativePosition = (element: any) => {
+    if (!element || !containerRef.current) return { x: 0, y: 0 }
+    
+    const stateBounds = element.getBoundingClientRect()
+    const containerBounds = containerRef.current.getBoundingClientRect()
+    
+    return {
+      x: stateBounds.left - containerBounds.left + stateBounds.width / 2,
+      y: stateBounds.top - containerBounds.top
+    }
+  }
+  
   // Update tooltip position on scroll
   useEffect(() => {
     const updateTooltipPosition = () => {
       if (hoveredState && hoveredStateElementRef.current) {
-        const bounds = hoveredStateElementRef.current.getBoundingClientRect()
-        setTooltipPosition({
-          x: bounds.left + bounds.width / 2,
-          y: bounds.top
-        })
+        setTooltipPosition(calculateRelativePosition(hoveredStateElementRef.current))
       }
     }
     
@@ -210,22 +220,14 @@ export default function USMap({ stateData, onStateClick, legend }: USMapProps) {
     // If no tooltip showing, show immediately
     if (!hoveredState) {
       setHoveredState(stateCode)
-      const bounds = event.target.getBoundingClientRect()
-      setTooltipPosition({
-        x: bounds.left + bounds.width / 2,
-        y: bounds.top
-      })
+      setTooltipPosition(calculateRelativePosition(event.target))
     } 
     // If tooltip already showing for different state, delay switch
     // This prevents accidental switches when moving mouse to tooltip
     else if (hoveredState !== stateCode) {
       hoverTimeoutRef.current = setTimeout(() => {
         setHoveredState(stateCode)
-        const bounds = event.target.getBoundingClientRect()
-        setTooltipPosition({
-          x: bounds.left + bounds.width / 2,
-          y: bounds.top
-        })
+        setTooltipPosition(calculateRelativePosition(event.target))
       }, 200) // 200ms delay prevents accidental switches
     }
   }
@@ -250,7 +252,7 @@ export default function USMap({ stateData, onStateClick, legend }: USMapProps) {
   const hoveredData = hoveredState ? stateData[hoveredState] : null
   
   return (
-    <div className="relative">
+    <div ref={containerRef} className="relative">
       {/* SVG Patterns for overlays */}
       <svg width="0" height="0">
         <defs>
@@ -317,7 +319,7 @@ export default function USMap({ stateData, onStateClick, legend }: USMapProps) {
       {/* Tooltip - Stays visible until hover another state or click close */}
       {hoveredState && hoveredData && (
         <div 
-          className="fixed z-50 pointer-events-auto"
+          className="absolute z-50 pointer-events-auto"
           style={{
             left: `${tooltipPosition.x}px`,
             top: `${tooltipPosition.y - 10}px`,
@@ -490,24 +492,32 @@ export default function USMap({ stateData, onStateClick, legend }: USMapProps) {
       <div className="absolute bottom-4 right-4 bg-white/95 rounded-lg shadow-lg p-4 border border-gray-200 max-w-xs">
         <div className="text-sm font-semibold text-gray-800 mb-3">Legend</div>
         
-        {/* Type of Legislation - Dynamic based on topic */}
-        {Object.keys(legislationTypes).length > 0 && (
-          <div className="mb-3">
-            <div className="text-xs font-medium text-gray-600 mb-2">Type of Legislation</div>
-            <div className="space-y-1">
-              {Object.entries(legislationTypes).map(([key, label]) => (
-                <div key={key} className="flex items-center gap-2">
-                  <div className="w-4 h-4 rounded flex-shrink-0" style={{ backgroundColor: getColorForCategory(key) }} />
-                  <span className="text-xs text-gray-700">{label}</span>
+        {/* Type of Legislation - Show actual types from data */}
+        {(() => {
+          // Get unique types from actual state data
+          const uniqueTypes = new Set<string>()
+          Object.values(stateData).forEach(state => {
+            if (state.primary_type) uniqueTypes.add(state.primary_type)
+          })
+          
+          return uniqueTypes.size > 0 && (
+            <div className="mb-3">
+              <div className="text-xs font-medium text-gray-600 mb-2">Type of Legislation</div>
+              <div className="space-y-1">
+                {Array.from(uniqueTypes).sort().map(type => (
+                  <div key={type} className="flex items-center gap-2">
+                    <div className="w-4 h-4 rounded flex-shrink-0" style={{ backgroundColor: getColorForCategory(type) }} />
+                    <span className="text-xs text-gray-700 capitalize">{legislationTypes[type] || type.replace(/_/g, ' ')}</span>
+                  </div>
+                ))}
+                <div className="flex items-center gap-2">
+                  <div className="w-4 h-4 rounded flex-shrink-0" style={{ backgroundColor: '#E3F2FD' }} />
+                  <span className="text-xs text-gray-700">No Legislation</span>
                 </div>
-              ))}
-              <div className="flex items-center gap-2">
-                <div className="w-4 h-4 rounded flex-shrink-0" style={{ backgroundColor: '#E3F2FD' }} />
-                <span className="text-xs text-gray-700">No Legislation</span>
               </div>
             </div>
-          </div>
-        )}
+          )
+        })()}
         
         {/* Status of Legislation */}
         <div>
