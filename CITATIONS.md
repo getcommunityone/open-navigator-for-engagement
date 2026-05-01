@@ -92,6 +92,65 @@ July 2023, Toronto, Canada.
 - Video source discovery could enhance their data
 - We follow their Code of Conduct for all contributions
 
+### **LegiScan** ⭐
+- Comprehensive legislative tracking and bill text database
+- Organization: LegiScan LLC
+- Source: https://legiscan.com/
+- API: https://legiscan.com/legiscan
+- License: API access requires subscription (free tier available with limitations)
+- Coverage: All 50 states + U.S. Congress + Washington D.C.
+- API Key: Required for access (free tier: limited requests)
+
+**Coverage:**
+- Real-time legislative tracking for all U.S. states and Congress
+- Full bill text, amendments, and legislative documents
+- Roll call votes and voting records
+- Committee assignments and hearings
+- Bill status tracking and history
+- Sponsor and co-sponsor information
+- Bill text in PDF, HTML, and plain text formats
+
+**What we use:**
+- Bill text downloads and full-text search
+- Legislative document archives
+- Bill status and tracking data
+- Voting records and roll calls
+- Supplement to Open States data for missing jurisdictions
+- Historical legislative data back to 2011
+
+**API Features:**
+- GetBillText: Retrieve full bill text in multiple formats
+- GetBill: Detailed bill metadata and status
+- GetRollCall: Voting records with legislator positions
+- GetSponsor: Sponsor and co-sponsor information
+- Search: Full-text search across all bills
+- GetDatasetList: Bulk dataset downloads
+
+**Resources:**
+- API Documentation: https://legiscan.com/legiscan
+- Dataset Downloads: https://legiscan.com/datasets
+- Search Interface: https://legiscan.com/gaits/search
+- State Coverage: https://legiscan.com/legiscan/states
+
+**BibTeX:**
+```bibtex
+@software{legiscan,
+    title = {LegiScan},
+    author = {{LegiScan LLC}},
+    year = {2024},
+    url = {https://legiscan.com/},
+    note = {Comprehensive legislative tracking and bill text database covering all 50 U.S. states and Congress}
+}
+```
+
+**Complementary to Open States:**
+- LegiScan provides bill text in multiple formats (PDF, HTML, plain text)
+- Historical data back to 2011 for all states
+- Real-time updates and notifications
+- More comprehensive document archives
+- Paid API provides higher rate limits and bulk downloads
+- Use LegiScan for bill text analysis, Open States for structured legislative data
+
 ### **Harvard Dataverse**
 - Meeting datasets and civic engagement research
 - Source: https://dataverse.harvard.edu/
@@ -1238,6 +1297,71 @@ The primary news and ranking source for the government technology industry, prov
 ```
 
 **Citation:** "Government Technology. e.Republic Inc. https://www.govtech.com/"
+
+---
+
+### **Civic Tech Guide** ⭐
+
+Comprehensive, curated directory of civic technology projects, organizations, and tools worldwide, maintained by the civic tech community.
+
+**Organization:** Civic Tech Field Guide (Community-maintained)  
+**Website:** https://app.civictech.guide/  
+**About:** Open directory and knowledge base of civic tech projects, tools, and organizations with detailed project profiles and categorization  
+**Founded:** 2018  
+**Coverage:** Global civic technology ecosystem (1,000+ projects)  
+
+**What we use:**
+- **Project Directory**: Discovery of related civic tech tools and platforms
+- **Categorization**: Understanding how civic tech projects are classified and tagged
+- **Community Connections**: Network of civic technologists and organizations
+- **Best Practices**: Learning from similar projects and their approaches
+
+**CommunityOne Profile:**
+- **Listed as**: https://app.civictech.guide/p/communityone/r/recN0BG4gvjXT7WLf
+- **Categories**: Open Government, Civic Engagement, AI/Machine Learning
+- **Description**: AI-powered civic engagement platform tracking local government meetings, legislation, and advocacy opportunities
+
+**Key Features:**
+- **Search & Filter**: Discover projects by topic, geography, technology, and impact area
+- **Project Profiles**: Detailed information about civic tech initiatives including status, team, and technology
+- **Tagging System**: Categorization by civic tech domains (transparency, participation, accountability, etc.)
+- **API Access**: Programmatic access to the project database
+- **Community Contributions**: Open for civic tech projects to self-list and update profiles
+
+**Categories in Civic Tech Guide:**
+- Open Government & Transparency
+- Civic Participation & Engagement
+- Community Organizing
+- Democracy & Voting
+- Public Service Delivery
+- Data & Research
+- Advocacy & Policy
+- Urban Planning & Development
+
+**Resources:**
+- Main Site: https://app.civictech.guide/
+- About: https://civictech.guide/
+- Submit Project: https://app.civictech.guide/submit
+- GitHub: https://github.com/compilerla/civic-tech-taxonomy
+
+**Why Civic Tech Guide:**
+- **Discovery**: Find related projects and potential collaborators
+- **Context**: Understand where your project fits in the broader civic tech ecosystem
+- **Community**: Connect with civic technologists working on similar problems
+- **Legitimacy**: Being listed establishes credibility in the civic tech community
+
+**BibTeX:**
+```bibtex
+@misc{civic_tech_guide,
+    title = {Civic Tech Field Guide},
+    author = {{Civic Tech Field Guide Community}},
+    year = {2026},
+    url = {https://civictech.guide/},
+    note = {Community-maintained directory of civic technology projects and organizations worldwide}
+}
+```
+
+**Citation:** "Civic Tech Field Guide. https://civictech.guide/"
 
 ---
 
