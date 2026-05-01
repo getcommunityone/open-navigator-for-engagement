@@ -30,9 +30,8 @@ langgraph>=0.0.20
 langchain-core>=0.1.0
 tiktoken>=0.5.0
 
-# Model Context Protocol (MCP)
-mcp>=0.1.0
-anthropic-mcp-sdk>=0.1.0
+# Model Context Protocol (MCP) - Optional, for local MCP server only
+# mcp>=0.1.0
 
 # Data Processing & Lakehouse
 databricks-sdk==0.18.0
