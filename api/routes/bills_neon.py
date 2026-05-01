@@ -269,7 +269,20 @@ async def fetch_map_data_from_neon(
             WHERE topic = $1
         """
         
-        rows = await conn.fetch(sql, topic.lower() if topic else 'all')
+        requested_topic = topic.lower() if topic else 'all'
+        rows = await conn.fetch(sql, requested_topic)
+        
+        # If topic-specific data not found, return empty (don't fallback)
+        if not rows:
+            logger.warning(f"📊 No pre-computed data for topic '{requested_topic}'")
+            return {
+                "topic": requested_topic,
+                "session": session,
+                "states": {},
+                "total_states": 0,
+                "message": f"No data available for topic '{requested_topic}'. Try 'all' or pre-compute aggregates for this topic.",
+                "source": "neon"
+            }
         
         state_data = {}
         for row in rows:
@@ -277,6 +290,9 @@ async def fetch_map_data_from_neon(
             
             # Parse sample bills JSON
             sample_bills = row['sample_bills'] or []
+            if isinstance(sample_bills, str):
+                import json
+                sample_bills = json.loads(sample_bills)
             
             state_data[state_code] = {
                 "state": state_code,
@@ -301,7 +317,7 @@ async def fetch_map_data_from_neon(
             }
         
         result = {
-            "topic": topic,
+            "topic": requested_topic,
             "session": session,
             "states": state_data,
             "total_states": len(state_data),

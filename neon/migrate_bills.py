@@ -230,7 +230,7 @@ def main():
     logger.info("🚀 Starting lightweight bills map migration to Neon PostgreSQL")
     logger.info("📦 Strategy: Map aggregates in Neon, detailed bills in parquet")
     logger.info(f"📂 Gold directory: {GOLD_DIR}")
-    logger.info(f"🔗 Database: {NEON_DATABASE_URL.split('@')[1].split('/')[0]}")
+    logger.info(f"🔗 Database: {DATABASE_URL.split('@')[1].split('/')[0] if DATABASE_URL and '@' in DATABASE_URL else 'localhost'}")
     
     try:
         # Create schema

@@ -1,5 +1,5 @@
 // @ts-nocheck
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { ComposableMap, Geographies, Geography } from 'react-simple-maps'
 
@@ -169,6 +169,7 @@ export default function USMap({ stateData, onStateClick, legend }: USMapProps) {
   const [hoveredState, setHoveredState] = useState<string | null>(null)
   const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 })
   const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const hoveredStateElementRef = useRef<any>(null)
   
   // Get unique types from actual state data if legend not provided
   const legislationTypes = legend?.types || {}
@@ -178,12 +179,33 @@ export default function USMap({ stateData, onStateClick, legend }: USMapProps) {
     'pending': 'Pending'
   }
   
+  // Update tooltip position on scroll
+  useEffect(() => {
+    const updateTooltipPosition = () => {
+      if (hoveredState && hoveredStateElementRef.current) {
+        const bounds = hoveredStateElementRef.current.getBoundingClientRect()
+        setTooltipPosition({
+          x: bounds.left + bounds.width / 2,
+          y: bounds.top
+        })
+      }
+    }
+    
+    if (hoveredState) {
+      window.addEventListener('scroll', updateTooltipPosition, true)
+      return () => window.removeEventListener('scroll', updateTooltipPosition, true)
+    }
+  }, [hoveredState])
+  
   const handleMouseEnter = (event: any, stateCode: string) => {
     // Clear any pending state change
     if (hoverTimeoutRef.current) {
       clearTimeout(hoverTimeoutRef.current)
       hoverTimeoutRef.current = null
     }
+    
+    // Store the element reference for scroll updates
+    hoveredStateElementRef.current = event.target
     
     // If no tooltip showing, show immediately
     if (!hoveredState) {
