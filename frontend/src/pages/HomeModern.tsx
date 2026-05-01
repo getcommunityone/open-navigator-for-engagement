@@ -72,9 +72,9 @@ export default function HomeModern() {
 
   // Environment-aware URLs for docs and API
   // In development: Docusaurus on localhost:3000/docs, API on localhost:8000
-  // In production (HF Spaces): Served via nginx at /docs/ and /api/
+  // In production: Use custom domain to avoid HuggingFace Spaces URL in links
   let docsBaseUrl = import.meta.env.VITE_DOCS_URL || 
-    (import.meta.env.DEV ? 'http://localhost:3000/docs' : '/docs')
+    (import.meta.env.DEV ? 'http://localhost:3000/docs' : 'https://www.communityone.com/docs')
   let apiBaseUrl = import.meta.env.VITE_API_URL || 
     (import.meta.env.DEV ? 'http://localhost:8000' : '')
 

@@ -36,7 +36,7 @@ export default function Home() {
   const [showSuggestions, setShowSuggestions] = useState(false)
   const { location, setLocation } = useLocationContext()
 
-  const DOCS_URL = import.meta.env.PROD ? '/docs/intro' : 'http://localhost:3000/docs/intro'
+  const DOCS_URL = import.meta.env.PROD ? 'https://www.communityone.com/docs/intro' : 'http://localhost:3000/docs/intro'
 
   // Live search preview (type-ahead with actual results from API)
   const { data: previewResults, isLoading: previewLoading, error: previewError } = useQuery({

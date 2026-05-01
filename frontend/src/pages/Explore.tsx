@@ -475,7 +475,7 @@ export default function Explore() {
                 🤗 View on HuggingFace
               </a>
               <a
-                href={import.meta.env.PROD ? '/docs/data-sources/data-model-erd' : 'http://localhost:3000/docs/data-sources/data-model-erd'}
+                href={import.meta.env.PROD ? 'https://www.communityone.com/docs/data-sources/data-model-erd' : 'http://localhost:3000/docs/data-sources/data-model-erd'}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="px-6 py-3 rounded-lg font-semibold hover:shadow-lg transition-all border-2"

@@ -74,8 +74,8 @@ export default function Layout() {
   const { location: userLocation, hasLocation } = useLocationContext()
 
   // Environment-aware URLs
-  const docsUrl = import.meta.env.PROD ? '/docs/intro' : 'http://localhost:3000/docs/intro'
-  const apiDocsUrl = import.meta.env.PROD ? '/api/docs' : 'http://localhost:8000/docs'
+  const docsUrl = import.meta.env.PROD ? 'https://www.communityone.com/docs/intro' : 'http://localhost:3000/docs/intro'
+  const apiDocsUrl = import.meta.env.PROD ? 'https://www.communityone.com/api/docs' : 'http://localhost:8000/docs'
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault()
