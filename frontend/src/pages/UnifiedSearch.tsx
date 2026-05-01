@@ -32,6 +32,13 @@ interface SearchResult {
 interface SearchResponse {
   query: string
   total_results: number
+  type_totals?: {
+    contacts: number
+    meetings: number
+    organizations: number
+    causes: number
+    jurisdictions: number
+  }
   results: {
     contacts: SearchResult[]
     meetings: SearchResult[]
@@ -1214,7 +1221,7 @@ export default function UnifiedSearch() {
                   <div className="mb-8">
                     <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
                       <UserIcon className="h-6 w-6 text-blue-600" />
-                      People ({searchResults.results.contacts.length})
+                      People ({searchResults.type_totals?.contacts?.toLocaleString() || searchResults.results.contacts.length})
                     </h3>
                     <div className="grid grid-cols-1 gap-4">
                       {searchResults.results.contacts.map((result, idx) => (
@@ -1228,7 +1235,7 @@ export default function UnifiedSearch() {
                   <div className="mb-8">
                     <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
                       <CalendarIcon className="h-6 w-6 text-green-600" />
-                      Meetings ({searchResults.results.meetings.length})
+                      Meetings ({searchResults.type_totals?.meetings?.toLocaleString() || searchResults.results.meetings.length})
                     </h3>
                     <div className="grid grid-cols-1 gap-4">
                       {searchResults.results.meetings.map((result, idx) => (
@@ -1242,7 +1249,7 @@ export default function UnifiedSearch() {
                   <div className="mb-8">
                     <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
                       <BuildingOfficeIcon className="h-6 w-6 text-purple-600" />
-                      Organizations ({searchResults.results.organizations.length})
+                      Organizations ({searchResults.type_totals?.organizations?.toLocaleString() || searchResults.results.organizations.length})
                     </h3>
                     <div className="grid grid-cols-1 gap-4">
                       {searchResults.results.organizations.map((result, idx) => (
@@ -1256,7 +1263,7 @@ export default function UnifiedSearch() {
                   <div className="mb-8">
                     <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
                       <HeartIcon className="h-6 w-6 text-pink-600" />
-                      Causes ({searchResults.results.causes.length})
+                      Causes ({searchResults.type_totals?.causes?.toLocaleString() || searchResults.results.causes.length})
                     </h3>
                     <div className="grid grid-cols-1 gap-4">
                       {searchResults.results.causes.map((result, idx) => (
@@ -1270,7 +1277,7 @@ export default function UnifiedSearch() {
                   <div className="mb-8">
                     <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
                       <MapPinIcon className="h-6 w-6 text-orange-600" />
-                      Jurisdictions ({searchResults.results.jurisdictions.length})
+                      Jurisdictions ({searchResults.type_totals?.jurisdictions?.toLocaleString() || searchResults.results.jurisdictions.length})
                     </h3>
                     <div className="grid grid-cols-1 gap-4">
                       {searchResults.results.jurisdictions.map((result, idx) => (

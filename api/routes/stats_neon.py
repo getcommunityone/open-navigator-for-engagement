@@ -16,12 +16,13 @@ STATS_CACHE: Dict[str, Dict[str, Any]] = {}
 CACHE_DURATION = timedelta(minutes=5)
 
 # Get database URL from environment
-# Use NEON_DATABASE_URL_DEV for development, NEON_DATABASE_URL for production
+# Priority: LOCAL_DATABASE_URL > NEON_DATABASE_URL_DEV > NEON_DATABASE_URL
+LOCAL_DATABASE_URL = os.getenv('LOCAL_DATABASE_URL', 'postgresql://postgres:password@localhost:5433/open_navigator')
 NEON_DATABASE_URL_DEV = os.getenv('NEON_DATABASE_URL_DEV')
 NEON_DATABASE_URL = os.getenv('NEON_DATABASE_URL')
 
-# Prefer dev database in development, fall back to production
-DATABASE_URL = NEON_DATABASE_URL_DEV or NEON_DATABASE_URL
+# Prefer local database, then dev, then production
+DATABASE_URL = LOCAL_DATABASE_URL or NEON_DATABASE_URL_DEV or NEON_DATABASE_URL
 
 # Connection pool (created on first request)
 _db_pool = None
@@ -35,8 +36,8 @@ async def get_db_pool():
             raise ValueError("DATABASE_URL not configured (set NEON_DATABASE_URL_DEV or NEON_DATABASE_URL)")
         
         # Log which database we're using
-        db_type = "Development PostgreSQL" if NEON_DATABASE_URL_DEV else "Neon (production)"
-        logger.info(f"🗄️  Connecting to {db_type}")
+        db_type = "Local PostgreSQL" if LOCAL_DATABASE_URL else ("Development Neon" if NEON_DATABASE_URL_DEV else "Neon Production")
+        logger.info(f"🗄️  [Stats] Connecting to {db_type}: {DATABASE_URL[:50]}...")
         
         _db_pool = await asyncpg.create_pool(DATABASE_URL, min_size=1, max_size=10)
     return _db_pool
@@ -182,6 +183,7 @@ async def fetch_stats_from_neon(
                 result = await conn.fetchrow(query, state)
                 
             elif level == 'county':
+                # Try county-level stats first
                 query = """
                     SELECT * FROM stats_aggregates 
                     WHERE level = 'county' 
@@ -191,7 +193,18 @@ async def fetch_stats_from_neon(
                 """
                 result = await conn.fetchrow(query, state, f"%{county}%")
                 
+                # Fall back to state-level if county not found
+                if not result and state:
+                    logger.info(f"County '{county}' not found in stats, falling back to state '{state}'")
+                    query = """
+                        SELECT * FROM stats_aggregates 
+                        WHERE level = 'state' AND UPPER(state) = UPPER($1)
+                        LIMIT 1
+                    """
+                    result = await conn.fetchrow(query, state)
+                
             elif level == 'city':
+                # Try city-level stats first
                 query = """
                     SELECT * FROM stats_aggregates 
                     WHERE level = 'city' 
@@ -200,6 +213,28 @@ async def fetch_stats_from_neon(
                     LIMIT 1
                 """
                 result = await conn.fetchrow(query, state, f"%{city}%")
+                
+                # If city not found, try county with same name (e.g., "Tuscaloosa" -> "Tuscaloosa County")
+                if not result and state and city:
+                    logger.info(f"City '{city}' not found, trying county '{city} County'")
+                    query = """
+                        SELECT * FROM stats_aggregates 
+                        WHERE level = 'county' 
+                          AND UPPER(state) = UPPER($1) 
+                          AND county ILIKE $2
+                        LIMIT 1
+                    """
+                    result = await conn.fetchrow(query, state, f"%{city}%")
+                
+                # Fall back to state-level if neither city nor county found
+                if not result and state:
+                    logger.info(f"City/County '{city}' not found in stats, falling back to state '{state}'")
+                    query = """
+                        SELECT * FROM stats_aggregates 
+                        WHERE level = 'state' AND UPPER(state) = UPPER($1)
+                        LIMIT 1
+                    """
+                    result = await conn.fetchrow(query, state)
             
             else:
                 return None

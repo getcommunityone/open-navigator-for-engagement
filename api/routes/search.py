@@ -1573,12 +1573,22 @@ async def unified_search(
         
         logger.info(f"📦 Grouped results - contacts:{len(grouped_results['contacts'])}, meetings:{len(grouped_results['meetings'])}, organizations:{len(grouped_results['organizations'])}, causes:{len(grouped_results['causes'])}, jurisdictions:{len(grouped_results['jurisdictions'])}")
         
+        # Calculate total results per type (from all_results before pagination)
+        type_totals = {
+            'contacts': len([r for r in all_results if r.result_type == 'contact']),
+            'meetings': len([r for r in all_results if r.result_type == 'meeting']),
+            'organizations': len([r for r in all_results if r.result_type == 'organization']),
+            'causes': len([r for r in all_results if r.result_type == 'cause']),
+            'jurisdictions': len([r for r in all_results if r.result_type == 'jurisdiction']),
+        }
+        
         # Calculate total results
         # For single-type browse mode, get accurate count from database
         if not q and len(requested_types) == 1:
             # Browse mode: count total matching records in DB
             if 'organizations' in requested_types:
                 total_results = count_organizations(state=state, ntee_code=ntee_code, query=q)
+                type_totals['organizations'] = total_results  # Use accurate DB count
             else:
                 # Fallback to fetched results for other types
                 total_results = len(all_results)
@@ -1591,6 +1601,7 @@ async def unified_search(
         response_data = {
             "query": q or "",
             "total_results": total_results,
+            "type_totals": type_totals,  # Add per-type totals
             "results": grouped_results,
             "pagination": {
                 "page": page if offset == 0 or offset == (page - 1) * limit else (offset // limit) + 1,

@@ -105,35 +105,35 @@ export default function HomeModern() {
         location.city 
           ? api.get('/stats', { params: { state: location.state, county: location.county, city: location.city } })
               .then(res => {
-                console.log('📊 [HomeModern] City stats:', res.data.data);
-                return res.data.data;
+                console.log('📊 [HomeModern] City stats:', res.data);
+                return res.data;
               })
               .catch(err => {
-                console.error('❌ [HomeModern] City stats error:', err);
-                return null;
+                console.error('❌ [HomeModern] City stats error:', err.response?.data || err.message);
+                return { error: err.response?.data?.detail || err.message };
               })
           : Promise.resolve(null),
         // County stats
         location.county 
           ? api.get('/stats', { params: { state: location.state, county: location.county } })
               .then(res => {
-                console.log('📊 [HomeModern] County stats:', res.data.data);
-                return res.data.data;
+                console.log('📊 [HomeModern] County stats:', res.data);
+                return res.data;
               })
               .catch(err => {
-                console.error('❌ [HomeModern] County stats error:', err);
-                return null;
+                console.error('❌ [HomeModern] County stats error:', err.response?.data || err.message);
+                return { error: err.response?.data?.detail || err.message };
               })
           : Promise.resolve(null),
         // State stats - ALWAYS fetch if we have a state
         api.get('/stats', { params: { state: location.state } })
           .then(res => {
-            console.log('📊 [HomeModern] State stats:', res.data.data);
-            return res.data.data;
+            console.log('📊 [HomeModern] State stats:', res.data);
+            return res.data;
           })
           .catch(err => {
-            console.error('❌ [HomeModern] State stats error:', err);
-            return null;
+            console.error('❌ [HomeModern] State stats error:', err.response?.data || err.message);
+            return { error: err.response?.data?.detail || err.message };
           })
       ]);
       
@@ -524,6 +524,11 @@ export default function HomeModern() {
                   {location && ` in ${location.city || location.county || location.state}`}
                 </span>
               </>
+            ) : statsData?.error ? (
+              // Show error message when stats failed to load
+              <span className="text-amber-600">
+                ⚠️ Stats unavailable ({statsData.error}). Using default counts.
+              </span>
             ) : statsData ? (
               // Show stats for any level (state, county, city, community)
               (statsData.level === 'state' || statsData.level === 'county' || statsData.level === 'city' || statsData.level === 'community') ? (
