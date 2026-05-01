@@ -37,6 +37,7 @@ python scripts/enrichment/enrich_nonprofits_async.py
 - `auto_enrich_nonprofits.sh` - Automated enrichment pipeline
 - `enrich_all_states_local.sh` - State-by-state enrichment
 - `enrich_nonprofits_no_auth.sh` - Enrichment without API authentication
+- `enrich_alabama_nonprofits.sh` - Alabama-specific nonprofit enrichment
 
 ## Utilities
 

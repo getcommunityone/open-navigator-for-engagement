@@ -525,62 +525,45 @@ export default function HomeModern() {
                 </span>
               </>
             ) : statsData ? (
-              statsData.level === 'state' ? (
+              // Show stats for any level (state, county, city, community)
+              (statsData.level === 'state' || statsData.level === 'county' || statsData.level === 'city' || statsData.level === 'community') ? (
                 <>
-                  <Link 
-                    to={`/jurisdictions?state=${statsData.state}`}
-                    className="font-semibold text-[#52796F] hover:text-[#354F52] no-underline hover:underline hover:decoration-2 transition-all duration-200"
-                  >
-                    {statsData.jurisdictions_display} jurisdictions
-                  </Link>
+                  {/* Jurisdictions link */}
+                  {statsData.level === 'city' && statsData.jurisdictions_breakdown ? (
+                    <Link
+                      to={`/jurisdictions?state=${statsData.state}&jurisdiction_details=${encodeURIComponent(JSON.stringify(statsData.jurisdictions_breakdown))}`}
+                      className="font-semibold text-[#52796F] hover:text-[#354F52] no-underline hover:underline hover:decoration-2 transition-all duration-200"
+                    >
+                      {statsData.jurisdictions_display} jurisdictions
+                    </Link>
+                  ) : (
+                    <Link 
+                      to={`/jurisdictions?state=${statsData.state}${statsData.county ? `&county=${encodeURIComponent(statsData.county)}` : ''}${statsData.city ? `&city=${encodeURIComponent(statsData.city)}` : ''}`}
+                      className="font-semibold text-[#52796F] hover:text-[#354F52] no-underline hover:underline hover:decoration-2 transition-all duration-200"
+                    >
+                      {statsData.jurisdictions_display} jurisdictions
+                    </Link>
+                  )}
                   {' • '}
+                  {/* Nonprofits link */}
                   <Link 
-                    to={`/search?types=organizations&state=${statsData.state}`}
+                    to={`/search?types=organizations&state=${statsData.state}${statsData.county ? `&county=${encodeURIComponent(statsData.county)}` : ''}${statsData.city ? `&city=${encodeURIComponent(statsData.city)}` : ''}`}
                     className="font-semibold text-[#52796F] hover:text-[#354F52] no-underline hover:underline hover:decoration-2 transition-all duration-200"
                   >
                     {statsData.nonprofits_display} nonprofits
                   </Link>
                   {' • '}
+                  {/* Contacts link */}
                   <Link 
-                    to={`/search?types=contacts&state=${statsData.state}`}
+                    to={`/search?types=contacts&state=${statsData.state}${statsData.county ? `&county=${encodeURIComponent(statsData.county)}` : ''}${statsData.city ? `&city=${encodeURIComponent(statsData.city)}` : ''}`}
                     className="font-semibold text-[#52796F] hover:text-[#354F52] no-underline hover:underline hover:decoration-2 transition-all duration-200"
                   >
                     {statsData.contacts_display} leaders
                   </Link>
                   {' • '}
+                  {/* Causes link */}
                   <Link 
-                    to={`/search?types=causes&state=${statsData.state}`}
-                    className="font-semibold text-[#52796F] hover:text-[#354F52] no-underline hover:underline hover:decoration-2 transition-all duration-200"
-                  >
-                    {statsData.causes_display} causes
-                  </Link>
-                  {' in '}{statsData.location} • 100% free
-                </>
-              ) : statsData.level === 'city' && statsData.jurisdictions_breakdown ? (
-                <>
-                  <Link
-                    to={`/jurisdictions?state=${statsData.state}&jurisdiction_details=${encodeURIComponent(JSON.stringify(statsData.jurisdictions_breakdown))}`}
-                    className="font-semibold text-[#52796F] hover:text-[#354F52] no-underline hover:underline hover:decoration-2 transition-all duration-200"
-                  >
-                    {statsData.jurisdictions_display} jurisdictions
-                  </Link>
-                  {' • '}
-                  <Link 
-                    to={`/search?types=organizations${statsData.state ? `&state=${statsData.state}` : ''}`}
-                    className="font-semibold text-[#52796F] hover:text-[#354F52] no-underline hover:underline hover:decoration-2 transition-all duration-200"
-                  >
-                    {statsData.nonprofits_display} nonprofits
-                  </Link>
-                  {' • '}
-                  <Link 
-                    to={`/search?types=contacts${statsData.state ? `&state=${statsData.state}` : ''}`}
-                    className="font-semibold text-[#52796F] hover:text-[#354F52] no-underline hover:underline hover:decoration-2 transition-all duration-200"
-                  >
-                    {statsData.contacts_display} leaders
-                  </Link>
-                  {' • '}
-                  <Link 
-                    to={`/search?types=causes${statsData.state ? `&state=${statsData.state}` : ''}`}
+                    to={`/search?types=causes&state=${statsData.state}${statsData.county ? `&county=${encodeURIComponent(statsData.county)}` : ''}${statsData.city ? `&city=${encodeURIComponent(statsData.city)}` : ''}`}
                     className="font-semibold text-[#52796F] hover:text-[#354F52] no-underline hover:underline hover:decoration-2 transition-all duration-200"
                   >
                     {statsData.causes_display} causes
@@ -588,6 +571,7 @@ export default function HomeModern() {
                   {' in '}{statsData.location} • 100% free
                 </>
               ) : (
+                // Fallback for unknown level or no location data
                 <>
                   <Link 
                     to={`/jurisdictions${statsData.state ? `?state=${statsData.state}` : ''}`}

@@ -31,6 +31,35 @@ Removes frontend build artifacts and dependencies.
 ./scripts/maintenance/cleanup_frontend_junk.sh
 ```
 
+### docker-cleanup.sh
+Docker-specific cleanup (removes unused images, containers, volumes).
+
+**Usage:**
+```bash
+./scripts/maintenance/docker-cleanup.sh
+```
+
+**What it cleans:**
+- Stopped containers
+- Unused images
+- Dangling volumes
+- Unused networks
+
+## Project Maintenance
+
+### migrate-docs.sh
+Migrates documentation from project root to website/docs/ (Docusaurus format).
+
+**Usage:**
+```bash
+./scripts/maintenance/migrate-docs.sh
+```
+
+**What it does:**
+- Moves .md files from root to website/docs/
+- Adds YAML frontmatter
+- Converts filenames to kebab-case
+
 ## System Utilities
 
 ### prevent_terminal_corruption.sh
