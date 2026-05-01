@@ -212,7 +212,7 @@ All data comes from **100% free, public sources**:
 If you need help setting up or accessing data:
 - Visit the [Developer Documentation](/docs/quickstart)
 - File an issue on [GitHub](https://github.com/getcommunityone/open-navigator-for-engagement/issues)
-- Contact: john.bowyer@communityone.com
+- Contact: johnbowyer@communityone.com
 
 ## Next Steps
 

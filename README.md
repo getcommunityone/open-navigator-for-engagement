@@ -527,7 +527,7 @@ Apache License 2.0 - see [LICENSE](LICENSE) file for details.
 ## Support
 
 - GitHub Issues: [github.com/getcommunityone/open-navigator-for-engagement/issues](https://github.com/getcommunityone/open-navigator-for-engagement/issues)
-- Email: john.bowyer@communityone.com
+- Email: johnbowyer@communityone.com
 
 ---
 

@@ -1404,7 +1404,7 @@ export default function HomeModern() {
                 Contact Us on GitHub
               </a>
               <a
-                href="mailto:john.bowyer@communityone.com"
+                href="mailto:johnbowyer@communityone.com"
                 className="inline-flex items-center justify-center px-8 py-4 rounded-lg bg-white border-2 text-[#354F52] font-semibold transition-all hover:bg-gray-50"
                 style={{ borderColor: '#354F52' }}
               >
