@@ -21,6 +21,9 @@ wheels/
 .installed.cfg
 *.egg
 
+# Node.js
+node_modules/
+
 # Virtual environments
 venv/
 env/

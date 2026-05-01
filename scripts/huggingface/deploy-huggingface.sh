@@ -263,8 +263,12 @@ git add -f frontend/ website/ databricks/ examples/ models/ neon/ notebooks/
 git add -f requirements*.txt setup.py main.py Makefile *.sh *.md *.yml *.yaml
 git add -f CITATIONS.md CONTRIBUTING.md LICENSE INTEL_ARC_QUICKSTART.md
 
-# Explicitly exclude large binary files and virtual environments
+# Explicitly exclude node_modules, large binary files and virtual environments
+echo "🧹 Excluding node_modules and large binaries..."
 git reset HEAD .venv* 2>/dev/null || true
+git reset HEAD '**/node_modules/**' 2>/dev/null || true
+git reset HEAD 'website/node_modules' 2>/dev/null || true
+git reset HEAD 'frontend/node_modules' 2>/dev/null || true
 git reset HEAD website/static/img/communityone_card.png 2>/dev/null || true  
 git reset HEAD frontend/public/communityone_logo.png 2>/dev/null || true
 git reset HEAD website/static/img/communityone_logo.png 2>/dev/null || true
