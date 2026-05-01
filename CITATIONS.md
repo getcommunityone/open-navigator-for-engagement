@@ -472,6 +472,73 @@ LIMIT 1000;
 
 ---
 
+### **National Center for Charitable Statistics (NCCS) Unified BMF** ⭐
+
+The NCCS Unified BMF is a longitudinal nonprofit dataset specifically designed for AI and "Lakehouse" projects with pre-geocoded locations and Census integration.
+
+**Organization:** National Center for Charitable Statistics (NCCS), Urban Institute  
+**Website:** https://nccs.urban.org/  
+**Dataset:** Unified BMF (Business Master File)  
+**Documentation:** https://nccs.urban.org/project/irs-exempt-organizations-business-master-file  
+**License:** Public domain (IRS data) + Urban Institute terms  
+**Released:** Late 2025/Early 2026  
+**Coverage:** 1989 through mid-2025 (update pending)
+
+**What we use:**
+- **Longitudinal tracking**: Single file with one row per organization that has ever held tax-exempt status
+- **Pre-geocoded addresses**: Most recent address geocoded to Census block level
+- **Geographic codes**: FIPS codes at block, tract, county, and state levels
+- **Metropolitan area codes**: Current CBSA (Core Based Statistical Area) definitions
+- **Temporal tracking**: `ORG_YEAR_FIRST` and `ORG_YEAR_LAST` variables for organization lifecycle
+- **Census integration**: Ready for merging with Census demographic and economic data
+
+**Key Features:**
+- ✅ **Eliminates annual file merging**: Consolidates all historical BMF releases into single file
+- ✅ **AI/Lakehouse optimized**: Designed for modern data infrastructure
+- ✅ **Census-ready**: FIPS codes enable direct joins with Census data
+- ✅ **Metropolitan vs Rural**: CBSA codes identify urban/rural areas
+- ✅ **Historical analysis**: Track organizations over time without complex ETL
+- ✅ **Geographic analysis**: Pre-geocoded to Census block granularity
+
+**Use Cases:**
+- Longitudinal analysis of nonprofit sector
+- Building historical sampling frames
+- Linking nonprofit data to Census demographics
+- Metropolitan vs rural nonprofit analysis
+- Policy research requiring geographic precision
+- Time-series analysis of organizational entry/exit
+
+**Geographic Levels Available:**
+- Census Block (finest granularity)
+- Census Tract
+- County (FIPS codes)
+- State (FIPS codes)
+- CBSA (Core Based Statistical Area)
+
+**Related Resources:**
+- NCCS Census Crosswalk: For aggregating to additional geographic levels
+- BMF Overview: https://nccs.urban.org/project/irs-exempt-organizations-business-master-file
+- NCCS Data Archive: https://nccs.urban.org/nccs-data-archive
+
+**BibTeX:**
+```bibtex
+@dataset{nccs_unified_bmf,
+    title = {Unified Business Master File (BMF)},
+    author = {{National Center for Charitable Statistics}},
+    year = {2026},
+    publisher = {Urban Institute},
+    url = {https://nccs.urban.org/},
+    note = {Longitudinal nonprofit dataset with pre-geocoded Census integration, 1989-2025}
+}
+```
+
+**Attribution:** When using NCCS Unified BMF data, cite:
+1. National Center for Charitable Statistics, Urban Institute
+2. IRS Business Master File (original data source)
+3. Specify the data vintage/update date used
+
+---
+
 ### **Charity Navigator** ⭐
 
 **Powered by Charity Navigator**

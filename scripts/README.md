@@ -25,11 +25,24 @@ Data processing pipelines, migrations, and aggregations.
 - Data splits and partitioning
 
 ### [datasources/](datasources/)
-Data source integrations and API connectors.
-- OpenStates integration
-- IRS/nonprofit data processing
-- Census Bureau APIs
-- External data source connectors
+Data source integrations and API connectors organized by external data source.
+
+**Available Sources:**
+- `openstates/` - OpenStates legislative data (bills, legislators, votes) - 7 scripts
+- `census/` - US Census Bureau geographic and demographic data - 3 scripts
+- `irs/` - IRS nonprofit data (Form 990, Business Master File) - 3 scripts
+- `fec/` - Federal Election Commission campaign finance data - 2 scripts
+- `ballotpedia/` - Ballotpedia election and official data - 1 script
+- `google_civic/` - Google Civic Information API - 1 script
+- `grants_gov/` - Grants.gov federal grant data - 1 script
+- `localview/` - LocalView meeting transcripts - 1 script
+- `meetingbank/` - MeetingBank research dataset - 1 script
+- `nces/` - National Center for Education Statistics - 1 script
+- `wikidata/` - Wikidata structured knowledge - 1 script
+- `dbpedia/` - DBpedia structured Wikipedia data - 1 script
+- `voter_data/` - Voter registration and turnout data - 1 script
+
+See [datasources/README.md](datasources/README.md) for detailed documentation.
 
 ### [deployment/](deployment/)
 Setup scripts for local development and production deployment.
