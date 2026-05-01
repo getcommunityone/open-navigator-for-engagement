@@ -306,7 +306,7 @@ data/cache/nonprofits/
 
 | Service | Cost | Coverage |
 |---------|------|----------|
-| **ProPublica API** | $0 | 3M+ orgs, 10+ years |
+| **ProPublica API** | $0 | 1.8M orgs, 10+ years |
 | **IRS TEOS** | $0 | All U.S. nonprofits |
 | **Every.org API** | $0 (basic) | Mission + logos |
 | **Total** | **$0/month** | 95% of paid features |

@@ -20,6 +20,7 @@ class Settings(BaseSettings):
     openai_api_key: Optional[str] = Field(None, description="OpenAI API key (optional for local mode)")
     anthropic_api_key: Optional[str] = Field(None, description="Anthropic API key")
     huggingface_token: Optional[str] = Field(None, description="HuggingFace API token for dataset uploads")
+    census_api_key: Optional[str] = Field(None, description="U.S. Census Bureau API key (free, increases rate limit from 500 to 5000/day)")
     dataverse_api_key: Optional[str] = Field(None, description="Harvard Dataverse API key (optional, improves rate limits)")
     openstates_api_key: Optional[str] = Field(None, description="Open States API key (free tier: 50k requests/month)")
     google_civic_api_key: Optional[str] = Field(None, description="Google Civic Information API key (free tier: 25k requests/day)")

@@ -71,12 +71,18 @@ const config: Config = {
         theme: {
           customCss: './src/css/custom.css',
         },
-        // Google Analytics - disabled to prevent runtime errors
-        // Re-enable for production deployment by uncommenting:
-        // gtag: {
-        //   trackingID: 'G-5EQV815915',
-        //   anonymizeIP: true,
-        // },
+        // Google Analytics for tracking and SEO
+        gtag: {
+          trackingID: 'G-5EQV815915',
+          anonymizeIP: true,
+        },
+        // Sitemap configuration for better SEO
+        sitemap: {
+          changefreq: 'weekly',
+          priority: 0.5,
+          ignorePatterns: ['/tags/**'],
+          filename: 'sitemap.xml',
+        },
       } satisfies Preset.Options,
     ],
   ],
@@ -88,9 +94,17 @@ const config: Config = {
   },
 
   themeConfig: {
+    // SEO metadata
+    metadata: [
+      {name: 'keywords', content: 'civic engagement, policy tracking, meeting minutes, nonprofit tracking, municipal government, advocacy, open data, local government'},
+      {name: 'description', content: 'Open Navigator - Track 90,000+ jurisdictions, 1.8M nonprofits, and analyze meeting minutes with AI. The open path to everything local.'},
+      {property: 'og:type', content: 'website'},
+      {property: 'og:site_name', content: 'Open Navigator'},
+      {name: 'twitter:card', content: 'summary_large_image'},
+    ],
     tableOfContents: {
       minHeadingLevel: 2,
-      maxHeadingLevel: 2, // Only show h2 headings in right sidebar (reduces clutter)
+      maxHeadingLevel: 4, // Show h2-h4 headings for better navigation
     },
     mermaid: {
       theme: { light: 'default', dark: 'dark' },

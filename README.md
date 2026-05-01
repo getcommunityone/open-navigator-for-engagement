@@ -393,6 +393,56 @@ python scripts/legislative_analysis_intel.py
 
 ---
 
+## 🤖 AI Integration (MCP Server)
+
+**Connect your civic data to Claude and other AI assistants!**
+
+Open Navigator includes a **Model Context Protocol (MCP)** server that lets AI assistants directly access your data:
+
+```bash
+# Install MCP dependencies
+pip install mcp anthropic-mcp-sdk
+
+# Run the server
+python scripts/mcp/open_navigator_server.py
+```
+
+**What AI assistants can do:**
+- 🏛️ Search 90,000+ jurisdictions by name or location
+- 🏢 Query 1.8M nonprofits with Form 990 data
+- 📜 Semantic search across 4.5M+ legislative documents
+- 📊 Get real-time statistics and analytics
+- 🔍 Vector search meetings and bills with natural language
+
+**Example queries to Claude:**
+> "Find all cities named Springfield in the database"
+
+> "Show me 501c3 nonprofits in San Francisco focused on education"
+
+> "What bills related to oral health were introduced in California?"
+
+**Configure Claude Desktop:**
+
+Add to `~/.config/Claude/claude_desktop_config.json`:
+
+```json
+{
+  "mcpServers": {
+    "open-navigator": {
+      "command": "python",
+      "args": ["/path/to/open-navigator/scripts/mcp/open_navigator_server.py"],
+      "env": {
+        "DATABASE_URL": "postgresql://postgres:password@localhost:5433/open_navigator"
+      }
+    }
+  }
+}
+```
+
+**See full guide:** [MCP Server Documentation](website/docs/integrations/mcp-server.md)
+
+---
+
 ## Testing
 
 ```bash
@@ -449,6 +499,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for details.
 - **[Architecture](http://localhost:3000/docs/architecture)** - System architecture overview
 - **[Quick Start](http://localhost:3000/docs/quickstart)** - Detailed setup instructions
 - **[Quick Reference](http://localhost:3000/docs/quick-reference)** - Command reference card
+- **[MCP Server](http://localhost:3000/docs/integrations/mcp-server)** - AI assistant integration guide
 - **[Deployment](http://localhost:3000/docs/deployment/databricks-apps)** - Production deployment guides
 - **[Case Studies](http://localhost:3000/docs/case-studies/tuscaloosa-complete)** - Real-world examples
 - [CONTRIBUTING.md](CONTRIBUTING.md) - How to contribute

@@ -1,0 +1,9 @@
+# Allow all search engines to crawl the site
+User-agent: *
+Allow: /
+
+# Sitemap location
+Sitemap: https://opennavigator.org/sitemap.xml
+
+# Crawl-delay to be polite to search engines
+Crawl-delay: 1

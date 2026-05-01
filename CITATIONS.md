@@ -1365,7 +1365,74 @@ Comprehensive, curated directory of civic technology projects, organizations, an
 
 ---
 
-## 🙏 **Acknowledgments**
+## �️ **Technology Platforms & Support Programs**
+
+### **Databricks for Good Program** ⭐
+
+A philanthropic initiative providing cloud data platform credits and technical support to nonprofits, academic institutions, and social impact organizations.
+
+**Organization:** Databricks, Inc.  
+**Website:** https://www.databricks.com/product/databricks-for-good  
+**Application:** https://www.databricks.com/product/databricks-for-good  
+
+**Eligibility:**
+- ✅ **Nonprofits** - 501(c)(3) status required
+- ✅ **Academic institutions** - Universities, colleges, research organizations
+- ✅ **Social impact organizations** - Civic engagement, public good projects
+- ✅ **Government agencies** - Case-by-case evaluation for civic data initiatives
+
+**CommunityOne/Open Navigator Alignment:**
+This project appears well-suited for the program as a civic engagement and social good initiative. Eligibility would depend on establishing formal nonprofit status or academic partnership.
+
+**Program Benefits:**
+- **$10,000-50,000** in annual Databricks credits
+- Access to **Unity Catalog** (normally $0.20 per million metadata operations)
+- Access to **Databricks Marketplace** for data sharing and distribution
+- **Standard tier** platform features included
+- **Technical support** from Databricks team
+- **Delta Sharing** protocol for secure data distribution
+- **MLflow** for AI/ML experiment tracking
+- **Databricks SQL** for analytics and dashboards
+
+**What This Enables for Open Navigator:**
+- **Data Publishing**: Share 1.8M nonprofit profiles, 4.5M+ legislative documents via Databricks Marketplace
+- **Unity Catalog**: Organize data assets with enterprise-grade governance
+- **Delta Sharing**: Distribute datasets to enterprise/research consumers without data copying
+- **Lakehouse Architecture**: Unified analytics on legislative, nonprofit, and civic data
+- **Collaborative Notebooks**: Reproducible research and analysis
+- **Scheduled Pipelines**: Automated data updates and quality checks
+
+**Alternative Path (Hybrid Approach):**
+- **HuggingFace Hub**: Continue using for open-source community distribution (free)
+- **Databricks Marketplace**: Add enterprise/research distribution channel (if approved)
+- **Data stays in one place**: External tables in Unity Catalog point to existing Parquet files
+- **No data duplication**: Delta Sharing streams data from your storage on-demand
+
+**BibTeX:**
+```bibtex
+@misc{databricks_for_good,
+    title = {Databricks for Good Program},
+    author = {{Databricks, Inc.}},
+    year = {2024},
+    url = {https://www.databricks.com/product/databricks-for-good},
+    note = {Cloud data platform credits and support for nonprofits, academic institutions, and social impact organizations}
+}
+```
+
+**Application Process:**
+1. Visit https://www.databricks.com/product/databricks-for-good
+2. Submit organization details and project description
+3. Describe social impact and data use case
+4. Provide 501(c)(3) documentation (for nonprofits) or academic affiliation
+5. Review process typically takes 2-4 weeks
+6. Upon approval, receive credits and onboarding support
+
+**Compliance:**
+Credits must be used for the approved social impact project and cannot be resold or transferred. Annual renewal required with impact reporting.
+
+---
+
+## �🙏 **Acknowledgments**
 
 We are grateful to the authors of MeetingBank for making their dataset publicly available for research purposes. Their work on meeting summarization has been instrumental in developing civic engagement tools.
 

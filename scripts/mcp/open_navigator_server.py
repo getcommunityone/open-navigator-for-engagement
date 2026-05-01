@@ -7,7 +7,7 @@ Model Context Protocol (MCP) server for Open Navigator data sources.
 
 Provides AI assistants access to:
 - 90,000+ U.S. jurisdictions (Census data)
-- 3M+ nonprofit organizations (IRS data)
+- 1.8M nonprofit organizations (IRS data)
 - 4.5M+ legislative documents (Open States)
 - Vector search across bills and meetings
 - Real-time statistics and aggregates
@@ -116,7 +116,7 @@ async def list_resources() -> list[Resource]:
             ),
             Resource(
                 uri="hf://nonprofits",
-                name="Nonprofit Organizations (3M+)",
+                name="Nonprofit Organizations (1.8M)",
                 description="IRS-registered nonprofits with Form 990 data",
                 mimeType="application/x-parquet"
             ),
