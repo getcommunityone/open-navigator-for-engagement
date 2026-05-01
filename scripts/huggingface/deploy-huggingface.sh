@@ -234,12 +234,13 @@ echo "✅ Cache-bust timestamps updated to: $CACHE_BUST"
 echo ""
 
 # Create deployment branch
-echo "🔧 Preparing deployment branch..."
-# Make sure we're on main and it's up to date
+echo "🔧 Preparing deployment branch (clean, no binary history)..."
+# Make sure we're on main
 git checkout main
-# Delete old deployment branch if it exists and create fresh from main
+
+# Create a new orphan branch (no history) to avoid binary file issues
 git branch -D huggingface-deploy 2>/dev/null || true
-git checkout -b huggingface-deploy
+git checkout --orphan huggingface-deploy
 
 # Copy Dockerfile for HF (they look for "Dockerfile" not "Dockerfile.huggingface")
 echo "📝 Configuring Dockerfile..."
@@ -249,22 +250,27 @@ cp Dockerfile.huggingface Dockerfile
 echo "📝 Configuring README..."
 cp .huggingface/README.md README_HF.md
 
-# Remove large binary files that will be included in Docker build
+# Remove large binary files from being staged
 # (HF Spaces rejects large binary files in git)
-echo "📝 Optimizing deployment (removing large binaries)..."
-git rm --cached frontend/public/communityone_logo.png website/static/img/communityone_logo.png 2>/dev/null || true
+echo "📝 Optimizing deployment (excluding binary files)..."
+# Reset index to avoid staging unwanted files
+git rm -rf --cached . 2>/dev/null || true
 
-# Stage deployment files
-git add Dockerfile README_HF.md .huggingface/
-git add -u
+# Add only essential files (exclude .venv, large images, etc.)
+git add -f Dockerfile README_HF.md .huggingface/ .gitignore .dockerignore
+git add -f agents/ api/ config/ discovery/ extraction/ pipeline/ scripts/ tests/ visualization/
+git add -f frontend/ website/ databricks/ examples/ models/ neon/ notebooks/
+git add -f requirements*.txt setup.py main.py Makefile *.sh *.md *.yml *.yaml
+git add -f CITATIONS.md CONTRIBUTING.md LICENSE INTEL_ARC_QUICKSTART.md
 
-# Commit if there are changes
-if git diff --cached --quiet; then
-    echo "✅ No changes to commit"
-else
-    echo "💾 Committing deployment configuration..."
-    git commit -m "Configure Hugging Face Space deployment" || true
-fi
+# Explicitly exclude large binary files and virtual environments
+git reset HEAD .venv* 2>/dev/null || true
+git reset HEAD website/static/img/communityone_card.png 2>/dev/null || true  
+git reset HEAD frontend/public/communityone_logo.png 2>/dev/null || true
+git reset HEAD website/static/img/communityone_logo.png 2>/dev/null || true
+
+echo "💾 Committing clean deployment (no git history)..."
+git commit -m "Clean HuggingFace deployment without binary files" --allow-empty
 
 # Add HF remote if it doesn't exist
 if git remote get-url $HF_REMOTE &> /dev/null; then
