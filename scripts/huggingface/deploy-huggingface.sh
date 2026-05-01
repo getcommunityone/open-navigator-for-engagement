@@ -271,8 +271,8 @@ echo "🧹 Adding frontend/website sources (node_modules auto-excluded by .gitig
 git add frontend/ website/
 
 # Verify node_modules are NOT staged
-NODE_MODULES_COUNT=$(git diff --cached --name-only | grep -c "node_modules" || echo "0")
-if [ "$NODE_MODULES_COUNT" != "0" ]; then
+NODE_MODULES_COUNT=$(git diff --cached --name-only | grep "node_modules" | wc -l)
+if [ "$NODE_MODULES_COUNT" -gt 0 ]; then
     echo "❌ ERROR: node_modules were staged ($NODE_MODULES_COUNT files)"
     echo "This should not happen. Check .gitignore configuration."
     exit 1
