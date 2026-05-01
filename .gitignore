@@ -93,3 +93,5 @@ secrets/
 
 # OS
 Thumbs.db
+# Binary files for Docker build only (not in git)
+website/static/img/communityone_card.png
