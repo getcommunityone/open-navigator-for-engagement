@@ -546,6 +546,59 @@ This project complies with Charity Navigator's API Terms of Use, including:
 
 ---
 
+### **OpenSecrets.org (Center for Responsive Politics)** ⭐
+
+**Organization:** OpenSecrets, a nonpartisan research organization tracking money in U.S. politics  
+**Website:** https://www.opensecrets.org  
+**Bulk Data:** https://www.opensecrets.org/open-data/bulk-data  
+**API Documentation:** https://www.opensecrets.org/open-data/api  
+**Status:** Bulk data access pending approval
+
+**What they offer:**
+- **Campaign Finance Data**: Federal campaign contributions, expenditures, and fundraising
+- **Lobbying Data**: Federal lobbying spending by organizations and industries
+- **Political Action Committees (PACs)**: PAC contributions and expenditures
+- **Personal Finance Disclosures**: Wealth and financial interests of federal lawmakers
+- **501(c) Organizations**: Political spending by nonprofits and dark money groups
+- **Foreign Lobby Influence**: Foreign agents registered under FARA
+
+**Data Access:**
+- **Bulk Data Downloads**: Available to nonprofits upon approval (application pending)
+- **Public API**: Available with rate limits for smaller queries
+- **Data Format**: CSV files with detailed transaction-level records
+- **Update Frequency**: Regular updates as new filings are processed
+- **Coverage**: Federal-level political finance data (1990-present)
+
+**What we plan to use:**
+- Nonprofit political spending and advocacy activity
+- Lobbying expenditures by healthcare and oral health organizations
+- Campaign contributions from dental associations and health policy groups
+- 501(c)(4) "dark money" spending on ballot measures
+- Cross-reference EINs with IRS nonprofit data for comprehensive profiles
+
+**BibTeX:**
+```bibtex
+@misc{opensecrets,
+    title = {OpenSecrets.org: Money in Politics Database},
+    author = {{Center for Responsive Politics}},
+    year = {2024},
+    url = {https://www.opensecrets.org},
+    note = {Comprehensive database of campaign finance, lobbying, and political spending in U.S. politics}
+}
+```
+
+**License & Attribution:**
+- Data collected from Federal Election Commission (FEC) and other public sources
+- Attribution required: "Data from OpenSecrets.org, a project of the Center for Responsive Politics"
+- Nonprofit bulk data access subject to approval and terms of use
+
+**Application Status:**
+- ⏳ Bulk data access application pending approval
+- Will enable comprehensive analysis of nonprofit political activity
+- Integration planned upon approval
+
+---
+
 ### **IRS Exempt Organizations Business Master File (EO-BMF)**
 
 Basic nonprofit registration data (name, EIN, address, NTEE code).

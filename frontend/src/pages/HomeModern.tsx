@@ -152,8 +152,24 @@ export default function HomeModern() {
     refetchOnWindowFocus: false
   });
 
-  // Get the stats for the currently selected scope
-  const statsData = allStatsData?.[searchScope as keyof typeof allStatsData];
+  // Format numbers for display (e.g., 1234 -> "1,234" or "1.2K")
+  const formatNumber = (num: number | null | undefined): string => {
+    if (num === null || num === undefined || num === 0) return '0';
+    if (num >= 1000000) return `${(num / 1000000).toFixed(1)}M`;
+    if (num >= 10000) return `${(num / 1000).toFixed(1)}K`;
+    return num.toLocaleString();
+  };
+
+  // Get the stats for the currently selected scope and add display fields
+  const rawStatsData = allStatsData?.[searchScope as keyof typeof allStatsData];
+  const statsData = rawStatsData ? {
+    ...rawStatsData,
+    jurisdictions_display: formatNumber(rawStatsData.jurisdictions),
+    nonprofits_display: formatNumber(rawStatsData.nonprofits),
+    contacts_display: formatNumber(rawStatsData.contacts),
+    causes_display: '650+', // Static for now - we don't track causes count yet
+    school_districts_display: formatNumber(rawStatsData.school_districts)
+  } : null;
   
   console.log('📊 [HomeModern] Current scope:', searchScope, 'Stats data:', statsData, 'Loading:', statsLoading);
 

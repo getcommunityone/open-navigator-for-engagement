@@ -101,6 +101,9 @@ async def get_stats(
             stats = {
                 'location': location_display,
                 'level': level,
+                'state': state,
+                'county': county,
+                'city': city,
                 'jurisdictions': 0,
                 'school_districts': 0,
                 'nonprofits': 0,
@@ -118,6 +121,9 @@ async def get_stats(
             stats = {
                 'location': location_display,
                 'level': level,
+                'state': state,
+                'county': county,
+                'city': city,
                 'jurisdictions': stats.get('jurisdictions_count', 0),
                 'school_districts': stats.get('school_districts_count', 0),
                 'nonprofits': stats.get('nonprofits_count', 0),
@@ -214,21 +220,10 @@ async def fetch_stats_from_neon(
                 """
                 result = await conn.fetchrow(query, state, f"%{city}%")
                 
-                # If city not found, try county with same name (e.g., "Tuscaloosa" -> "Tuscaloosa County")
-                if not result and state and city:
-                    logger.info(f"City '{city}' not found, trying county '{city} County'")
-                    query = """
-                        SELECT * FROM stats_aggregates 
-                        WHERE level = 'county' 
-                          AND UPPER(state) = UPPER($1) 
-                          AND county ILIKE $2
-                        LIMIT 1
-                    """
-                    result = await conn.fetchrow(query, state, f"%{city}%")
-                
-                # Fall back to state-level if neither city nor county found
+                # NEVER fall back to county stats for city requests
+                # If city stats not found, go straight to state-level
                 if not result and state:
-                    logger.info(f"City/County '{city}' not found in stats, falling back to state '{state}'")
+                    logger.info(f"City '{city}' not found in stats, falling back to state '{state}' (skipping county)")
                     query = """
                         SELECT * FROM stats_aggregates 
                         WHERE level = 'state' AND UPPER(state) = UPPER($1)

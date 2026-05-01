@@ -77,6 +77,8 @@ export default function JurisdictionsSearch() {
     return []
   })
   const [selectedState, setSelectedState] = useState(() => searchParams.get('state') || '')
+  const [selectedCity, setSelectedCity] = useState(() => searchParams.get('city') || '')
+  const [selectedCounty, setSelectedCounty] = useState(() => searchParams.get('county') || '')
   const [currentPage, setCurrentPage] = useState(() => parseInt(searchParams.get('page') || '1'))
   const [showFilters, setShowFilters] = useState(false)
   
@@ -86,6 +88,8 @@ export default function JurisdictionsSearch() {
   useEffect(() => {
     const queryParam = searchParams.get('q')
     const stateParam = searchParams.get('state')
+    const cityParam = searchParams.get('city')
+    const countyParam = searchParams.get('county')
     const levelsParam = searchParams.get('levels')
     const pageParam = searchParams.get('page')
     
@@ -95,6 +99,12 @@ export default function JurisdictionsSearch() {
     }
     if (stateParam) {
       setSelectedState(stateParam)
+    }
+    if (cityParam) {
+      setSelectedCity(cityParam)
+    }
+    if (countyParam) {
+      setSelectedCounty(countyParam)
     }
     if (levelsParam) {
       const levels = levelsParam.split(',').filter(l => 
@@ -111,10 +121,10 @@ export default function JurisdictionsSearch() {
 
   // Main search results
   const { data: searchResults, isLoading: isSearching, error } = useQuery<SearchResponse>({
-    queryKey: ['jurisdictions-search', activeQuery, selectedLevels, selectedState, currentPage],
+    queryKey: ['jurisdictions-search', activeQuery, selectedLevels, selectedState, selectedCity, selectedCounty, currentPage],
     queryFn: async () => {
       // Allow searching with query OR with filters (browse mode)
-      if (!activeQuery && !selectedState && !selectedLevels.length) {
+      if (!activeQuery && !selectedState && !selectedCity && !selectedCounty && !selectedLevels.length) {
         return null
       }
       
@@ -124,13 +134,21 @@ export default function JurisdictionsSearch() {
         page: currentPage
       }
       
-      // Query is optional - can browse by state/level
+      // Query is optional - can browse by state/level/city/county
       if (activeQuery) {
         params.q = activeQuery
       }
       
       if (selectedState) {
         params.state = selectedState
+      }
+      
+      if (selectedCity) {
+        params.city = selectedCity
+      }
+      
+      if (selectedCounty) {
+        params.county = selectedCounty
       }
       
       if (selectedLevels.length > 0) {
@@ -141,13 +159,13 @@ export default function JurisdictionsSearch() {
       return response.data
     },
     // Enable if we have query OR filters (browse mode)
-    enabled: (activeQuery && activeQuery.length >= 2) || selectedState !== '' || selectedLevels.length > 0
+    enabled: (activeQuery && activeQuery.length >= 2) || selectedState !== '' || selectedCity !== '' || selectedCounty !== '' || selectedLevels.length > 0
   })
 
   const handleSearch = (e?: React.FormEvent) => {
     e?.preventDefault()
     // Allow search with query OR just filters (browse mode)
-    if (query.trim().length >= 2 || selectedState || selectedLevels.length > 0) {
+    if (query.trim().length >= 2 || selectedState || selectedCity || selectedCounty || selectedLevels.length > 0) {
       setActiveQuery(query)
       setCurrentPage(1) // Reset to first page on new search
       
@@ -155,6 +173,8 @@ export default function JurisdictionsSearch() {
       const params: any = {}
       if (query.trim()) params.q = query
       if (selectedState) params.state = selectedState
+      if (selectedCity) params.city = selectedCity
+      if (selectedCounty) params.county = selectedCounty
       if (selectedLevels.length > 0) {
         params.levels = selectedLevels.join(',')
       }
@@ -295,7 +315,7 @@ export default function JurisdictionsSearch() {
           </div>
 
           {/* Active Filters Display */}
-          {(selectedState || selectedLevels.length > 0) && (
+          {(selectedState || selectedCity || selectedCounty || selectedLevels.length > 0) && (
             <div className="mt-3 flex items-center gap-2 flex-wrap">
               <span className="text-sm text-gray-600">Active filters:</span>
               {selectedState && (
@@ -307,6 +327,34 @@ export default function JurisdictionsSearch() {
                       setTimeout(() => handleSearch(), 0)
                     }}
                     className="hover:bg-blue-200 rounded-full p-0.5"
+                  >
+                    <XMarkIcon className="h-3 w-3" />
+                  </button>
+                </span>
+              )}
+              {selectedCity && (
+                <span className="inline-flex items-center gap-1 px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm">
+                  City: {selectedCity}
+                  <button
+                    onClick={() => {
+                      setSelectedCity('')
+                      setTimeout(() => handleSearch(), 0)
+                    }}
+                    className="hover:bg-green-200 rounded-full p-0.5"
+                  >
+                    <XMarkIcon className="h-3 w-3" />
+                  </button>
+                </span>
+              )}
+              {selectedCounty && (
+                <span className="inline-flex items-center gap-1 px-3 py-1 bg-amber-100 text-amber-800 rounded-full text-sm">
+                  County: {selectedCounty}
+                  <button
+                    onClick={() => {
+                      setSelectedCounty('')
+                      setTimeout(() => handleSearch(), 0)
+                    }}
+                    className="hover:bg-amber-200 rounded-full p-0.5"
                   >
                     <XMarkIcon className="h-3 w-3" />
                   </button>
