@@ -209,6 +209,27 @@ const config: Config = {
           ],
         },
         {
+          title: 'Community',
+          items: [
+            {
+              label: 'Instagram',
+              href: 'https://www.instagram.com/getcommunityone/',
+            },
+            {
+              label: 'Facebook',
+              href: 'https://www.facebook.com/getcommunityone',
+            },
+            {
+              label: 'X (Twitter)',
+              href: 'https://x.com/getcommunityone/',
+            },
+            {
+              label: 'LinkedIn',
+              href: 'https://www.linkedin.com/company/getcommunityone',
+            },
+          ],
+        },
+        {
           title: 'Legal',
           items: [
             {
