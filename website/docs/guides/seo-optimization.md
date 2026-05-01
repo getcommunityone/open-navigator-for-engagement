@@ -45,7 +45,7 @@ gtag: {
 ```txt
 User-agent: *
 Allow: /
-Sitemap: https://opennavigator.org/sitemap.xml
+Sitemap: https://www.communityone.com/sitemap.xml
 Crawl-delay: 1
 ```
 
@@ -68,7 +68,7 @@ sitemap: {
 ```
 
 **Impact:** 
-- Auto-generated at `https://opennavigator.org/sitemap.xml`
+- Auto-generated at `https://www.communityone.com/sitemap.xml`
 - Helps search engines discover all pages
 - Updates weekly to reflect new content
 
@@ -149,6 +149,20 @@ metadata: [
 
 **Impact:** Consistent SEO across all documentation pages.
 
+### 10. Google Search Console Verification File
+
+**Added:** HTML verification file for domain ownership
+
+**Locations:**
+- `frontend/public/google6934fc6e3618949f.html`
+- `website/static/google6934fc6e3618949f.html`
+
+**Impact:** 
+- Enables Google Search Console setup
+- Allows monitoring of search performance
+- Required for sitemap submission
+- Tracks indexing status and errors
+
 ## 🔍 Additional SEO Recommendations
 
 ### Content Optimization
@@ -198,13 +212,7 @@ metadata: [
    - Include target keywords
 
 8. **Page Speed Optimization**
-   ```bash
-   # Test current performance
-   npm run build
-   npm run serve
-   # Then use Google PageSpeed Insights
-   ```
-
+   - Test with [Google PageSpeed Insights](https://pagespeed.web.dev/)
    - Optimize images (WebP format)
    - Enable compression
    - Minimize JavaScript bundles
@@ -219,9 +227,13 @@ metadata: [
 
 10. **Submit Sitemap to Google**
     1. Go to [Google Search Console](https://search.google.com/search-console)
-    2. Add property: `https://opennavigator.org`
-    3. Submit sitemap: `https://opennavigator.org/sitemap.xml`
-    4. Monitor indexing status
+    2. Add property: `https://www.communityone.com`
+    3. Verify ownership (HTML file verification already deployed):
+       - Verification file: `google6934fc6e3618949f.html`
+       - Located in: `frontend/public/` and `website/static/`
+       - Accessible at: `https://www.communityone.com/google6934fc6e3618949f.html`
+    4. Submit sitemap: `https://www.communityone.com/sitemap.xml`
+    5. Monitor indexing status
 
 11. **Submit to Bing Webmaster Tools**
     1. Visit [Bing Webmaster Tools](https://www.bing.com/webmasters)
@@ -307,12 +319,14 @@ metadata: [
 
 ## 🎯 Quick Wins (Do These First)
 
-1. ✅ **Submit sitemap to Google Search Console** (5 minutes)
-2. ✅ **Create social card image** (30 minutes)
-3. ✅ **Add alt text to all images** (1 hour)
-4. ✅ **Add description frontmatter to top 10 pages** (1 hour)
-5. ✅ **Write first blog post** (2 hours)
-6. ✅ **Set up Google Search Console alerts** (10 minutes)
+1. **Submit sitemap to Google Search Console** (5 minutes)
+   - Add property: `https://www.communityone.com`
+   - Submit sitemap: `https://www.communityone.com/sitemap.xml`
+2. **Create social card image** (30 minutes)
+3. **Add alt text to all images** (1 hour)
+4. **Add description frontmatter to top 10 pages** (1 hour)
+5. **Write first blog post** (2 hours)
+6. **Set up Google Search Console alerts** (10 minutes)
 
 ## 🚀 Long-Term SEO Strategy
 

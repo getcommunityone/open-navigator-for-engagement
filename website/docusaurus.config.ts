@@ -15,7 +15,7 @@ const config: Config = {
   },
 
   // Set the production url of your site here
-  url: 'https://opennavigator.org',
+  url: 'https://www.communityone.com',
   // Set the /<baseUrl>/ pathname under which your site is served
   // For GitHub pages deployment, it is often '/<projectName>/'
   // For HuggingFace Spaces, docs are served from /docs/ subdirectory
