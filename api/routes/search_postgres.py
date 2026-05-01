@@ -10,12 +10,12 @@ from datetime import datetime
 from dataclasses import dataclass
 
 # Database configuration
+# Priority: NEON_DATABASE_URL_DEV (local) > NEON_DATABASE_URL (production)
 NEON_DATABASE_URL_DEV = os.getenv('NEON_DATABASE_URL_DEV')
 NEON_DATABASE_URL = os.getenv('NEON_DATABASE_URL')
-LOCAL_DATABASE_URL = os.getenv('LOCAL_DATABASE_URL', 'postgresql://postgres:password@localhost:5433/open_navigator')
 
-# Prefer local DB for development, fall back to Neon
-DATABASE_URL = LOCAL_DATABASE_URL or NEON_DATABASE_URL_DEV or NEON_DATABASE_URL
+# Use dev database for local development, production database for deployed environments
+DATABASE_URL = NEON_DATABASE_URL_DEV or NEON_DATABASE_URL
 
 # Connection pool (created on first request)
 _db_pool = None
@@ -40,7 +40,7 @@ async def get_db_pool():
         if not DATABASE_URL:
             raise ValueError("DATABASE_URL not configured")
         
-        db_type = "Local PostgreSQL" if LOCAL_DATABASE_URL else ("Development Neon" if NEON_DATABASE_URL_DEV else "Neon Production")
+        db_type = "Development (Local PostgreSQL)" if NEON_DATABASE_URL_DEV else "Production (Neon)"
         logger.info(f"🗄️  Creating connection pool to {db_type}")
         
         _db_pool = await asyncpg.create_pool(DATABASE_URL, min_size=2, max_size=20)

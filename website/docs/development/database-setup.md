@@ -81,7 +81,7 @@ print(f'Contacts: {cur.fetchone()[0]:,}')
 ```bash
 # Start the API server
 cd /home/developer/projects/open-navigator
-LOCAL_DATABASE_URL="postgresql://user:password@host/db" \
+NEON_DATABASE_URL_DEV="postgresql://user:password@host/db" \
   .venv/bin/python -m uvicorn api.main:app --host 0.0.0.0 --port 8000 --reload
 
 # In another terminal, test stats endpoint

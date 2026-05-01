@@ -16,13 +16,12 @@ STATS_CACHE: Dict[str, Dict[str, Any]] = {}
 CACHE_DURATION = timedelta(minutes=5)
 
 # Get database URL from environment
-# Priority: LOCAL_DATABASE_URL > NEON_DATABASE_URL_DEV > NEON_DATABASE_URL
-LOCAL_DATABASE_URL = os.getenv('LOCAL_DATABASE_URL', 'postgresql://postgres:password@localhost:5433/open_navigator')
+# Priority: NEON_DATABASE_URL_DEV (local) > NEON_DATABASE_URL (production)
 NEON_DATABASE_URL_DEV = os.getenv('NEON_DATABASE_URL_DEV')
 NEON_DATABASE_URL = os.getenv('NEON_DATABASE_URL')
 
-# Prefer local database, then dev, then production
-DATABASE_URL = LOCAL_DATABASE_URL or NEON_DATABASE_URL_DEV or NEON_DATABASE_URL
+# Use dev database for local development, production database for deployed environments
+DATABASE_URL = NEON_DATABASE_URL_DEV or NEON_DATABASE_URL
 
 # Connection pool (created on first request)
 _db_pool = None
@@ -36,7 +35,7 @@ async def get_db_pool():
             raise ValueError("DATABASE_URL not configured (set NEON_DATABASE_URL_DEV or NEON_DATABASE_URL)")
         
         # Log which database we're using
-        db_type = "Local PostgreSQL" if LOCAL_DATABASE_URL else ("Development Neon" if NEON_DATABASE_URL_DEV else "Neon Production")
+        db_type = "Development (Local PostgreSQL)" if NEON_DATABASE_URL_DEV else "Production (Neon)"
         logger.info(f"🗄️  [Stats] Connecting to {db_type}: {DATABASE_URL[:50]}...")
         
         _db_pool = await asyncpg.create_pool(DATABASE_URL, min_size=1, max_size=10)
