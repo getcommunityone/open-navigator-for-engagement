@@ -253,25 +253,31 @@ cp .huggingface/README.md README_HF.md
 # Remove large binary files from being staged
 # (HF Spaces rejects large binary files in git)
 echo "📝 Optimizing deployment (excluding binary files)..."
+
 # Reset index to avoid staging unwanted files
 git rm -rf --cached . 2>/dev/null || true
 
-# Add only essential files (exclude .venv, large images, etc.)
+# Add deployment config files (small, safe to force)
 git add -f Dockerfile README_HF.md .huggingface/ .gitignore .dockerignore
-git add -f agents/ api/ config/ discovery/ extraction/ pipeline/ scripts/ tests/ visualization/
-git add -f frontend/ website/ databricks/ examples/ models/ neon/ notebooks/
-git add -f requirements*.txt setup.py main.py Makefile *.sh *.md *.yml *.yaml
-git add -f CITATIONS.md CONTRIBUTING.md LICENSE INTEL_ARC_QUICKSTART.md
 
-# Explicitly exclude node_modules, large binary files and virtual environments
-echo "🧹 Excluding node_modules and large binaries..."
-git reset HEAD .venv* 2>/dev/null || true
-git reset HEAD '**/node_modules/**' 2>/dev/null || true
-git reset HEAD 'website/node_modules' 2>/dev/null || true
-git reset HEAD 'frontend/node_modules' 2>/dev/null || true
-git reset HEAD website/static/img/communityone_card.png 2>/dev/null || true  
-git reset HEAD frontend/public/communityone_logo.png 2>/dev/null || true
-git reset HEAD website/static/img/communityone_logo.png 2>/dev/null || true
+# Add source code WITHOUT -f to respect .gitignore (excludes node_modules automatically)
+git add agents/ api/ config/ discovery/ extraction/ pipeline/ scripts/ tests/ visualization/
+git add databricks/ examples/ models/ neon/ notebooks/
+git add requirements*.txt setup.py main.py Makefile *.sh *.md *.yml *.yaml
+git add CITATIONS.md CONTRIBUTING.md LICENSE INTEL_ARC_QUICKSTART.md
+
+# Add frontend/website source EXCLUDING node_modules (gitignore handles this)
+echo "🧹 Adding frontend/website sources (node_modules auto-excluded by .gitignore)..."
+git add frontend/ website/
+
+# Verify node_modules are NOT staged
+NODE_MODULES_COUNT=$(git diff --cached --name-only | grep -c "node_modules" || echo "0")
+if [ "$NODE_MODULES_COUNT" != "0" ]; then
+    echo "❌ ERROR: node_modules were staged ($NODE_MODULES_COUNT files)"
+    echo "This should not happen. Check .gitignore configuration."
+    exit 1
+fi
+echo "✅ Verified: No node_modules in staging area"
 
 echo "💾 Committing clean deployment (no git history)..."
 git commit -m "Clean HuggingFace deployment without binary files" --allow-empty
