@@ -72,7 +72,7 @@ if [ -n "$HF_USERNAME_ARG" ]; then
 fi
 
 # Deploy to the Space with custom domain configured
-SPACE_NAME="www.communityone.com"
+SPACE_NAME="open-navigator"
 HF_REPO="https://huggingface.co/spaces/${HF_USERNAME}/${SPACE_NAME}"
 HF_REMOTE="hf-www"  # Use hf-www remote for custom domain Space
 
