@@ -2,6 +2,8 @@
 OAuth authentication routes - HuggingFace, Google, Facebook, GitHub
 """
 import os
+import hmac
+import hashlib
 import httpx
 from datetime import datetime, timedelta
 from typing import Optional
@@ -431,11 +433,27 @@ async def get_user_info(provider: str, access_token: str, config: dict) -> dict:
             }
         
         elif provider == 'facebook':
+            # Facebook requires appsecret_proof for server-side API calls
+            # Generate HMAC-SHA256 hash of access token using app secret
+            app_secret = os.getenv('FACEBOOK_APP_SECRET')
+            if not app_secret:
+                logger.error("❌ [FACEBOOK] FACEBOOK_APP_SECRET not configured!")
+                return None
+            
+            # Create appsecret_proof
+            appsecret_proof = hmac.new(
+                app_secret.encode('utf-8'),
+                access_token.encode('utf-8'),
+                hashlib.sha256
+            ).hexdigest()
+            
             # Facebook uses access token as query parameter, not Bearer header
-            userinfo_url_with_token = f"{config['userinfo_url']}&access_token={access_token}"
+            # Add appsecret_proof for security
+            userinfo_url_with_token = f"{config['userinfo_url']}&access_token={access_token}&appsecret_proof={appsecret_proof}"
             
             logger.info(f"🔍 [FACEBOOK] Requesting user info from: {config['userinfo_url']}")
             logger.info(f"🔍 [FACEBOOK] Access token (first 20 chars): {access_token[:20]}...")
+            logger.info(f"🔐 [FACEBOOK] Generated appsecret_proof: {appsecret_proof[:20]}...")
             
             try:
                 resp = await client.get(userinfo_url_with_token)
