@@ -272,6 +272,12 @@ async def oauth_callback(
     
     # Exchange code for access token
     try:
+        logger.info(f"🔐 [{provider.upper()}] Starting token exchange")
+        logger.info(f"🔐 [{provider.upper()}] Token URL: {config['token_url']}")
+        logger.info(f"🔐 [{provider.upper()}] Callback URL: {callback_url}")
+        logger.info(f"🔐 [{provider.upper()}] Client ID configured: {bool(client_id)}")
+        logger.info(f"🔐 [{provider.upper()}] Client Secret configured: {bool(client_secret)}")
+        
         async with httpx.AsyncClient() as client:
             token_response = await client.post(
                 config['token_url'],
@@ -285,7 +291,12 @@ async def oauth_callback(
                 headers={'Accept': 'application/json'}
             )
             
+            logger.info(f"📊 [{provider.upper()}] Token response status: {token_response.status_code}")
+            
             if token_response.status_code != 200:
+                logger.error(f"❌ [{provider.upper()}] Token exchange failed!")
+                logger.error(f"❌ [{provider.upper()}] Response: {token_response.text}")
+                
                 # Parse error response for user-friendly message
                 error_msg = "Authentication failed"
                 try:
@@ -317,20 +328,27 @@ async def oauth_callback(
                 return RedirectResponse(url=f"{redirect_url}?{params}")
             
             token_data = token_response.json()
+            logger.info(f"✅ [{provider.upper()}] Token response keys: {list(token_data.keys())}")
             access_token = token_data.get('access_token')
             
             if not access_token:
+                logger.error(f"❌ [{provider.upper()}] No access token in response!")
                 logger.error(f"No access token in response from {provider}: {token_data}")
                 frontend_url = os.getenv('FRONTEND_URL', '')
                 redirect_url = oauth_state.redirect_uri or (frontend_url if frontend_url and 'localhost' not in frontend_url else '/')
                 params = urlencode({'error': f'{provider.title()} login failed: No access token received'})
                 return RedirectResponse(url=f"{redirect_url}?{params}")
             
+            logger.info(f"✅ [{provider.upper()}] Got access token (first 20 chars): {access_token[:20]}...")
+            
             # Get user info from provider
+            logger.info(f"🔍 [{provider.upper()}] Fetching user info...")
             user_info = await get_user_info(provider, access_token, config)
+            logger.info(f"📊 [{provider.upper()}] User info result: {user_info is not None}")
         
         # Validate we got user info (email is now always set, even if placeholder for Facebook)
         if not user_info:
+            logger.error(f"❌ [{provider.upper()}] Could not retrieve user info! Check API response logs above.")
             logger.error(f"Could not retrieve user info from {provider}. Check API response logs above.")
             frontend_url = os.getenv('FRONTEND_URL', '')
             redirect_url = oauth_state.redirect_uri or (frontend_url if frontend_url and 'localhost' not in frontend_url else '/')
