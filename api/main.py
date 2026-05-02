@@ -509,33 +509,37 @@ async def get_api_opportunities(
         states = [state] if state else list(STATE_COORDS.keys())
         opportunities = []
         
-        for st in states:
-            parquet_path = Path(f"data/gold/states/{st}/bills_bills.parquet")
-            if not parquet_path.exists():
-                continue
-            
-            # Query for fluoridation-related bills
-            query = f"""
-                SELECT 
-                    '{st}' as state,
-                    title,
-                    identifier,
-                    session,
-                    latest_action,
-                    created_at,
-                    updated_at
-                FROM read_parquet('{parquet_path}')
-                WHERE LOWER(title) LIKE '%fluorid%' 
+        # Use consolidated parquet file
+        parquet_path = Path("data/gold/bills_bills.parquet")
+        if not parquet_path.exists():
+            return {"opportunities": [], "total": 0}
+        
+        # Build state filter
+        state_filter = f"state IN ({','.join(repr(s) for s in states)})"
+        
+        # Query for fluoridation-related bills
+        query = f"""
+            SELECT 
+                state,
+                title,
+                identifier,
+                session,
+                latest_action,
+                created_at,
+                updated_at
+            FROM read_parquet('{parquet_path}')
+            WHERE ({state_filter})
+                AND (LOWER(title) LIKE '%fluorid%' 
                    OR LOWER(title) LIKE '%dental%'
                    OR LOWER(title) LIKE '%oral health%'
-                   OR LOWER(title) LIKE '%water treat%'
-                LIMIT {limit}
-            """
-            
-            result = duckdb.query(query).fetchall()
-            
-            # Convert to opportunities format
-            for row in result:
+                   OR LOWER(title) LIKE '%water treat%')
+            LIMIT {limit}
+        """
+        
+        result = duckdb.query(query).fetchall()
+        
+        # Convert to opportunities format
+        for row in result:
                 state_code, title, identifier, session, latest_action, created_at, updated_at = row
                 
                 # Determine urgency based on keywords

@@ -113,88 +113,77 @@ def calculate_stats(state: Optional[str] = None,
         school_districts = count_parquet_records('reference/jurisdictions_school_districts.parquet')
     
     # Count nonprofits
-    if state:
-        # Read specific state's nonprofit file
-        state_file = Path(f'data/gold/states/{state}/nonprofits_organizations.parquet')
-        if state_file.exists():
-            df = pd.read_parquet(state_file)
-            
-            # Filter by county if specified
-            if county:
-                county_col = 'COUNTY' if 'COUNTY' in df.columns else 'county'
-                if county_col in df.columns:
-                    df = df[df[county_col].str.contains(county, case=False, na=False)]
-            
-            # Filter by city if specified  
-            if city:
-                city_col = 'CITY' if 'CITY' in df.columns else 'city'
-                if city_col in df.columns:
-                    df = df[df[city_col].str.contains(city, case=False, na=False)]
-            
-            nonprofits = len(df)
-        else:
-            nonprofits = 0
+    nonprofits_file = Path('data/gold/nonprofits_organizations.parquet')
+    if nonprofits_file.exists():
+        df = pd.read_parquet(nonprofits_file)
+        
+        # Filter by state if specified
+        if state:
+            state_col = 'state' if 'state' in df.columns else ('STATE' if 'STATE' in df.columns else None)
+            if state_col:
+                df = df[df[state_col].str.upper() == state.upper()]
+        
+        # Filter by county if specified
+        if county:
+            county_col = 'COUNTY' if 'COUNTY' in df.columns else 'county'
+            if county_col in df.columns:
+                df = df[df[county_col].str.contains(county, case=False, na=False)]
+        
+        # Filter by city if specified  
+        if city:
+            city_col = 'CITY' if 'CITY' in df.columns else 'city'
+            if city_col in df.columns:
+                df = df[df[city_col].str.contains(city, case=False, na=False)]
+        
+        nonprofits = len(df)
     else:
-        nonprofits = count_parquet_records('states/*/nonprofits_organizations.parquet')
+        nonprofits = 0
     
-    # Count events/meetings (try new naming first, fallback to old)
-    if state:
-        # Try new naming first
-        event_pattern = f'states/{state}/events.parquet'
-        event_file = Path(f'data/gold/{event_pattern}')
+    # Count events/meetings
+    event_file = Path('data/gold/events.parquet')
+    if event_file.exists():
+        df = pd.read_parquet(event_file)
         
-        if not event_file.exists():
-            # Try old events_events naming
-            event_pattern = f'states/{state}/events_events.parquet'
-            event_file = Path(f'data/gold/{event_pattern}')
+        # Filter by state if specified
+        if state:
+            state_col = 'state' if 'state' in df.columns else ('STATE' if 'STATE' in df.columns else None)
+            if state_col:
+                df = df[df[state_col].str.upper() == state.upper()]
         
-        if not event_file.exists():
-            # Fallback to original meetings naming
-            event_pattern = f'states/{state}/meetings.parquet'
-            event_file = Path(f'data/gold/{event_pattern}')
-        
-        if city and event_file.exists():
-            # Filter by city
-            df = pd.read_parquet(event_file)
+        # Filter by city if specified
+        if city:
             place_col = 'place_name' if 'place_name' in df.columns else ('jurisdiction_name' if 'jurisdiction_name' in df.columns else 'jurisdiction')
             if place_col in df.columns:
-                # Match city name (case-insensitive)
                 df = df[df[place_col].str.contains(city, case=False, na=False)]
-            meetings = len(df)
-        else:
-            meetings = count_parquet_records(event_pattern)
-    else:
-        # Try new naming first for all states
-        meetings = count_parquet_records('states/*/events.parquet')
-        if meetings == 0:
-            # Try old events_events naming
-            meetings = count_parquet_records('states/*/events_events.parquet')
-        if meetings == 0:
-            # Fallback to original meetings naming
-            meetings = count_parquet_records('states/*/meetings.parquet')
-    
-    # Count contacts
-    if state:
-        contact_pattern = f'states/{state}/contacts_*.parquet'
-        contact_files = list(Path('data/gold/states').glob(f'{state}/contacts_*.parquet'))
         
-        if city and contact_files:
-            # Filter by city across all contact files
-            contacts = 0
-            for contact_file in contact_files:
-                try:
-                    df = pd.read_parquet(contact_file)
+        meetings = len(df)
+    else:
+        meetings = 0
+    
+    # Count contacts - read from consolidated contacts files
+    contacts = 0
+    for contact_table in ['contacts_local_officials', 'contacts_officials']:
+        contact_file = Path(f'data/gold/{contact_table}.parquet')
+        if contact_file.exists():
+            try:
+                df = pd.read_parquet(contact_file)
+                
+                # Filter by state if specified
+                if state:
+                    state_col = 'state' if 'state' in df.columns else ('STATE' if 'STATE' in df.columns else None)
+                    if state_col:
+                        df = df[df[state_col].str.upper() == state.upper()]
+                
+                # Filter by city if specified
+                if city:
                     jurisdiction_col = 'jurisdiction' if 'jurisdiction' in df.columns else 'city'
                     if jurisdiction_col in df.columns:
                         df = df[df[jurisdiction_col].str.contains(city, case=False, na=False)]
-                    contacts += len(df)
-                except Exception as e:
-                    logger.error(f"Error filtering contacts by city in {contact_file}: {e}")
-                    continue
-        else:
-            contacts = count_parquet_records(contact_pattern)
-    else:
-        contacts = count_parquet_records('states/*/contacts_*.parquet')
+                
+                contacts += len(df)
+            except Exception as e:
+                logger.error(f"Error reading contacts from {contact_file}: {e}")
+                continue
     
     # Count causes (NTEE codes - always national)
     causes = count_parquet_records('reference/causes_ntee_codes.parquet')
