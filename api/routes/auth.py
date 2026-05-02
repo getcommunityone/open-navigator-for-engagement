@@ -415,38 +415,61 @@ async def get_user_info(provider: str, access_token: str, config: dict) -> dict:
         elif provider == 'facebook':
             # Facebook uses access token as query parameter, not Bearer header
             userinfo_url_with_token = f"{config['userinfo_url']}&access_token={access_token}"
-            resp = await client.get(userinfo_url_with_token)
             
-            # Log response for debugging
-            logger.info(f"Facebook API response status: {resp.status_code}")
-            logger.info(f"Facebook API response: {resp.text[:500]}")
+            logger.info(f"🔍 [FACEBOOK] Requesting user info from: {config['userinfo_url']}")
+            logger.info(f"🔍 [FACEBOOK] Access token (first 20 chars): {access_token[:20]}...")
             
-            if resp.status_code != 200:
-                logger.error(f"Facebook userinfo request failed: {resp.status_code} - {resp.text}")
+            try:
+                resp = await client.get(userinfo_url_with_token)
+                
+                # Enhanced logging for debugging
+                logger.info(f"📊 [FACEBOOK] API response status: {resp.status_code}")
+                logger.info(f"📊 [FACEBOOK] API response headers: {dict(resp.headers)}")
+                logger.info(f"📊 [FACEBOOK] API response body: {resp.text[:1000]}")
+                
+                if resp.status_code != 200:
+                    logger.error(f"❌ [FACEBOOK] Userinfo request failed!")
+                    logger.error(f"❌ [FACEBOOK] Status: {resp.status_code}")
+                    logger.error(f"❌ [FACEBOOK] Full response: {resp.text}")
+                    return None
+                
+                data = resp.json()
+                logger.info(f"✅ [FACEBOOK] Successfully parsed JSON response")
+                logger.info(f"✅ [FACEBOOK] Data keys: {list(data.keys())}")
+                
+                # Validate we got required data
+                if not data.get('id'):
+                    logger.error(f"❌ [FACEBOOK] Missing user ID in response!")
+                    logger.error(f"❌ [FACEBOOK] Full response data: {data}")
+                    return None
+                
+                logger.info(f"✅ [FACEBOOK] Got user ID: {data.get('id')}")
+                
+                # Facebook may not return email if permission not approved in App Review
+                # Generate a placeholder email using Facebook ID if email not available
+                email = data.get('email')
+                if not email:
+                    fb_id = data.get('id')
+                    email = f"facebook_{fb_id}@communityone.placeholder"
+                    logger.warning(f"⚠️  [FACEBOOK] No email returned for user {fb_id}. Using placeholder: {email}")
+                else:
+                    logger.info(f"✅ [FACEBOOK] Got email: {email}")
+                
+                user_info = {
+                    'email': email,
+                    'oauth_id': str(data.get('id')),
+                    'full_name': data.get('name'),
+                    'avatar_url': data.get('picture', {}).get('data', {}).get('url') if isinstance(data.get('picture'), dict) else None,
+                    'username': data.get('name', '').replace(' ', '_').lower(),
+                }
+                logger.info(f"✅ [FACEBOOK] Created user_info: {user_info}")
+                
+            except Exception as e:
+                logger.error(f"❌ [FACEBOOK] Exception during user info fetch: {str(e)}")
+                logger.error(f"❌ [FACEBOOK] Exception type: {type(e).__name__}")
+                import traceback
+                logger.error(f"❌ [FACEBOOK] Traceback: {traceback.format_exc()}")
                 return None
-            
-            data = resp.json()
-            
-            # Validate we got required data
-            if not data.get('id'):
-                logger.error(f"Facebook did not return user ID. Response: {data}")
-                return None
-            
-            # Facebook may not return email if permission not approved in App Review
-            # Generate a placeholder email using Facebook ID if email not available
-            email = data.get('email')
-            if not email:
-                fb_id = data.get('id')
-                email = f"facebook_{fb_id}@communityone.placeholder"
-                logger.warning(f"Facebook did not return email for user {fb_id}. Using placeholder: {email}")
-            
-            user_info = {
-                'email': email,
-                'oauth_id': str(data.get('id')),
-                'full_name': data.get('name'),
-                'avatar_url': data.get('picture', {}).get('data', {}).get('url') if isinstance(data.get('picture'), dict) else None,
-                'username': data.get('name', '').replace(' ', '_').lower(),
-            }
         
         elif provider == 'github':
             # Get user profile
