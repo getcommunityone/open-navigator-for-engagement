@@ -21,6 +21,8 @@ interface AuthContextType {
   logout: () => void;
   isAuthenticated: boolean;
   isLoading: boolean;
+  authError: string | null;
+  clearAuthError: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -29,6 +31,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [authError, setAuthError] = useState<string | null>(null);
 
   const API_URL = import.meta.env.PROD 
     ? '/api'
@@ -43,7 +46,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     
     if (urlError) {
       // Show OAuth error to user
-      alert(`Login failed: ${urlError}`);
+      setAuthError(urlError);
       // Clean URL (remove error from address bar)
       window.history.replaceState({}, document.title, window.location.pathname);
       setIsLoading(false);
@@ -109,6 +112,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setUser(null);
   };
 
+  const clearAuthError = () => {
+    setAuthError(null);
+  };
+
   return (
     <AuthContext.Provider
       value={{
@@ -118,6 +125,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         logout,
         isAuthenticated: !!user,
         isLoading,
+        authError,
+        clearAuthError,
       }}
     >
       {children}
