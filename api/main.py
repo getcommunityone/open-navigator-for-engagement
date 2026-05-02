@@ -174,6 +174,20 @@ if os.path.exists(static_dir):
 else:
     logger.warning(f"Static directory not found: {static_dir}")
 
+# Serve favicon at root
+@app.get("/favicon.ico", include_in_schema=False)
+async def favicon():
+    """Serve favicon"""
+    from fastapi.responses import FileResponse
+    api_static = Path(__file__).parent / "static" / "favicon.ico"
+    if api_static.exists():
+        return FileResponse(api_static)
+    # Fallback to frontend public
+    frontend_favicon = Path(static_dir) / "favicon.ico"
+    if frontend_favicon.exists():
+        return FileResponse(frontend_favicon)
+    raise HTTPException(status_code=404, detail="Favicon not found")
+
 # Include authentication routes
 from api.routes import auth as auth_routes
 from api.routes import social as social_routes

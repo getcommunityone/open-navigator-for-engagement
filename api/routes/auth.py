@@ -153,17 +153,23 @@ async def oauth_login(
     
     Supported providers: huggingface, google, facebook, github
     """
-    if provider not in OAUTH_PROVIDERS:
-        raise HTTPException(status_code=400, detail=f"Unsupported provider: {provider}")
-    
-    config = OAUTH_PROVIDERS[provider]
-    client_id = os.getenv(config['client_id_env'])
-    
-    if not client_id:
-        raise HTTPException(
-            status_code=500, 
-            detail=f"OAuth not configured for {provider}. Missing {config['client_id_env']}"
-        )
+    try:
+        if provider not in OAUTH_PROVIDERS:
+            raise HTTPException(status_code=400, detail=f"Unsupported provider: {provider}")
+        
+        config = OAUTH_PROVIDERS[provider]
+        client_id = os.getenv(config['client_id_env'])
+        
+        if not client_id:
+            raise HTTPException(
+                status_code=500, 
+                detail=f"OAuth not configured for {provider}. Missing {config['client_id_env']}"
+            )
+    except Exception as e:
+        import traceback
+        print(f"ERROR in oauth_login: {e}")
+        print(traceback.format_exc())
+        raise HTTPException(status_code=500, detail=f"OAuth login error: {str(e)}")
     
     # Generate state token for CSRF protection
     state = generate_state_token()
