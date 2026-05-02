@@ -78,7 +78,7 @@ export default function Settings() {
 
     try {
       const token = localStorage.getItem('auth_token')
-      const response = await fetch(`${API_URL}/api/auth/profile`, {
+      const response = await fetch(`${API_URL}/auth/profile`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',

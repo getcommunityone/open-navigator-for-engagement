@@ -188,6 +188,95 @@ async def favicon():
         return FileResponse(frontend_favicon)
     raise HTTPException(status_code=404, detail="Favicon not found")
 
+
+# Custom Exception Handlers for better error messages
+from fastapi.exceptions import RequestValidationError
+from starlette.exceptions import HTTPException as StarletteHTTPException
+
+@app.exception_handler(StarletteHTTPException)
+async def http_exception_handler(request: Request, exc: StarletteHTTPException):
+    """Handle HTTP exceptions with user-friendly messages"""
+    if exc.status_code == 404:
+        return JSONResponse(
+            status_code=404,
+            content={
+                "error": "Not Found",
+                "message": f"The requested resource '{request.url.path}' was not found.",
+                "path": request.url.path,
+                "suggestion": "Check the URL and try again, or visit /docs for available endpoints.",
+                "documentation": "/docs",
+                "support": "johnbowyer@communityone.com"
+            }
+        )
+    elif exc.status_code == 401:
+        return JSONResponse(
+            status_code=401,
+            content={
+                "error": "Unauthorized",
+                "message": exc.detail or "Authentication required to access this resource.",
+                "suggestion": "Please log in or provide valid credentials.",
+                "login": "/api/auth/google"
+            }
+        )
+    elif exc.status_code == 403:
+        return JSONResponse(
+            status_code=403,
+            content={
+                "error": "Forbidden",
+                "message": exc.detail or "You don't have permission to access this resource.",
+                "suggestion": "Contact support if you believe this is an error.",
+                "support": "johnbowyer@communityone.com"
+            }
+        )
+    else:
+        return JSONResponse(
+            status_code=exc.status_code,
+            content={
+                "error": exc.detail or "An error occurred",
+                "status_code": exc.status_code,
+                "path": request.url.path
+            }
+        )
+
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    """Handle validation errors with detailed, user-friendly messages"""
+    errors = []
+    for error in exc.errors():
+        field = " -> ".join(str(loc) for loc in error["loc"])
+        errors.append({
+            "field": field,
+            "message": error["msg"],
+            "type": error["type"]
+        })
+    
+    return JSONResponse(
+        status_code=422,
+        content={
+            "error": "Validation Error",
+            "message": "The request data is invalid. Please check the fields below.",
+            "errors": errors,
+            "suggestion": "Review the error details and correct the invalid fields.",
+            "documentation": "/docs"
+        }
+    )
+
+@app.exception_handler(500)
+async def internal_server_error_handler(request: Request, exc: Exception):
+    """Handle internal server errors with generic message (hide details from users)"""
+    logger.error(f"Internal server error on {request.url.path}: {exc}")
+    return JSONResponse(
+        status_code=500,
+        content={
+            "error": "Internal Server Error",
+            "message": "Something went wrong on our end. We've been notified and are working to fix it.",
+            "path": request.url.path,
+            "suggestion": "Please try again later or contact support if the problem persists.",
+            "support": "johnbowyer@communityone.com"
+        }
+    )
+
+
 # Include authentication routes
 from api.routes import auth as auth_routes
 from api.routes import social as social_routes

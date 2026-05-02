@@ -25,6 +25,7 @@ import UnifiedSearch from './pages/UnifiedSearch'
 import JurisdictionsSearch from './pages/JurisdictionsSearch'
 import PolicyMap from './pages/PolicyMap'
 import BillDetail from './pages/BillDetail'
+import NotFound from './pages/NotFound'
 
 function App() {
   return (
@@ -63,6 +64,9 @@ function App() {
         <Route path="advocacy-topics" element={<AdvocacyTopics />} />
         <Route path="fact-checking" element={<FactChecking />} />
       </Route>
+      
+      {/* 404 Page - Catch all unmatched routes */}
+      <Route path="*" element={<NotFound />} />
     </Routes>
   )
 }
