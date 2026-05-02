@@ -255,7 +255,7 @@ You have the right to:
 - Request correction of inaccurate information
 - Download a copy of your data (data portability)
 
-**How to exercise:** Email [contact email] with your request.
+**How to exercise:** Email johnbowyer@communityone.com with your request.
 
 ### 9.2 Deletion
 
@@ -265,8 +265,11 @@ You have the right to request deletion of:
 - Saved searches and notes
 
 **How to exercise:** 
-1. Delete your account through account settings, or
-2. Email us at [contact email]
+1. Delete your account through account settings (self-service), or
+2. Email us at johnbowyer@communityone.com
+3. See detailed instructions at [Data Deletion Request](./data-deletion.md)
+
+**Processing time:** Self-service deletion is immediate. Email requests processed within 30 days.
 
 **Limitations:** We may retain information required by law or legitimate public interest.
 
@@ -286,7 +289,7 @@ If you are a California resident, you have additional rights:
 - **Right to Opt-Out:** Opt out of sale of personal information (we do NOT sell data)
 - **Right to Non-Discrimination:** Equal service regardless of privacy choices
 
-**To exercise CCPA rights:** Email [contact email] with "CCPA Request" in subject line.
+**To exercise CCPA rights:** Email johnbowyer@communityone.com with "CCPA Request" in subject line.
 
 ### 9.5 European Privacy Rights (GDPR)
 
@@ -305,7 +308,7 @@ If you are in the European Economic Area (EEA), you have rights under GDPR:
 - **Legitimate Interests:** Providing civic engagement tools
 - **Consent:** For optional features like account creation
 
-**To exercise GDPR rights:** Email [contact email] with "GDPR Request" in subject line.
+**To exercise GDPR rights:** Email johnbowyer@communityone.com with "GDPR Request" in subject line.
 
 **Data Protection Officer:** [DPO contact if applicable]
 
@@ -316,7 +319,7 @@ If you are in the European Economic Area (EEA), you have rights under GDPR:
 The Service is **not directed to children under 13 years of age**. We do not knowingly collect personal information from children under 13.
 
 If you believe we have collected information from a child under 13:
-- Email us immediately at [contact email]
+- Email us immediately at johnbowyer@communityone.com
 - We will promptly investigate and delete such information
 
 **Parents/Guardians:** If you become aware your child has provided us with information, please contact us.
@@ -393,9 +396,9 @@ We may update this Privacy Policy from time to time. Changes will be posted on t
 
 For questions about this Privacy Policy or privacy practices:
 
-**Email:** [contact email to be added]  
+**Email:** johnbowyer@communityone.com  
 **GitHub Issues:** [Privacy-related issues](https://github.com/getcommunityone/open-navigator-for-engagement/issues)  
-**Mail:** [Physical address to be added]
+**Mail:** 5617 Lakeridge Court, Tuscaloosa, AL 35406
 
 **For specific requests:**
 - Subject line: "Privacy Request" or "CCPA Request" or "GDPR Request"
@@ -426,7 +429,9 @@ For questions about this Privacy Policy or privacy practices:
 - ✅ Respect user rights
 - ✅ Industry-standard security
 
-**Questions?** Contact us at [contact email]
+**Questions?** Contact us at johnbowyer@communityone.com
+
+**Need to delete your data?** See [Data Deletion Request](./data-deletion.md)
 
 ---
 
