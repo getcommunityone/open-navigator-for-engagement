@@ -46,7 +46,10 @@ const config: Config = {
       'classic',
       {
         docs: {
-          routeBasePath: 'docs', // Serve docs at /docs path
+          // If baseUrl already includes /docs/, serve at root. Otherwise add /docs/.
+          // Production (HF): baseUrl=/docs/ + routeBasePath=/ = /docs/intro ✓
+          // Development: baseUrl=/ + routeBasePath=docs = /docs/intro ✓
+          routeBasePath: process.env.DOCUSAURUS_BASE_URL ? '/' : 'docs',
           sidebarPath: './sidebars.ts',
           // Please change this to your repo.
           // Remove this to remove the "edit this page" links.
