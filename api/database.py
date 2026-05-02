@@ -9,10 +9,20 @@ from typing import Generator
 
 from api.models import Base
 
-# Database URL from environment or default to SQLite for development
+# Database URL priority:
+# 1. NEON_DATABASE_URL_DEV (local development with PostgreSQL)
+# 2. NEON_DATABASE_URL (production Neon PostgreSQL)
+# 3. DATABASE_URL (backwards compatibility)
+# 4. SQLite fallback (no setup required)
 DATABASE_URL = os.getenv(
-    "DATABASE_URL",
-    "sqlite:///./data/users.db"  # Fallback to SQLite if no PostgreSQL configured
+    "NEON_DATABASE_URL_DEV",
+    os.getenv(
+        "NEON_DATABASE_URL",
+        os.getenv(
+            "DATABASE_URL",
+            "sqlite:///./data/users.db"
+        )
+    )
 )
 
 # Handle PostgreSQL URL format for SQLAlchemy 2.0+
