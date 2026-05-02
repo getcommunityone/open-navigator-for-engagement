@@ -81,6 +81,37 @@ class UserResponse(BaseModel):
 
 
 # Helper functions
+def get_base_url(request: Request) -> str:
+    """
+    Get the base URL from the request, handling proxy headers
+    
+    In production (HuggingFace Spaces with nginx reverse proxy):
+    - Returns: https://www.communityone.com
+    
+    In local development:
+    - Returns: http://localhost:8000
+    """
+    # Check for explicit API_BASE_URL override first
+    if base_url := os.getenv('API_BASE_URL'):
+        # Only use if it's not the default localhost value
+        if 'localhost' not in base_url and '127.0.0.1' not in base_url:
+            return base_url
+    
+    # Detect from request headers (handles nginx reverse proxy)
+    scheme = request.headers.get('x-forwarded-proto', request.url.scheme)
+    host = request.headers.get('x-forwarded-host', request.headers.get('host', request.url.netloc))
+    
+    # Clean up host (remove port if it's standard)
+    if ':' in host:
+        host_parts = host.split(':')
+        port = host_parts[1]
+        # Remove standard ports
+        if (scheme == 'https' and port == '443') or (scheme == 'http' and port == '80'):
+            host = host_parts[0]
+    
+    return f"{scheme}://{host}"
+
+
 def get_or_create_user(
     db: Session,
     email: str,
@@ -184,8 +215,8 @@ async def oauth_login(
     db.add(oauth_state)
     db.commit()
     
-    # Build callback URL using API_BASE_URL to ensure correct protocol (http vs https)
-    base_url = os.getenv('API_BASE_URL', 'http://localhost:8000')
+    # Build callback URL dynamically from request (handles both local and production)
+    base_url = get_base_url(request)
     callback_url = f"{base_url}/api/auth/callback/{provider}"
     
     # Build authorization URL
@@ -204,6 +235,7 @@ async def oauth_login(
 @router.get("/callback/{provider}", name="oauth_callback")
 async def oauth_callback(
     provider: str,
+    request: Request,
     code: Optional[str] = None,
     state: Optional[str] = None,
     error: Optional[str] = None,
@@ -233,10 +265,8 @@ async def oauth_callback(
     client_id = os.getenv(config['client_id_env'])
     client_secret = os.getenv(config['client_secret_env'])
     
-    # Build callback URL (must match the one sent to authorize)
-    from fastapi import Request
-    # We need to reconstruct the callback URL - for now use a simple approach
-    base_url = os.getenv('API_BASE_URL', 'http://localhost:8000')
+    # Build callback URL dynamically from request (must match the one sent to authorize)
+    base_url = get_base_url(request)
     callback_url = f"{base_url}/api/auth/callback/{provider}"
     
     # Exchange code for access token

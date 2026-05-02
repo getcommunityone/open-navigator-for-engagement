@@ -36,6 +36,9 @@ Directory Structure:
         └── ...
 
 Usage:
+    # Quick start: Unzip only the latest 2 years with 8 workers (RECOMMENDED)
+    python unzip_fec_data.py --latest 2 --workers 8 --base-dir /mnt/d/fec_data
+
     # Fast: Use 8 parallel workers (4-8x faster)
     python unzip_fec_data.py --workers 8 --base-dir /mnt/d/fec_data
 
@@ -50,6 +53,9 @@ Usage:
 
     # Specific years only
     python unzip_fec_data.py --years 2020,2022,2024 --workers 4
+    
+    # Latest 5 years only
+    python unzip_fec_data.py --latest 5 --workers 8
 
     # Resume interrupted extraction
     python unzip_fec_data.py --resume --workers 8
@@ -561,6 +567,12 @@ def main():
     )
     
     parser.add_argument(
+        '--latest',
+        type=int,
+        help='Only unzip the latest N years (e.g., --latest 2 for most recent 2 years)'
+    )
+    
+    parser.add_argument(
         '--workers',
         type=int,
         default=1,
@@ -598,6 +610,40 @@ def main():
     # Parse categories and years
     categories = {args.category} if args.category else None
     years = set(args.years.split(',')) if args.years else None
+    
+    # Handle --latest option (auto-determine latest N years)
+    if args.latest:
+        if args.years:
+            logger.error("❌ Cannot use both --years and --latest options together")
+            sys.exit(1)
+        
+        # Find all available years in the bulk-downloads directory
+        base_dir = Path(args.base_dir)
+        bulk_dir = base_dir / "bulk-downloads"
+        
+        if not bulk_dir.exists():
+            logger.error(f"❌ Bulk downloads directory not found: {bulk_dir}")
+            sys.exit(1)
+        
+        # Scan for all year directories
+        available_years = set()
+        for category_dir in bulk_dir.iterdir():
+            if category_dir.is_dir():
+                for year_dir in category_dir.iterdir():
+                    if year_dir.is_dir() and year_dir.name.isdigit():
+                        available_years.add(year_dir.name)
+        
+        if not available_years:
+            logger.error("❌ No year directories found in bulk-downloads")
+            sys.exit(1)
+        
+        # Get latest N years
+        sorted_years = sorted(available_years, reverse=True)
+        latest_years = sorted_years[:args.latest]
+        years = set(latest_years)
+        
+        logger.info(f"📅 Auto-selected latest {args.latest} years: {', '.join(sorted(latest_years, reverse=True))}")
+        logger.info("")
     
     # Auto-detect optimal worker count if requested
     if args.workers == 0:

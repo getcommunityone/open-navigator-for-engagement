@@ -63,7 +63,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const fetchUser = async (authToken: string) => {
     try {
-      const response = await fetch(`${API_URL}/auth/me`, {
+      const response = await fetch(`${API_URL}/api/auth/me`, {
         headers: {
           'Authorization': `Bearer ${authToken}`,
         },
@@ -89,7 +89,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const login = (provider: string) => {
     // Redirect to OAuth endpoint
     const redirectUri = encodeURIComponent(window.location.origin);
-    const authUrl = `${API_URL}/auth/login/${provider}?redirect_uri=${redirectUri}`;
+    const authUrl = `${API_URL}/api/auth/login/${provider}?redirect_uri=${redirectUri}`;
     window.location.href = authUrl;
   };
 

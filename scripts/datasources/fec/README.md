@@ -113,7 +113,10 @@ Unzip all FEC bulk data files with parallel processing and 7-Zip support for max
 
 **Usage:**
 ```bash
-# FASTEST: Use 7-Zip with 8 parallel workers (10-15x faster)
+# RECOMMENDED: Unzip latest 2 years only with 8 workers (FAST & QUICK)
+python unzip_fec_data.py --latest 2 --workers 8 --base-dir /mnt/d/fec_data
+
+# FASTEST: Use 7-Zip with 8 parallel workers (10-15x faster, all years)
 python unzip_fec_data.py --method 7z --workers 8 --base-dir /mnt/d/fec_data
 
 # Fast: Use parallel workers only (4-8x faster)
@@ -133,6 +136,9 @@ python unzip_fec_data.py --category candidate-master --workers 4
 
 # Unzip specific years with parallel workers
 python unzip_fec_data.py --years 2020,2022,2024 --workers 4
+    
+# Unzip latest 5 years only (auto-detects 2020-2024)
+python unzip_fec_data.py --latest 5 --workers 8
 
 # Resume interrupted extraction
 python unzip_fec_data.py --resume --workers 8
@@ -186,7 +192,8 @@ brew install p7zip
 
 **Workflow:**
 1. Download FEC bulk data: `python bulk_download_fec.py --base-dir /mnt/d/fec_data`
-2. Unzip all files (FAST): `python unzip_fec_data.py --method 7z --workers 8 --base-dir /mnt/d/fec_data`
+2. **QUICK START** - Unzip latest 2 years only: `python unzip_fec_data.py --latest 2 --workers 8 --base-dir /mnt/d/fec_data`
+   - OR **FULL** - Unzip all files (FAST): `python unzip_fec_data.py --method 7z --workers 8 --base-dir /mnt/d/fec_data`
 3. (Optional) Remove ZIPs to save space: Add `--remove-zips` flag to step 2
 
 **Performance Comparison:**
