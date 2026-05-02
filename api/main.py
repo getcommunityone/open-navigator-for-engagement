@@ -199,12 +199,12 @@ from api.routes import contact as contact_routes
 from api.routes import bills_neon as bills_routes  # Was: bills
 from api.database import init_db
 
-app.include_router(auth_routes.router)
-app.include_router(social_routes.router)
-app.include_router(search_routes.router)
+app.include_router(auth_routes.router, prefix="/api")
+app.include_router(social_routes.router, prefix="/api")
+app.include_router(search_routes.router, prefix="/api")
 app.include_router(stats_routes.router, prefix="/api", tags=["stats"])
-app.include_router(contact_routes.router)
-app.include_router(bills_routes.router)
+app.include_router(contact_routes.router, prefix="/api")
+app.include_router(bills_routes.router, prefix="/api")
 
 # Custom Swagger UI with logo
 @app.get("/docs", include_in_schema=False)
@@ -1248,19 +1248,17 @@ async def startup_event():
         logger.info("🤗 VALIDATING HUGGINGFACE DATASETS...")
         logger.info("-" * 80)
         
-        # Check a sample of critical datasets
+        # Check a sample of critical datasets (using new consolidated datasets)
         import requests
-        from api.routes.bills import get_hf_dataset_url
         
         test_datasets = [
-            ("states-ma-bills-bills", "Massachusetts Bills"),
-            ("states-al-bills-bills", "Alabama Bills"),
-            ("states-ma-contacts-local-officials", "Massachusetts Local Officials"),
+            ("https://huggingface.co/datasets/CommunityOne/one-bills/resolve/main/data/train-00000-of-00001.parquet", "Bills (Consolidated)"),
+            ("https://huggingface.co/datasets/CommunityOne/one-local-officials/resolve/main/data/train-00000-of-00001.parquet", "Local Officials (Consolidated)"),
+            ("https://huggingface.co/datasets/CommunityOne/one-nonprofits-organizations/resolve/main/data/train-00000-of-00001.parquet", "Nonprofits (Consolidated)"),
         ]
         
         hf_datasets_ok = 0
-        for dataset_name, display_name in test_datasets:
-            url = get_hf_dataset_url(dataset_name)
+        for url, display_name in test_datasets:
             try:
                 response = requests.head(url, timeout=10, allow_redirects=True)
                 if response.status_code == 200:
