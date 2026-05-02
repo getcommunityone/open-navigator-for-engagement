@@ -488,8 +488,8 @@ export default function USMap({ stateData, onStateClick, legend }: USMapProps) {
         </div>
       )}
       
-      {/* Legend */}
-      <div className="absolute bottom-4 right-4 bg-white/95 rounded-lg shadow-lg p-4 border border-gray-200 max-w-xs">
+      {/* Legend - Absolute on desktop, below map on mobile */}
+      <div className="relative md:absolute md:bottom-4 md:right-4 mt-4 md:mt-0 bg-white/95 rounded-lg shadow-lg p-4 border border-gray-200 max-w-xs mx-auto md:mx-0">
         <div className="text-sm font-semibold text-gray-800 mb-3">Legend</div>
         
         {/* Type of Legislation - Show actual types from data */}

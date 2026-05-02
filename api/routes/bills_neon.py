@@ -16,7 +16,7 @@ from datetime import datetime, timedelta
 
 from api.errors import ErrorDetail, parse_error
 
-router = APIRouter(prefix="/api/bills", tags=["bills"])
+router = APIRouter(prefix="/bills", tags=["bills"])
 
 # Database configuration (for map aggregates only)
 NEON_DATABASE_URL_DEV = os.getenv("NEON_DATABASE_URL_DEV")

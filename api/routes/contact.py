@@ -8,7 +8,7 @@ import httpx
 import os
 from loguru import logger
 
-router = APIRouter(prefix="/api/contact", tags=["contact"])
+router = APIRouter(prefix="/contact", tags=["contact"])
 
 
 class ContactRequest(BaseModel):

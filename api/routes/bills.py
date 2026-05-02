@@ -16,7 +16,7 @@ import traceback
 from api.errors import ErrorDetail, parse_error
 from api.routes.search import load_parquet_cached
 
-router = APIRouter(prefix="/api/bills", tags=["bills"])
+router = APIRouter(prefix="/bills", tags=["bills"])
 
 GOLD_DIR = Path("data/gold")
 IS_HF_SPACES = os.getenv("HF_SPACES") == "1"

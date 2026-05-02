@@ -294,6 +294,9 @@ async def oauth_callback(
                     if 'error' in error_data:
                         if isinstance(error_data['error'], dict):
                             error_msg = error_data['error'].get('message', error_msg)
+                            # Special handling for Facebook's "error validating web secret"
+                            if provider == 'facebook' and 'validating' in error_msg.lower() and 'secret' in error_msg.lower():
+                                error_msg = "Invalid App Secret. Please update FACEBOOK_APP_SECRET in your .env file with the correct secret from Facebook Developer Console."
                         else:
                             error_msg = str(error_data['error'])
                     # Google/other providers: {"error": "...", "error_description": "..."}
@@ -326,11 +329,12 @@ async def oauth_callback(
             # Get user info from provider
             user_info = await get_user_info(provider, access_token, config)
         
-        if not user_info or not user_info.get('email'):
-            logger.error(f"Could not retrieve email from {provider}. User info: {user_info}")
+        # Validate we got user info (email is now always set, even if placeholder for Facebook)
+        if not user_info:
+            logger.error(f"Could not retrieve user info from {provider}. Check API response logs above.")
             frontend_url = os.getenv('FRONTEND_URL', '')
             redirect_url = oauth_state.redirect_uri or (frontend_url if frontend_url and 'localhost' not in frontend_url else '/')
-            params = urlencode({'error': f'{provider.title()} login failed: Could not retrieve email'})
+            params = urlencode({'error': f'{provider.title()} login failed: Could not retrieve user information'})
             return RedirectResponse(url=f"{redirect_url}?{params}")
     
     except Exception as e:
@@ -409,10 +413,35 @@ async def get_user_info(provider: str, access_token: str, config: dict) -> dict:
             }
         
         elif provider == 'facebook':
-            resp = await client.get(config['userinfo_url'], headers={'Authorization': f'Bearer {access_token}'})
+            # Facebook uses access token as query parameter, not Bearer header
+            userinfo_url_with_token = f"{config['userinfo_url']}&access_token={access_token}"
+            resp = await client.get(userinfo_url_with_token)
+            
+            # Log response for debugging
+            logger.info(f"Facebook API response status: {resp.status_code}")
+            logger.info(f"Facebook API response: {resp.text[:500]}")
+            
+            if resp.status_code != 200:
+                logger.error(f"Facebook userinfo request failed: {resp.status_code} - {resp.text}")
+                return None
+            
             data = resp.json()
+            
+            # Validate we got required data
+            if not data.get('id'):
+                logger.error(f"Facebook did not return user ID. Response: {data}")
+                return None
+            
+            # Facebook may not return email if permission not approved in App Review
+            # Generate a placeholder email using Facebook ID if email not available
+            email = data.get('email')
+            if not email:
+                fb_id = data.get('id')
+                email = f"facebook_{fb_id}@communityone.placeholder"
+                logger.warning(f"Facebook did not return email for user {fb_id}. Using placeholder: {email}")
+            
             user_info = {
-                'email': data.get('email'),
+                'email': email,
                 'oauth_id': str(data.get('id')),
                 'full_name': data.get('name'),
                 'avatar_url': data.get('picture', {}).get('data', {}).get('url') if isinstance(data.get('picture'), dict) else None,

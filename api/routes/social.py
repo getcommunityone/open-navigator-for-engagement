@@ -15,7 +15,7 @@ from api.models import (
     UserFollow, OfficialFollow, OrganizationFollow, CauseFollow
 )
 
-router = APIRouter(prefix="/api/social", tags=["social"])
+router = APIRouter(prefix="/social", tags=["social"])
 
 
 # ============================================================================

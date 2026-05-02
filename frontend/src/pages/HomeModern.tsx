@@ -1474,7 +1474,7 @@ export default function HomeModern() {
           
           <div className="flex justify-center gap-8 text-sm text-gray-400">
             <a href={`${docsBaseUrl}/intro`} target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">Documentation</a>
-            <a href={`${apiBaseUrl}/api/docs`} target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">API</a>
+            <a href={import.meta.env.PROD ? 'https://www.communityone.com/api/docs' : 'http://localhost:8000/docs'} target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">API</a>
             <Link to="/explore" className="hover:text-white transition-colors">Explore</Link>
           </div>
           <p className="text-gray-500 text-sm mt-6">
