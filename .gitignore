@@ -98,3 +98,5 @@ secrets/
 Thumbs.db
 # Binary files for Docker build only (not in git)
 website/static/img/communityone_card.png
+data/gold_old/
+data/gold_backup_*/
