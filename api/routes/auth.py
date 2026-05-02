@@ -7,6 +7,7 @@ from datetime import datetime, timedelta
 from typing import Optional
 from urllib.parse import urlencode
 from dotenv import load_dotenv
+from loguru import logger
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.responses import RedirectResponse
@@ -270,36 +271,74 @@ async def oauth_callback(
     callback_url = f"{base_url}/api/auth/callback/{provider}"
     
     # Exchange code for access token
-    async with httpx.AsyncClient() as client:
-        token_response = await client.post(
-            config['token_url'],
-            data={
-                'client_id': client_id,
-                'client_secret': client_secret,
-                'code': code,
-                'redirect_uri': callback_url,
-                'grant_type': 'authorization_code',
-            },
-            headers={'Accept': 'application/json'}
-        )
-        
-        if token_response.status_code != 200:
-            raise HTTPException(
-                status_code=400, 
-                detail=f"Token exchange failed: {token_response.text}"
+    try:
+        async with httpx.AsyncClient() as client:
+            token_response = await client.post(
+                config['token_url'],
+                data={
+                    'client_id': client_id,
+                    'client_secret': client_secret,
+                    'code': code,
+                    'redirect_uri': callback_url,
+                    'grant_type': 'authorization_code',
+                },
+                headers={'Accept': 'application/json'}
             )
+            
+            if token_response.status_code != 200:
+                # Parse error response for user-friendly message
+                error_msg = "Authentication failed"
+                try:
+                    error_data = token_response.json()
+                    # Facebook error format: {"error": {"message": "...", "type": "..."}}
+                    if 'error' in error_data:
+                        if isinstance(error_data['error'], dict):
+                            error_msg = error_data['error'].get('message', error_msg)
+                        else:
+                            error_msg = str(error_data['error'])
+                    # Google/other providers: {"error": "...", "error_description": "..."}
+                    elif 'error_description' in error_data:
+                        error_msg = error_data['error_description']
+                    elif 'error' in error_data:
+                        error_msg = error_data['error']
+                except:
+                    error_msg = f"Authentication failed (HTTP {token_response.status_code})"
+                
+                # Log full error for debugging
+                logger.error(f"OAuth token exchange failed for {provider}: {token_response.text}")
+                
+                # Redirect to frontend with error
+                frontend_url = os.getenv('FRONTEND_URL', '')
+                redirect_url = oauth_state.redirect_uri or (frontend_url if frontend_url and 'localhost' not in frontend_url else '/')
+                params = urlencode({'error': f'{provider.title()} login failed: {error_msg}'})
+                return RedirectResponse(url=f"{redirect_url}?{params}")
+            
+            token_data = token_response.json()
+            access_token = token_data.get('access_token')
+            
+            if not access_token:
+                logger.error(f"No access token in response from {provider}: {token_data}")
+                frontend_url = os.getenv('FRONTEND_URL', '')
+                redirect_url = oauth_state.redirect_uri or (frontend_url if frontend_url and 'localhost' not in frontend_url else '/')
+                params = urlencode({'error': f'{provider.title()} login failed: No access token received'})
+                return RedirectResponse(url=f"{redirect_url}?{params}")
+            
+            # Get user info from provider
+            user_info = await get_user_info(provider, access_token, config)
         
-        token_data = token_response.json()
-        access_token = token_data.get('access_token')
-        
-        if not access_token:
-            raise HTTPException(status_code=400, detail="No access token received")
-        
-        # Get user info from provider
-        user_info = await get_user_info(provider, access_token, config)
+        if not user_info or not user_info.get('email'):
+            logger.error(f"Could not retrieve email from {provider}. User info: {user_info}")
+            frontend_url = os.getenv('FRONTEND_URL', '')
+            redirect_url = oauth_state.redirect_uri or (frontend_url if frontend_url and 'localhost' not in frontend_url else '/')
+            params = urlencode({'error': f'{provider.title()} login failed: Could not retrieve email'})
+            return RedirectResponse(url=f"{redirect_url}?{params}")
     
-    if not user_info or not user_info.get('email'):
-        raise HTTPException(status_code=400, detail="Could not retrieve user email from provider")
+    except Exception as e:
+        logger.error(f"Unexpected error during {provider} OAuth: {str(e)}")
+        frontend_url = os.getenv('FRONTEND_URL', '')
+        redirect_url = oauth_state.redirect_uri or (frontend_url if frontend_url and 'localhost' not in frontend_url else '/')
+        params = urlencode({'error': f'{provider.title()} login failed: {str(e)}'})
+        return RedirectResponse(url=f"{redirect_url}?{params}")
     
     # Get or create user
     user = get_or_create_user(

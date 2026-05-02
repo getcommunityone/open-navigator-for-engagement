@@ -299,7 +299,7 @@ We reserve the right to modify these Terms at any time. Changes will be effectiv
 
 ### 14.1 Governing Law
 
-These Terms shall be governed by and construed in accordance with the laws of the United States and the State of [Your State], without regard to conflict of law principles.
+These Terms shall be governed by and construed in accordance with the laws of the United States and the State of Alabama, without regard to conflict of law principles.
 
 ### 14.2 Dispute Resolution
 
@@ -324,9 +324,9 @@ These Terms, together with our [Privacy Policy](./privacy-policy.md) and [Data P
 
 For questions about these Terms of Service:
 
-- **Email:** [contact email to be added]
+- **Email:** johnbowyer@communityone.com
 - **GitHub Issues:** [Report issues](https://github.com/getcommunityone/open-navigator-for-engagement/issues)
-- **Mail:** [Physical address to be added]
+- **Mail:** 5617 Lakeridge Court, Tuscaloosa, AL 35406
 
 ## 18. Acknowledgments
 

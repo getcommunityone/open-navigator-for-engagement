@@ -39,6 +39,16 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     // Check for token in URL FIRST (OAuth callback)
     const urlParams = new URLSearchParams(window.location.search);
     const urlToken = urlParams.get('token');
+    const urlError = urlParams.get('error');
+    
+    if (urlError) {
+      // Show OAuth error to user
+      alert(`Login failed: ${urlError}`);
+      // Clean URL (remove error from address bar)
+      window.history.replaceState({}, document.title, window.location.pathname);
+      setIsLoading(false);
+      return;
+    }
     
     if (urlToken) {
       localStorage.setItem('auth_token', urlToken);
