@@ -186,7 +186,7 @@ async def oauth_login(
     
     # Build callback URL using API_BASE_URL to ensure correct protocol (http vs https)
     base_url = os.getenv('API_BASE_URL', 'http://localhost:8000')
-    callback_url = f"{base_url}/auth/callback/{provider}"
+    callback_url = f"{base_url}/api/auth/callback/{provider}"
     
     # Build authorization URL
     params = {
@@ -237,7 +237,7 @@ async def oauth_callback(
     from fastapi import Request
     # We need to reconstruct the callback URL - for now use a simple approach
     base_url = os.getenv('API_BASE_URL', 'http://localhost:8000')
-    callback_url = f"{base_url}/auth/callback/{provider}"
+    callback_url = f"{base_url}/api/auth/callback/{provider}"
     
     # Exchange code for access token
     async with httpx.AsyncClient() as client:

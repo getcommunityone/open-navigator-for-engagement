@@ -598,6 +598,57 @@ The NCCS Unified BMF is a longitudinal nonprofit dataset specifically designed f
 
 ---
 
+### **Fundraising Effectiveness Project (FEP)** ⭐
+
+The Fundraising Effectiveness Project provides comprehensive research and benchmarking data on nonprofit fundraising trends and donor behavior.
+
+**Organization:** Association of Fundraising Professionals (AFP) & Growth in Giving Initiative  
+**Website:** https://afpglobal.org/fundraising-effectiveness-project  
+**Publications:** https://publications.fepreports.org/  
+**Data Portal:** https://data.givingtuesday.org/fep/  
+**License:** Research data available for nonprofit sector analysis  
+**Coverage:** Quarterly fundraising data from 5,000+ U.S. nonprofits (2005-present)
+
+**What we use:**
+- **Donor retention metrics**: Longitudinal donor behavior and retention rates
+- **Fundraising benchmarks**: Revenue trends across nonprofit sectors and organization sizes
+- **Giving trends**: Analysis of individual giving, major donors, and fundraising effectiveness
+- **Sector analysis**: NTEE-based comparisons across health, education, human services, etc.
+- **Economic indicators**: Correlation between fundraising and economic conditions
+
+**Key Metrics:**
+- ✅ **Donor retention rates**: Track donor loyalty and lapsed donor trends
+- ✅ **Dollar retention**: Revenue retention from recurring vs. new donors
+- ✅ **Average gift sizes**: Trends in donation amounts by donor segment
+- ✅ **New donor acquisition**: Cost and effectiveness of donor recruitment
+- ✅ **Quarterly benchmarks**: Real-time fundraising performance indicators
+
+**Use Cases:**
+- Benchmarking nonprofit fundraising performance
+- Predicting revenue trends for budget planning
+- Analyzing donor engagement patterns
+- Policy research on charitable giving
+- Advocacy for nonprofit sector sustainability
+
+**BibTeX:**
+```bibtex
+@misc{fundraising_effectiveness_project,
+    title = {Fundraising Effectiveness Project},
+    author = {{Association of Fundraising Professionals} and {Growth in Giving Initiative}},
+    year = {2024},
+    url = {https://publications.fepreports.org/},
+    note = {Comprehensive research and benchmarking data on nonprofit fundraising trends and donor behavior}
+}
+```
+
+**Attribution:** When using FEP data, cite:
+1. Fundraising Effectiveness Project (FEP)
+2. Association of Fundraising Professionals (AFP)
+3. Growth in Giving Initiative
+4. Specify the quarter/year of data used
+
+---
+
 ### **Charity Navigator** ⭐
 
 **Powered by Charity Navigator**
@@ -722,6 +773,62 @@ This project complies with Charity Navigator's API Terms of Use, including:
 - ⏳ Bulk data access application pending approval
 - Will enable comprehensive analysis of nonprofit political activity
 - Integration planned upon approval
+
+---
+
+### **fecfile - Python FEC Filing Parser** ⭐
+
+**Python library for parsing Federal Election Commission (FEC) electronic filings**
+
+**Repository:** https://github.com/esonderegger/fecfile  
+**Author:** Evan Sonderegger  
+**License:** MIT License (open source)  
+**Language:** Python  
+**Purpose:** Parse FEC electronic filing formats (ASCII, CSV, JSON)
+
+**What it does:**
+- **Parse .fec files**: Converts FEC electronic filing format to structured data
+- **Multiple output formats**: CSV, JSON, and Python dictionaries
+- **Version support**: Handles multiple FEC filing format versions
+- **Data validation**: Validates filing structure and data types
+- **Command-line tool**: Easy conversion of .fec files without writing code
+- **Python API**: Programmatic access for custom ETL pipelines
+
+**Use Cases:**
+- Converting FEC bulk data downloads to CSV/JSON for analysis
+- Building campaign finance databases from raw FEC filings
+- ETL pipelines for loading FEC data into SQL/NoSQL databases
+- Data validation and quality checking of FEC submissions
+- Research on campaign contributions and political spending
+
+**What we use it for:**
+- Parsing FEC bulk data downloads from https://www.fec.gov/data/browse-data/?tab=bulk-data
+- Converting .fec electronic filings to structured formats
+- Loading campaign finance data into our data lake
+- Cross-referencing campaign contributions with nonprofit advocacy spending
+
+**BibTeX:**
+```bibtex
+@software{fecfile,
+    title = {fecfile: Python FEC Filing Parser},
+    author = {Sonderegger, Evan},
+    year = {2024},
+    url = {https://github.com/esonderegger/fecfile},
+    license = {MIT},
+    note = {Python library for parsing Federal Election Commission electronic filing formats}
+}
+```
+
+**Related FEC Resources:**
+- **FEC Bulk Data:** https://www.fec.gov/data/browse-data/?tab=bulk-data
+- **FEC Data Catalog:** https://www.fec.gov/data/
+- **OpenFEC API:** https://api.open.fec.gov/developers/
+- **FEC Filing Formats:** https://www.fec.gov/data/browse-data/?tab=bulk-data
+
+**Attribution:**
+When using fecfile in your research or applications, cite both:
+1. The fecfile library (Evan Sonderegger)
+2. The Federal Election Commission as the original data source
 
 ---
 
