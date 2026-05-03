@@ -152,6 +152,24 @@ On your Intel Core Ultra 7 165H:
 | Context injection (100 bills) | ~20ms |
 | Full testimony analysis | ~80ms |
 
+### ⚡ Current LLM Performance Status
+
+**Two Options Available:**
+
+| Method | Status | Performance | Notes |
+|--------|--------|-------------|-------|
+| **Ollama llama3.2** | ✅ Working | ~2 min/bill | Subprocess call, slower but reliable |
+| **HuggingFace Transformers** | ⏳ Pending Access | ~30 sec/bill | Intel GPU optimized, 4x faster |
+
+**Why the difference?**
+- **Ollama**: Runs as separate process, requires subprocess communication overhead
+- **HuggingFace**: Direct library calls, optimized with Intel IPEX + OpenVINO
+
+**Current Recommendation:**
+- Use **Ollama** for testing and prototyping (working now)
+- **HuggingFace access pending** - will be significantly faster for batch processing
+- Both use the same `batch_analyze_bills.py` script
+
 ## ⚠️ Important Notes
 
 **Did You Download the Right Bundle?**

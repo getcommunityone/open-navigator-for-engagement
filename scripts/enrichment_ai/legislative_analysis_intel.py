@@ -583,13 +583,21 @@ class IntelOptimizedLLM:
         # Fallback to standard transformers
         logger.info("📦 Loading model with transformers...")
         from transformers import AutoModelForCausalLM, AutoTokenizer
+        import os
+        
+        # Get HF token from environment or .env file
+        hf_token = os.getenv('HF_TOKEN') or os.getenv('HUGGINGFACE_TOKEN')
         
         self.model = AutoModelForCausalLM.from_pretrained(
             self.model_name,
             device_map="auto",
-            torch_dtype="auto"
+            torch_dtype="auto",
+            token=hf_token  # Pass token for gated models
         )
-        self.tokenizer = AutoTokenizer.from_pretrained(self.model_name)
+        self.tokenizer = AutoTokenizer.from_pretrained(
+            self.model_name,
+            token=hf_token  # Pass token for gated models
+        )
         logger.info("✅ Model loaded")
     
     def extract_interest_groups(

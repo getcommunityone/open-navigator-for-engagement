@@ -10,17 +10,28 @@ This guide covers running high-performance legislative analysis using **DuckDB +
 
 ```bash
 # 1. Install Intel-optimized environment
-./scripts/intel_llm_setup.sh
+./scripts/enrichment_ai/intel_llm_setup.sh
 
 # 2. Activate environment
 source .venv-intel/bin/activate
 
-# 3. Run DuckDB VSS demo
-python scripts/duckdb_vss_demo.py
-
-# 4. Run legislative analysis
-python scripts/legislative_analysis_intel.py
+# 3. Run batch bill analysis
+python scripts/enrichment_ai/batch_analyze_bills.py --state GA --topic fluoride --limit 1
 ```
+
+## ⚡ Performance Status
+
+**Two LLM Options Available:**
+
+| Method | Status | Performance | Notes |
+|--------|--------|-------------|-------|
+| **Ollama llama3.2** | ✅ Working | ~2 min/bill | Subprocess call, slower but reliable |
+| **HuggingFace Transformers** | ⏳ Pending Access | ~30 sec/bill | Intel GPU optimized, 4x faster |
+
+**Current Recommendation:**
+- Use **Ollama** for testing (working but slower)
+- **HuggingFace access pending** - will be significantly faster with Intel Arc GPU optimization
+- Both use the same analysis pipeline
 
 ## 📁 Files
 

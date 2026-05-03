@@ -199,6 +199,13 @@ ollama pull llama3.2
 ollama run llama3.2 "Analyze this bill..."
 ```
 
+**⚡ Performance Note:**
+- **Current Status**: Ollama llama3.2 is working but slow via subprocess (~2 min/bill)
+- **Recommended**: HuggingFace Transformers with Intel optimization (~30 sec/bill)
+- **Reason**: Direct library calls are 4x faster than subprocess communication
+- **Use Ollama for**: Quick testing and prototyping
+- **Use HuggingFace for**: Production batch processing
+
 ## 🎯 Legislative Analysis Workflow
 
 ### Full Pipeline Example

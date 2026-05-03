@@ -91,7 +91,29 @@ print(f"Primary Rationale: {analysis.primary_rationale}")
 - [x] Bill text and abstracts available (151,130 bills)
 - [x] Bill versions data (3.3M versions with PDFs)
 - [x] Structured output schema
+### ⚡ Performance Status
 
+**Two LLM Options Available:**
+
+| Method | Status | Performance | Notes |
+|--------|--------|-------------|-------|
+| **Ollama llama3.2** | ✅ Working | ~2 min/bill | Subprocess call, slower but reliable |
+| **HuggingFace Transformers** | ⏳ Pending Access | ~30 sec/bill | Intel GPU optimized, 4x faster |
+
+**Current Recommendation:**
+- Use **Ollama** for now (working but slower)
+- **HuggingFace access pending** - will be significantly faster with Intel Arc GPU optimization
+- Both use the same analysis pipeline (`scripts/enrichment_ai/batch_analyze_bills.py`)
+
+**Usage:**
+```bash
+# Using Ollama (current, slower)
+python scripts/enrichment_ai/batch_analyze_bills.py --state GA --topic fluoride --limit 10
+
+# Using HuggingFace (once access granted, faster)
+export HF_TOKEN=your_token_here
+python scripts/enrichment_ai/batch_analyze_bills.py --state GA --topic fluoride --limit 10
+```
 ### 🔨 In Progress
 
 - [x] **Collect additional data sources**
