@@ -47,51 +47,55 @@ interface TrendingCause {
   popularity_rank?: number
 }
 
-// Featured story (hero banner)
-const FEATURED_STORY = {
-  title: 'World Press Freedom Day: 43,726 Nonprofits Fighting for Transparency',
-  subtitle: 'How local journalism and civic organizations are tracking government decisions across 925 jurisdictions',
-  image: 'https://images.unsplash.com/photo-1504711434969-e33886168f5c?w=1200&h=600&fit=crop',
-  category: 'Civic Engagement',
-  link: '/search?q=press+freedom'
-}
-
-// Top stories
-const TOP_STORIES = [
+// Featured stories for tabbed hero banner
+const FEATURED_STORIES = [
+  {
+    title: 'World Press Freedom Day: 43,726 Nonprofits Fighting for Transparency',
+    subtitle: 'How local journalism and civic organizations are tracking government decisions across 925 jurisdictions',
+    image: 'https://images.unsplash.com/photo-1504711434969-e33886168f5c?w=1200&h=600&fit=crop',
+    category: 'Civic Engagement',
+    link: '/search?q=press+freedom'
+  },
   {
     title: 'AI Policy Tracking: 15,000+ Government Decisions Analyzed',
-    topic: 'Artificial Intelligence',
-    image: 'https://images.unsplash.com/photo-1677442136019-21780ecad995?w=400&h=300&fit=crop',
+    subtitle: 'Machine learning models identify patterns in legislative discussions and regulatory frameworks',
+    image: 'https://images.unsplash.com/photo-1677442136019-21780ecad995?w=1200&h=600&fit=crop',
+    category: 'Artificial Intelligence',
     link: '/search?q=artificial+intelligence'
   },
   {
     title: 'Healthcare Access: Dental Clinics in Focus',
-    topic: 'Health & Medicine',
-    image: 'https://images.unsplash.com/photo-1588776814546-1ffcf47267a5?w=400&h=300&fit=crop',
+    subtitle: 'Tracking 8,500+ dental health providers and community health initiatives nationwide',
+    image: 'https://images.unsplash.com/photo-1588776814546-1ffcf47267a5?w=1200&h=600&fit=crop',
+    category: 'Health & Medicine',
     link: '/search?q=dental+health'
   },
   {
     title: 'Local Sports Funding: $2.5B in Community Programs',
-    topic: 'Sports & Recreation',
-    image: 'https://images.unsplash.com/photo-1461896836934-ffe607ba8211?w=400&h=300&fit=crop',
+    subtitle: 'Analysis of recreation budget allocation across 12,000+ jurisdictions',
+    image: 'https://images.unsplash.com/photo-1461896836934-ffe607ba8211?w=1200&h=600&fit=crop',
+    category: 'Sports & Recreation',
     link: '/search?q=sports+funding'
   },
   {
     title: 'Social Media Policies: Cities Set New Guidelines',
-    topic: 'Technology',
-    image: 'https://images.unsplash.com/photo-1611162617474-5b21e879e113?w=400&h=300&fit=crop',
+    subtitle: 'How local governments are establishing digital communication standards',
+    image: 'https://images.unsplash.com/photo-1611162617474-5b21e879e113?w=1200&h=600&fit=crop',
+    category: 'Technology',
     link: '/search?q=social+media+policy'
   },
   {
     title: 'Business Development: 8,000+ Economic Initiatives',
-    topic: 'Business & Markets',
-    image: 'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=400&h=300&fit=crop',
+    subtitle: 'Economic development zones, tax incentives, and small business support programs',
+    image: 'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=1200&h=600&fit=crop',
+    category: 'Business & Markets',
     link: '/search?q=business+development'
   },
   {
     title: 'Government Transparency: 12,000+ Hours of Meeting Video',
-    topic: 'Civic Engagement',
-    image: 'https://images.unsplash.com/photo-1555421689-d68471e189f2?w=400&h=300&fit=crop',
+    subtitle: 'Comprehensive archive of city council, county board, and planning commission meetings',
+    image: 'https://images.unsplash.com/photo-1555421689-d68471e189f2?w=1200&h=600&fit=crop',
+    category: 'Government',
     link: '/documents'
   },
 ]
@@ -102,11 +106,12 @@ export default function Home() {
   const [keyword, setKeyword] = useState('')
   const [searchScope, setSearchScope] = useState('city') // city, county, state, community (school), national
   const [selectedTab, setSelectedTab] = useState(0)
+  const [selectedStoryTab, setSelectedStoryTab] = useState(0)
   const [showSuggestions, setShowSuggestions] = useState(false)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [showLoginMenu, setShowLoginMenu] = useState(false)
   const { location, setLocation } = useLocationContext()
-  const { user, isAuthenticated, login, logout, isLoading } = useAuth()
+  const { user, isAuthenticated, login, isLoading } = useAuth()
 
   const DOCS_URL = import.meta.env.PROD ? 'https://www.communityone.com/docs/intro' : 'http://localhost:3000/docs/intro'
 
@@ -522,66 +527,153 @@ export default function Home() {
       {/* Featured Story Hero with gradient background */}
       <div className="py-8" style={{ background: 'linear-gradient(135deg, #F1F5F9 0%, #E8EEF2 100%)' }}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <Link to={FEATURED_STORY.link} className="group block animate-[slideUp_0.6s_ease-out]">
-          <div className="relative overflow-hidden rounded-2xl bg-gray-900 shadow-2xl h-[500px]">
-            <img
-              src={FEATURED_STORY.image}
-              alt={FEATURED_STORY.title}
-              className="absolute inset-0 w-full h-full object-cover opacity-60 group-hover:opacity-50 transition-opacity duration-300"
-            />
-            <div className="absolute inset-0 bg-gradient-to-t from-black via-black/50 to-transparent" />
-            <div className="absolute bottom-0 left-0 right-0 p-8 md:p-12">
-              <span className="inline-block px-3 py-1 bg-primary-600 text-white text-xs font-semibold uppercase rounded mb-4">
-                {FEATURED_STORY.category}
-              </span>
-              <h2 className="text-3xl md:text-5xl font-bold text-white mb-4 leading-tight group-hover:text-primary-300 transition-colors">
-                {FEATURED_STORY.title}
-              </h2>
-              <p className="text-lg md:text-xl text-gray-200 max-w-3xl">
-                {FEATURED_STORY.subtitle}
-              </p>
-            </div>
-          </div>
-        </Link>
-        </div>
-      </div>
-
-      {/* Top Stories Grid */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="text-center mb-8 animate-[slideUp_0.8s_ease-out_0.4s_both]">
-          <h2 className="text-3xl md:text-4xl font-bold mb-2" style={{ color: '#354F52' }}>Top Stories</h2>
-          <div className="w-24 h-1 bg-gradient-to-r from-[#52796F] to-[#84A98C] mx-auto rounded mb-4"></div>
-          <Link to="/search" className="text-primary-600 hover:text-primary-700 font-medium hover:underline hover:decoration-2 inline-flex items-center gap-1">
-            View All <ArrowRightIcon className="h-4 w-4" />
-          </Link>
-        </div>
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12 animate-[slideUp_0.8s_ease-out_0.6s_both]">
-          {TOP_STORIES.map((story, idx) => (
-            <Link
-              key={idx}
-              to={story.link}
-              className="group bg-white border border-gray-200 rounded-xl overflow-hidden hover:shadow-lg transition-all"
-            >
-              <div className="relative h-48 overflow-hidden bg-gray-100">
-                <img
-                  src={story.image}
-                  alt={story.title}
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                />
-                <div className="absolute top-3 left-3">
-                  <span className="px-2 py-1 bg-white/90 backdrop-blur-sm text-xs font-semibold text-gray-900 rounded">
-                    {story.topic}
-                  </span>
+          <div className="flex gap-6">
+            {/* Left Sidebar Navigation */}
+            <div className="hidden lg:block w-64 flex-shrink-0">
+              <div className="bg-white rounded-xl shadow-lg border border-gray-200 p-6 sticky top-24">
+                <h3 className="text-lg font-bold mb-4" style={{ color: '#354F52' }}>
+                  Quick Navigation
+                </h3>
+                <nav className="space-y-2">
+                  <Link
+                    to="/explore"
+                    className="flex items-center gap-3 px-4 py-3 rounded-lg text-gray-700 hover:bg-[#354F52] hover:text-white transition-all group"
+                  >
+                    <MapIcon className="h-5 w-5 group-hover:scale-110 transition-transform" />
+                    <span className="font-medium">Explore</span>
+                  </Link>
+                  <Link
+                    to="/search"
+                    className="flex items-center gap-3 px-4 py-3 rounded-lg text-gray-700 hover:bg-[#354F52] hover:text-white transition-all group"
+                  >
+                    <MagnifyingGlassIcon className="h-5 w-5 group-hover:scale-110 transition-transform" />
+                    <span className="font-medium">Search</span>
+                  </Link>
+                  <Link
+                    to="/policy-map"
+                    className="flex items-center gap-3 px-4 py-3 rounded-lg text-gray-700 hover:bg-[#354F52] hover:text-white transition-all group"
+                  >
+                    <ChartBarIcon className="h-5 w-5 group-hover:scale-110 transition-transform" />
+                    <span className="font-medium">Policy Map</span>
+                  </Link>
+                  <Link
+                    to="/nonprofits"
+                    className="flex items-center gap-3 px-4 py-3 rounded-lg text-gray-700 hover:bg-[#354F52] hover:text-white transition-all group"
+                  >
+                    <BuildingLibraryIcon className="h-5 w-5 group-hover:scale-110 transition-transform" />
+                    <span className="font-medium">Nonprofits</span>
+                  </Link>
+                </nav>
+                
+                {/* Additional Info */}
+                <div className="mt-6 pt-6 border-t border-gray-200">
+                  <div className="flex items-center gap-2 text-sm text-gray-600 mb-2">
+                    <BellAlertIcon className="h-4 w-4 text-primary-600" />
+                    <span className="font-semibold">Stay Updated</span>
+                  </div>
+                  <p className="text-xs text-gray-500 mb-3">
+                    Get alerts for new policies and opportunities in your area
+                  </p>
+                  <Link
+                    to="/explore"
+                    className="block w-full px-4 py-2 text-center bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors text-sm font-medium"
+                  >
+                    Get Started
+                  </Link>
                 </div>
               </div>
-              <div className="p-4">
-                <h3 className="font-bold text-gray-900 group-hover:text-primary-600 transition-colors line-clamp-2">
-                  {story.title}
-                </h3>
+            </div>
+
+            {/* Hero Story with Tabs */}
+            <div className="flex-1">
+              <div className="animate-[slideUp_0.6s_ease-out]">
+                {/* Story Tabs */}
+                <div className="flex gap-2 mb-4 overflow-x-auto pb-2">
+                  {FEATURED_STORIES.map((story, idx) => (
+                    <button
+                      key={idx}
+                      onClick={() => setSelectedStoryTab(idx)}
+                      className={`px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-all flex-shrink-0 ${
+                        selectedStoryTab === idx
+                          ? 'bg-[#354F52] text-white shadow-lg'
+                          : 'bg-white text-gray-700 border border-gray-300 hover:border-[#354F52] hover:text-[#354F52]'
+                      }`}
+                    >
+                      {story.category}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Story Content */}
+                <Link to={FEATURED_STORIES[selectedStoryTab].link} className="group block">
+                  <div className="relative overflow-hidden rounded-2xl bg-gray-900 shadow-2xl h-[500px]">
+                    <img
+                      src={FEATURED_STORIES[selectedStoryTab].image}
+                      alt={FEATURED_STORIES[selectedStoryTab].title}
+                      className="absolute inset-0 w-full h-full object-cover opacity-60 group-hover:opacity-50 transition-opacity duration-300"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black via-black/50 to-transparent" />
+                    <div className="absolute bottom-0 left-0 right-0 p-8 md:p-12">
+                      <span className="inline-block px-3 py-1 bg-primary-600 text-white text-xs font-semibold uppercase rounded mb-4">
+                        {FEATURED_STORIES[selectedStoryTab].category}
+                      </span>
+                      <h2 className="text-3xl md:text-5xl font-bold text-white mb-4 leading-tight group-hover:text-primary-300 transition-colors">
+                        {FEATURED_STORIES[selectedStoryTab].title}
+                      </h2>
+                      <p className="text-lg md:text-xl text-gray-200 max-w-3xl">
+                        {FEATURED_STORIES[selectedStoryTab].subtitle}
+                      </p>
+                    </div>
+
+                    {/* Story Navigation Arrows */}
+                    <button
+                      onClick={(e) => {
+                        e.preventDefault()
+                        setSelectedStoryTab((prev) => (prev === 0 ? FEATURED_STORIES.length - 1 : prev - 1))
+                      }}
+                      className="absolute left-4 top-1/2 -translate-y-1/2 w-12 h-12 bg-white/20 backdrop-blur-sm hover:bg-white/30 rounded-full flex items-center justify-center text-white transition-all"
+                      aria-label="Previous story"
+                    >
+                      <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                      </svg>
+                    </button>
+                    <button
+                      onClick={(e) => {
+                        e.preventDefault()
+                        setSelectedStoryTab((prev) => (prev === FEATURED_STORIES.length - 1 ? 0 : prev + 1))
+                      }}
+                      className="absolute right-4 top-1/2 -translate-y-1/2 w-12 h-12 bg-white/20 backdrop-blur-sm hover:bg-white/30 rounded-full flex items-center justify-center text-white transition-all"
+                      aria-label="Next story"
+                    >
+                      <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                      </svg>
+                    </button>
+
+                    {/* Story Indicators */}
+                    <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2">
+                      {FEATURED_STORIES.map((_, idx) => (
+                        <button
+                          key={idx}
+                          onClick={(e) => {
+                            e.preventDefault()
+                            setSelectedStoryTab(idx)
+                          }}
+                          className={`w-2 h-2 rounded-full transition-all ${
+                            selectedStoryTab === idx
+                              ? 'bg-white w-8'
+                              : 'bg-white/50 hover:bg-white/75'
+                          }`}
+                          aria-label={`Go to story ${idx + 1}`}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                </Link>
               </div>
-            </Link>
-          ))}
+            </div>
+          </div>
         </div>
       </div>
 
