@@ -85,6 +85,7 @@ export default function PolicyMap() {
   }, [searchParams]) // Re-run when URL changes
   
   // Sync topic changes TO URL (when user selects a topic)
+  // IMPORTANT: Don't include searchParams in deps to avoid circular updates
   useEffect(() => {
     const currentTopicInUrl = searchParams.get('topic') || ''
     
@@ -98,7 +99,8 @@ export default function PolicyMap() {
       // Clear topic from URL if selector is shown
       setSearchParams({}, { replace: true })
     }
-  }, [selectedTopic, showTopicSelector, setSearchParams, searchParams])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedTopic, showTopicSelector, setSearchParams])
   
   const [page, setPage] = useState(1)
   const limit = 20
@@ -158,8 +160,8 @@ export default function PolicyMap() {
       })
       return response.data
     },
-    enabled: viewMode === 'list', // Only fetch sessions in list view
-    staleTime: 5 * 60 * 1000, // 5 minutes - prevent refetch jitters
+    enabled: viewMode === 'list' && !showTopicSelector && (selectedTopic !== '' || searchQuery !== ''), // Only fetch when actually needed - run if topic OR search query
+    staleTime: 1 * 60 * 1000, // 1 minute - ensure filters are respected
     refetchOnWindowFocus: false,
     retry: 2,
     retryDelay: 1000,
@@ -188,8 +190,8 @@ export default function PolicyMap() {
       const response = await api.get(`/bills?${params}`)
       return response.data
     },
-    enabled: viewMode === 'list',
-    staleTime: 5 * 60 * 1000, // 5 minutes - prevent refetch jitters
+    enabled: viewMode === 'list' && !showTopicSelector && (selectedTopic !== '' || searchQuery !== ''), // Only fetch when actually needed - run if topic OR search query
+    staleTime: 1 * 60 * 1000, // 1 minute - ensure filters are respected
     refetchOnWindowFocus: false,
     retry: 2,
     retryDelay: 1000,
