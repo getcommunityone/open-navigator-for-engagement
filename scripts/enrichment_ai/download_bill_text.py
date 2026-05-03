@@ -53,6 +53,14 @@ from scripts.enrichment_ai.bill_text_sources import (
     can_fetch_bill_text
 )
 
+# Import Alabama scraper for fallback
+try:
+    from scripts.enrichment_ai.download_alabama_bills_scraper import AlabamaBillScraper
+    ALABAMA_SCRAPER_AVAILABLE = True
+except ImportError as e:
+    logger.warning(f"Alabama scraper not available: {e}")
+    ALABAMA_SCRAPER_AVAILABLE = False
+
 
 class BillTextDownloader:
     """Download and extract bill text from various sources"""
@@ -72,6 +80,10 @@ class BillTextDownloader:
         # Load existing bills data to get bill IDs and version URLs
         self.bills_file = output_dir / "bills_bills.parquet"
         self.versions_file = output_dir / "bills_versions.parquet"
+        
+        # Initialize Alabama scraper for fallback (lazy initialization)
+        self.alabama_scraper = None
+        self.alabama_scraper_initialized = False
         
     def load_bills_for_processing(
         self,
@@ -293,6 +305,67 @@ class BillTextDownloader:
             logger.debug(f"Georgia API error for {bill_number}: {e}")
             return None
     
+    def get_alabama_scraper(self):
+        """Get Alabama scraper instance (lazy initialization)"""
+        if not self.alabama_scraper_initialized:
+            self.alabama_scraper_initialized = True
+            
+            if not ALABAMA_SCRAPER_AVAILABLE:
+                logger.warning("Alabama scraper not available - install playwright: pip install playwright && playwright install")
+                return None
+            
+            try:
+                self.alabama_scraper = AlabamaBillScraper(headless=True)
+                logger.info("✅ Alabama scraper initialized")
+            except Exception as e:
+                logger.error(f"Failed to initialize Alabama scraper: {e}")
+                self.alabama_scraper = None
+        
+        return self.alabama_scraper
+    
+    def fetch_alabama_bill_text(
+        self,
+        bill_id: str,
+        bill_number: str,
+        session: str
+    ) -> Optional[Dict]:
+        """
+        Fetch bill text using Alabama scraper (fallback method)
+        
+        Used when direct URL download fails for Alabama bills
+        """
+        scraper = self.get_alabama_scraper()
+        if not scraper:
+            logger.debug(f"Alabama scraper not available for {bill_id}")
+            return None
+        
+        try:
+            logger.info(f"🔍 Using Alabama scraper for {bill_number} ({session})")
+            
+            # Use playwright to scrape
+            from playwright.sync_api import sync_playwright
+            
+            with sync_playwright() as p:
+                browser = p.chromium.launch(headless=scraper.headless)
+                page = browser.new_page()
+                
+                try:
+                    result = scraper.scrape_bill(page, bill_number, session)
+                    
+                    if result and result.get('text'):
+                        logger.success(f"✅ Alabama scraper extracted {result['word_count']} words")
+                        return result
+                    else:
+                        logger.warning(f"Alabama scraper found no text for {bill_number}")
+                        return None
+                        
+                finally:
+                    browser.close()
+                    
+        except Exception as e:
+            logger.error(f"Alabama scraper error for {bill_number}: {e}")
+            return None
+    
     def process_bills(
         self,
         bills_df: pl.DataFrame
@@ -335,6 +408,15 @@ class BillTextDownloader:
             if not result and document_url:
                 result = self.download_from_url(document_url, bill_id)
                 source_type = 'url_download'
+            
+            # Alabama fallback: Use scraper if URL download failed
+            if not result and state == 'AL' and bill_number:
+                session = row.get('session', '')
+                if session:
+                    logger.info(f"⚠️  URL download failed for Alabama bill, trying scraper...")
+                    result = self.fetch_alabama_bill_text(bill_id, bill_number, session)
+                    if result:
+                        source_type = 'alabama_scraper'
             
             # If still no result, skip
             if not result:

@@ -82,65 +82,123 @@ class AlabamaBillScraper:
         # Wait for page to stabilize
         time.sleep(2)
         
-    def scrape_bill(self, page: Page, bill_number: str, session: str) -> Optional[Dict]:
+    def construct_bill_url(self, bill_number: str, session: str, version: str = "int") -> str:
+        """Construct the bill URL from components"""
+        # Convert session to uppercase (e.g., 2017rs -> 2017RS)
+        session_upper = session.upper()
+        
+        # Construct URL: https://alison.legislature.state.al.us/SearchableInstruments/2017RS/PrintFiles/HB1-int.pdf
+        bill_clean = bill_number.replace(" ", "")
+        url = f"{self.base_url}/SearchableInstruments/{session_upper}/PrintFiles/{bill_clean}-{version}.pdf"
+        return url
+    
+    def scrape_bill(self, page: Page, bill_number: str, session: str, version_note: str = None) -> Optional[Dict]:
         """
         Scrape a single bill's text from ALISON
+        
+        Strategy:
+        1. Try to construct direct PDF URL (common patterns: -int, -eng, -enr)
+        2. If that fails, navigate to bill page and find PDF link
         
         Returns dict with bill text and metadata
         """
         try:
             logger.info(f"Scraping {bill_number} from {session}")
             
-            # Navigate to bill search
-            page.goto(f"{self.base_url}/bills")
-            page.wait_for_load_state("networkidle")
+            # Try common version suffixes
+            version_suffixes = ['int', 'eng', 'enr', 'sub']
             
-            # Enter bill number in search
+            for version in version_suffixes:
+                try:
+                    pdf_url = self.construct_bill_url(bill_number, session, version)
+                    logger.debug(f"Trying: {pdf_url}")
+                    
+                    # Try to download directly
+                    response = page.request.get(pdf_url)
+                    
+                    if response.status == 200 and response.headers.get('content-type', '').startswith('application/pdf'):
+                        logger.info(f"✅ Found PDF at: {pdf_url}")
+                        pdf_content = response.body()
+                        text = self.extract_text_from_pdf(pdf_content)
+                        
+                        if text:
+                            return {
+                                'text': text,
+                                'text_format': 'pdf',
+                                'source_url': pdf_url,
+                                'character_count': len(text),
+                                'word_count': len(text.split())
+                            }
+                except Exception as e:
+                    logger.debug(f"Version '{version}' not found: {e}")
+                    continue
+            
+            # If direct URL failed, try navigating to bill page
+            logger.debug(f"Direct URL failed, trying web navigation for {bill_number}")
+            return self.scrape_bill_via_navigation(page, bill_number, session)
+                
+        except Exception as e:
+            logger.error(f"Error scraping {bill_number}: {e}")
+            return None
+    
+    def scrape_bill_via_navigation(self, page: Page, bill_number: str, session: str) -> Optional[Dict]:
+        """Fallback: Navigate to bill page and find PDF link"""
+        try:
+            # Navigate to bills page with longer timeout
+            page.goto(f"{self.base_url}/bills", timeout=60000)
+            page.wait_for_load_state("domcontentloaded")
+            time.sleep(2)
+            
+            # Try to find and use search input
             try:
-                search_input = page.locator("input[placeholder*='bill' i], input[name*='search' i]").first
-                search_input.fill(bill_number)
-                search_input.press("Enter")
-                page.wait_for_load_state("networkidle")
-                time.sleep(1)
+                # Wait for search input to be available
+                search_input = page.wait_for_selector(
+                    "input[type='search'], input[placeholder*='search' i], input[name*='search' i]",
+                    timeout=10000
+                )
+                if search_input:
+                    search_input.fill(bill_number)
+                    search_input.press("Enter")
+                    page.wait_for_load_state("domcontentloaded")
+                    time.sleep(2)
             except Exception as e:
-                logger.warning(f"Could not search for {bill_number}: {e}")
+                logger.warning(f"Could not use search for {bill_number}: {e}")
                 return None
             
             # Look for PDF link
             try:
-                # Find link containing 'PDF' or ending in '.pdf'
-                pdf_link = page.locator("a[href$='.pdf'], a:has-text('PDF')").first
-                pdf_url = pdf_link.get_attribute("href")
-                
-                if not pdf_url.startswith("http"):
-                    pdf_url = self.base_url + pdf_url
-                
-                logger.info(f"Found PDF URL: {pdf_url}")
-                
-                # Download PDF
-                response = page.request.get(pdf_url)
-                if response.status == 200:
-                    pdf_content = response.body()
-                    text = self.extract_text_from_pdf(pdf_content)
+                pdf_link = page.wait_for_selector(
+                    "a[href$='.pdf'], a:has-text('PDF'), a:has-text('Download')",
+                    timeout=10000
+                )
+                if pdf_link:
+                    pdf_url = pdf_link.get_attribute("href")
                     
-                    if text:
-                        return {
-                            'text': text,
-                            'text_format': 'pdf',
-                            'source_url': pdf_url,
-                            'character_count': len(text),
-                            'word_count': len(text.split())
-                        }
-                else:
-                    logger.warning(f"PDF download failed: {response.status}")
-                    return None
+                    if not pdf_url.startswith("http"):
+                        pdf_url = self.base_url + pdf_url
                     
+                    logger.info(f"Found PDF URL via navigation: {pdf_url}")
+                    
+                    # Download PDF
+                    response = page.request.get(pdf_url)
+                    if response.status == 200:
+                        pdf_content = response.body()
+                        text = self.extract_text_from_pdf(pdf_content)
+                        
+                        if text:
+                            return {
+                                'text': text,
+                                'text_format': 'pdf',
+                                'source_url': pdf_url,
+                                'character_count': len(text),
+                                'word_count': len(text.split())
+                            }
             except Exception as e:
-                logger.warning(f"Could not find/download PDF for {bill_number}: {e}")
+                logger.warning(f"Could not find PDF link for {bill_number}: {e}")
                 return None
                 
         except Exception as e:
-            logger.error(f"Error scraping {bill_number}: {e}")
+            logger.warning(f"Navigation method failed for {bill_number}: {e}")
             return None
     
     def scrape_session(
@@ -154,7 +212,7 @@ class AlabamaBillScraper:
         
         Args:
             session: Session code (e.g., '2017rs', '2019fs')
-            bill_numbers: Specific bills to scrape (if None, scrapes all)
+            bill_numbers: Specific bills to scrape (if None, scrapes all from DB)
             limit: Maximum number of bills to scrape
         
         Returns:
@@ -169,22 +227,44 @@ class AlabamaBillScraper:
             try:
                 # If no bill numbers provided, try to get list from database
                 if not bill_numbers:
-                    logger.info(f"Loading bill numbers for {session} from database")
-                    bill_numbers = self.get_bills_for_session(session)
+                    logger.info(f"Loading bills for {session} from database")
+                    bills_info = self.get_bills_for_session(session)
+                else:
+                    # Convert bill numbers to info dicts
+                    bills_info = [{'bill_id': f'al-{session}-{bn.lower().replace(" ", "")}', 'bill_number': bn} 
+                                  for bn in bill_numbers]
                 
                 if limit:
-                    bill_numbers = bill_numbers[:limit]
+                    bills_info = bills_info[:limit]
                 
-                logger.info(f"Scraping {len(bill_numbers)} bills from {session}")
+                logger.info(f"Scraping {len(bills_info)} bills from {session}")
                 
-                for i, bill_number in enumerate(bill_numbers, 1):
-                    logger.info(f"[{i}/{len(bill_numbers)}] Processing {bill_number}")
+                for i, bill_info in enumerate(bills_info, 1):
+                    bill_number = bill_info['bill_number']
+                    bill_id = bill_info['bill_id']
                     
-                    result = self.scrape_bill(page, bill_number, session)
+                    logger.info(f"[{i}/{len(bills_info)}] Processing {bill_number}")
+                    
+                    # Try scraping with retry logic
+                    max_retries = 2
+                    result = None
+                    
+                    for attempt in range(max_retries):
+                        try:
+                            result = self.scrape_bill(page, bill_number, session)
+                            if result and result.get('text'):
+                                break
+                            elif attempt < max_retries - 1:
+                                logger.debug(f"Retry {attempt + 1}/{max_retries} for {bill_number}")
+                                time.sleep(2)
+                        except Exception as e:
+                            logger.warning(f"Attempt {attempt + 1} failed for {bill_number}: {e}")
+                            if attempt < max_retries - 1:
+                                time.sleep(2)
                     
                     if result and result.get('text'):
                         text_records.append({
-                            'bill_id': f"al-{session}-{bill_number.lower().replace(' ', '')}",
+                            'bill_id': bill_id,  # Use actual bill_id from database
                             'state': 'AL',
                             'session': session,
                             'bill_number': bill_number,
@@ -213,8 +293,8 @@ class AlabamaBillScraper:
         
         return pl.DataFrame(text_records)
     
-    def get_bills_for_session(self, session: str) -> List[str]:
-        """Get bill numbers for a session from our database"""
+    def get_bills_for_session(self, session: str) -> List[Dict[str, str]]:
+        """Get bill information for a session from our database"""
         try:
             import pyarrow.parquet as pq
             import pyarrow.compute as pc
@@ -235,11 +315,18 @@ class AlabamaBillScraper:
             session_bills = bills_df.filter(
                 (pl.col('state') == 'AL') & 
                 (pl.col('session') == session)
-            ).select('bill_number').unique()
+            ).select(['bill_id', 'bill_number']).unique()
             
-            bill_numbers = session_bills['bill_number'].to_list()
-            logger.info(f"Found {len(bill_numbers)} bills for session {session}")
-            return bill_numbers
+            # Convert to list of dicts
+            bills_list = []
+            for row in session_bills.iter_rows(named=True):
+                bills_list.append({
+                    'bill_id': row['bill_id'],
+                    'bill_number': row['bill_number']
+                })
+            
+            logger.info(f"Found {len(bills_list)} bills for session {session}")
+            return bills_list
             
         except Exception as e:
             logger.error(f"Error loading bills from database: {e}")

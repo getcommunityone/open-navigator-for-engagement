@@ -2,14 +2,25 @@
 
 This directory contains scripts for downloading and extracting bill text from various sources.
 
+## Prerequisites
+
+**For Alabama automatic fallback** (optional - only needed for AL bills with broken URLs):
+```bash
+# Install Playwright for web scraping
+pip install playwright
+playwright install chromium
+```
+
+Without Playwright, Alabama bills will skip the scraper fallback (but other states will work fine).
+
 ## Main Scripts
 
 ### `download_bill_text.py` - Primary Method (Fast)
 
-**Use this for most states.** Downloads bill text using direct URLs from OpenStates database.
+**Use this for all states.** Downloads bill text using direct URLs from OpenStates database, with automatic fallback to web scraping for Alabama.
 
 ```bash
-# Download all available states
+# Download all available states (including Alabama with automatic scraper fallback)
 python scripts/enrichment_ai/download_bill_text.py --states AL,GA,IN,MA,WA,WI
 
 # Download specific state and year
@@ -24,15 +35,16 @@ python scripts/enrichment_ai/download_bill_text.py --states AL,GA --year 2024
 - ✅ Works with PDF, HTML, and text formats
 - ✅ Tries state APIs first (Georgia SOAP API)
 - ✅ Falls back to URL downloads
-- ⚠️ Alabama 2017-2022 bills have broken URLs
+- ✅ **NEW: Automatically uses Alabama scraper for failed Alabama URLs**
+- ✅ Handles Alabama 2017-2022 bills with broken URLs automatically
 
 **Output:** `data/gold/bills_bill_text.parquet`
 
 ---
 
-### `download_alabama_bills_scraper.py` - Alabama Backup (Slow)
+### `download_alabama_bills_scraper.py` - Alabama Backup (Manual Use)
 
-**Use this for Alabama bills from 2017-2022 only.** Web scraper using Playwright to navigate ALISON website.
+**This is now automatically invoked by `download_bill_text.py` as a fallback.** You can also run it manually for Alabama-specific batch processing.
 
 ```bash
 # Scrape specific session (old bills with broken URLs)
@@ -48,9 +60,13 @@ python scripts/enrichment_ai/download_alabama_bills_scraper.py --session 2019rs 
 python scripts/enrichment_ai/download_alabama_bills_scraper.py --session 2017rs --limit 5 --show-browser
 ```
 
-**When to use:**
-- Alabama bills from 2017-2022 (old URLs broken)
-- When direct URL download fails with "Name or service not known"
+**When to use manually:**
+- Batch processing many Alabama bills from a specific session
+- Debugging scraper behavior with `--show-browser`
+- When you want more control over Alabama-specific downloads
+
+**Automatic use:**
+- `download_bill_text.py` automatically invokes this for AL bills when URL download fails
 
 **Features:**
 - ✅ Works when direct URLs are unavailable
@@ -69,7 +85,7 @@ python scripts/enrichment_ai/download_alabama_bills_scraper.py --session 2017rs 
 
 | State | Direct URLs | API Available | Notes |
 |-------|-------------|---------------|-------|
-| **AL** | ✅ 2024-2026<br>❌ 2017-2022 | ❌ | Old URLs broken, use scraper for 2017-2022 |
+| **AL** | ✅ 2024-2026<br>❌ 2017-2022 | ❌ | **Automatic scraper fallback** for broken old URLs |
 | **GA** | ✅ All years | ⚠️ Partial (404s) | Georgia SOAP API attempted, PDFs work |
 | **IN** | ✅ Varies | ❌ | Depends on session |
 | **MA** | ✅ Varies | ❌ | Depends on session |
