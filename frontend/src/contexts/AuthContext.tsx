@@ -83,9 +83,16 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
       if (response.ok) {
         const userData = await response.json();
+        console.log('✅ User data received:', {
+          email: userData.email,
+          full_name: userData.full_name,
+          oauth_provider: userData.oauth_provider,
+          avatar_url: userData.avatar_url ? `${userData.avatar_url.substring(0, 50)}...` : 'null',
+        });
         setUser(userData);
       } else {
         // Token is invalid
+        console.error('❌ Auth token invalid, status:', response.status);
         localStorage.removeItem('auth_token');
         setToken(null);
       }

@@ -172,11 +172,16 @@ export default function Layout() {
                       src={user.avatar_url} 
                       alt={user.full_name || user.email}
                       className="h-9 w-9 flex-shrink-0 rounded-full border-2 border-primary-500 shadow-sm object-cover"
+                      referrerPolicy="no-referrer"
                       onError={(e) => {
+                        console.error('❌ Avatar failed to load:', user.avatar_url);
                         // If image fails to load, hide it and show fallback
                         e.currentTarget.style.display = 'none';
                         const fallback = e.currentTarget.nextElementSibling as HTMLElement | null;
                         if (fallback) fallback.style.display = 'flex';
+                      }}
+                      onLoad={() => {
+                        console.log('✅ Avatar loaded successfully:', user.avatar_url?.substring(0, 50));
                       }}
                     />
                   ) : null}
@@ -209,7 +214,9 @@ export default function Layout() {
                             src={user.avatar_url} 
                             alt={user.full_name || user.email}
                             className="h-12 w-12 rounded-full border-2 border-primary-500"
+                            referrerPolicy="no-referrer"
                             onError={(e) => {
+                              console.error('❌ Avatar (dropdown) failed to load:', user.avatar_url);
                               // If image fails to load, hide it and show fallback
                               e.currentTarget.style.display = 'none';
                               const fallback = e.currentTarget.nextElementSibling as HTMLElement | null;
