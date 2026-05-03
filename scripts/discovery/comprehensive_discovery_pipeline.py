@@ -59,7 +59,9 @@ class ComprehensiveDiscoveryPipeline:
         youtube_api_key: Optional[str] = None,
         max_concurrent: int = 10,
         output_dir: str = "data/bronze/discovered_sources",
-        gold_output_dir: str = "data/gold"
+        gold_output_dir: str = "data/gold",
+        incremental: bool = True,
+        refresh_days: int = 90
     ):
         """
         Initialize discovery pipeline.
@@ -75,6 +77,11 @@ class ComprehensiveDiscoveryPipeline:
         self.output_dir.mkdir(parents=True, exist_ok=True)
         self.gold_output_dir = Path(gold_output_dir)
         self.gold_output_dir.mkdir(parents=True, exist_ok=True)
+        self.incremental = incremental
+        self.refresh_days = refresh_days
+        
+        # Load existing discoveries for incremental mode
+        self.existing_discoveries = self._load_existing_discoveries() if incremental else {}
         
         # Load LocalView channels if available
         self.localview_channels = self._load_localview_channels()
@@ -511,7 +518,7 @@ class ComprehensiveDiscoveryPipeline:
         
         logger.info(f"Saved CSV: {csv_file}")
         
-        # Save to Gold parquet with GEOID linking
+        # Save to Gold parquet with GEOID linking (merge with existing if incremental)
         gold_data = []
         for r in results:
             j = r['jurisdiction']
@@ -533,7 +540,31 @@ class ComprehensiveDiscoveryPipeline:
             })
         
         gold_file = self.gold_output_dir / f'jurisdictions_details.parquet'
-        pl.DataFrame(gold_data).write_parquet(gold_file)
+        
+        # Handle empty results
+        if not gold_data:
+            logger.warning("No new discoveries to save")
+            if gold_file.exists():
+                logger.info(f"Keeping existing gold file: {gold_file}")
+            return
+        
+        new_df = pl.DataFrame(gold_data)
+        
+        # Merge with existing if incremental mode
+        if self.incremental and gold_file.exists():
+            existing_df = pl.read_parquet(gold_file)
+            # Remove old entries for jurisdictions we just discovered
+            new_jurisdiction_ids = set(new_df['jurisdiction_id'].to_list())
+            existing_df = existing_df.filter(
+                ~pl.col('jurisdiction_id').is_in(new_jurisdiction_ids)
+            )
+            # Combine and sort
+            merged_df = pl.concat([existing_df, new_df]).sort('jurisdiction_id')
+            merged_df.write_parquet(gold_file)
+            logger.info(f"Merged {len(new_df)} new + {len(existing_df)} existing = {len(merged_df)} total")
+        else:
+            new_df.write_parquet(gold_file)
+        
         logger.info(f"Saved Gold parquet: {gold_file}")
     
     def _load_localview_channels(self) -> Dict[str, Dict]:
@@ -570,6 +601,50 @@ class ComprehensiveDiscoveryPipeline:
         """Get LocalView channel for a jurisdiction if available."""
         key = (name.lower(), state.upper())
         return self.localview_channels.get(key)
+    
+    def _load_existing_discoveries(self) -> Dict[str, Dict]:
+        """Load existing discoveries from gold parquet for incremental mode."""
+        gold_file = self.gold_output_dir / 'jurisdictions_details.parquet'
+        if not gold_file.exists():
+            logger.info("No existing discoveries found (first run)")
+            return {}
+        
+        try:
+            from datetime import datetime, timedelta
+            
+            df = pl.read_parquet(gold_file)
+            discoveries = {}
+            
+            # Create lookup: jurisdiction_id -> discovery data
+            for row in df.iter_rows(named=True):
+                jurisdiction_id = row['jurisdiction_id']
+                timestamp = row['discovery_timestamp']
+                
+                # Check if discovery is stale (older than refresh_days)
+                try:
+                    discovery_date = datetime.fromisoformat(timestamp)
+                    age_days = (datetime.now() - discovery_date).days
+                    is_stale = age_days > self.refresh_days
+                except:
+                    is_stale = True  # Invalid timestamp = stale
+                
+                discoveries[jurisdiction_id] = {
+                    'data': row,
+                    'is_stale': is_stale,
+                    'age_days': age_days if not is_stale else self.refresh_days + 1
+                }
+            
+            fresh_count = sum(1 for d in discoveries.values() if not d['is_stale'])
+            stale_count = len(discoveries) - fresh_count
+            
+            logger.info(f"Loaded {len(discoveries)} existing discoveries")
+            logger.info(f"  Fresh (< {self.refresh_days} days): {fresh_count}")
+            logger.info(f"  Stale (> {self.refresh_days} days): {stale_count}")
+            
+            return discoveries
+        except Exception as e:
+            logger.warning(f"Error loading existing discoveries: {e}")
+            return {}
     
     def load_jurisdictions(
         self,
@@ -629,7 +704,18 @@ class ComprehensiveDiscoveryPipeline:
             logger.warning("No jurisdictions found in gold tables, using sample list")
             jurisdictions = self._generate_sample_list(state_filter, top_n)
         
-        return jurisdictions
+        # Filter out already-discovered jurisdictions if incremental mode
+        if self.incremental and self.existing_discoveries:
+            original_count = len(jurisdictions)
+            jurisdictions = [
+                j for j in jurisdictions
+                if j.get('GEOID', '') not in self.existing_discoveries
+                or self.existing_discoveries[j['GEOID']]['is_stale']
+            ]
+            skipped = original_count - len(jurisdictions)
+            if skipped > 0:
+                logger.info(f"Incremental mode: Skipping {skipped} already-discovered jurisdictions")
+                logger.info(f"Will discover {len(jurisdictions)} new/stale jurisdictions")
         
         return jurisdictions
     
@@ -695,13 +781,26 @@ async def main():
         default=10,
         help='Maximum concurrent requests (default: 10)'
     )
+    parser.add_argument(
+        '--no-incremental',
+        action='store_true',
+        help='Disable incremental mode (rediscover all jurisdictions)'
+    )
+    parser.add_argument(
+        '--refresh-days',
+        type=int,
+        default=90,
+        help='Days before discovery is considered stale (default: 90)'
+    )
     
     args = parser.parse_args()
     
     # Initialize pipeline
     pipeline = ComprehensiveDiscoveryPipeline(
         youtube_api_key=args.youtube_api_key,
-        max_concurrent=args.max_concurrent
+        max_concurrent=args.max_concurrent,
+        incremental=not args.no_incremental,
+        refresh_days=args.refresh_days
     )
     
     # Load jurisdictions
@@ -720,15 +819,19 @@ async def main():
     results = await pipeline.discover_batch(jurisdictions)
     
     # Summary statistics
-    successful = sum(1 for r in results if r['status'] == 'success')
-    avg_completeness = sum(r.get('completeness_score', 0) for r in results) / len(results)
-    
     print("\n" + "="*80)
     print("DISCOVERY COMPLETE!")
     print("="*80)
-    print(f"Total jurisdictions: {len(results)}")
-    print(f"Successful: {successful} ({successful/len(results):.1%})")
-    print(f"Average completeness: {avg_completeness:.1%}")
+    
+    if results:
+        successful = sum(1 for r in results if r['status'] == 'success')
+        avg_completeness = sum(r.get('completeness_score', 0) for r in results) / len(results)
+        print(f"Total jurisdictions discovered: {len(results)}")
+        print(f"Successful: {successful} ({successful/len(results):.1%})")
+        print(f"Average completeness: {avg_completeness:.1%}")
+    else:
+        print("No new jurisdictions discovered (all already up-to-date)")
+    
     print(f"\nResults saved to: {pipeline.output_dir}")
     print("="*80)
 
