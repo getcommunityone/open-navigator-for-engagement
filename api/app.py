@@ -325,7 +325,7 @@ async def search_nonprofits(
     Example: /api/nonprofits?location=Tuscaloosa,AL&keyword=dental&ntee_code=E
     """
     try:
-        from discovery.nonprofit_discovery import NonprofitDiscovery
+        from scripts.datasources.irs.nonprofit_discovery import NonprofitDiscovery
         
         discovery = NonprofitDiscovery()
         results = []
@@ -487,7 +487,7 @@ async def ingest_census_data(background_tasks: BackgroundTasks):
     """
     try:
         def run_census_ingestion():
-            from discovery.census_ingestion import CensusGovernmentIngestion
+            from scripts.discovery.census_ingestion import CensusGovernmentIngestion
             import asyncio
             
             logger.info("Starting Census data ingestion...")
@@ -527,7 +527,7 @@ async def ingest_nces_data(background_tasks: BackgroundTasks):
     """
     try:
         def run_nces_ingestion():
-            from discovery.nces_ingestion import NCESSchoolDistrictIngestion
+            from scripts.discovery.nces_ingestion import NCESSchoolDistrictIngestion
             import asyncio
             
             logger.info("Starting NCES data ingestion...")
@@ -568,7 +568,7 @@ async def ingest_nonprofits(
     Example: POST /api/data/ingest/nonprofits?state=AL&ntee_codes=E&ntee_codes=E20
     """
     try:
-        from discovery.nonprofit_discovery import NonprofitDiscovery
+        from scripts.datasources.irs.nonprofit_discovery import NonprofitDiscovery
         
         discovery = NonprofitDiscovery()
         ntee_list = ntee_codes or ["E"]  # Default to health

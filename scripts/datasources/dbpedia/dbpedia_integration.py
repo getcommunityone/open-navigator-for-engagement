@@ -33,7 +33,7 @@ API DOCUMENTATION:
 - Examples: https://wiki.dbpedia.org/develop/datasets
 
 USAGE:
-    from discovery.dbpedia_integration import DBpediaLookup
+    from scripts.discovery.dbpedia_integration import DBpediaLookup
     
     dbpedia = DBpediaLookup()
     

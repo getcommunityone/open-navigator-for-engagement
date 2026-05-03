@@ -322,7 +322,7 @@ class ScraperAgent(BaseAgent):
         discovered = {"youtube": [], "facebook": []}
 
         try:
-            from discovery.social_media_discovery import SocialMediaDiscovery
+            from scripts.discovery.social_media_discovery import SocialMediaDiscovery
 
             async with SocialMediaDiscovery() as discovery:
                 social = await discovery.discover_from_website(
@@ -337,7 +337,7 @@ class ScraperAgent(BaseAgent):
 
         # Augment YouTube discovery using handle pattern search for better recall.
         try:
-            from discovery.youtube_channel_discovery import YouTubeChannelDiscovery
+            from scripts.discovery.youtube_channel_discovery import YouTubeChannelDiscovery
 
             async with YouTubeChannelDiscovery() as ydisc:
                 channels = await ydisc.discover_channels(

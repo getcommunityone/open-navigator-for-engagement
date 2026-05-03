@@ -408,7 +408,7 @@ pip install httpx beautifulsoup4
 
 # 2. Run standalone test
 cd /home/developer/projects/open-navigator
-python discovery/social_media_discovery.py
+python scripts/discovery/social_media_discovery.py
 
 # Expected output:
 # ✓ Found 3 social media links for Seattle
@@ -536,7 +536,7 @@ async def process_batch(cities, batch_size=50):
 
 1. **Test Social Media Discovery** ✅ READY TO RUN
    ```bash
-   python discovery/social_media_discovery.py
+   python scripts/discovery/social_media_discovery.py
    ```
 
 2. **Integrate with Pipeline**

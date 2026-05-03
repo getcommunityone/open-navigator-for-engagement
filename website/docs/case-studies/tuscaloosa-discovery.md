@@ -421,7 +421,7 @@ To start scraping Tuscaloosa meeting videos:
 
 ```bash
 # Option 1: Fetch from Vimeo channel
-python discovery/social_media_discovery.py --url "https://vimeo.com/tuscaloosacity" --type vimeo
+python scripts/discovery/social_media_discovery.py --url "https://vimeo.com/tuscaloosacity" --type vimeo
 
 # Option 2: Manual scraping
 python main.py scrape \
@@ -431,7 +431,7 @@ python main.py scrape \
   --platform generic
 
 # Option 3: Add to discovery pipeline
-python discovery/discovery_pipeline.py --jurisdiction "Tuscaloosa, AL"
+python scripts/discovery/discovery_pipeline.py --jurisdiction "Tuscaloosa, AL"
 ```
 
 ---

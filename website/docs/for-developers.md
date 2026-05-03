@@ -185,9 +185,9 @@ python -m discovery.census_ingestion
 python -m discovery.nces_ingestion
 
 # Pre-built datasets
-python discovery/meetingbank_ingestion.py
-python discovery/city_scrapers_urls.py
-python discovery/openstates_sources.py
+python scripts/discovery/meetingbank_ingestion.py
+python scripts/discovery/city_scrapers_urls.py
+python scripts/discovery/openstates_sources.py
 ```
 
 ### Scrape Meeting Minutes

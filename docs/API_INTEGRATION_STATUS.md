@@ -455,7 +455,7 @@ class GoogleCivicAPI:
    ```bash
    cd /home/developer/projects/open-navigator
    source .venv/bin/activate
-   python discovery/ballotpedia_integration.py
+   python scripts/discovery/ballotpedia_integration.py
    ```
 
 2. **Create Google Civic integration:**

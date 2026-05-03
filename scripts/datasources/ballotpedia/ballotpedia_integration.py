@@ -26,7 +26,7 @@ INTEGRATION METHODS (if you have paid API access):
 2. **Web Scraping** - Fallback for public data (rate-limited, respectful)
 
 OFFICIAL API (v3.0):
-    from discovery.ballotpedia_integration import BallotpediaAPI
+    from scripts.discovery.ballotpedia_integration import BallotpediaAPI
     
     api = BallotpediaAPI(api_key="your-api-key")
     
@@ -37,7 +37,7 @@ OFFICIAL API (v3.0):
     measures = await api.get_ballot_measures("Alabama", year=2024)
 
 WEB SCRAPING (Fallback):
-    from discovery.ballotpedia_integration import BallotpediaDiscovery
+    from scripts.discovery.ballotpedia_integration import BallotpediaDiscovery
     
     discovery = BallotpediaDiscovery()
     

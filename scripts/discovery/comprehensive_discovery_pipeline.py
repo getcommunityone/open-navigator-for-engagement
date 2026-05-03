@@ -14,13 +14,13 @@ Scale: 3,143 counties + 19,000+ cities = ~22,000 jurisdictions
 
 Usage:
     # Run for all jurisdictions
-    python discovery/comprehensive_discovery_pipeline.py --all
+    python scripts/discovery/comprehensive_discovery_pipeline.py --all
     
     # Run for specific state
-    python discovery/comprehensive_discovery_pipeline.py --state AL
+    python scripts/discovery/comprehensive_discovery_pipeline.py --state AL
     
     # Run for top 100 cities
-    python discovery/comprehensive_discovery_pipeline.py --top 100
+    python scripts/discovery/comprehensive_discovery_pipeline.py --top 100
 """
 import asyncio
 import argparse
@@ -33,10 +33,16 @@ from loguru import logger
 from tqdm.asyncio import tqdm
 import pandas as pd
 
-from discovery.url_discovery_agent import URLDiscoveryAgent
-from discovery.youtube_channel_discovery import YouTubeChannelDiscovery
-from discovery.social_media_discovery import SocialMediaDiscovery
-from discovery.platform_detector import detect_platform
+# Add parent directory to path for imports
+import sys
+from pathlib import Path
+if str(Path(__file__).parent.parent.parent) not in sys.path:
+    sys.path.insert(0, str(Path(__file__).parent.parent.parent))
+
+from scripts.discovery.url_discovery_agent import URLDiscoveryAgent
+from scripts.discovery.youtube_channel_discovery import YouTubeChannelDiscovery
+from scripts.discovery.social_media_discovery import SocialMediaDiscovery
+from scripts.discovery.platform_detector import detect_platform
 import httpx
 
 

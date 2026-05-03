@@ -25,9 +25,9 @@ except ImportError:
 
 from config import settings
 
-from discovery.census_ingestion import CensusGovernmentIngestion
-from discovery.gsa_domains import GSADomainList
-from discovery.url_discovery_agent import URLDiscoveryAgent, JurisdictionURL
+from census_ingestion import CensusGovernmentIngestion
+from gsa_domains import GSADomainList
+from url_discovery_agent import URLDiscoveryAgent, JurisdictionURL
 
 
 class DiscoveryPipeline:

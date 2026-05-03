@@ -369,7 +369,7 @@ NACo may provide:
 
 1. **Test ELGL Scraper** ✅ READY
    ```bash
-   python discovery/curated_sources.py
+   python scripts/discovery/curated_sources.py
    ```
 
 2. **Contact NACo**

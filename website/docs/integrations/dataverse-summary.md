@@ -52,7 +52,7 @@ echo "DATAVERSE_API_KEY=your_key" >> .env
 
 # 3. Download LocalView dataset
 source venv/bin/activate
-python discovery/localview_ingestion.py
+python scripts/discovery/localview_ingestion.py
 ```
 
 ### Without API Key (manual)
@@ -64,7 +64,7 @@ open https://dataverse.harvard.edu/dataset.xhtml?persistentId=doi:10.7910/DVN/NJ
 # 2. Save CSV files to data/cache/localview/
 
 # 3. Run ingestion
-python discovery/localview_ingestion.py
+python scripts/discovery/localview_ingestion.py
 ```
 
 ---
@@ -171,7 +171,7 @@ logger.error("✗ Checksum failed")
 
 2. **Download LocalView**
    ```bash
-   python discovery/localview_ingestion.py
+   python scripts/discovery/localview_ingestion.py
    ```
 
 3. **Verify Results**

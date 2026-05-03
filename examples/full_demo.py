@@ -17,7 +17,7 @@ from config.settings import settings
 # Import our new capabilities
 from extraction.summarizer import MeetingSummarizer, summarize_meeting_simple
 from alerts.keyword_monitor import KeywordAlertSystem, generate_alert_email
-from discovery.batch_processor import BatchProcessor, JurisdictionQuality
+from scripts.discovery.batch_processor import BatchProcessor, JurisdictionQuality
 from models.meeting_event import MeetingEvent, Classification, Location
 
 
@@ -314,7 +314,7 @@ def demo_batch_processing():
     
     print("\n💡 Example Usage:")
     print("""
-  from discovery.batch_processor import BatchProcessor
+  from scripts.discovery.batch_processor import BatchProcessor
   
   processor = BatchProcessor(batch_size=100)
   
@@ -395,7 +395,7 @@ def main():
     print("\n  Or explore individual capabilities:")
     print("  • python extraction/summarizer.py")
     print("  • python alerts/keyword_monitor.py")
-    print("  • python discovery/batch_processor.py")
+    print("  • python scripts/discovery/batch_processor.py")
 
 
 if __name__ == "__main__":

@@ -209,7 +209,7 @@ function OrganizationLogo({ org }) {
 
 ```bash
 # 1. Get base nonprofit data
-python discovery/irs_bmf_ingestion.py --state MA
+python scripts/discovery/irs_bmf_ingestion.py --state MA
 
 # 2. Enrich with website URLs (Every.org)
 python scripts/enrich_nonprofits_everyorg.py \

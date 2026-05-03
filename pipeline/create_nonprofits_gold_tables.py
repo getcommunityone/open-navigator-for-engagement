@@ -35,8 +35,8 @@ import sys
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from config.settings import settings
-from discovery.nonprofit_discovery import NonprofitDiscovery
-from discovery.irs_bmf_ingestion import IRSBMFIngestion
+from scripts.datasources.irs.nonprofit_discovery import NonprofitDiscovery
+from scripts.discovery.irs_bmf_ingestion import IRSBMFIngestion
 
 
 class NonprofitGoldTableCreator:

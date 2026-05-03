@@ -81,7 +81,7 @@ cd /home/developer/projects/open-navigator
 source venv/bin/activate
 
 # Run the ingestion script
-python discovery/localview_ingestion.py
+python scripts/discovery/localview_ingestion.py
 ```
 
 ### What the Script Does
@@ -175,9 +175,9 @@ Based on the LocalView research paper:
 
 ```bash
 # After running LocalView ingestion
-python discovery/meetingbank_ingestion.py      # 1,366 meetings
-python discovery/city_scrapers_urls.py         # 100-500 agencies
-python discovery/openstates_sources.py         # 50+ legislatures
+python scripts/discovery/meetingbank_ingestion.py      # 1,366 meetings
+python scripts/discovery/city_scrapers_urls.py         # 100-500 agencies
+python scripts/discovery/openstates_sources.py         # 50+ legislatures
 
 # Total: 7,000-12,000 verified URLs!
 ```
@@ -249,4 +249,4 @@ If you encounter issues:
 1. Check the dataset documentation on Harvard Dataverse
 2. Look at example data in the first few rows
 3. Update column mappings in the script accordingly
-4. Run with `--sample` flag first to test: `python discovery/localview_ingestion.py --sample`
+4. Run with `--sample` flag first to test: `python scripts/discovery/localview_ingestion.py --sample`

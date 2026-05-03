@@ -86,7 +86,7 @@ for batch_result in processor.process_all_jurisdictions():
           f"{batch_result.success_rate:.1f}% success")
 ```
 
-**Demo**: `python discovery/batch_processor.py`
+**Demo**: `python scripts/discovery/batch_processor.py`
 
 ---
 
@@ -132,7 +132,7 @@ python alerts/keyword_monitor.py
 
 **Batch Processing**:
 ```bash
-python discovery/batch_processor.py
+python scripts/discovery/batch_processor.py
 ```
 
 ---

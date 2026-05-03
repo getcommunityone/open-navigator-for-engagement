@@ -205,12 +205,12 @@ python -m discovery.census_ingestion
 python -m discovery.nces_ingestion
 
 # Pre-built meeting datasets
-python discovery/meetingbank_ingestion.py
-python discovery/city_scrapers_urls.py
-python discovery/openstates_sources.py
+python scripts/discovery/meetingbank_ingestion.py
+python scripts/discovery/city_scrapers_urls.py
+python scripts/discovery/openstates_sources.py
 
 # LocalView (requires Dataverse API key)
-python discovery/localview_ingestion.py
+python scripts/discovery/localview_ingestion.py
 ```
 
 **Scraping & Analysis**

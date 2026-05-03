@@ -193,7 +193,7 @@ Run the full pipeline:
 ./scripts/localview/update_all.sh
 
 # Load into database
-python discovery/localview_ingestion.py
+python scripts/discovery/localview_ingestion.py
 python pipeline/create_events_gold_tables.py
 ```
 

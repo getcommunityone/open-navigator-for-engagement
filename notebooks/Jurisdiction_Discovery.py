@@ -34,7 +34,7 @@ from pathlib import Path
 # Add project root to path
 sys.path.insert(0, "/Workspace/Repos/open-navigator")
 
-from discovery.discovery_pipeline import DiscoveryPipeline
+from scripts.discovery.discovery_pipeline import DiscoveryPipeline
 from config import settings
 from pyspark.sql.functions import col, count, avg, when
 import asyncio

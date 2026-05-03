@@ -138,7 +138,7 @@ These are NOT paid services! They host FREE public government data:
 ```bash
 # Download MeetingBank (1,366 meetings)
 pip install datasets
-python discovery/meetingbank_ingestion.py
+python scripts/discovery/meetingbank_ingestion.py
 
 # Cost: $0
 # Time: 2 hours
@@ -160,7 +160,7 @@ python discovery/meetingbank_ingestion.py
 ```bash
 # Clone CDP repos
 # Extract configuration URLs
-python discovery/external_url_datasets.py
+python scripts/discovery/external_url_datasets.py
 
 # Cost: $0
 # Time: 2 hours

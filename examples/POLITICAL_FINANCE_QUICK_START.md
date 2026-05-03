@@ -88,7 +88,7 @@ python examples/demo_grants_gov.py
 python examples/demo_political_influence.py --api-key YOUR_FEC_KEY
 
 # 3. Match to your nonprofits (if you have officer data)
-python discovery/fec_integration.py \
+python scripts/discovery/fec_integration.py \
   --api-key YOUR_FEC_KEY \
   --state MA \
   --employer "health"

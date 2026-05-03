@@ -42,7 +42,7 @@ def extract_video_urls_from_instance(instance: dict) -> Dict[str, str]:
 cd /home/developer/projects/open-navigator
 source venv/bin/activate
 pip install datasets  # HuggingFace datasets library
-python discovery/meetingbank_ingestion.py
+python scripts/discovery/meetingbank_ingestion.py
 ```
 
 ---
@@ -77,7 +77,7 @@ Complete integration that clones City Scrapers repos and extracts URLs from spid
 ```bash
 cd /home/developer/projects/open-navigator
 source venv/bin/activate
-python discovery/city_scrapers_urls.py
+python scripts/discovery/city_scrapers_urls.py
 ```
 
 **Note**: Requires `git` command available (for cloning repos)
@@ -121,7 +121,7 @@ Get your key free at: https://openstates.org/accounts/signup/
 cd /home/developer/projects/open-navigator
 source venv/bin/activate
 export OPENSTATES_API_KEY=your-key  # or add to .env
-python discovery/openstates_sources.py
+python scripts/discovery/openstates_sources.py
 ```
 
 ---
@@ -187,7 +187,7 @@ echo "OPENSTATES_API_KEY=your-key-here" >> .env
 ```bash
 cd /home/developer/projects/open-navigator
 source venv/bin/activate
-python discovery/meetingbank_ingestion.py
+python scripts/discovery/meetingbank_ingestion.py
 ```
 
 **Expected**: 1,366 meetings with video URLs loaded to Bronze layer (5 minutes)
@@ -196,7 +196,7 @@ python discovery/meetingbank_ingestion.py
 ```bash
 cd /home/developer/projects/open-navigator
 source venv/bin/activate
-python discovery/city_scrapers_urls.py
+python scripts/discovery/city_scrapers_urls.py
 ```
 
 **Expected**: 100-500 agency URLs loaded to Bronze layer (2-5 minutes, depends on git clone speed)
@@ -207,7 +207,7 @@ python discovery/city_scrapers_urls.py
 ```bash
 cd /home/developer/projects/open-navigator
 source venv/bin/activate
-python discovery/openstates_sources.py
+python scripts/discovery/openstates_sources.py
 ```
 
 **Expected**: 50-100 video sources loaded to Bronze layer (1 minute)

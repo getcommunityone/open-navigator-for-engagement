@@ -42,7 +42,7 @@ import os
 project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
-from discovery.fec_integration import OpenFECAPI
+from scripts.discovery.fec_integration import OpenFECAPI
 from pipeline.create_campaigns_gold_tables import CampaignsGoldTableCreator
 from loguru import logger
 

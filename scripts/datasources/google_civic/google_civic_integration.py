@@ -17,7 +17,7 @@ SETUP:
 3. Add to .env: GOOGLE_CIVIC_API_KEY=your-key
 
 USAGE:
-    from discovery.google_civic_integration import GoogleCivicAPI
+    from scripts.discovery.google_civic_integration import GoogleCivicAPI
     
     api = GoogleCivicAPI()
     

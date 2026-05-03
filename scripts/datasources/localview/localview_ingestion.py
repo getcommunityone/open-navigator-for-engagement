@@ -43,7 +43,7 @@ from config import settings
 
 # Import Dataverse client for API downloads
 try:
-    from discovery.dataverse_client import DataverseClient
+    from scripts.datasources.localview.dataverse_client import DataverseClient
     DATAVERSE_CLIENT_AVAILABLE = True
 except ImportError:
     DATAVERSE_CLIENT_AVAILABLE = False

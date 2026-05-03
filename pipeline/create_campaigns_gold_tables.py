@@ -46,7 +46,7 @@ import os
 # Add project root to path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from discovery.fec_integration import OpenFECAPI
+from scripts.discovery.fec_integration import OpenFECAPI
 
 
 class CampaignsGoldTableCreator:

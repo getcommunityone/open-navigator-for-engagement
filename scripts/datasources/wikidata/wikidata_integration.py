@@ -34,7 +34,7 @@ API DOCUMENTATION:
 - Query Examples: https://www.wikidata.org/wiki/Wikidata:SPARQL_query_service/queries/examples
 
 USAGE:
-    from discovery.wikidata_integration import WikidataQuery
+    from scripts.discovery.wikidata_integration import WikidataQuery
     
     wikidata = WikidataQuery()
     

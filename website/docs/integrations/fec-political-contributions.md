@@ -342,7 +342,7 @@ Our implementation includes automatic rate limiting (0.2s between requests).
 1. **Get API Key**: https://api.data.gov/signup/
 2. **Test Integration**:
    ```bash
-   python discovery/fec_integration.py --api-key YOUR_KEY --state MA --employer "Health"
+   python scripts/discovery/fec_integration.py --api-key YOUR_KEY --state MA --employer "Health"
    ```
 3. **Match to Your Data**:
    - Link FEC contributions to nonprofit officers

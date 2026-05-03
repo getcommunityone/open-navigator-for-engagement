@@ -10,10 +10,13 @@ scripts/
 ├── datasources/             # Data source integrations and connectors
 ├── deployment/              # Deployment and setup
 ├── development/             # Development and debugging tools
+├── discovery/               # Jurisdiction discovery and URL finding
 ├── enrichment/              # Data enrichment (990s, nonprofits)
 ├── enrichment_ai/           # AI-powered analysis (Intel Arc optimized)
 ├── huggingface/             # HuggingFace dataset management
-└── maintenance/             # Cleanup and maintenance
+├── localview/               # LocalView YouTube scraper
+├── maintenance/             # Cleanup and maintenance
+└── mcp/                     # Model Context Protocol server
 ```
 
 ## 📖 Folder Descriptions
@@ -29,14 +32,19 @@ Data processing pipelines, migrations, and aggregations.
 Data source integrations and API connectors organized by external data source.
 
 **Available Sources:**
-- `openstates/` - OpenStates legislative data (bills, legislators, votes) - 7 scripts
+- `openstates/` - OpenStates legislative data (bills, legislators, votes) - 8 scripts
+  - ✅ **openstates_sources.py** - API integration for jurisdiction discovery
 - `census/` - US Census Bureau geographic and demographic data - 3 scripts
-- `irs/` - IRS nonprofit data (Form 990, Business Master File) - 3 scripts
+- `irs/` - IRS nonprofit data (Form 990, Business Master File) - 5 scripts
+  - ✅ **nonprofit_discovery.py** - Discover nonprofits by location/category
 - `fec/` - Federal Election Commission campaign finance data - 2 scripts
+- `localview/` - LocalView meeting transcripts - 2 scripts
+  - ✅ **dataverse_client.py** - Harvard Dataverse API client
+- `google_data_commons/` - Google Data Commons demographic data - 1 script
+- `gsa/` - GSA .gov domain registry - 1 script
 - `ballotpedia/` - Ballotpedia election and official data - 1 script
 - `google_civic/` - Google Civic Information API - 1 script
 - `grants_gov/` - Grants.gov federal grant data - 1 script
-- `localview/` - LocalView meeting transcripts - 1 script
 - `meetingbank/` - MeetingBank research dataset - 1 script
 - `nces/` - National Center for Education Statistics - 1 script
 - `wikidata/` - Wikidata structured knowledge - 1 script
@@ -56,6 +64,25 @@ Development and debugging tools.
 - Debug scripts for scrapers
 - Testing utilities
 - Development helpers
+
+### [discovery/](discovery/)
+Comprehensive jurisdiction discovery and data source identification.
+- **Automated discovery** for all 90,000+ U.S. jurisdictions
+- Official website URL finding
+- YouTube channel discovery (with API integration)
+- Meeting platform detection (Legistar, Granicus, SuiteOne)
+- Social media account discovery
+- Agenda portal identification
+- Batch processing with quality metrics
+
+**Key Scripts:**
+- `comprehensive_discovery_pipeline.py` - Master discovery for all jurisdictions
+- `youtube_channel_discovery.py` - Find municipal YouTube channels
+- `platform_detector.py` - Detect meeting platforms
+- `social_media_discovery.py` - Find social media accounts
+- `batch_processor.py` - Process thousands of jurisdictions
+
+See [discovery/README_NONPROFIT_DISCOVERY.md](discovery/README_NONPROFIT_DISCOVERY.md) for details.
 
 ### [enrichment/](enrichment/)
 Scripts to enrich nonprofit data with additional metadata.

@@ -17,7 +17,7 @@ from pathlib import Path
 # Add project root to path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from discovery.grants_gov_integration import GrantsGovAPI, GrantMatcher
+from scripts.discovery.grants_gov_integration import GrantsGovAPI, GrantMatcher
 import pandas as pd
 from loguru import logger
 
@@ -126,7 +126,7 @@ def demo_match_to_state():
     if not ma_nonprofits_file.exists():
         print(f"⚠️  Massachusetts nonprofit data not found at: {ma_nonprofits_file}")
         print("   Run this first to generate MA data:")
-        print("   python -c \"from discovery.irs_bmf_ingestion import IRSBMFIngestion; bmf = IRSBMFIngestion(); ma_df = bmf.download_state_file('MA'); ma_df.to_parquet('data/gold/states/MA/nonprofits_organizations.parquet')\"")
+        print("   python -c \"from scripts.discovery.irs_bmf_ingestion import IRSBMFIngestion; bmf = IRSBMFIngestion(); ma_df = bmf.download_state_file('MA'); ma_df.to_parquet('data/gold/states/MA/nonprofits_organizations.parquet')\"")
         return
     
     # Load MA nonprofits

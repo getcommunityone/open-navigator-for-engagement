@@ -117,7 +117,7 @@ def compare_states():
    python scripts/enrich_nonprofits_bigquery.py --state AL
    
 3. To regenerate from IRS BMF:
-   python -c "from discovery.irs_bmf_ingestion import IRSBMFIngestion; \\
+   python -c "from scripts.discovery.irs_bmf_ingestion import IRSBMFIngestion; \\
               bmf = IRSBMFIngestion(); \\
               df = bmf.download_state_file('AL'); \\
               df.to_parquet('data/gold/states/AL/nonprofits_organizations.parquet')"

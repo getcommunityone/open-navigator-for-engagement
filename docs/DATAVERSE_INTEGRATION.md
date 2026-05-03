@@ -64,7 +64,7 @@ Implements all IQSS best practices:
 3. **Run ingestion**:
    ```bash
    source venv/bin/activate
-   python discovery/localview_ingestion.py
+   python scripts/discovery/localview_ingestion.py
    ```
 
 The script will automatically:
@@ -94,7 +94,7 @@ The script will automatically:
 3. **Run ingestion**:
    ```bash
    source venv/bin/activate
-   python discovery/localview_ingestion.py
+   python scripts/discovery/localview_ingestion.py
    ```
 
 ---
@@ -338,7 +338,7 @@ open https://dataverse.harvard.edu/loginpage.xhtml
 ```bash
 # Delete cached file and retry
 rm -rf data/cache/dataverse/doi_10.7910_DVN_NJTBEM/
-python discovery/localview_ingestion.py
+python scripts/discovery/localview_ingestion.py
 ```
 
 ### Error: "Request timeout"
@@ -419,7 +419,7 @@ client = DataverseClient(timeout=300)  # 5 minutes
 
 3. **Download LocalView**
    ```bash
-   python discovery/localview_ingestion.py
+   python scripts/discovery/localview_ingestion.py
    ```
 
 4. **Verify Results**

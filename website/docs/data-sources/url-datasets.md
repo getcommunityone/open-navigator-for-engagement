@@ -102,7 +102,7 @@ open https://dataverse.harvard.edu/dataset.xhtml?persistentId=doi:10.7910/DVN/NJ
 # Save to: data/cache/localview/
 
 # Then load to Bronze layer
-python discovery/external_url_datasets.py
+python scripts/discovery/external_url_datasets.py
 ```
 
 ### Priority 2: Use CDP Deployments (HIGHEST QUALITY)

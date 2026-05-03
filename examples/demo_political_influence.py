@@ -21,9 +21,9 @@ from pathlib import Path
 # Add project root to path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from discovery.fec_integration import OpenFECAPI, PoliticalContributionMatcher
-from discovery.voter_data_integration import PoliticalContextEnricher
-from discovery.grants_gov_integration import GrantsGovAPI, GrantMatcher
+from scripts.discovery.fec_integration import OpenFECAPI, PoliticalContributionMatcher
+from scripts.discovery.voter_data_integration import PoliticalContextEnricher
+from scripts.discovery.grants_gov_integration import GrantsGovAPI, GrantMatcher
 import pandas as pd
 from loguru import logger
 

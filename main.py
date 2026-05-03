@@ -234,7 +234,7 @@ def discover_jurisdictions(limit: Optional[int], state: Optional[str], jurisdict
     
     # Check for PySpark
     try:
-        from discovery.discovery_pipeline import PYSPARK_AVAILABLE
+        from scripts.discovery.discovery_pipeline import PYSPARK_AVAILABLE
         if not PYSPARK_AVAILABLE:
             click.echo("❌ PySpark not installed!")
             click.echo("   For full discovery with data storage, install:")
@@ -247,7 +247,7 @@ def discover_jurisdictions(limit: Optional[int], state: Optional[str], jurisdict
         return
     
     async def run_discovery():
-        from discovery.discovery_pipeline import DiscoveryPipeline
+        from scripts.discovery.discovery_pipeline import DiscoveryPipeline
         
         pipeline = DiscoveryPipeline()
         

@@ -100,7 +100,7 @@ received = pd.read_parquet("data/gold/states/MA/grants_revenue_sources.parquet")
 ### Search for Oral Health Grants
 
 ```bash
-python discovery/grants_gov_integration.py \
+python scripts/discovery/grants_gov_integration.py \
   --oral-health \
   --output data/gold/grants
 ```
@@ -108,7 +108,7 @@ python discovery/grants_gov_integration.py \
 ### Custom Search
 
 ```bash
-python discovery/grants_gov_integration.py \
+python scripts/discovery/grants_gov_integration.py \
   --keyword "fluoridation" \
   --funding-category HL \
   --agency HHS \
@@ -276,7 +276,7 @@ else:
 
 1. **Test the integration**:
    ```bash
-   python discovery/grants_gov_integration.py --oral-health
+   python scripts/discovery/grants_gov_integration.py --oral-health
    ```
 
 2. **Schedule regular updates**:
