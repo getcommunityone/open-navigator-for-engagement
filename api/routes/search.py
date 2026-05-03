@@ -1443,8 +1443,8 @@ def search_jurisdictions(query: str, state: Optional[str] = None, city: Optional
     return all_results[offset:offset + limit]
 
 
-@router.get("/api/search")
-@router.get("/api/search/", include_in_schema=False)
+@router.get("/search")
+@router.get("/search/", include_in_schema=False)
 async def unified_search(
     q: Optional[str] = Query(None, description="Search query (optional - browse by filters if omitted)"),
     types: Optional[str] = Query(None, description="Comma-separated result types: contacts,meetings,organizations,causes,jurisdictions"),
@@ -1640,7 +1640,7 @@ async def unified_search(
         )
 
 
-@router.get("/api/search/suggest")
+@router.get("/search/suggest")
 async def search_suggestions(
     q: str = Query(..., min_length=1, description="Partial search query"),
     limit: int = Query(5, ge=1, le=20, description="Maximum suggestions")

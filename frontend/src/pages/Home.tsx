@@ -50,6 +50,16 @@ interface TrendingCause {
 // Featured stories for tabbed hero banner
 const FEATURED_STORIES = [
   {
+    type: 'hero',
+    title: 'CommunityOne',
+    subtitle: 'Track Local Decisions. Take Action.',
+    description: 'Follow leaders, charities, and causes in your community.',
+    stats: '925 jurisdictions • 43.7K nonprofits • 362 leaders • 650+ causes • 100% free',
+    category: 'Home',
+    link: '/'
+  },
+  {
+    type: 'story',
     title: 'World Press Freedom Day: 43,726 Nonprofits Fighting for Transparency',
     subtitle: 'How local journalism and civic organizations are tracking government decisions across 925 jurisdictions',
     image: 'https://images.unsplash.com/photo-1504711434969-e33886168f5c?w=1200&h=600&fit=crop',
@@ -57,6 +67,7 @@ const FEATURED_STORIES = [
     link: '/search?q=press+freedom'
   },
   {
+    type: 'story',
     title: 'AI Policy Tracking: 15,000+ Government Decisions Analyzed',
     subtitle: 'Machine learning models identify patterns in legislative discussions and regulatory frameworks',
     image: 'https://images.unsplash.com/photo-1677442136019-21780ecad995?w=1200&h=600&fit=crop',
@@ -64,6 +75,7 @@ const FEATURED_STORIES = [
     link: '/search?q=artificial+intelligence'
   },
   {
+    type: 'story',
     title: 'Healthcare Access: Dental Clinics in Focus',
     subtitle: 'Tracking 8,500+ dental health providers and community health initiatives nationwide',
     image: 'https://images.unsplash.com/photo-1588776814546-1ffcf47267a5?w=1200&h=600&fit=crop',
@@ -71,6 +83,7 @@ const FEATURED_STORIES = [
     link: '/search?q=dental+health'
   },
   {
+    type: 'story',
     title: 'Local Sports Funding: $2.5B in Community Programs',
     subtitle: 'Analysis of recreation budget allocation across 12,000+ jurisdictions',
     image: 'https://images.unsplash.com/photo-1461896836934-ffe607ba8211?w=1200&h=600&fit=crop',
@@ -78,6 +91,7 @@ const FEATURED_STORIES = [
     link: '/search?q=sports+funding'
   },
   {
+    type: 'story',
     title: 'Social Media Policies: Cities Set New Guidelines',
     subtitle: 'How local governments are establishing digital communication standards',
     image: 'https://images.unsplash.com/photo-1611162617474-5b21e879e113?w=1200&h=600&fit=crop',
@@ -85,6 +99,7 @@ const FEATURED_STORIES = [
     link: '/search?q=social+media+policy'
   },
   {
+    type: 'story',
     title: 'Business Development: 8,000+ Economic Initiatives',
     subtitle: 'Economic development zones, tax incentives, and small business support programs',
     image: 'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=1200&h=600&fit=crop',
@@ -92,6 +107,7 @@ const FEATURED_STORIES = [
     link: '/search?q=business+development'
   },
   {
+    type: 'story',
     title: 'Government Transparency: 12,000+ Hours of Meeting Video',
     subtitle: 'Comprehensive archive of city council, county board, and planning commission meetings',
     image: 'https://images.unsplash.com/photo-1555421689-d68471e189f2?w=1200&h=600&fit=crop',
@@ -104,7 +120,7 @@ export default function Home() {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const [keyword, setKeyword] = useState('')
-  const [searchScope, setSearchScope] = useState('city') // city, county, state, community (school), national
+  const [searchScope, setSearchScope] = useState('city') // city, county, state, community (school)
   const [selectedTab, setSelectedTab] = useState(0)
   const [selectedStoryTab, setSelectedStoryTab] = useState(0)
   const [showSuggestions, setShowSuggestions] = useState(false)
@@ -143,27 +159,40 @@ export default function Home() {
         return null;
       }
       
-      const url = '/search/';
-      const params: any = {
-        q: keyword,
-        types: 'causes,contacts,organizations',
-        limit: 3
-      };
-      
-      // Add state filter if location is set
-      if (location && location.state) {
-        params.state = location.state;
-        console.log('📍 [Home] Filtering by state:', location.state);
+      try {
+        const url = '/search/';
+        const params: any = {
+          q: keyword,
+          types: 'causes,contacts,organizations',
+          limit: 3
+        };
+        
+        // Add state filter if location is set
+        if (location && location.state) {
+          params.state = location.state;
+          console.log('📍 [Home] Filtering by state:', location.state);
+        }
+        
+        console.log('📤 [Home] API Request:', url, params);
+        const response = await api.get(url, { params });
+        console.log('📥 [Home] API Response:', response.data);
+        console.log('📊 [Home] Total results:', response.data.total_results);
+        return response.data;
+      } catch (error: any) {
+        console.error('❌ [Home] Search preview error:', error);
+        console.error('❌ [Home] Error details:', {
+          message: error.message,
+          response: error.response,
+          status: error.response?.status,
+          data: error.response?.data
+        });
+        throw error;
       }
-      
-      console.log('📤 [Home] API Request:', url, params);
-      const response = await api.get(url, { params });
-      console.log('📥 [Home] API Response:', response.data);
-      console.log('📊 [Home] Total results:', response.data.total_results);
-      return response.data;
     },
     enabled: keyword.length >= 2 && showSuggestions,
-    staleTime: 1000
+    staleTime: 1000,
+    retry: 1, // Only retry once on error
+    retryDelay: 1000
   });
 
   // Log when preview results change
@@ -218,25 +247,23 @@ export default function Home() {
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault()
-    if (keyword || location) {
+    console.log('🔍 [Home] Search submitted:', { keyword, location: location?.state, searchScope });
+    
+    if (keyword.trim()) {
       const params = new URLSearchParams()
-      if (keyword) params.set('search', keyword)
-      if (searchScope) params.set('scope', searchScope)
+      params.set('q', keyword.trim())
       
-      // Add location context based on scope
-      if (location) {
-        if (searchScope === 'state' || searchScope === 'county' || searchScope === 'city' || searchScope === 'community') {
-          params.set('state', location.state)
-        }
-        if (searchScope === 'county' || searchScope === 'city' || searchScope === 'community') {
-          if (location.county) params.set('county', location.county)
-        }
-        if (searchScope === 'city' || searchScope === 'community') {
-          params.set('city', location.city)
-        }
+      // Add location context if available
+      if (location && location.state) {
+        params.set('state', location.state)
+        console.log('📍 [Home] Adding state filter:', location.state);
       }
       
-      navigate(`/documents?${params.toString()}`)
+      const searchUrl = `/search?${params.toString()}`;
+      console.log('🚀 [Home] Navigating to:', searchUrl);
+      navigate(searchUrl)
+    } else {
+      console.warn('⚠️ [Home] Search submitted with empty keyword');
     }
   }
 
@@ -276,6 +303,21 @@ export default function Home() {
     }
   }
 
+  // Smooth scroll to section with offset for sticky header
+  const scrollToSection = (sectionId: string) => {
+    const element = document.getElementById(sectionId)
+    if (element) {
+      const offset = 80 // Account for sticky header (h-20 = 80px)
+      const elementPosition = element.getBoundingClientRect().top
+      const offsetPosition = elementPosition + window.pageYOffset - offset
+
+      window.scrollTo({
+        top: offsetPosition,
+        behavior: 'smooth'
+      })
+    }
+  }
+
   return (
     <div className="min-h-screen bg-white">
       {/* Navigation Header */}
@@ -283,49 +325,63 @@ export default function Home() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-20">
             {/* Logo */}
-            <Link to="/" className="flex items-center gap-3">
+            <a 
+              href="#" 
+              onClick={(e) => {
+                e.preventDefault()
+                window.scrollTo({ top: 0, behavior: 'smooth' })
+              }}
+              className="flex items-center gap-3 cursor-pointer group"
+            >
               <img 
                 src="/communityone_logo.svg" 
                 alt="CommunityOne Logo" 
                 className="h-12"
               />
-              <span className="text-xl font-bold" style={{ color: '#354F52' }}>
-                Open Navigator
-              </span>
-            </Link>
+              <div className="flex flex-col">
+                <span className="text-xl font-bold" style={{ color: '#354F52' }}>
+                  Open Navigator
+                </span>
+                <span className="text-xs text-gray-500 -mt-1 group-hover:text-[#354F52] transition-colors">
+                  The open path to everything local
+                </span>
+              </div>
+            </a>
 
             {/* Desktop Navigation Links - Centered with underline */}
             <div className="hidden md:flex items-center gap-8">
-              <Link 
-                to="/" 
-                className="text-sm font-medium text-[#354F52] transition-colors pb-1 border-b-2 border-[#354F52]"
+              <button 
+                onClick={() => scrollToSection('features')} 
+                className="text-sm font-medium text-gray-600 hover:text-[#354F52] transition-colors pb-1 border-b-2 border-transparent hover:border-[#354F52] cursor-pointer"
               >
-                Home
-              </Link>
-              <Link 
-                to="/explore" 
+                Features
+              </button>
+              <button 
+                onClick={() => scrollToSection('how-it-works')} 
+                className="text-sm font-medium text-gray-600 hover:text-[#354F52] transition-colors pb-1 border-b-2 border-transparent hover:border-[#354F52] cursor-pointer"
+              >
+                How It Works
+              </button>
+              <button 
+                onClick={() => scrollToSection('impact')} 
+                className="text-sm font-medium text-gray-600 hover:text-[#354F52] transition-colors pb-1 border-b-2 border-transparent hover:border-[#354F52] cursor-pointer"
+              >
+                Impact
+              </button>
+              <a 
+                href={DOCS_URL}
+                target="_blank"
+                rel="noopener noreferrer"
                 className="text-sm font-medium text-gray-600 hover:text-[#354F52] transition-colors pb-1 border-b-2 border-transparent hover:border-[#354F52]"
               >
-                Explore
-              </Link>
-              <Link 
-                to="/search" 
+                Documentation
+              </a>
+              <a 
+                href="mailto:johnbowyer@communityone.com" 
                 className="text-sm font-medium text-gray-600 hover:text-[#354F52] transition-colors pb-1 border-b-2 border-transparent hover:border-[#354F52]"
               >
-                Search
-              </Link>
-              <Link 
-                to="/policy-map" 
-                className="text-sm font-medium text-gray-600 hover:text-[#354F52] transition-colors pb-1 border-b-2 border-transparent hover:border-[#354F52]"
-              >
-                Policy Map
-              </Link>
-              <Link 
-                to="/nonprofits" 
-                className="text-sm font-medium text-gray-600 hover:text-[#354F52] transition-colors pb-1 border-b-2 border-transparent hover:border-[#354F52]"
-              >
-                Nonprofits
-              </Link>
+                Contact
+              </a>
             </div>
 
             {/* Desktop CTA Button */}
@@ -355,7 +411,7 @@ export default function Home() {
                 <div className="relative">
                   <button
                     onClick={() => setShowLoginMenu(!showLoginMenu)}
-                    className="px-6 py-2.5 text-white rounded-lg transition-colors text-sm font-semibold flex items-center gap-2"
+                    className="h-[42px] px-6 text-white rounded-lg transition-colors text-sm font-semibold flex items-center gap-2"
                     style={{ backgroundColor: '#354F52' }}
                     onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#2e4346'}
                     onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#354F52'}
@@ -412,7 +468,7 @@ export default function Home() {
               )}
               <Link
                 to="/explore"
-                className="px-6 py-2.5 rounded-lg text-white font-semibold hover:shadow-lg transition-all"
+                className="h-[42px] px-6 rounded-lg text-white font-semibold hover:shadow-lg transition-all flex items-center"
                 style={{ backgroundColor: '#354F52' }}
               >
                 Explore Now
@@ -438,88 +494,81 @@ export default function Home() {
         {mobileMenuOpen && (
           <div className="md:hidden border-t border-gray-200 bg-white">
             <div className="px-4 py-3 space-y-1">
-              <Link
-                to="/"
-                className="block px-4 py-3 rounded-lg text-base font-medium bg-[#354F52] text-white"
-                onClick={() => setMobileMenuOpen(false)}
+              <button
+                className="block w-full text-left px-4 py-3 rounded-lg text-base font-medium text-gray-700 hover:bg-gray-100"
+                onClick={() => {
+                  scrollToSection('features')
+                  setMobileMenuOpen(false)
+                }}
               >
-                Home
-              </Link>
-              <Link
-                to="/explore"
+                Features
+              </button>
+              <button
+                className="block w-full text-left px-4 py-3 rounded-lg text-base font-medium text-gray-700 hover:bg-gray-100"
+                onClick={() => {
+                  scrollToSection('how-it-works')
+                  setMobileMenuOpen(false)
+                }}
+              >
+                How It Works
+              </button>
+              <button
+                className="block w-full text-left px-4 py-3 rounded-lg text-base font-medium text-gray-700 hover:bg-gray-100"
+                onClick={() => {
+                  scrollToSection('impact')
+                  setMobileMenuOpen(false)
+                }}
+              >
+                Impact
+              </button>
+              <a
+                href={DOCS_URL}
+                target="_blank"
+                rel="noopener noreferrer"
                 className="block px-4 py-3 rounded-lg text-base font-medium text-gray-700 hover:bg-gray-100"
                 onClick={() => setMobileMenuOpen(false)}
               >
-                Explore
-              </Link>
-              <Link
-                to="/search"
+                Documentation
+              </a>
+              <a
+                href="mailto:johnbowyer@communityone.com"
                 className="block px-4 py-3 rounded-lg text-base font-medium text-gray-700 hover:bg-gray-100"
                 onClick={() => setMobileMenuOpen(false)}
               >
-                Search
-              </Link>
-              <Link
-                to="/policy-map"
-                className="block px-4 py-3 rounded-lg text-base font-medium text-gray-700 hover:bg-gray-100"
-                onClick={() => setMobileMenuOpen(false)}
-              >
-                Policy Map
-              </Link>
-              <Link
-                to="/nonprofits"
-                className="block px-4 py-3 rounded-lg text-base font-medium text-gray-700 hover:bg-gray-100"
-                onClick={() => setMobileMenuOpen(false)}
-              >
-                Nonprofits
-              </Link>
+                Contact
+              </a>
             </div>
           </div>
         )}
       </nav>
 
-      {/* Trending Topics Bar with gradient background */}
-      <div className="border-b border-gray-200" style={{ background: 'linear-gradient(135deg, #F1F5F9 0%, #E8EEF2 100%)' }}>
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
-          <div className="flex items-center gap-2 text-xs text-gray-600 mb-2">
-            <FireIcon className="h-4 w-4 text-orange-500" />
-            <span className="font-semibold uppercase">Trending Causes</span>
-            <span className="text-gray-400">({trendingTopics.length} from database)</span>
-          </div>
-          {/* First row of topics */}
-          <div className="flex flex-wrap gap-2 mb-2">
-            {trendingTopics.slice(0, 6).map((topic: TrendingCause) => (
+      {/* Trending Topics Bar - Compact and Professional */}
+      <div className="border-b border-gray-200 bg-white">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2">
+          <div className="flex items-center gap-3">
+            {/* Trending Icon */}
+            <FireIcon className="h-5 w-5 text-orange-500 flex-shrink-0" />
+            
+            {/* Scrollable topics row */}
+            <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide flex-1">
+              {trendingTopics.slice(0, 12).map((topic: TrendingCause) => (
+                <button
+                  key={topic.name}
+                  onClick={() => navigate(`/search?q=${encodeURIComponent(topic.name)}`)}
+                  className="group inline-flex items-center gap-1.5 px-2.5 py-1 bg-gray-50 border border-gray-200 rounded-md hover:border-[#354F52] hover:bg-[#354F52]/5 transition-all text-xs whitespace-nowrap flex-shrink-0"
+                >
+                  <span className="font-medium text-gray-700 group-hover:text-[#354F52]">{topic.name}</span>
+                  <PlusIcon className="h-3 w-3 text-gray-400 group-hover:text-[#354F52]" />
+                </button>
+              ))}
               <button
-                key={topic.name}
-                onClick={() => navigate(`/search?q=${encodeURIComponent(topic.name)}`)}
-                className="group inline-flex items-center gap-1.5 px-3 py-1.5 bg-white border border-gray-300 rounded-full hover:border-primary-500 hover:bg-primary-50 transition-all text-sm"
+                onClick={() => navigate('/search')}
+                className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-[#354F52] text-white rounded-md hover:bg-[#2e4346] transition-all text-xs whitespace-nowrap flex-shrink-0"
               >
-                <span>{topic.icon}</span>
-                <span className="font-medium text-gray-700 group-hover:text-primary-700">{topic.name}</span>
-                <PlusIcon className="h-3.5 w-3.5 text-gray-400 group-hover:text-primary-600" />
+                <BellIcon className="h-3 w-3" />
+                <span className="font-medium">View All</span>
               </button>
-            ))}
-          </div>
-          {/* Second row of topics */}
-          <div className="flex flex-wrap gap-2">
-            {trendingTopics.slice(6, 12).map((topic: TrendingCause) => (
-              <button
-                key={topic.name}
-                onClick={() => navigate(`/search?q=${encodeURIComponent(topic.name)}`)}
-                className="group inline-flex items-center gap-1.5 px-3 py-1.5 bg-white border border-gray-300 rounded-full hover:border-primary-500 hover:bg-primary-50 transition-all text-sm"
-              >
-                <span>{topic.icon}</span>
-                <span className="font-medium text-gray-700 group-hover:text-primary-700">{topic.name}</span>
-                <PlusIcon className="h-3.5 w-3.5 text-gray-400 group-hover:text-primary-600" />
-              </button>
-            ))}
-            <button
-              onClick={() => navigate('/search')}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-primary-50 border border-primary-300 rounded-full hover:bg-primary-100 transition-all text-sm"
-            >
-              <BellIcon className="h-3.5 w-3.5 text-primary-600" />
-              <span className="font-medium text-primary-700">Follow Causes</span>
-            </button>
+            </div>
           </div>
         </div>
       </div>
@@ -530,11 +579,11 @@ export default function Home() {
           <div className="flex gap-6">
             {/* Left Sidebar Navigation */}
             <div className="hidden lg:block w-64 flex-shrink-0">
-              <div className="bg-white rounded-xl shadow-lg border border-gray-200 p-6 sticky top-24">
+              <div className="bg-white rounded-xl shadow-lg border border-gray-200 p-6 sticky top-24 h-[500px] flex flex-col">
                 <h3 className="text-lg font-bold mb-4" style={{ color: '#354F52' }}>
                   Quick Navigation
                 </h3>
-                <nav className="space-y-2">
+                <nav className="space-y-2 flex-1">
                   <Link
                     to="/explore"
                     className="flex items-center gap-3 px-4 py-3 rounded-lg text-gray-700 hover:bg-[#354F52] hover:text-white transition-all group"
@@ -566,7 +615,7 @@ export default function Home() {
                 </nav>
                 
                 {/* Additional Info */}
-                <div className="mt-6 pt-6 border-t border-gray-200">
+                <div className="mt-auto pt-6 border-t border-gray-200">
                   <div className="flex items-center gap-2 text-sm text-gray-600 mb-2">
                     <BellAlertIcon className="h-4 w-4 text-primary-600" />
                     <span className="font-semibold">Stay Updated</span>
@@ -584,54 +633,129 @@ export default function Home() {
               </div>
             </div>
 
-            {/* Hero Story with Tabs */}
+            {/* Hero Carousel with Search as First Item */}
             <div className="flex-1">
               <div className="animate-[slideUp_0.6s_ease-out]">
-                {/* Story Tabs */}
-                <div className="flex gap-2 mb-4 overflow-x-auto pb-2">
-                  {FEATURED_STORIES.map((story, idx) => (
-                    <button
-                      key={idx}
-                      onClick={() => setSelectedStoryTab(idx)}
-                      className={`px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-all flex-shrink-0 ${
-                        selectedStoryTab === idx
-                          ? 'bg-[#354F52] text-white shadow-lg'
-                          : 'bg-white text-gray-700 border border-gray-300 hover:border-[#354F52] hover:text-[#354F52]'
-                      }`}
-                    >
-                      {story.category}
-                    </button>
-                  ))}
-                </div>
-
-                {/* Story Content */}
-                <Link to={FEATURED_STORIES[selectedStoryTab].link} className="group block">
-                  <div className="relative overflow-hidden rounded-2xl bg-gray-900 shadow-2xl h-[500px]">
-                    <img
-                      src={FEATURED_STORIES[selectedStoryTab].image}
-                      alt={FEATURED_STORIES[selectedStoryTab].title}
-                      className="absolute inset-0 w-full h-full object-cover opacity-60 group-hover:opacity-50 transition-opacity duration-300"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black via-black/50 to-transparent" />
-                    <div className="absolute bottom-0 left-0 right-0 p-8 md:p-12">
-                      <span className="inline-block px-3 py-1 bg-primary-600 text-white text-xs font-semibold uppercase rounded mb-4">
-                        {FEATURED_STORIES[selectedStoryTab].category}
-                      </span>
-                      <h2 className="text-3xl md:text-5xl font-bold text-white mb-4 leading-tight group-hover:text-primary-300 transition-colors">
+                {/* Story Content - Conditional rendering based on type */}
+                {FEATURED_STORIES[selectedStoryTab].type === 'hero' ? (
+                  /* Hero Search Interface */
+                  <div className="relative overflow-hidden rounded-2xl shadow-2xl h-[500px] flex items-center justify-center p-8 md:p-12 bg-gradient-to-br from-gray-50 to-white">
+                    <div className="text-center max-w-4xl w-full">
+                      <p className="text-xl md:text-2xl text-gray-600 mb-4">
                         {FEATURED_STORIES[selectedStoryTab].title}
-                      </h2>
-                      <p className="text-lg md:text-xl text-gray-200 max-w-3xl">
-                        {FEATURED_STORIES[selectedStoryTab].subtitle}
                       </p>
+                      <h1 className="text-5xl md:text-7xl font-bold mb-6 leading-tight" style={{
+                        background: 'linear-gradient(135deg, #354F52 0%, #52796F 50%, #84A98C 100%)',
+                        WebkitBackgroundClip: 'text',
+                        WebkitTextFillColor: 'transparent',
+                        backgroundClip: 'text'
+                      }}>
+                        {FEATURED_STORIES[selectedStoryTab].subtitle}
+                      </h1>
+                      <p className="text-lg md:text-xl text-gray-600 mb-6">
+                        {FEATURED_STORIES[selectedStoryTab].description}
+                      </p>
+                      <p className="text-sm md:text-base text-gray-500 mb-8 font-medium">
+                        {FEATURED_STORIES[selectedStoryTab].stats}
+                      </p>
+                      
+                      {/* Search Box */}
+                      <div className="max-w-3xl mx-auto mb-6">
+                        <div className="bg-white rounded-xl shadow-lg border-2 border-gray-200 p-4">
+                          <form onSubmit={handleSearch}>
+                            {/* Search Input and Scope Dropdown on Same Line */}
+                            <div className="flex gap-2 mb-3 relative">
+                              <div className="flex-1 relative">
+                                <input
+                                  type="text"
+                                  placeholder="Search for topics, people, organizations, or causes..."
+                                  value={keyword}
+                                  onChange={handleKeywordChange}
+                                  onFocus={() => {
+                                    if (keyword.length >= 2) {
+                                      setShowSuggestions(true)
+                                    }
+                                  }}
+                                  onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
+                                  className="w-full px-4 py-2 text-base border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#354F52] focus:border-transparent text-gray-900"
+                                />
+                                
+                                {/* Error Display - Below Input */}
+                                {keyword.length >= 2 && previewError && (
+                                  <div className="absolute top-full left-0 right-0 mt-2 z-20 bg-red-50 border border-red-200 rounded-lg shadow-lg p-3">
+                                    <div className="flex items-start gap-2">
+                                      <svg className="h-5 w-5 text-red-400 flex-shrink-0 mt-0.5" viewBox="0 0 20 20" fill="currentColor">
+                                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                                      </svg>
+                                      <div>
+                                        <p className="text-sm font-medium text-red-800">Search Error</p>
+                                        <p className="text-xs text-red-600 mt-1">
+                                          {(previewError as any)?.response?.status === 404 
+                                            ? 'API endpoint not found. Server may still be starting.'
+                                            : 'Unable to fetch results. Please try again.'}
+                                        </p>
+                                      </div>
+                                    </div>
+                                  </div>
+                                )}
+                                
+                                {/* Loading Display - Below Input */}
+                                {keyword.length >= 2 && previewLoading && (
+                                  <div className="absolute top-full left-0 right-0 mt-2 z-20 bg-white border border-gray-200 rounded-lg shadow-lg p-3">
+                                    <div className="flex items-center gap-2">
+                                      <svg className="animate-spin h-4 w-4 text-[#354F52]" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                      </svg>
+                                      <span className="text-sm text-gray-600">Searching...</span>
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                              
+                              {/* Search Scope Dropdown */}
+                              {location ? (
+                                <select
+                                  value={searchScope}
+                                  onChange={(e) => setSearchScope(e.target.value)}
+                                  className="px-4 py-2 text-sm border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#354F52] focus:border-transparent bg-white text-gray-900 whitespace-nowrap"
+                                >
+                                  <option value="city">My City ({location.city})</option>
+                                  <option value="county">My County ({location.county || 'County'})</option>
+                                  <option value="state">My State ({location.state})</option>
+                                  <option value="community">School Board ({location.city})</option>
+                                </select>
+                              ) : null}
+                            </div>
+                            
+                            <div className="flex gap-2 items-center">
+                              <button
+                                onClick={() => setSelectedTab(1)}
+                                type="button"
+                                className="px-3 py-2 text-sm font-medium text-[#354F52] hover:text-[#52796F] transition-colors whitespace-nowrap"
+                              >
+                                📍 Find My Community
+                              </button>
+                              
+                              <button
+                                type="submit"
+                                className="flex-1 px-6 py-2 bg-[#354F52] text-white rounded-lg hover:bg-[#2e4346] transition-colors font-semibold shadow-lg text-sm"
+                              >
+                                Search
+                              </button>
+                            </div>
+                          </form>
+                        </div>
+                      </div>
                     </div>
 
-                    {/* Story Navigation Arrows */}
+                    {/* Navigation Arrows */}
                     <button
                       onClick={(e) => {
                         e.preventDefault()
                         setSelectedStoryTab((prev) => (prev === 0 ? FEATURED_STORIES.length - 1 : prev - 1))
                       }}
-                      className="absolute left-4 top-1/2 -translate-y-1/2 w-12 h-12 bg-white/20 backdrop-blur-sm hover:bg-white/30 rounded-full flex items-center justify-center text-white transition-all"
+                      className="absolute left-4 top-1/2 -translate-y-1/2 w-12 h-12 bg-white/20 backdrop-blur-sm hover:bg-white/30 rounded-full flex items-center justify-center text-gray-700 transition-all"
                       aria-label="Previous story"
                     >
                       <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -643,7 +767,7 @@ export default function Home() {
                         e.preventDefault()
                         setSelectedStoryTab((prev) => (prev === FEATURED_STORIES.length - 1 ? 0 : prev + 1))
                       }}
-                      className="absolute right-4 top-1/2 -translate-y-1/2 w-12 h-12 bg-white/20 backdrop-blur-sm hover:bg-white/30 rounded-full flex items-center justify-center text-white transition-all"
+                      className="absolute right-4 top-1/2 -translate-y-1/2 w-12 h-12 bg-white/20 backdrop-blur-sm hover:bg-white/30 rounded-full flex items-center justify-center text-gray-700 transition-all"
                       aria-label="Next story"
                     >
                       <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -662,23 +786,137 @@ export default function Home() {
                           }}
                           className={`w-2 h-2 rounded-full transition-all ${
                             selectedStoryTab === idx
-                              ? 'bg-white w-8'
-                              : 'bg-white/50 hover:bg-white/75'
+                              ? 'bg-gray-700 w-8'
+                              : 'bg-gray-400 hover:bg-gray-600'
                           }`}
                           aria-label={`Go to story ${idx + 1}`}
                         />
                       ))}
                     </div>
                   </div>
-                </Link>
+                ) : (
+                  /* Regular Story with Image */
+                  <Link to={FEATURED_STORIES[selectedStoryTab].link} className="group block">
+                    <div className="relative overflow-hidden rounded-2xl bg-gray-900 shadow-2xl h-[500px]">
+                      <img
+                        src={FEATURED_STORIES[selectedStoryTab].image}
+                        alt={FEATURED_STORIES[selectedStoryTab].title}
+                        className="absolute inset-0 w-full h-full object-cover opacity-60 group-hover:opacity-50 transition-opacity duration-300"
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black via-black/50 to-transparent" />
+                      <div className="absolute bottom-0 left-0 right-0 p-8 md:p-12">
+                        <h2 className="text-3xl md:text-5xl font-bold text-white mb-4 leading-tight group-hover:text-primary-300 transition-colors">
+                          {FEATURED_STORIES[selectedStoryTab].title}
+                        </h2>
+                        <p className="text-lg md:text-xl text-gray-200 max-w-3xl">
+                          {FEATURED_STORIES[selectedStoryTab].subtitle}
+                        </p>
+                      </div>
+
+                      {/* Story Navigation Arrows */}
+                      <button
+                        onClick={(e) => {
+                          e.preventDefault()
+                          setSelectedStoryTab((prev) => (prev === 0 ? FEATURED_STORIES.length - 1 : prev - 1))
+                        }}
+                        className="absolute left-4 top-1/2 -translate-y-1/2 w-12 h-12 bg-white/20 backdrop-blur-sm hover:bg-white/30 rounded-full flex items-center justify-center text-white transition-all"
+                        aria-label="Previous story"
+                      >
+                        <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                        </svg>
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          e.preventDefault()
+                          setSelectedStoryTab((prev) => (prev === FEATURED_STORIES.length - 1 ? 0 : prev + 1))
+                        }}
+                        className="absolute right-4 top-1/2 -translate-y-1/2 w-12 h-12 bg-white/20 backdrop-blur-sm hover:bg-white/30 rounded-full flex items-center justify-center text-white transition-all"
+                        aria-label="Next story"
+                      >
+                        <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                        </svg>
+                      </button>
+
+                      {/* Story Indicators */}
+                      <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2">
+                        {FEATURED_STORIES.map((_, idx) => (
+                          <button
+                            key={idx}
+                            onClick={(e) => {
+                              e.preventDefault()
+                              setSelectedStoryTab(idx)
+                            }}
+                            className={`w-2 h-2 rounded-full transition-all ${
+                              selectedStoryTab === idx
+                                ? 'bg-white w-8'
+                                : 'bg-white/50 hover:bg-white/75'
+                            }`}
+                            aria-label={`Go to story ${idx + 1}`}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  </Link>
+                )}
               </div>
             </div>
           </div>
         </div>
       </div>
 
+      {/* Find My Community Modal */}
+      {selectedTab === 1 && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => setSelectedTab(0)}>
+          <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-2xl w-full" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-2xl font-bold" style={{ color: '#354F52' }}>
+                Find My Community
+              </h2>
+              <button
+                onClick={() => setSelectedTab(0)}
+                className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
+                aria-label="Close"
+              >
+                <XMarkIcon className="h-6 w-6 text-gray-500" />
+              </button>
+            </div>
+            <p className="text-gray-600 mb-6">
+              Enter your address to find local organizations, city councils, county boards, school districts, and charities near you
+            </p>
+            <AddressLookup onLocationFound={handleAddressFound} />
+            
+            {/* Success message */}
+            {location && (
+              <div className="mt-8 p-6 bg-green-50 border-2 border-green-200 rounded-xl">
+                <div className="flex items-start gap-3 mb-4">
+                  <CheckCircleIcon className="h-6 w-6 text-green-600 flex-shrink-0 mt-0.5" />
+                  <div className="flex-1">
+                    <h3 className="text-lg font-bold text-green-900 mb-1">
+                      Location Set Successfully!
+                    </h3>
+                    <p className="text-green-700">
+                      You're all set for <strong>{location.city}, {location.state}</strong>. You can now search for topics in your community.
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setSelectedTab(0)}
+                  className="w-full bg-green-600 hover:bg-green-700 text-white px-6 py-4 rounded-lg font-semibold text-lg flex items-center justify-center gap-2 transition-all shadow-lg hover:shadow-xl"
+                >
+                  <MagnifyingGlassIcon className="h-6 w-6" />
+                  Start Searching
+                  <ArrowRightIcon className="h-5 w-5" />
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Features Section */}
-      <section className="py-16 px-4 bg-white">
+      <section id="features" className="py-16 px-4 bg-white">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-12 animate-[slideUp_0.8s_ease-out_0.8s_both]">
             <h2 className="text-3xl md:text-4xl font-bold mb-2" style={{ color: '#354F52' }}>
@@ -820,6 +1058,133 @@ export default function Home() {
         </div>
       </section>
 
+      {/* How It Works Section */}
+      <section id="how-it-works" className="py-16 px-4 bg-gradient-to-br from-gray-50 to-gray-100">
+        <div className="max-w-7xl mx-auto">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl md:text-4xl font-bold mb-2" style={{ color: '#354F52' }}>
+              How It Works
+            </h2>
+            <div className="w-24 h-1 bg-gradient-to-r from-[#52796F] to-[#84A98C] mx-auto rounded mb-4"></div>
+            <p className="text-lg text-gray-600">
+              Three simple steps to stay engaged with your community
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl mx-auto">
+            {/* Step 1 */}
+            <div className="text-center">
+              <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-[#354F52] text-white text-2xl font-bold mb-4">
+                1
+              </div>
+              <h3 className="text-xl font-bold mb-3" style={{ color: '#354F52' }}>
+                Discover
+              </h3>
+              <p className="text-gray-600">
+                Search across 925 jurisdictions and 43,726 nonprofits to find topics, people, and causes that matter to you
+              </p>
+            </div>
+
+            {/* Step 2 */}
+            <div className="text-center">
+              <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-[#52796F] text-white text-2xl font-bold mb-4">
+                2
+              </div>
+              <h3 className="text-xl font-bold mb-3" style={{ color: '#354F52' }}>
+                Track
+              </h3>
+              <p className="text-gray-600">
+                Monitor legislation, meetings, and policy decisions with AI-powered analysis and real-time updates
+              </p>
+            </div>
+
+            {/* Step 3 */}
+            <div className="text-center">
+              <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-[#84A98C] text-white text-2xl font-bold mb-4">
+                3
+              </div>
+              <h3 className="text-xl font-bold mb-3" style={{ color: '#354F52' }}>
+                Engage
+              </h3>
+              <p className="text-gray-600">
+                Take action by contacting officials, supporting causes, and participating in local democracy
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Impact Section */}
+      <section id="impact" className="py-16 px-4 bg-white">
+        <div className="max-w-7xl mx-auto">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl md:text-4xl font-bold mb-2" style={{ color: '#354F52' }}>
+              Our Impact
+            </h2>
+            <div className="w-24 h-1 bg-gradient-to-r from-[#52796F] to-[#84A98C] mx-auto rounded mb-4"></div>
+            <p className="text-lg text-gray-600">
+              Making civic engagement accessible to everyone
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-12">
+            {/* Stat 1 */}
+            <div className="text-center">
+              <div className="text-4xl md:text-5xl font-bold mb-2" style={{ color: '#354F52' }}>
+                925
+              </div>
+              <div className="text-gray-600 font-medium">
+                Jurisdictions Tracked
+              </div>
+            </div>
+
+            {/* Stat 2 */}
+            <div className="text-center">
+              <div className="text-4xl md:text-5xl font-bold mb-2" style={{ color: '#52796F' }}>
+                43K+
+              </div>
+              <div className="text-gray-600 font-medium">
+                Nonprofits Indexed
+              </div>
+            </div>
+
+            {/* Stat 3 */}
+            <div className="text-center">
+              <div className="text-4xl md:text-5xl font-bold mb-2" style={{ color: '#84A98C' }}>
+                500K+
+              </div>
+              <div className="text-gray-600 font-medium">
+                Meeting Pages
+              </div>
+            </div>
+
+            {/* Stat 4 */}
+            <div className="text-center">
+              <div className="text-4xl md:text-5xl font-bold mb-2" style={{ color: '#4A90E2' }}>
+                13K+
+              </div>
+              <div className="text-gray-600 font-medium">
+                Legislative Bills
+              </div>
+            </div>
+          </div>
+
+          {/* Mission Statement */}
+          <div className="max-w-3xl mx-auto text-center bg-gradient-to-br from-gray-50 to-white border-2 border-gray-200 rounded-2xl p-8">
+            <p className="text-lg text-gray-700 leading-relaxed mb-4">
+              Open Navigator empowers communities by making local government transparent and accessible. 
+              We believe informed citizens create stronger democracies.
+            </p>
+            <Link
+              to="/explore"
+              className="inline-flex items-center gap-2 px-6 py-3 bg-[#354F52] text-white rounded-lg hover:bg-[#2e4346] transition-colors font-semibold"
+            >
+              Start Exploring <ArrowRightIcon className="h-5 w-5" />
+            </Link>
+          </div>
+        </div>
+      </section>
+
       {/* Search Section (Collapsible) */}
       <div className="bg-gray-50 py-12 border-t border-gray-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -890,8 +1255,45 @@ export default function Home() {
                               className="w-full px-4 py-3 text-lg border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent text-gray-900"
                             />
                             
+                            {/* Error Display */}
+                            {showSuggestions && previewError && (
+                              <div className="absolute z-10 w-full mt-2 bg-red-50 border border-red-200 rounded-lg shadow-xl p-4">
+                                <div className="flex items-start gap-3">
+                                  <div className="flex-shrink-0">
+                                    <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+                                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                                    </svg>
+                                  </div>
+                                  <div className="flex-1">
+                                    <h3 className="text-sm font-medium text-red-800">Search Error</h3>
+                                    <p className="mt-1 text-sm text-red-700">
+                                      {(previewError as any)?.response?.status === 404 
+                                        ? 'Search endpoint not found. The API may still be starting up.'
+                                        : 'Unable to fetch search results. Please try again.'}
+                                    </p>
+                                    <p className="mt-2 text-xs text-red-600">
+                                      Error details: {(previewError as any)?.message || 'Unknown error'}
+                                    </p>
+                                  </div>
+                                </div>
+                              </div>
+                            )}
+                            
+                            {/* Loading Display */}
+                            {showSuggestions && previewLoading && (
+                              <div className="absolute z-10 w-full mt-2 bg-white border border-gray-200 rounded-lg shadow-xl p-4">
+                                <div className="flex items-center justify-center gap-3">
+                                  <svg className="animate-spin h-5 w-5 text-primary-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                  </svg>
+                                  <span className="text-sm text-gray-600">Searching...</span>
+                                </div>
+                              </div>
+                            )}
+                            
                             {/* Rich Preview Dropdown with Grouped Results */}
-                            {showSuggestions && previewResults && previewResults.total_results > 0 && (
+                            {showSuggestions && !previewLoading && !previewError && previewResults && previewResults.total_results > 0 && (
                               <div className="absolute z-10 w-full mt-2 bg-white border border-gray-200 rounded-lg shadow-xl max-h-96 overflow-y-auto">
                                 
                                 {/* Causes Section */}

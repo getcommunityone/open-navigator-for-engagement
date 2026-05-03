@@ -104,15 +104,20 @@ export default function Layout() {
               )}
             </button>
 
-            <Link to="/" className="flex items-center gap-2 md:gap-3">
+            <Link to="/" className="flex items-center gap-2 md:gap-3 group">
               <img 
                 src="/communityone_logo.svg" 
                 alt="CommunityOne Logo" 
                 className="h-10 md:h-12"
               />
-              <h1 className="text-lg md:text-2xl font-bold" style={{ color: '#354F52' }}>
-                Open Navigator
-              </h1>
+              <div className="flex flex-col">
+                <h1 className="text-lg md:text-2xl font-bold" style={{ color: '#354F52' }}>
+                  Open Navigator
+                </h1>
+                <span className="hidden md:block text-xs text-gray-500 -mt-1 group-hover:text-[#354F52] transition-colors">
+                  The open path to everything local
+                </span>
+              </div>
             </Link>
           </div>
 
