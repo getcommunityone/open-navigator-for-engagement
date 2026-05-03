@@ -132,6 +132,7 @@ export default function UnifiedSearch() {
   const [debouncedQuery, setDebouncedQuery] = useState(query)
   
   const searchInputRef = useRef<HTMLInputElement>(null)
+  const searchContainerRef = useRef<HTMLFormElement>(null)
 
   // Debounce the query for autocomplete (300ms delay)
   useEffect(() => {
@@ -141,6 +142,22 @@ export default function UnifiedSearch() {
     
     return () => clearTimeout(timer)
   }, [query])
+
+  // Close suggestions dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (searchContainerRef.current && !searchContainerRef.current.contains(event.target as Node)) {
+        setShowSuggestions(false);
+      }
+    };
+
+    if (showSuggestions) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => {
+        document.removeEventListener('mousedown', handleClickOutside);
+      };
+    }
+  }, [showSuggestions]);
 
   // Initialize from URL parameters on mount
   useEffect(() => {
@@ -635,7 +652,7 @@ export default function UnifiedSearch() {
           <h1 className="text-3xl font-bold text-gray-900 mb-4">Search</h1>
           
           {/* Search Bar */}
-          <form onSubmit={handleSearch} className="relative">
+          <form onSubmit={handleSearch} className="relative" ref={searchContainerRef}>
             <div className="relative">
               <input
                 ref={searchInputRef}
@@ -646,7 +663,6 @@ export default function UnifiedSearch() {
                   setShowSuggestions(true)
                 }}
                 onFocus={() => setShowSuggestions(true)}
-                onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
                 placeholder="Search for people, meetings, organizations, causes..."
                 className="w-full px-12 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent text-lg text-gray-900"
               />

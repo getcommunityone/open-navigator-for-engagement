@@ -670,6 +670,49 @@ def load_contacts_search(conn, limit_states=None):
     cursor = conn.cursor()
     
     for state in states_to_load:
+        # Load state legislators (from OpenStates)
+        state_legislators_file = GOLD_DIR / "states" / state / "contacts_officials.parquet"
+        if state_legislators_file.exists():
+            df = pd.read_parquet(state_legislators_file)
+            
+            records = []
+            for _, row in df.iterrows():
+                chamber_label = "State Senator" if row.get('chamber') == 'upper' else "State Representative"
+                if row.get('district'):
+                    chamber_label = f"{chamber_label}, District {row.get('district')}"
+                
+                record = (
+                    row.get('full_name', ''),
+                    chamber_label,
+                    row.get('jurisdiction_name', state.upper()),  # organization_name
+                    None,  # organization_ein
+                    row.get('email'),
+                    row.get('phone'),
+                    row.get('address'),  # street_address
+                    None,  # city
+                    state,
+                    None,  # zip_code
+                    'state_legislator',  # role_type
+                    None,  # compensation
+                    None,  # hours_per_week
+                    'openstates',
+                    None,  # tax_year
+                    datetime.now()
+                )
+                records.append(record)
+            
+            if records:
+                execute_values(cursor, """
+                    INSERT INTO contacts_search 
+                    (name, title, organization_name, organization_ein, email, phone,
+                     street_address, city, state, zip_code, role_type, compensation,
+                     hours_per_week, source, tax_year, last_updated)
+                    VALUES %s
+                """, records)
+                
+                total_loaded += len(records)
+                logger.info(f"  Loaded {len(records):,} state legislators from {state}")
+        
         # Load local officials
         officials_file = GOLD_DIR / "states" / state / "contacts_local_officials.parquet"
         if officials_file.exists():

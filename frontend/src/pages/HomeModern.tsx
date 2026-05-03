@@ -1391,23 +1391,14 @@ export default function HomeModern() {
               Questions, feedback, or ideas? We'd love to hear from you.
               Report bugs, request features, or ask questions about jurisdiction coverage.
             </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <div className="flex justify-center">
               <a
-                href="https://github.com/getcommunityone/open-navigator-for-engagement/issues/new"
-                target="_blank"
-                rel="noopener noreferrer"
+                href="mailto:hello@communityone.com"
                 className="inline-flex items-center justify-center px-8 py-4 rounded-lg text-white font-semibold transition-all hover:shadow-lg"
                 style={{ backgroundColor: '#354F52' }}
               >
                 <EnvelopeIcon className="h-5 w-5 mr-2" />
-                Contact Us on GitHub
-              </a>
-              <a
-                href="mailto:johnbowyer@communityone.com"
-                className="inline-flex items-center justify-center px-8 py-4 rounded-lg bg-white border-2 text-[#354F52] font-semibold transition-all hover:bg-gray-50"
-                style={{ borderColor: '#354F52' }}
-              >
-                Email Us Directly
+                Email Us
               </a>
             </div>
             <p className="text-sm text-gray-500 mt-6">

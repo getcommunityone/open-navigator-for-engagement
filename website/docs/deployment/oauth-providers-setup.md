@@ -92,9 +92,9 @@ Replace `{provider}` with: `google`, `facebook`, `github`, or `huggingface`
 
 5. **Authorized redirect URIs:**
    ```
-   http://localhost:8000/auth/callback/google
-   https://www.communityone.com/auth/callback/google
-   https://your-space.hf.space/auth/callback/google
+   http://localhost:8000/api/auth/callback/google
+   https://www.communityone.com/api/auth/callback/google
+   https://your-space.hf.space/api/auth/callback/google
    ```
 
 6. Click **"CREATE"**
@@ -145,9 +145,9 @@ GOOGLE_CLIENT_SECRET=GOCSPX-your-secret-here
 
 2. **Valid OAuth Redirect URIs** (one per line):
    ```
-   http://localhost:8000/auth/callback/facebook
-   https://www.communityone.com/auth/callback/facebook
-   https://your-space.hf.space/auth/callback/facebook
+   http://localhost:8000/api/auth/callback/facebook
+   https://www.communityone.com/api/auth/callback/facebook
+   https://your-space.hf.space/api/auth/callback/facebook
    ```
 
 3. **Enable these settings:**
@@ -217,7 +217,7 @@ FACEBOOK_APP_SECRET=your-app-secret-here
 1. Fill in details:
    - **Application name:** `Open Navigator`
    - **Homepage URL:** `https://www.communityone.com`
-   - **Authorization callback URL:** `http://localhost:8000/auth/callback/github`
+   - **Authorization callback URL:** `http://localhost:8000/api/auth/callback/github`
 
 2. Click **"Register application"**
 
@@ -226,11 +226,11 @@ FACEBOOK_APP_SECRET=your-app-secret-here
 GitHub only allows ONE callback URL per OAuth app. For multiple environments:
 
 **Option 1:** Create separate apps for each environment
-- Local Dev app → `http://localhost:8000/auth/callback/github`
-- Production app → `https://www.communityone.com/auth/callback/github`
+- Local Dev app → `http://localhost:8000/api/auth/callback/github`
+- Production app → `https://www.communityone.com/api/auth/callback/github`
 
 **Option 2:** Use production URL only
-- Set: `https://www.communityone.com/auth/callback/github`
+- Set: `https://www.communityone.com/api/auth/callback/github`
 - For local dev, temporarily change to localhost during testing
 
 ### Step 4: Get Credentials
@@ -270,9 +270,9 @@ GITHUB_CLIENT_SECRET=your-client-secret-here
 
 2. **Redirect URIs** (add all):
    ```
-   http://localhost:8000/auth/callback/huggingface
-   https://www.communityone.com/auth/callback/huggingface
-   https://your-space.hf.space/auth/callback/huggingface
+   http://localhost:8000/api/auth/callback/huggingface
+   https://www.communityone.com/api/auth/callback/huggingface
+   https://your-space.hf.space/api/auth/callback/huggingface
    ```
 
 3. Click **"Create application"**
@@ -472,10 +472,10 @@ API_BASE_URL=http://www.communityone.com   # ❌ Wrong
 
 | Provider | Setup URL | Redirect URI Format |
 |----------|-----------|---------------------|
-| Google | [console.cloud.google.com](https://console.cloud.google.com/apis/credentials) | `/auth/callback/google` |
-| Facebook | [developers.facebook.com](https://developers.facebook.com/apps/) | `/auth/callback/facebook` |
-| GitHub | [github.com/settings/developers](https://github.com/settings/developers) | `/auth/callback/github` |
-| HuggingFace | [huggingface.co/settings/applications](https://huggingface.co/settings/applications) | `/auth/callback/huggingface` |
+| Google | [console.cloud.google.com](https://console.cloud.google.com/apis/credentials) | `/api/auth/callback/google` |
+| Facebook | [developers.facebook.com](https://developers.facebook.com/apps/) | `/api/auth/callback/facebook` |
+| GitHub | [github.com/settings/developers](https://github.com/settings/developers) | `/api/auth/callback/github` |
+| HuggingFace | [huggingface.co/settings/applications](https://huggingface.co/settings/applications) | `/api/auth/callback/huggingface` |
 
 ---
 

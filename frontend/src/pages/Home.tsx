@@ -1,5 +1,5 @@
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
-import React, { useState, Fragment, useEffect } from 'react'
+import React, { useState, Fragment, useEffect, useRef } from 'react'
 import { Tab } from '@headlessui/react'
 import { useQuery } from '@tanstack/react-query'
 import api from '../lib/api'
@@ -130,6 +130,7 @@ export default function Home() {
   const [showLoginMenu, setShowLoginMenu] = useState(false)
   const { location, setLocation } = useLocationContext()
   const { user, isAuthenticated, login, isLoading } = useAuth()
+  const searchContainerRef = useRef<HTMLDivElement>(null)
 
   const DOCS_URL = import.meta.env.PROD ? 'https://www.communityone.com/docs/intro' : 'http://localhost:3000/docs/intro'
   
@@ -144,6 +145,22 @@ export default function Home() {
       clearTimeout(timer);
     };
   }, [keyword]);
+
+  // Close suggestions dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (searchContainerRef.current && !searchContainerRef.current.contains(event.target as Node)) {
+        setShowSuggestions(false);
+      }
+    };
+
+    if (showSuggestions) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => {
+        document.removeEventListener('mousedown', handleClickOutside);
+      };
+    }
+  }, [showSuggestions]);
 
   // Fetch stats based on location AND search scope
   const { data: locationStats } = useQuery({
@@ -788,7 +805,7 @@ export default function Home() {
                       
                       {/* Search Box */}
                       <div className="max-w-3xl mx-auto mb-6">
-                        <div className="bg-white rounded-xl shadow-lg border-2 border-gray-200 p-4">
+                        <div className="bg-white rounded-xl shadow-lg border-2 border-gray-200 p-4" ref={searchContainerRef}>
                           <form onSubmit={handleSearch}>
                             {/* Search Input and Scope Dropdown on Same Line */}
                             <div className="flex gap-2 mb-3 relative">
@@ -803,7 +820,6 @@ export default function Home() {
                                       setShowSuggestions(true)
                                     }
                                   }}
-                                  onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
                                   className="w-full px-4 py-2 text-base border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#354F52] focus:border-transparent text-gray-900"
                                 />
                                 
@@ -1507,7 +1523,6 @@ export default function Home() {
                               placeholder="Try: mayor, dental clinic, food bank, affordable housing..."
                               value={keyword}
                               onChange={handleKeywordChange}
-                              onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
                               onFocus={() => {
                                 if (keyword.length >= 2) {
                                   setShowSuggestions(true)
@@ -1901,23 +1916,14 @@ export default function Home() {
               Questions, feedback, or ideas? We'd love to hear from you.
               Report bugs, request features, or ask questions about jurisdiction coverage.
             </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <div className="flex justify-center">
               <a
-                href="https://github.com/getcommunityone/open-navigator-for-engagement/issues/new"
-                target="_blank"
-                rel="noopener noreferrer"
+                href="mailto:hello@communityone.com"
                 className="inline-flex items-center justify-center px-8 py-4 rounded-lg text-white font-semibold transition-all hover:shadow-lg"
                 style={{ backgroundColor: '#354F52' }}
               >
                 <EnvelopeIcon className="h-5 w-5 mr-2" />
-                Contact Us on GitHub
-              </a>
-              <a
-                href="mailto:johnbowyer@communityone.com"
-                className="inline-flex items-center justify-center px-8 py-4 rounded-lg bg-white border-2 text-[#354F52] font-semibold transition-all hover:bg-gray-50"
-                style={{ borderColor: '#354F52' }}
-              >
-                Email Us Directly
+                Email Us
               </a>
             </div>
             <p className="text-sm text-gray-500 mt-6">

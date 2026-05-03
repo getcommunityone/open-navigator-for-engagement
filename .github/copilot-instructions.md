@@ -195,6 +195,48 @@ When suggesting deployment or setup:
 - Mention that secrets go in `.env` (gitignored)
 - Include verification steps to test deployment
 
+### Database Configuration
+
+**CRITICAL - PostgreSQL is ALREADY RUNNING:**
+
+**❌ NEVER DO THIS:**
+- ❌ Try to start new PostgreSQL Docker containers
+- ❌ Suggest `docker run postgres` or `docker-compose up postgres`
+- ❌ Connect to localhost:5432 for OpenStates data
+- ❌ Ask to "spin up" a PostgreSQL instance
+
+**✅ ALWAYS DO THIS:**
+- ✅ OpenStates database is at `postgresql://postgres:password@localhost:5433/openstates`
+- ✅ Check if database exists: `psql -h localhost -p 5433 -U postgres -d openstates -c "\dt"`
+- ✅ The database is ALREADY running on port **5433** (not 5432)
+- ✅ Use existing connection - don't create new containers
+
+**Database Architecture:**
+
+1. **OpenStates PostgreSQL** (localhost:5433)
+   - Database name: `openstates`
+   - Contains: `opencivicdata_person` table (22,546+ legislators)
+   - Source data for legislators, bills, votes
+   - Connection: `postgresql://postgres:password@localhost:5433/openstates`
+
+2. **Neon PostgreSQL** (cloud - for production)
+   - Used for `contacts_search`, `jurisdictions_search`, `nonprofits_search`
+   - Connection via `NEON_DATABASE_URL` or `NEON_DATABASE_URL_DEV`
+   - Managed via `neon/migrate.py` script
+
+**Loading Legislators Data:**
+
+The legislators data flow is:
+1. Source: `opencivicdata_person` table in OpenStates DB (port 5433)
+2. Optional intermediate: `openstates_people` table (simplified schema)
+3. Gold tables: `data/gold/states/{STATE}/contacts_officials.parquet`
+4. Search index: `contacts_search` table in Neon DB
+
+Use these scripts:
+- `scripts/datasources/openstates/load_openstates_people.py` - Load from GitHub repo to `openstates_people` table
+- `scripts/datasources/openstates/export_openstates_to_gold.py` - Export to gold parquet files
+- `neon/migrate.py` - Load gold files into Neon `contacts_search` table
+
 ### Data Management Rules
 
 **CRITICAL - DO NOT DELETE APPLICATION CACHE:**

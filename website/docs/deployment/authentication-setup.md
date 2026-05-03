@@ -117,7 +117,7 @@ HUGGINGFACE_CLIENT_SECRET=hf_oauth_secret_xxx
    - Application type: **Web application**
    - Name: `Open Navigator Web Client`
    - Authorized redirect URIs:
-     - `http://localhost:8000/auth/callback/google` (development)
+     - `http://localhost:8000/api/auth/callback/google` (development)
      - `https://www.communityone.com/api/auth/callback/google` (production)
    - Click **"Create"**
 
@@ -150,7 +150,7 @@ GOOGLE_CLIENT_SECRET=GOCSPX-xxxxx
 3. **Configure OAuth settings**
    - Go to Facebook Login → Settings
    - Valid OAuth Redirect URIs:
-     - `http://localhost:8000/auth/callback/facebook`
+     - `http://localhost:8000/api/auth/callback/facebook`
      - `https://www.communityone.com/api/auth/callback/facebook`
    - Client OAuth Login: **Yes**
    - Web OAuth Login: **Yes**
@@ -182,7 +182,7 @@ FACEBOOK_APP_SECRET=xxxxxxxxxxxxx
    - **Application name**: `Open Navigator`
    - **Homepage URL**: `https://www.communityone.com`
    - **Authorization callback URL**:
-     - Development: `http://localhost:8000/auth/callback/github`
+     - Development: `http://localhost:8000/api/auth/callback/github`
      - Production: `https://www.communityone.com/api/auth/callback/github`
 
 3. **Create application**

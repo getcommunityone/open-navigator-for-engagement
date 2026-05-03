@@ -331,7 +331,7 @@ async def search_bills(
                 session_name,
                 first_action_date,
                 latest_action_date,
-                latest_action_description,
+                latest_action,
                 jurisdiction_name
             FROM read_parquet(?)
             WHERE {where_clause}
@@ -624,7 +624,7 @@ async def get_bill_map_data_on_demand(
                     SELECT 
                         title,
                         classification,
-                        latest_action_description
+                        latest_action
                     FROM read_parquet(?)
                     WHERE {where_clause}
                 """
@@ -759,7 +759,7 @@ async def get_bill_details(bill_id: str):
                     bill_number,
                     title,
                     classification,
-                    latest_action_description,
+                    latest_action,
                     latest_action_date,
                     first_action_date,
                     session,

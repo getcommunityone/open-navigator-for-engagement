@@ -180,7 +180,7 @@ async def fetch_bills_from_parquet(
                 logger.info(f"✅ Adding type_conditions: {type_conditions}")
                 where_clauses.append(f"({' OR '.join(type_conditions)})")
         
-        # Status filter (multi-select - based on latest_action_description)
+        # Status filter (multi-select - based on latest_action)
         if statuses and len(statuses) > 0:
             status_keywords = {
                 'enacted': 'Enacted',
@@ -198,11 +198,11 @@ async def fetch_bills_from_parquet(
                 
                 if '|' in keyword:
                     keyword_parts = keyword.split('|')
-                    keyword_clauses = ["LOWER(latest_action_description) LIKE LOWER(?)"] * len(keyword_parts)
+                    keyword_clauses = ["LOWER(latest_action) LIKE LOWER(?)"] * len(keyword_parts)
                     status_conditions.append(f"({' OR '.join(keyword_clauses)})")
                     params.extend([f'%{kw}%' for kw in keyword_parts])
                 else:
-                    status_conditions.append("LOWER(latest_action_description) LIKE LOWER(?)")
+                    status_conditions.append("LOWER(latest_action) LIKE LOWER(?)")
                     params.append(f'%{keyword}%')
             
             if status_conditions:
@@ -230,7 +230,7 @@ async def fetch_bills_from_parquet(
                 session_name,
                 first_action_date,
                 latest_action_date,
-                latest_action_description,
+                latest_action,
                 jurisdiction_name,
                 abstract,
                 source_url
@@ -254,7 +254,7 @@ async def fetch_bills_from_parquet(
                 "session_name": row[5],
                 "first_action_date": str(row[6]) if row[6] else None,
                 "latest_action_date": str(row[7]) if row[7] else None,
-                "latest_action_description": row[8],
+                "latest_action": row[8],
                 "jurisdiction_name": row[9],
                 "abstract": row[10],
                 "source_url": row[11],
@@ -362,7 +362,7 @@ async def fetch_sessions_from_parquet(
             status_conditions = []
             for status in statuses:
                 keyword = status_keywords.get(status.lower(), status)
-                status_conditions.append(f"REGEXP_MATCHES(COALESCE(latest_action_description, ''), ?)")
+                status_conditions.append(f"REGEXP_MATCHES(COALESCE(latest_action, ''), ?)")
                 params.append(keyword)
             if status_conditions:
                 where_conditions.append(f"({' OR '.join(status_conditions)})")
@@ -803,17 +803,17 @@ async def get_filter_options(
         sql_statuses = f"""
             SELECT 
                 CASE 
-                    WHEN LOWER(latest_action_description) LIKE '%enact%' THEN 'enacted'
-                    WHEN LOWER(latest_action_description) LIKE '%pass%' THEN 'passed'
-                    WHEN LOWER(latest_action_description) LIKE '%adopt%' THEN 'adopted'
-                    WHEN LOWER(latest_action_description) LIKE '%fail%' THEN 'failed'
-                    WHEN LOWER(latest_action_description) LIKE '%introduc%' THEN 'introduced'
-                    WHEN LOWER(latest_action_description) LIKE '%refer%' THEN 'referred'
-                    WHEN LOWER(latest_action_description) LIKE '%report%' THEN 'reported'
+                    WHEN LOWER(latest_action) LIKE '%enact%' THEN 'enacted'
+                    WHEN LOWER(latest_action) LIKE '%pass%' THEN 'passed'
+                    WHEN LOWER(latest_action) LIKE '%adopt%' THEN 'adopted'
+                    WHEN LOWER(latest_action) LIKE '%fail%' THEN 'failed'
+                    WHEN LOWER(latest_action) LIKE '%introduc%' THEN 'introduced'
+                    WHEN LOWER(latest_action) LIKE '%refer%' THEN 'referred'
+                    WHEN LOWER(latest_action) LIKE '%report%' THEN 'reported'
                 END as status,
                 COUNT(*) as count
             FROM read_parquet(?)
-            WHERE {where_clause} AND latest_action_description IS NOT NULL
+            WHERE {where_clause} AND latest_action IS NOT NULL
             GROUP BY status
             HAVING status IS NOT NULL
             ORDER BY count DESC
@@ -1007,7 +1007,7 @@ async def get_bill_details(bill_id: str):
                     bill_number,
                     title,
                     classification,
-                    latest_action_description,
+                    latest_action,
                     latest_action_date,
                     first_action_date,
                     session,
