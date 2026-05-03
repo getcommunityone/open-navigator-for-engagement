@@ -4,6 +4,7 @@ import { useSearchParams } from 'react-router-dom'
 import api from '../lib/api'
 import { MagnifyingGlassIcon, MapIcon as MapIconOutline, ListBulletIcon } from '@heroicons/react/24/outline'
 import USMap from '../components/USMap'
+import MultiSelect from '../components/MultiSelect'
 
 interface Bill {
   bill_id: string
@@ -57,24 +58,38 @@ export default function PolicyMap() {
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc')
   const [expandedBill, setExpandedBill] = useState<string | null>(null)
   
-  // New filter states
-  const [selectedChamber, setSelectedChamber] = useState<string>('')
-  const [selectedBillType, setSelectedBillType] = useState<string>('')
-  const [selectedStatus, setSelectedStatus] = useState<string>('')
+  // Multi-select filter states
+  const [selectedSessions, setSelectedSessions] = useState<string[]>([])
+  const [selectedChambers, setSelectedChambers] = useState<string[]>([])
+  const [selectedBillTypes, setSelectedBillTypes] = useState<string[]>([])
+  const [selectedStatuses, setSelectedStatuses] = useState<string[]>([])
   
-  // Read topic from URL, or default to empty (showing topic selector)
-  const topicFromUrl = searchParams.get('topic') || ''
-  const [selectedTopic, setSelectedTopic] = useState(topicFromUrl)
-  const [showTopicSelector, setShowTopicSelector] = useState(!topicFromUrl)
+  // Read topic from URL - use state that syncs with URL
+  const [selectedTopic, setSelectedTopic] = useState<string>('')
+  const [showTopicSelector, setShowTopicSelector] = useState(true)
   
-  // Sync topic changes to URL
+  // Sync topic FROM URL to state (on mount and URL changes)
   useEffect(() => {
-    if (selectedTopic) {
-      setSearchParams({ topic: selectedTopic })
+    const topicFromUrl = searchParams.get('topic') || ''
+    if (topicFromUrl) {
+      setSelectedTopic(topicFromUrl)
+      setShowTopicSelector(false)
+      console.log('🔗 Initialized topic from URL:', topicFromUrl)
     } else {
-      setSearchParams({})
+      setSelectedTopic('')
+      setShowTopicSelector(true)
     }
-  }, [selectedTopic, setSearchParams])
+  }, []) // Only run on mount
+  
+  // Sync topic changes TO URL (when user selects a topic)
+  useEffect(() => {
+    if (selectedTopic && !showTopicSelector) {
+      setSearchParams({ topic: selectedTopic }, { replace: true })
+      console.log('📝 Updated URL with topic:', selectedTopic)
+    } else if (showTopicSelector) {
+      setSearchParams({}, { replace: true })
+    }
+  }, [selectedTopic, showTopicSelector, setSearchParams])
   
   const [page, setPage] = useState(1)
   const limit = 20
@@ -105,16 +120,31 @@ export default function PolicyMap() {
 
   // Fetch sessions
   const { data: sessionsData } = useQuery({
-    queryKey: ['sessions', selectedState, selectedTopic, selectedChamber, selectedBillType, selectedStatus, searchQuery],
+    queryKey: ['sessions', selectedState, selectedTopic, selectedChambers, selectedBillTypes, selectedStatuses, searchQuery],
     queryFn: async () => {
       const params = new URLSearchParams({ state: selectedState })
       if (selectedTopic) params.append('topic', selectedTopic)
-      if (selectedChamber) params.append('chamber', selectedChamber)
-      if (selectedBillType) params.append('bill_type', selectedBillType)
-      if (selectedStatus) params.append('status', selectedStatus)
+      if (selectedChambers.length > 0) params.append('chambers', selectedChambers.join(','))
+      if (selectedBillTypes.length > 0) params.append('bill_types', selectedBillTypes.join(','))
+      if (selectedStatuses.length > 0) params.append('statuses', selectedStatuses.join(','))
       if (searchQuery) params.append('q', searchQuery)
       
+      // Debug logging
+      console.log('🔍 Fetching sessions with params:', {
+        state: selectedState,
+        topic: selectedTopic,
+        chambers: selectedChambers,
+        bill_types: selectedBillTypes,
+        statuses: selectedStatuses,
+        q: searchQuery,
+        url: `/bills/sessions?${params}`
+      })
+      
       const response = await api.get(`/bills/sessions?${params}`)
+      console.log('✅ Sessions response:', {
+        total_sessions: response.data.total_sessions,
+        sessions: response.data.sessions?.length
+      })
       return response.data
     },
     enabled: viewMode === 'list', // Only fetch sessions in list view
@@ -128,19 +158,19 @@ export default function PolicyMap() {
     bills: Bill[]
     pagination: { limit: number; offset: number; has_more: boolean }
   }>({
-    queryKey: ['bills', selectedState, selectedSession, searchQuery, selectedTopic, selectedChamber, selectedBillType, selectedStatus, page],
+    queryKey: ['bills', selectedState, selectedSessions, searchQuery, selectedTopic, selectedChambers, selectedBillTypes, selectedStatuses, page],
     queryFn: async () => {
       const params = new URLSearchParams({
         state: selectedState,
         limit: limit.toString(),
         offset: ((page - 1) * limit).toString(),
       })
-      if (selectedSession) params.append('session', selectedSession)
+      if (selectedSessions.length > 0) params.append('sessions', selectedSessions.join(','))
       if (searchQuery) params.append('q', searchQuery)
       if (selectedTopic) params.append('topic', selectedTopic)
-      if (selectedChamber) params.append('chamber', selectedChamber)
-      if (selectedBillType) params.append('bill_type', selectedBillType)
-      if (selectedStatus) params.append('status', selectedStatus)
+      if (selectedChambers.length > 0) params.append('chambers', selectedChambers.join(','))
+      if (selectedBillTypes.length > 0) params.append('bill_types', selectedBillTypes.join(','))
+      if (selectedStatuses.length > 0) params.append('statuses', selectedStatuses.join(','))
 
       const response = await api.get(`/bills?${params}`)
       return response.data
@@ -153,6 +183,7 @@ export default function PolicyMap() {
   const totalPages = Math.ceil((billsData?.total || 0) / limit)
 
   const handleStateClick = (stateCode: string) => {
+    console.log('🗺️ State clicked:', stateCode, 'Current topic:', selectedTopic)
     setSelectedState(stateCode)
     setViewMode('list')
   }
@@ -477,98 +508,93 @@ export default function PolicyMap() {
                 )}
                 {/* Session Filter - list view only */}
                 {viewMode === 'list' && (
-                  <div className="flex-1 min-w-[200px]">
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Legislative Session
-                    </label>
-                    <select
-                      className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm text-gray-900 py-2"
-                      value={selectedSession}
-                      onChange={(e) => {
-                        setSelectedSession(e.target.value)
-                        setPage(1)
-                      }}
-                    >
-                      <option value="">All Sessions</option>
-                      {sessionsData?.sessions?.map((session: Session) => (
-                        <option key={session.session} value={session.session}>
-                          {session.session_name} ({session.bill_count.toLocaleString()} bills)
-                        </option>
-                      ))}
-                    </select>
-                  </div>
+                  <MultiSelect
+                    label="Legislative Session"
+                    options={
+                      sessionsData?.sessions
+                        ?.slice()
+                        .sort((a: Session, b: Session) => {
+                          const dateA = a.end_date ? new Date(a.end_date).getTime() : 0
+                          const dateB = b.end_date ? new Date(b.end_date).getTime() : 0
+                          return dateB - dateA
+                        })
+                        .map((session: Session) => ({
+                          value: session.session,
+                          label: session.session_name,
+                          count: session.bill_count
+                        })) || []
+                    }
+                    selected={selectedSessions}
+                    onChange={(values) => {
+                      setSelectedSessions(values)
+                      setPage(1)
+                    }}
+                    placeholder="All Sessions"
+                    className="flex-1 min-w-[250px]"
+                  />
                 )}
                 
                 {/* Chamber Filter - list view only */}
                 {viewMode === 'list' && (
-                  <div className="flex-1 min-w-[150px]">
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Chamber
-                    </label>
-                    <select
-                      className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm text-gray-900 py-2"
-                      value={selectedChamber}
-                      onChange={(e) => {
-                        setSelectedChamber(e.target.value)
-                        setPage(1)
-                      }}
-                    >
-                      <option value="">All Chambers</option>
-                      <option value="house">House</option>
-                      <option value="senate">Senate</option>
-                      <option value="joint">Joint</option>
-                    </select>
-                  </div>
+                  <MultiSelect
+                    label="Chamber"
+                    options={[
+                      { value: 'house', label: 'House' },
+                      { value: 'senate', label: 'Senate' },
+                      { value: 'joint', label: 'Joint' }
+                    ]}
+                    selected={selectedChambers}
+                    onChange={(values) => {
+                      setSelectedChambers(values)
+                      setPage(1)
+                    }}
+                    placeholder="All Chambers"
+                    className="flex-1 min-w-[150px]"
+                  />
                 )}
                 
                 {/* Bill Type Filter - list view only */}
                 {viewMode === 'list' && (
-                  <div className="flex-1 min-w-[150px]">
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Bill Type
-                    </label>
-                    <select
-                      className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm text-gray-900 py-2"
-                      value={selectedBillType}
-                      onChange={(e) => {
-                        setSelectedBillType(e.target.value)
-                        setPage(1)
-                      }}
-                    >
-                      <option value="">All Types</option>
-                      <option value="bill">Bill (HB/SB)</option>
-                      <option value="resolution">Resolution (HR/SR)</option>
-                      <option value="joint_resolution">Joint Resolution (HJR/SJR)</option>
-                      <option value="concurrent_resolution">Concurrent Resolution (HCR/SCR)</option>
-                      <option value="memorial">Memorial (HJM/SJM)</option>
-                    </select>
-                  </div>
+                  <MultiSelect
+                    label="Bill Type"
+                    options={[
+                      { value: 'bill', label: 'Bill (HB/SB)' },
+                      { value: 'resolution', label: 'Resolution (HR/SR)' },
+                      { value: 'joint_resolution', label: 'Joint Resolution (HJR/SJR)' },
+                      { value: 'concurrent_resolution', label: 'Concurrent Resolution (HCR/SCR)' },
+                      { value: 'memorial', label: 'Memorial (HJM/SJM)' }
+                    ]}
+                    selected={selectedBillTypes}
+                    onChange={(values) => {
+                      setSelectedBillTypes(values)
+                      setPage(1)
+                    }}
+                    placeholder="All Types"
+                    className="flex-1 min-w-[150px]"
+                  />
                 )}
                 
                 {/* Status Filter - list view only */}
                 {viewMode === 'list' && (
-                  <div className="flex-1 min-w-[150px]">
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Status
-                    </label>
-                    <select
-                      className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm text-gray-900 py-2"
-                      value={selectedStatus}
-                      onChange={(e) => {
-                        setSelectedStatus(e.target.value)
-                        setPage(1)
-                      }}
-                    >
-                      <option value="">All Statuses</option>
-                      <option value="enacted">Enacted</option>
-                      <option value="passed">Passed</option>
-                      <option value="adopted">Adopted</option>
-                      <option value="failed">Failed</option>
-                      <option value="introduced">Introduced</option>
-                      <option value="referred">Referred to Committee</option>
-                      <option value="reported">Reported from Committee</option>
-                    </select>
-                  </div>
+                  <MultiSelect
+                    label="Status"
+                    options={[
+                      { value: 'enacted', label: 'Enacted' },
+                      { value: 'passed', label: 'Passed' },
+                      { value: 'adopted', label: 'Adopted' },
+                      { value: 'failed', label: 'Failed' },
+                      { value: 'introduced', label: 'Introduced' },
+                      { value: 'referred', label: 'Referred to Committee' },
+                      { value: 'reported', label: 'Reported from Committee' }
+                    ]}
+                    selected={selectedStatuses}
+                    onChange={(values) => {
+                      setSelectedStatuses(values)
+                      setPage(1)
+                    }}
+                    placeholder="All Statuses"
+                    className="flex-1 min-w-[150px]"
+                  />
                 )}
 
                 {/* Search */}
@@ -590,15 +616,15 @@ export default function PolicyMap() {
                 </div>
 
                 {/* Clear button */}
-                {(searchQuery || selectedSession || selectedChamber || selectedBillType || selectedStatus) && (
+                {(searchQuery || selectedSessions.length > 0 || selectedChambers.length > 0 || selectedBillTypes.length > 0 || selectedStatuses.length > 0) && (
                   <button
                     type="button"
                     onClick={() => {
                       setSearchQuery('')
-                      setSelectedSession('')
-                      setSelectedChamber('')
-                      setSelectedBillType('')
-                      setSelectedStatus('')
+                      setSelectedSessions([])
+                      setSelectedChambers([])
+                      setSelectedBillTypes([])
+                      setSelectedStatuses([])
                       setPage(1)
                     }}
                     className="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition-colors text-sm font-medium"
@@ -824,14 +850,14 @@ export default function PolicyMap() {
                       )}
                     </p>
                     <div className="flex gap-3 justify-center">
-                      {(selectedSession || selectedChamber || selectedBillType || selectedStatus || searchQuery) ? (
+                      {(selectedSessions.length > 0 || selectedChambers.length > 0 || selectedBillTypes.length > 0 || selectedStatuses.length > 0 || searchQuery) ? (
                         <button
                           onClick={() => {
                             setSearchQuery('')
-                            setSelectedSession('')
-                            setSelectedChamber('')
-                            setSelectedBillType('')
-                            setSelectedStatus('')
+                            setSelectedSessions([])
+                            setSelectedChambers([])
+                            setSelectedBillTypes([])
+                            setSelectedStatuses([])
                             setPage(1)
                           }}
                           className="px-6 py-2 bg-yellow-600 text-white rounded-md hover:bg-yellow-700 transition-colors font-medium"

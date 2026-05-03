@@ -92,15 +92,15 @@ async def get_pool():
 async def fetch_bills_from_parquet(
     state: str,
     q: Optional[str] = None,
-    session: Optional[str] = None,
+    sessions: Optional[List[str]] = None,
     topic: Optional[str] = None,
-    chamber: Optional[str] = None,
-    bill_type: Optional[str] = None,
-    status: Optional[str] = None,
+    chambers: Optional[List[str]] = None,
+    bill_types: Optional[List[str]] = None,
+    statuses: Optional[List[str]] = None,
     limit: int = 50,
     offset: int = 0
 ) -> Dict[str, Any]:
-    """Fetch bills from parquet files using DuckDB (detailed drill-down)."""
+    """Fetch bills from parquet files using DuckDB (detailed drill-down). Supports multi-select filters."""
     try:
         # Use flat file structure (all states in one file)
         bills_file = GOLD_DIR / "bills_bills.parquet"
@@ -142,34 +142,44 @@ async def fetch_bills_from_parquet(
             pattern = f'%{q}%'
             params.extend([pattern, pattern])
         
-        if session:
-            where_clauses.append("session = ?")
-            params.append(session)
+        # Sessions filter (multi-select)
+        if sessions and len(sessions) > 0:
+            session_placeholders = ','.join(['?'] * len(sessions))
+            where_clauses.append(f"session IN ({session_placeholders})")
+            params.extend(sessions)
         
-        # Chamber filter (based on bill number prefix)
-        if chamber:
-            if chamber.lower() == 'house':
-                where_clauses.append("(bill_number LIKE 'HB%' OR bill_number LIKE 'HR%' OR bill_number LIKE 'HJR%' OR bill_number LIKE 'HCR%' OR bill_number LIKE 'HJM%' OR bill_number LIKE 'H %')")
-            elif chamber.lower() == 'senate':
-                where_clauses.append("(bill_number LIKE 'SB%' OR bill_number LIKE 'SR%' OR bill_number LIKE 'SJR%' OR bill_number LIKE 'SCR%' OR bill_number LIKE 'SJM%' OR bill_number LIKE 'S %')")
-            elif chamber.lower() == 'joint':
-                where_clauses.append("(bill_number LIKE '%JR%' OR bill_number LIKE '%JM%')")
+        # Chamber filter (multi-select - based on bill number prefix)
+        if chambers and len(chambers) > 0:
+            chamber_conditions = []
+            for chamber in chambers:
+                if chamber.lower() == 'house':
+                    chamber_conditions.append("(bill_number LIKE 'HB%' OR bill_number LIKE 'HR%' OR bill_number LIKE 'HJR%' OR bill_number LIKE 'HCR%' OR bill_number LIKE 'HJM%' OR bill_number LIKE 'H %')")
+                elif chamber.lower() == 'senate':
+                    chamber_conditions.append("(bill_number LIKE 'SB%' OR bill_number LIKE 'SR%' OR bill_number LIKE 'SJR%' OR bill_number LIKE 'SCR%' OR bill_number LIKE 'SJM%' OR bill_number LIKE 'S %')")
+                elif chamber.lower() == 'joint':
+                    chamber_conditions.append("(bill_number LIKE '%JR%' OR bill_number LIKE '%JM%')")
+            if chamber_conditions:
+                where_clauses.append(f"({' OR '.join(chamber_conditions)})")
         
-        # Bill type filter (based on bill number pattern)
-        if bill_type:
-            if bill_type == 'bill':
-                where_clauses.append("(bill_number LIKE 'HB%' OR bill_number LIKE 'SB%' OR bill_number LIKE 'AB%')")
-            elif bill_type == 'resolution':
-                where_clauses.append("(bill_number LIKE 'HR%' OR bill_number LIKE 'SR%' OR bill_number LIKE 'AR%')")
-            elif bill_type == 'joint_resolution':
-                where_clauses.append("(bill_number LIKE 'HJR%' OR bill_number LIKE 'SJR%' OR bill_number LIKE 'AJR%')")
-            elif bill_type == 'concurrent_resolution':
-                where_clauses.append("(bill_number LIKE 'HCR%' OR bill_number LIKE 'SCR%')")
-            elif bill_type == 'memorial':
-                where_clauses.append("(bill_number LIKE 'HJM%' OR bill_number LIKE 'SJM%')")
+        # Bill type filter (multi-select - based on bill number pattern)
+        if bill_types and len(bill_types) > 0:
+            type_conditions = []
+            for bill_type in bill_types:
+                if bill_type == 'bill':
+                    type_conditions.append("(bill_number LIKE 'HB%' OR bill_number LIKE 'SB%' OR bill_number LIKE 'AB%')")
+                elif bill_type == 'resolution':
+                    type_conditions.append("(bill_number LIKE 'HR%' OR bill_number LIKE 'SR%' OR bill_number LIKE 'AR%')")
+                elif bill_type == 'joint_resolution':
+                    type_conditions.append("(bill_number LIKE 'HJR%' OR bill_number LIKE 'SJR%' OR bill_number LIKE 'AJR%')")
+                elif bill_type == 'concurrent_resolution':
+                    type_conditions.append("(bill_number LIKE 'HCR%' OR bill_number LIKE 'SCR%')")
+                elif bill_type == 'memorial':
+                    type_conditions.append("(bill_number LIKE 'HJM%' OR bill_number LIKE 'SJM%')")
+            if type_conditions:
+                where_clauses.append(f"({' OR '.join(type_conditions)})")
         
-        # Status filter (based on latest_action_description)
-        if status:
+        # Status filter (multi-select - based on latest_action_description)
+        if statuses and len(statuses) > 0:
             status_keywords = {
                 'enacted': 'Enacted',
                 'passed': 'passed|Passed',
@@ -179,16 +189,22 @@ async def fetch_bills_from_parquet(
                 'referred': 'referred|Referred',
                 'reported': 'reported|Reported'
             }
-            keyword = status_keywords.get(status.lower(), status)
             
-            if '|' in keyword:
-                keyword_parts = keyword.split('|')
-                keyword_clauses = ["LOWER(latest_action_description) LIKE LOWER(?)"] * len(keyword_parts)
-                where_clauses.append(f"({' OR '.join(keyword_clauses)})")
-                params.extend([f'%{kw}%' for kw in keyword_parts])
-            else:
-                where_clauses.append("LOWER(latest_action_description) LIKE LOWER(?)")
-                params.append(f'%{keyword}%')
+            status_conditions = []
+            for status in statuses:
+                keyword = status_keywords.get(status.lower(), status)
+                
+                if '|' in keyword:
+                    keyword_parts = keyword.split('|')
+                    keyword_clauses = ["LOWER(latest_action_description) LIKE LOWER(?)"] * len(keyword_parts)
+                    status_conditions.append(f"({' OR '.join(keyword_clauses)})")
+                    params.extend([f'%{kw}%' for kw in keyword_parts])
+                else:
+                    status_conditions.append("LOWER(latest_action_description) LIKE LOWER(?)")
+                    params.append(f'%{keyword}%')
+            
+            if status_conditions:
+                where_clauses.append(f"({' OR '.join(status_conditions)})")
         
         where_clause = " AND ".join(where_clauses)
         
@@ -244,10 +260,10 @@ async def fetch_bills_from_parquet(
             "state": state,
             "query": q,
             "topic": topic,
-            "chamber": chamber,
-            "bill_type": bill_type,
-            "status": status,
-            "session": session,
+            "chambers": chambers,
+            "bill_types": bill_types,
+            "statuses": statuses,
+            "sessions": sessions,
             "bills": bills,
             "total": total,
             "limit": limit,
@@ -263,12 +279,12 @@ async def fetch_bills_from_parquet(
 async def fetch_sessions_from_parquet(
     state: str,
     topic: Optional[str] = None,
-    chamber: Optional[str] = None,
-    bill_type: Optional[str] = None,
-    status: Optional[str] = None,
+    chambers: Optional[List[str]] = None,
+    bill_types: Optional[List[str]] = None,
+    statuses: Optional[List[str]] = None,
     q: Optional[str] = None
 ) -> Dict[str, Any]:
-    """Fetch sessions from parquet files using DuckDB, filtered by active filters."""
+    """Fetch sessions from parquet files using DuckDB, filtered by active filters. Supports multi-select."""
     try:
         # Use flat file structure (all states in one file)
         bills_file = GOLD_DIR / "bills_bills.parquet"
@@ -297,17 +313,21 @@ async def fetch_sessions_from_parquet(
             where_conditions.append(f"REGEXP_MATCHES(LOWER(title), LOWER(?))")
             params.append(keyword)
         
-        # Chamber filter
-        if chamber:
-            if chamber.lower() == 'house':
-                where_conditions.append("(bill_number LIKE 'HB%' OR bill_number LIKE 'HR%' OR bill_number LIKE 'HJR%' OR bill_number LIKE 'HCR%' OR bill_number LIKE 'HJM%')")
-            elif chamber.lower() == 'senate':
-                where_conditions.append("(bill_number LIKE 'SB%' OR bill_number LIKE 'SR%' OR bill_number LIKE 'SJR%' OR bill_number LIKE 'SCR%' OR bill_number LIKE 'SJM%')")
-            elif chamber.lower() == 'joint':
-                where_conditions.append("(bill_number LIKE '%JR%' OR bill_number LIKE '%JM%')")
+        # Chamber filter (multi-select)
+        if chambers and len(chambers) > 0:
+            chamber_conditions = []
+            for chamber in chambers:
+                if chamber.lower() == 'house':
+                    chamber_conditions.append("(bill_number LIKE 'HB%' OR bill_number LIKE 'HR%' OR bill_number LIKE 'HJR%' OR bill_number LIKE 'HCR%' OR bill_number LIKE 'HJM%')")
+                elif chamber.lower() == 'senate':
+                    chamber_conditions.append("(bill_number LIKE 'SB%' OR bill_number LIKE 'SR%' OR bill_number LIKE 'SJR%' OR bill_number LIKE 'SCR%' OR bill_number LIKE 'SJM%')")
+                elif chamber.lower() == 'joint':
+                    chamber_conditions.append("(bill_number LIKE '%JR%' OR bill_number LIKE '%JM%')")
+            if chamber_conditions:
+                where_conditions.append(f"({' OR '.join(chamber_conditions)})")
         
-        # Bill type filter
-        if bill_type:
+        # Bill type filter (multi-select)
+        if bill_types and len(bill_types) > 0:
             type_patterns = {
                 'bill': "(bill_number LIKE 'HB%' OR bill_number LIKE 'SB%' OR bill_number LIKE 'AB%')",
                 'resolution': "(bill_number LIKE 'HR%' OR bill_number LIKE 'SR%' OR bill_number LIKE 'AR%')",
@@ -315,11 +335,15 @@ async def fetch_sessions_from_parquet(
                 'concurrent_resolution': "(bill_number LIKE 'HCR%' OR bill_number LIKE 'SCR%')",
                 'memorial': "(bill_number LIKE 'HJM%' OR bill_number LIKE 'SJM%')"
             }
-            if bill_type.lower() in type_patterns:
-                where_conditions.append(type_patterns[bill_type.lower()])
+            type_conditions = []
+            for bill_type in bill_types:
+                if bill_type.lower() in type_patterns:
+                    type_conditions.append(type_patterns[bill_type.lower()])
+            if type_conditions:
+                where_conditions.append(f"({' OR '.join(type_conditions)})")
         
-        # Status filter
-        if status:
+        # Status filter (multi-select)
+        if statuses and len(statuses) > 0:
             status_keywords = {
                 'enacted': 'Enacted',
                 'passed': 'passed|Passed',
@@ -329,9 +353,13 @@ async def fetch_sessions_from_parquet(
                 'referred': 'referred|Referred',
                 'reported': 'reported|Reported'
             }
-            keyword = status_keywords.get(status.lower(), status)
-            where_conditions.append(f"REGEXP_MATCHES(COALESCE(latest_action_description, ''), ?)")
-            params.append(keyword)
+            status_conditions = []
+            for status in statuses:
+                keyword = status_keywords.get(status.lower(), status)
+                status_conditions.append(f"REGEXP_MATCHES(COALESCE(latest_action_description, ''), ?)")
+                params.append(keyword)
+            if status_conditions:
+                where_conditions.append(f"({' OR '.join(status_conditions)})")
         
         # Search query
         if q:
@@ -352,8 +380,8 @@ async def fetch_sessions_from_parquet(
                 COUNT(*) as bill_count
             FROM read_parquet(?)
             WHERE {where_clause}
-            GROUP BY session, session_name
-            ORDER BY session DESC
+            GROUP BY session
+            ORDER BY MAX(latest_action_date) DESC NULLS LAST, session DESC
         """
         
         rows = conn.execute(sql, params).fetchall()
@@ -529,35 +557,40 @@ async def fetch_map_data_from_neon(
 async def get_bills(
     state: str = Query(..., description="State abbreviation (e.g., MA, AL)"),
     q: Optional[str] = Query(None, description="Search query (bill number or title)"),
-    session: Optional[str] = Query(None, description="Legislative session"),
+    sessions: Optional[str] = Query(None, description="Comma-separated session IDs"),
     topic: Optional[str] = Query(None, description="Policy topic (e.g., fluoride, dental, medicaid)"),
-    chamber: Optional[str] = Query(None, description="Legislative chamber (house, senate, joint)"),
-    bill_type: Optional[str] = Query(None, description="Bill type (bill, resolution, joint_resolution, concurrent_resolution, memorial)"),
-    status: Optional[str] = Query(None, description="Bill status (enacted, passed, adopted, failed, introduced, referred, reported)"),
+    chambers: Optional[str] = Query(None, description="Comma-separated chambers (house, senate, joint)"),
+    bill_types: Optional[str] = Query(None, description="Comma-separated bill types"),
+    statuses: Optional[str] = Query(None, description="Comma-separated bill statuses"),
     limit: int = Query(50, ge=1, le=500),
     offset: int = Query(0, ge=0)
 ):
     """
     Search legislative bills using parquet files (detailed drill-down).
+    Supports multiple values for sessions, chambers, bill_types, and statuses via comma separation.
     
     **Examples:**
     - `/api/bills?state=AL&q=dental` - Search Alabama bills for "dental"
-    - `/api/bills?state=AL&session=2024rs` - Get all 2024 regular session bills
-    - `/api/bills?state=AL&topic=fluoride` - Get fluoride-related Alabama bills
-    - `/api/bills?state=AL&chamber=house` - Get House bills only
-    - `/api/bills?state=AL&bill_type=bill` - Get only bills (not resolutions)
-    - `/api/bills?state=AL&status=enacted` - Get enacted bills only
-    - `/api/bills?state=AL&limit=50` - Browse recent Alabama bills
+    - `/api/bills?state=AL&sessions=2024rs,2023rs` - Get bills from multiple sessions
+    - `/api/bills?state=AL&chambers=house,senate` - Get House and Senate bills
+    - `/api/bills?state=AL&bill_types=bill,resolution` - Get bills and resolutions
+    - `/api/bills?state=AL&statuses=enacted,passed` - Get enacted and passed bills
     """
     try:
+        # Parse comma-separated values
+        session_list = sessions.split(',') if sessions else None
+        chamber_list = chambers.split(',') if chambers else None
+        bill_type_list = bill_types.split(',') if bill_types else None
+        status_list = statuses.split(',') if statuses else None
+        
         result = await fetch_bills_from_parquet(
             state=state.upper(),
             q=q,
-            session=session,
+            sessions=session_list,
             topic=topic,
-            chamber=chamber,
-            bill_type=bill_type,
-            status=status,
+            chambers=chamber_list,
+            bill_types=bill_type_list,
+            statuses=status_list,
             limit=limit,
             offset=offset
         )
@@ -585,27 +618,39 @@ async def get_bills(
 async def get_sessions(
     state: str = Query(..., description="State abbreviation (e.g., MA, AL)"),
     topic: Optional[str] = Query(None, description="Topic filter (e.g., fluoride, dental)"),
-    chamber: Optional[str] = Query(None, description="Chamber filter (house, senate, joint)"),
-    bill_type: Optional[str] = Query(None, description="Bill type filter"),
-    status: Optional[str] = Query(None, description="Status filter"),
+    chambers: Optional[str] = Query(None, description="Comma-separated chambers (house, senate, joint)"),
+    bill_types: Optional[str] = Query(None, description="Comma-separated bill types"),
+    statuses: Optional[str] = Query(None, description="Comma-separated statuses"),
     q: Optional[str] = Query(None, description="Search query")
 ):
     """
     Get legislative sessions for a state using parquet files, filtered by active search criteria.
+    Supports multiple values for chambers, bill_types, and statuses via comma separation.
     
     **Examples:**
     - `/api/bills/sessions?state=MA` - Get all Massachusetts sessions
     - `/api/bills/sessions?state=MA&topic=dental` - Get sessions with dental bills
+    - `/api/bills/sessions?state=MA&chambers=house,senate` - Filter by House and Senate
     """
     try:
+        # Parse comma-separated values
+        chamber_list = chambers.split(',') if chambers else None
+        bill_type_list = bill_types.split(',') if bill_types else None
+        status_list = statuses.split(',') if statuses else None
+        
+        # Debug logging
+        logger.info(f"📊 Sessions request: state={state}, topic={topic}, chambers={chamber_list}, bill_types={bill_type_list}, statuses={status_list}, q={q}")
+        
         result = await fetch_sessions_from_parquet(
             state=state.upper(),
             topic=topic,
-            chamber=chamber,
-            bill_type=bill_type,
-            status=status,
+            chambers=chamber_list,
+            bill_types=bill_type_list,
+            statuses=status_list,
             q=q
         )
+        
+        logger.info(f"✅ Returning {len(result.get('sessions', []))} sessions for {state}")
         
         return result
         
