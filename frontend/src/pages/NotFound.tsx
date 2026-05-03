@@ -98,7 +98,7 @@ export default function NotFound() {
             </a>{' '}
             or{' '}
             <a
-              href="mailto:johnbowyer@communityone.com"
+              href="mailto:hello@communityone.com"
               className="text-blue-600 hover:text-blue-800 font-semibold"
             >
               contact support

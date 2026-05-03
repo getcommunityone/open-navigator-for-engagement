@@ -1447,12 +1447,13 @@ def search_jurisdictions(query: str, state: Optional[str] = None, city: Optional
 @router.get("/search/", include_in_schema=False)
 async def unified_search(
     q: Optional[str] = Query(None, description="Search query (optional - browse by filters if omitted)"),
-    types: Optional[str] = Query(None, description="Comma-separated result types: contacts,meetings,organizations,causes,jurisdictions"),
+    types: Optional[str] = Query(None, description="Comma-separated result types: contacts,meetings,organizations,causes,jurisdictions,bills"),
     state: Optional[str] = Query(None, description="Filter by state (2-letter code)"),
     city: Optional[str] = Query(None, description="Filter by city name"),
     jurisdiction_levels: Optional[str] = Query(None, description="Comma-separated jurisdiction levels: city,county,town,village,school_district,special_district,state"),
     ntee_code: Optional[str] = Query(None, description="Filter organizations by NTEE code"),
     ein: Optional[str] = Query(None, description="Filter organizations by exact EIN (for direct organization links)"),
+    session: Optional[str] = Query(None, description="Filter bills by legislative session"),
     limit: int = Query(20, ge=1, le=100, description="Maximum results per type"),
     offset: int = Query(0, ge=0, description="Number of results to skip (for pagination)"),
     page: int = Query(1, ge=1, description="Page number (alternative to offset)"),
@@ -1462,7 +1463,7 @@ async def unified_search(
     """
     Unified search across all data types
     
-    Search for contacts, meetings, organizations, and causes in one query.
+    Search for contacts, meetings, organizations, bills, and causes in one query.
     **NEW:** Query is now optional - you can browse by state/type without searching!
     
     **Pagination:**
@@ -1477,9 +1478,10 @@ async def unified_search(
     - `/api/search?q=health&state=AL` - Search in Alabama only
     - `/api/search?q=education&types=organizations,causes` - Search orgs and causes
     - `/api/search?q=health&state=MA&page=2&limit=20` - Page 2 of MA health results
+    - `/api/search?q=healthcare&types=bills&state=MA` - Search bills in Massachusetts
     """
     # 🔍 DEBUG LOGGING - Log all incoming request parameters
-    logger.info(f"🔍 SEARCH REQUEST: q={q!r}, types={types!r}, state={state!r}, city={city!r}, jurisdiction_levels={jurisdiction_levels!r}, ntee_code={ntee_code!r}, ein={ein!r}, limit={limit}, offset={offset}, page={page}, enrich={enrich}, sort={sort!r}")
+    logger.info(f"🔍 SEARCH REQUEST: q={q!r}, types={types!r}, state={state!r}, city={city!r}, jurisdiction_levels={jurisdiction_levels!r}, ntee_code={ntee_code!r}, ein={ein!r}, session={session!r}, limit={limit}, offset={offset}, page={page}, enrich={enrich}, sort={sort!r}")
     
     try:
         # Calculate offset from page if offset not explicitly provided
@@ -1490,7 +1492,7 @@ async def unified_search(
         if types:
             requested_types = [t.strip() for t in types.split(',')]
         else:
-            requested_types = ['contacts', 'meetings', 'organizations', 'causes', 'jurisdictions']
+            requested_types = ['contacts', 'meetings', 'organizations', 'causes', 'jurisdictions', 'bills']
         
         # Parse jurisdiction levels if provided
         jurisdiction_levels_list = None
@@ -1535,6 +1537,13 @@ async def unified_search(
             logger.info(f"🏢 Organizations search returned {len(org_results)} results")
             all_results.extend(org_results)
         
+        if 'bills' in requested_types:
+            # Use PostgreSQL for fast indexed search
+            bill_results_pg = await search_postgres.search_bills_pg(q, state, session, limit=search_limit)
+            bill_results = [convert_pg_result(r) for r in bill_results_pg]
+            logger.info(f"📜 Bills search returned {len(bill_results)} results")
+            all_results.extend(bill_results)
+        
         if 'causes' in requested_types:
             cause_results = search_causes(q or "", limit=search_limit)
             logger.info(f"🎯 Causes search returned {len(cause_results)} results")
@@ -1567,17 +1576,19 @@ async def unified_search(
             'contacts': [r.to_dict() for r in paginated_results if r.result_type == 'contact'],
             'meetings': [r.to_dict() for r in paginated_results if r.result_type == 'meeting'],
             'organizations': [r.to_dict() for r in paginated_results if r.result_type == 'organization'],
+            'bills': [r.to_dict() for r in paginated_results if r.result_type == 'bill'],
             'causes': [r.to_dict() for r in paginated_results if r.result_type == 'cause'],
             'jurisdictions': [r.to_dict() for r in paginated_results if r.result_type == 'jurisdiction'],
         }
         
-        logger.info(f"📦 Grouped results - contacts:{len(grouped_results['contacts'])}, meetings:{len(grouped_results['meetings'])}, organizations:{len(grouped_results['organizations'])}, causes:{len(grouped_results['causes'])}, jurisdictions:{len(grouped_results['jurisdictions'])}")
+        logger.info(f"📦 Grouped results - contacts:{len(grouped_results['contacts'])}, meetings:{len(grouped_results['meetings'])}, organizations:{len(grouped_results['organizations'])}, bills:{len(grouped_results['bills'])}, causes:{len(grouped_results['causes'])}, jurisdictions:{len(grouped_results['jurisdictions'])}")
         
         # Calculate total results per type (from all_results before pagination)
         type_totals = {
             'contacts': len([r for r in all_results if r.result_type == 'contact']),
             'meetings': len([r for r in all_results if r.result_type == 'meeting']),
             'organizations': len([r for r in all_results if r.result_type == 'organization']),
+            'bills': len([r for r in all_results if r.result_type == 'bill']),
             'causes': len([r for r in all_results if r.result_type == 'cause']),
             'jurisdictions': len([r for r in all_results if r.result_type == 'jurisdiction']),
         }
