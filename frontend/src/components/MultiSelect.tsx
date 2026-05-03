@@ -84,6 +84,18 @@ export default function MultiSelect({
               borderColor: state.isFocused ? '#3b82f6' : '#9ca3af'
             }
           }),
+          placeholder: (base) => ({
+            ...base,
+            color: '#9ca3af'
+          }),
+          singleValue: (base) => ({
+            ...base,
+            color: '#111827'
+          }),
+          input: (base) => ({
+            ...base,
+            color: '#111827'
+          }),
           menu: (base) => ({
             ...base,
             zIndex: 50
@@ -91,6 +103,14 @@ export default function MultiSelect({
           menuList: (base) => ({
             ...base,
             maxHeight: '320px'
+          }),
+          option: (base, state) => ({
+            ...base,
+            color: '#111827',
+            backgroundColor: state.isFocused ? '#f3f4f6' : 'white',
+            '&:active': {
+              backgroundColor: '#e5e7eb'
+            }
           }),
           multiValue: (base) => ({
             ...base,

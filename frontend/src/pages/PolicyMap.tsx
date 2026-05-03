@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useSearchParams } from 'react-router-dom'
 import api from '../lib/api'
-import { MagnifyingGlassIcon, MapIcon as MapIconOutline, ListBulletIcon } from '@heroicons/react/24/outline'
+import { MagnifyingGlassIcon, MapIcon as MapIconOutline, ListBulletIcon, AdjustmentsHorizontalIcon, XMarkIcon } from '@heroicons/react/24/outline'
 import USMap from '../components/USMap'
 import MultiSelect from '../components/MultiSelect'
 
@@ -68,6 +68,9 @@ export default function PolicyMap() {
   const [selectedTopic, setSelectedTopic] = useState<string>('')
   const [showTopicSelector, setShowTopicSelector] = useState(true)
   
+  // Advanced filters sidebar state
+  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false)
+  
   // Sync topic FROM URL to state (on mount and URL changes)
   useEffect(() => {
     const topicFromUrl = searchParams.get('topic') || ''
@@ -120,6 +123,8 @@ export default function PolicyMap() {
       return response.data
     },
     enabled: viewMode === 'map' && !showTopicSelector && selectedTopic !== '',
+    staleTime: 5 * 60 * 1000, // 5 minutes - prevent refetch jitters
+    refetchOnWindowFocus: false,
     retry: 2,
     retryDelay: 1000,
   })
@@ -154,6 +159,8 @@ export default function PolicyMap() {
       return response.data
     },
     enabled: viewMode === 'list', // Only fetch sessions in list view
+    staleTime: 5 * 60 * 1000, // 5 minutes - prevent refetch jitters
+    refetchOnWindowFocus: false,
     retry: 2,
     retryDelay: 1000,
   })
@@ -182,6 +189,8 @@ export default function PolicyMap() {
       return response.data
     },
     enabled: viewMode === 'list',
+    staleTime: 5 * 60 * 1000, // 5 minutes - prevent refetch jitters
+    refetchOnWindowFocus: false,
     retry: 2,
     retryDelay: 1000,
   })
@@ -442,17 +451,17 @@ export default function PolicyMap() {
               </div>
             </div>
 
-            {/* Compact Filters */}
-            <div className="bg-white rounded-lg shadow-sm p-4 mb-4">
-              <div className="flex flex-wrap items-end gap-4">
+            {/* Basic Filters - Clean and Spacious */}
+            <div className="bg-white rounded-lg shadow-sm p-6 mb-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 {/* State Filter - list view only */}
                 {viewMode === 'list' && (
-                  <div className="flex-1 min-w-[150px]">
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
                       State
                     </label>
                     <select
-                      className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm text-gray-900 py-2"
+                      className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-gray-900 py-2.5"
                       value={selectedState}
                       onChange={(e) => {
                         setSelectedState(e.target.value)
@@ -512,160 +521,223 @@ export default function PolicyMap() {
                     </select>
                   </div>
                 )}
-                {/* Session Filter - list view only */}
-                {viewMode === 'list' && (
-                  <MultiSelect
-                    label="Legislative Session"
-                    options={
-                      sessionsData?.sessions
-                        ?.slice()
-                        .sort((a: Session, b: Session) => {
-                          const dateA = a.end_date ? new Date(a.end_date).getTime() : 0
-                          const dateB = b.end_date ? new Date(b.end_date).getTime() : 0
-                          return dateB - dateA
-                        })
-                        .map((session: Session) => ({
-                          value: session.session,
-                          label: session.session_name,
-                          count: session.bill_count
-                        })) || []
-                    }
-                    selected={selectedSessions}
-                    onChange={(values) => {
-                      setSelectedSessions(values)
-                      setPage(1)
-                    }}
-                    placeholder="All Sessions"
-                    className="flex-1 min-w-[250px]"
-                  />
-                )}
-                
-                {/* Chamber Filter - list view only */}
-                {viewMode === 'list' && (
-                  <MultiSelect
-                    label="Chamber"
-                    options={[
-                      { value: 'house', label: 'House' },
-                      { value: 'senate', label: 'Senate' },
-                      { value: 'joint', label: 'Joint' }
-                    ]}
-                    selected={selectedChambers}
-                    onChange={(values) => {
-                      setSelectedChambers(values)
-                      setPage(1)
-                    }}
-                    placeholder="All Chambers"
-                    className="flex-1 min-w-[150px]"
-                  />
-                )}
-                
-                {/* Bill Type Filter - list view only */}
-                {viewMode === 'list' && (
-                  <MultiSelect
-                    label="Bill Type"
-                    options={[
-                      { value: 'bill', label: 'Bill (HB/SB)' },
-                      { value: 'resolution', label: 'Resolution (HR/SR)' },
-                      { value: 'joint_resolution', label: 'Joint Resolution (HJR/SJR)' },
-                      { value: 'concurrent_resolution', label: 'Concurrent Resolution (HCR/SCR)' },
-                      { value: 'memorial', label: 'Memorial (HJM/SJM)' }
-                    ]}
-                    selected={selectedBillTypes}
-                    onChange={(values) => {
-                      setSelectedBillTypes(values)
-                      setPage(1)
-                    }}
-                    placeholder="All Types"
-                    className="flex-1 min-w-[150px]"
-                  />
-                )}
-                
-                {/* Status Filter - list view only */}
-                {viewMode === 'list' && (
-                  <MultiSelect
-                    label="Status"
-                    options={[
-                      { value: 'enacted', label: 'Enacted' },
-                      { value: 'passed', label: 'Passed' },
-                      { value: 'adopted', label: 'Adopted' },
-                      { value: 'failed', label: 'Failed' },
-                      { value: 'introduced', label: 'Introduced' },
-                      { value: 'referred', label: 'Referred to Committee' },
-                      { value: 'reported', label: 'Reported from Committee' }
-                    ]}
-                    selected={selectedStatuses}
-                    onChange={(values) => {
-                      setSelectedStatuses(values)
-                      setPage(1)
-                    }}
-                    placeholder="All Statuses"
-                    className="flex-1 min-w-[150px]"
-                  />
-                )}
 
-                {/* Search */}
-                <div className="flex-1 min-w-[250px]">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                {/* Search - Prominent */}
+                <div className={viewMode === 'list' ? 'md:col-span-2' : 'md:col-span-3'}>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
                     {viewMode === 'map' ? 'Search Keywords' : 'Search Bills'}
                   </label>
                   <div className="relative">
                     <input
                       type="text"
-                      className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 pl-10 text-sm text-gray-900 py-2"
+                      className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 pl-10 text-gray-900 py-2.5"
                       placeholder="Search within results..."
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
                       onKeyPress={(e) => e.key === 'Enter' && setPage(1)}
                     />
-                    <MagnifyingGlassIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                    <MagnifyingGlassIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
                   </div>
                 </div>
+              </div>
 
-                {/* Clear button */}
-                {(searchQuery || selectedSessions.length > 0 || selectedChambers.length > 0 || selectedBillTypes.length > 0 || selectedStatuses.length > 0) && (
+              {/* Advanced Filters Button & Active Filter Indicator */}
+              {viewMode === 'list' && (
+                <div className="flex items-center justify-between mt-4 pt-4 border-t border-gray-200">
                   <button
-                    type="button"
-                    onClick={() => {
-                      setSearchQuery('')
-                      setSelectedSessions([])
-                      setSelectedChambers([])
-                      setSelectedBillTypes([])
-                      setSelectedStatuses([])
-                      setPage(1)
-                    }}
-                    className="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition-colors text-sm font-medium"
+                    onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
+                    className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors font-medium"
                   >
-                    Clear Filters
+                    <AdjustmentsHorizontalIcon className="h-5 w-5" />
+                    Advanced Filters
+                    {(selectedSessions.length > 0 || selectedChambers.length > 0 || selectedBillTypes.length > 0 || selectedStatuses.length > 0) && (
+                      <span className="ml-1 bg-blue-800 text-white rounded-full px-2 py-0.5 text-xs font-bold">
+                        {selectedSessions.length + selectedChambers.length + selectedBillTypes.length + selectedStatuses.length}
+                      </span>
+                    )}
                   </button>
-                )}
+
+                  {/* Active Filters Summary */}
+                  {(selectedSessions.length > 0 || selectedChambers.length > 0 || selectedBillTypes.length > 0 || selectedStatuses.length > 0 || searchQuery) && (
+                    <button
+                      onClick={() => {
+                        setSearchQuery('')
+                        setSelectedSessions([])
+                        setSelectedChambers([])
+                        setSelectedBillTypes([])
+                        setSelectedStatuses([])
+                        setPage(1)
+                      }}
+                      className="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition-colors text-sm font-medium"
+                    >
+                      Clear All Filters
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Advanced Filters Sidebar */}
+            {viewMode === 'list' && showAdvancedFilters && (
+              <>
+                {/* Backdrop */}
+                <div 
+                  className="fixed inset-0 bg-black bg-opacity-50 z-40"
+                  onClick={() => setShowAdvancedFilters(false)}
+                />
                 
-                {/* Sort Controls - list view only */}
-                {viewMode === 'list' && (
-                  <div className="flex-1 min-w-[200px]">
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Sort By
-                    </label>
-                    <div className="flex gap-2">
-                      <select
-                        className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm text-gray-900 py-2"
-                        value={sortBy}
-                        onChange={(e) => setSortBy(e.target.value as 'date' | 'name')}
-                      >
-                        <option value="date">Latest Action</option>
-                        <option value="name">Bill Number</option>
-                      </select>
+                {/* Sidebar */}
+                <div className="fixed right-0 top-0 h-full w-full md:w-96 bg-white shadow-2xl z-50 overflow-y-auto">
+                  <div className="p-6">
+                    {/* Header */}
+                    <div className="flex items-center justify-between mb-6">
+                      <h3 className="text-xl font-bold text-gray-900">Advanced Filters</h3>
                       <button
-                        onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
-                        className="px-3 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition-colors text-sm font-medium"
-                        title={sortOrder === 'asc' ? 'Sort Descending' : 'Sort Ascending'}
+                        onClick={() => setShowAdvancedFilters(false)}
+                        className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-md transition-colors"
                       >
-                        {sortOrder === 'asc' ? '↑' : '↓'}
+                        <XMarkIcon className="h-6 w-6" />
+                      </button>
+                    </div>
+
+                    {/* Filters */}
+                    <div className="space-y-6">
+                      {/* Session Filter */}
+                      <div>
+                        <MultiSelect
+                          label="Legislative Session"
+                          options={
+                            sessionsData?.sessions
+                              ?.slice()
+                              .sort((a: Session, b: Session) => {
+                                const dateA = a.end_date ? new Date(a.end_date).getTime() : 0
+                                const dateB = b.end_date ? new Date(b.end_date).getTime() : 0
+                                return dateB - dateA
+                              })
+                              .map((session: Session) => ({
+                                value: session.session,
+                                label: session.session_name,
+                                count: session.bill_count
+                              })) || []
+                          }
+                          selected={selectedSessions}
+                          onChange={(values) => {
+                            setSelectedSessions(values)
+                            setPage(1)
+                          }}
+                          placeholder="All Sessions"
+                        />
+                      </div>
+                      
+                      {/* Chamber Filter */}
+                      <div>
+                        <MultiSelect
+                          label="Chamber"
+                          options={[
+                            { value: 'house', label: 'House' },
+                            { value: 'senate', label: 'Senate' },
+                            { value: 'joint', label: 'Joint' }
+                          ]}
+                          selected={selectedChambers}
+                          onChange={(values) => {
+                            setSelectedChambers(values)
+                            setPage(1)
+                          }}
+                          placeholder="All Chambers"
+                        />
+                      </div>
+                      
+                      {/* Bill Type Filter */}
+                      <div>
+                        <MultiSelect
+                          label="Bill Type"
+                          options={[
+                            { value: 'bill', label: 'Bill (HB/SB)' },
+                            { value: 'resolution', label: 'Resolution (HR/SR)' },
+                            { value: 'joint_resolution', label: 'Joint Resolution (HJR/SJR)' },
+                            { value: 'concurrent_resolution', label: 'Concurrent Resolution (HCR/SCR)' },
+                            { value: 'memorial', label: 'Memorial (HJM/SJM)' }
+                          ]}
+                          selected={selectedBillTypes}
+                          onChange={(values) => {
+                            setSelectedBillTypes(values)
+                            setPage(1)
+                          }}
+                          placeholder="All Types"
+                        />
+                      </div>
+                      
+                      {/* Status Filter */}
+                      <div>
+                        <MultiSelect
+                          label="Status"
+                          options={[
+                            { value: 'enacted', label: 'Enacted' },
+                            { value: 'passed', label: 'Passed' },
+                            { value: 'adopted', label: 'Adopted' },
+                            { value: 'failed', label: 'Failed' },
+                            { value: 'introduced', label: 'Introduced' },
+                            { value: 'referred', label: 'Referred to Committee' },
+                            { value: 'reported', label: 'Reported from Committee' }
+                          ]}
+                          selected={selectedStatuses}
+                          onChange={(values) => {
+                            setSelectedStatuses(values)
+                            setPage(1)
+                          }}
+                          placeholder="All Statuses"
+                        />
+                      </div>
+
+                      {/* Sort Controls */}
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Sort By
+                        </label>
+                        <div className="space-y-2">
+                          <select
+                            className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-gray-900 py-2.5"
+                            value={sortBy}
+                            onChange={(e) => setSortBy(e.target.value as 'date' | 'name')}
+                          >
+                            <option value="date">Latest Action</option>
+                            <option value="name">Bill Number</option>
+                          </select>
+                          <button
+                            onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
+                            className="w-full px-4 py-2.5 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition-colors font-medium flex items-center justify-center gap-2"
+                          >
+                            {sortOrder === 'asc' ? '↑ Ascending' : '↓ Descending'}
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Footer Actions */}
+                    <div className="mt-8 pt-6 border-t border-gray-200 space-y-3">
+                      <button
+                        onClick={() => {
+                          setSelectedSessions([])
+                          setSelectedChambers([])
+                          setSelectedBillTypes([])
+                          setSelectedStatuses([])
+                          setPage(1)
+                        }}
+                        className="w-full px-4 py-2.5 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition-colors font-medium"
+                      >
+                        Clear Advanced Filters
+                      </button>
+                      <button
+                        onClick={() => setShowAdvancedFilters(false)}
+                        className="w-full px-4 py-2.5 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors font-medium"
+                      >
+                        Apply Filters
                       </button>
                     </div>
                   </div>
-                )}
-              </div>
-            </div>
+                </div>
+              </>
+            )}
 
             {/* Map Visualization */}
             {viewMode === 'map' && (
