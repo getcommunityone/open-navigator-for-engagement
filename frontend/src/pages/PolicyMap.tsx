@@ -508,29 +508,24 @@ export default function PolicyMap() {
         {/* Map and List View - only show when topic is selected */}
         {!showTopicSelector && (
           <>
-            {/* Selected Topic Badge */}
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <span className="text-2xl">
-                    {selectedTopic === 'fluoride' && '💧'}
-                    {selectedTopic === 'dental' && '🦷'}
-                    {selectedTopic === 'oral health' && '😁'}
-                    {selectedTopic === 'medicaid' && '🏥'}
-                    {selectedTopic === 'education' && '🎓'}
-                    {selectedTopic === 'health' && '🏨'}
-                  </span>
-                  <div>
-                    <div className="text-sm text-gray-600">Viewing legislation for:</div>
-                    <div className="text-lg font-bold text-gray-900 capitalize">
-                      {selectedTopic === 'fluoride' ? 'Water Fluoridation' :
-                       selectedTopic === 'dental' ? 'Dental Health' :
-                       selectedTopic === 'oral health' ? 'Oral Health' :
-                       selectedTopic === 'medicaid' ? 'Medicaid' :
-                       selectedTopic === 'education' ? 'Education' :
-                       'Health'}
-                    </div>
-                  </div>
+            {/* Selected Topic Badge - Compact */}
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
+              <div className="flex items-center gap-2">
+                <span className="text-xl">
+                  {selectedTopic === 'fluoride' && '💧'}
+                  {selectedTopic === 'dental' && '🦷'}
+                  {selectedTopic === 'oral health' && '😁'}
+                  {selectedTopic === 'medicaid' && '🏥'}
+                  {selectedTopic === 'education' && '🎓'}
+                  {selectedTopic === 'health' && '🏨'}
+                </span>
+                <div className="text-base font-bold text-gray-900">
+                  {selectedTopic === 'fluoride' ? 'Water Fluoridation' :
+                   selectedTopic === 'dental' ? 'Dental Health' :
+                   selectedTopic === 'oral health' ? 'Oral Health' :
+                   selectedTopic === 'medicaid' ? 'Medicaid' :
+                   selectedTopic === 'education' ? 'Education' :
+                   'Health'} Legislation
                 </div>
               </div>
             </div>
@@ -809,35 +804,26 @@ export default function PolicyMap() {
             {/* Map Visualization */}
             {viewMode === 'map' && (
               <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
-            {/* Clear Explanatory Title */}
-            <div className="mb-6 border-b border-gray-200 pb-4">
-              <h2 className="text-2xl font-bold text-gray-900 mb-2">
-                {selectedTopic ? (
-                  <>
-                    {selectedTopic.charAt(0).toUpperCase() + selectedTopic.slice(1)} Legislation Across the US
-                  </>
-                ) : (
-                  <>State-by-State Legislative Policy Overview</>
-                )}
-              </h2>
-              <p className="text-base text-gray-600">
+            {/* Compact Map Description */}
+            <div className="mb-4 pb-3 border-b border-gray-200">
+              <p className="text-sm text-gray-600 leading-relaxed">
                 {selectedTopic === 'fluoride' && (
-                  <>See which states mandate water fluoridation, which have removed it, and where funding or studies are underway. Each state's color shows the primary type of legislation, while darker/lighter shades indicate whether bills have been enacted, are pending, or have failed.</>
+                  <>Click states to view fluoridation bills. Colors show legislation type; shading indicates status (enacted/pending/failed).</>
                 )}
                 {selectedTopic === 'dental' && (
-                  <>Track dental health policies including coverage expansion, screening programs, provider access initiatives, and funding. Colors show the main focus of legislation in each state, with shading indicating current status.</>
+                  <>Click states for dental health bills. Colors show focus area; shading shows status.</>
                 )}
                 {selectedTopic === 'medicaid' && (
-                  <>Monitor Medicaid program changes across states, including expansions, coverage modifications, reimbursement adjustments, and eligibility requirements. The map shows what type of Medicaid legislation is most active in each state.</>
+                  <>Click states for Medicaid bills. Colors show legislation type; shading shows status.</>
                 )}
                 {selectedTopic === 'health' && (
-                  <>View health-related legislation including protections, restrictions, funding initiatives, and healthcare reforms. Each state's color indicates the dominant type of health policy being considered or enacted.</>
+                  <>Click states for health policy bills. Colors show type; shading shows status.</>
                 )}
                 {selectedTopic === 'education' && (
-                  <>Explore educational policy across states, from new requirements and curriculum changes to funding initiatives and system reforms. Colors represent the primary focus of education legislation in each state.</>
+                  <>Click states for education bills. Colors show focus area; shading shows status.</>
                 )}
                 {!selectedTopic && (
-                  <>This interactive map shows legislative activity across all 50 states. Click any state to drill down into specific bills, or use the topic filter above to focus on a particular policy area. Colors indicate the primary type of legislation, while shading shows whether bills have been enacted (darker), are pending (normal), or failed (lighter).</>
+                  <>Click any state to view bills. Colors show legislation type; shading shows status (enacted/pending/failed).</>
                 )}
               </p>
             </div>
