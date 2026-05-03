@@ -9,6 +9,7 @@ DROP TABLE IF EXISTS nonprofits_search CASCADE;
 DROP TABLE IF EXISTS jurisdictions_search CASCADE;
 DROP TABLE IF EXISTS contacts_search CASCADE;
 DROP TABLE IF EXISTS events_search CASCADE;
+DROP TABLE IF EXISTS bills_search CASCADE;
 DROP TABLE IF EXISTS reference_causes CASCADE;
 DROP TABLE IF EXISTS reference_ntee_codes CASCADE;
 DROP TABLE IF EXISTS last_sync CASCADE;
@@ -206,6 +207,46 @@ CREATE INDEX idx_events_date ON events_search(event_date DESC);
 CREATE INDEX idx_events_state ON events_search(state);
 CREATE INDEX idx_events_jurisdiction ON events_search(jurisdiction_name);
 CREATE INDEX idx_events_date_state ON events_search(event_date, state);
+
+
+-- Bills search table (legislative bills from all states)
+CREATE TABLE bills_search (
+    id SERIAL PRIMARY KEY,
+    bill_id VARCHAR(255) UNIQUE NOT NULL,
+    bill_number VARCHAR(50) NOT NULL,
+    title TEXT NOT NULL,
+    
+    -- Classification
+    classification VARCHAR(100),  -- 'bill', 'resolution', etc.
+    
+    -- Session info
+    session VARCHAR(50),
+    session_name TEXT,
+    jurisdiction_name VARCHAR(200),
+    state VARCHAR(2),
+    
+    -- Dates
+    first_action_date DATE,
+    latest_action_date DATE,
+    latest_action_description TEXT,
+    
+    -- Content
+    abstract TEXT,
+    source_url TEXT,
+    
+    -- Metadata
+    created_at TIMESTAMP,
+    updated_at TIMESTAMP,
+    last_synced TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX idx_bills_title_search ON bills_search USING GIN (to_tsvector('english', title));
+CREATE INDEX idx_bills_abstract_search ON bills_search USING GIN (to_tsvector('english', COALESCE(abstract, '')));
+CREATE INDEX idx_bills_number ON bills_search(bill_number);
+CREATE INDEX idx_bills_state ON bills_search(state);
+CREATE INDEX idx_bills_session ON bills_search(session);
+CREATE INDEX idx_bills_latest_action_date ON bills_search(latest_action_date DESC);
+CREATE INDEX idx_bills_state_session ON bills_search(state, session);
 
 
 -- ============================================================================

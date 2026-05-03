@@ -797,6 +797,76 @@ def load_contacts_search(conn, limit_states=None):
     return True
 
 
+def load_bills_search(conn, limit_states=None):
+    """Load bills from states"""
+    logger.info("📜 Loading bills search data...")
+    
+    states_to_load = limit_states or []
+    
+    # If no limit, scan all states
+    if not limit_states:
+        states_dir = GOLD_DIR / "states"
+        if states_dir.exists():
+            states_to_load = [d.name for d in states_dir.iterdir() if d.is_dir()]
+    
+    total_loaded = 0
+    cursor = conn.cursor()
+    
+    for state in states_to_load:
+        bills_file = GOLD_DIR / "states" / state / "bills_bills.parquet"
+        if bills_file.exists():
+            df = pd.read_parquet(bills_file)
+            
+            records = []
+            for _, row in df.iterrows():
+                # Extract state code from jurisdiction_ocd_id
+                # ocd-jurisdiction/country:us/state:ma/government -> MA
+                state_code = state.upper()
+                
+                record = (
+                    row.get('bill_id', ''),
+                    row.get('bill_number', ''),
+                    row.get('title', ''),
+                    row.get('classification', ''),
+                    row.get('session', ''),
+                    row.get('session_name', ''),
+                    row.get('jurisdiction_name', ''),
+                    state_code,
+                    pd.to_datetime(row.get('first_action_date')).date() if pd.notna(row.get('first_action_date')) else None,
+                    pd.to_datetime(row.get('latest_action_date')).date() if pd.notna(row.get('latest_action_date')) else None,
+                    row.get('latest_action_description', ''),
+                    row.get('abstract', ''),
+                    row.get('source_url', ''),
+                    pd.to_datetime(row.get('created_at')) if pd.notna(row.get('created_at')) else None,
+                    pd.to_datetime(row.get('updated_at')) if pd.notna(row.get('updated_at')) else None,
+                    datetime.now()
+                )
+                records.append(record)
+            
+            if records:
+                # Insert in batches to handle large datasets
+                batch_size = 1000
+                for i in range(0, len(records), batch_size):
+                    batch = records[i:i + batch_size]
+                    execute_values(cursor, """
+                        INSERT INTO bills_search 
+                        (bill_id, bill_number, title, classification, session, session_name,
+                         jurisdiction_name, state, first_action_date, latest_action_date,
+                         latest_action_description, abstract, source_url, created_at, updated_at,
+                         last_synced)
+                        VALUES %s
+                        ON CONFLICT (bill_id) DO NOTHING
+                    """, batch)
+                
+                total_loaded += len(records)
+                logger.info(f"  Loaded {len(records):,} bills from {state}")
+    
+    conn.commit()
+    logger.success(f"✅ Loaded {total_loaded:,} bills into search table")
+    record_sync(conn, 'bills_search', total_loaded)
+    return True
+
+
 def record_sync(conn, table_name: str, records_synced: int, status: str = 'success', error: Optional[str] = None):
     """Record sync status"""
     cursor = conn.cursor()
@@ -849,6 +919,12 @@ def main():
         
         # Step 7: Load contacts (MA only, same as nonprofits)
         if not load_contacts_search(conn, limit_states=['MA']):
+            return 1
+        
+        # Step 8: Load bills (MA only to start)
+        logger.info("⚠️  Loading only MA bills (~75K records)")
+        logger.info("   To load all states, modify limit_states parameter")
+        if not load_bills_search(conn, limit_states=['MA']):
             return 1
         
         # Show summary

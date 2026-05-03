@@ -533,3 +533,131 @@ async def search_events_pg(
     except Exception as e:
         logger.error(f"PostgreSQL events search error: {e}")
         return []
+
+
+async def search_bills_pg(
+    query: Optional[str] = None,
+    state: Optional[str] = None,
+    session: Optional[str] = None,
+    limit: int = 10
+) -> List[SearchResult]:
+    """
+    Search bills using PostgreSQL full-text search
+    
+    Args:
+        query: Search text (title, bill number, abstract)
+        state: Filter by state code  
+        session: Filter by legislative session
+        limit: Max results
+    
+    Returns:
+        List of SearchResult objects
+    """
+    try:
+        pool = await get_db_pool()
+        
+        # Build WHERE clauses
+        where_clauses = []
+        params = []
+        param_idx = 1
+        
+        if state:
+            where_clauses.append(f"state = ${param_idx}")
+            params.append(state.upper())
+            param_idx += 1
+        
+        if session:
+            where_clauses.append(f"session = ${param_idx}")
+            params.append(session)
+            param_idx += 1
+        
+        # Text search across title and abstract
+        if query and query.strip():
+            where_clauses.append(f"""(
+                to_tsvector('english', title) @@ plainto_tsquery('english', ${param_idx})
+                OR to_tsvector('english', COALESCE(abstract, '')) @@ plainto_tsquery('english', ${param_idx})
+                OR LOWER(bill_number) LIKE LOWER(${param_idx + 1})
+            )""")
+            params.append(query)
+            params.append(f"%{query}%")
+            param_idx += 2
+            
+            order_by = f"""
+                GREATEST(
+                    ts_rank(to_tsvector('english', title), plainto_tsquery('english', ${param_idx - 2})),
+                    ts_rank(to_tsvector('english', COALESCE(abstract, '')), plainto_tsquery('english', ${param_idx - 2}))
+                ) DESC, latest_action_date DESC NULLS LAST
+            """
+        else:
+            order_by = "latest_action_date DESC NULLS LAST"
+        
+        where_sql = " AND ".join(where_clauses) if where_clauses else "TRUE"
+        
+        sql = f"""
+            SELECT 
+                bill_id,
+                bill_number,
+                title,
+                classification,
+                session,
+                session_name,
+                jurisdiction_name,
+                state,
+                latest_action_date,
+                latest_action_description,
+                abstract,
+                source_url
+            FROM bills_search
+            WHERE {where_sql}
+            ORDER BY {order_by}
+            LIMIT ${param_idx}
+        """
+        params.append(limit)
+        
+        async with pool.acquire() as conn:
+            rows = await conn.fetch(sql, *params)
+            
+            results = []
+            for row in rows:
+                # Format title  
+                title = f"{row['bill_number']}: {row['title'][:100]}"
+                if len(row['title']) > 100:
+                    title += "..."
+                
+                # Format subtitle with session and date
+                subtitle_parts = []
+                if row['session_name']:
+                    subtitle_parts.append(row['session_name'])
+                if row['latest_action_date']:
+                    subtitle_parts.append(f"Last action: {row['latest_action_date'].strftime('%Y-%m-%d')}")
+                subtitle = " • ".join(subtitle_parts) if subtitle_parts else row.get('jurisdiction_name', '')
+                
+                # Description is either abstract or latest action
+                description = row['abstract'] if row['abstract'] else (row['latest_action_description'] or '')
+                if description and len(description) > 200:
+                    description = description[:200] + "..."
+                
+                results.append(SearchResult(
+                    result_type='bill',
+                    title=title,
+                    subtitle=subtitle,
+                    description=description,
+                    url=row['source_url'] or f"/bills/{row['state']}/{row['bill_number']}",
+                    score=1.0,
+                    metadata={
+                        'bill_id': row['bill_id'],
+                        'bill_number': row['bill_number'],
+                        'state': row['state'],
+                        'session': row['session'],
+                        'classification': row['classification'],
+                        'latest_action_date': row['latest_action_date'].isoformat() if row['latest_action_date'] else None
+                    }
+                ))
+            
+            logger.info(f"📜 PostgreSQL bills search: {len(results)} results")
+            return results
+            
+    except Exception as e:
+        logger.error(f"PostgreSQL bills search error: {e}")
+        return []
+
