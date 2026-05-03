@@ -40,8 +40,8 @@ if str(Path(__file__).parent.parent.parent) not in sys.path:
     sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 from scripts.discovery.url_discovery_agent import URLDiscoveryAgent
-from scripts.discovery.youtube_channel_discovery import YouTubeChannelDiscovery
-from scripts.discovery.social_media_discovery import SocialMediaDiscovery
+from scripts.datasources.youtube.youtube_channel_discovery import YouTubeChannelDiscovery
+from scripts.datasources.social_media.social_media_discovery import SocialMediaDiscovery
 from scripts.discovery.platform_detector import detect_platform
 import httpx
 

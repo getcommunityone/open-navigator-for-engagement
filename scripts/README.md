@@ -37,6 +37,10 @@ Data source integrations and API connectors organized by external data source.
 - `census/` - US Census Bureau geographic and demographic data - 3 scripts
 - `irs/` - IRS nonprofit data (Form 990, Business Master File) - 5 scripts
   - ✅ **nonprofit_discovery.py** - Discover nonprofits by location/category
+- `youtube/` - YouTube Data API integration - 1 script
+  - ✅ **youtube_channel_discovery.py** - Discover municipal YouTube channels
+- `social_media/` - Social media discovery (Facebook, Twitter, Instagram) - 1 script
+  - ✅ **social_media_discovery.py** - Find social media accounts
 - `fec/` - Federal Election Commission campaign finance data - 2 scripts
 - `localview/` - LocalView meeting transcripts - 2 scripts
   - ✅ **dataverse_client.py** - Harvard Dataverse API client
