@@ -54,15 +54,26 @@ def get_data_source(file_path: Path, use_remote: bool = False) -> str:
     
     # Convert local path to HuggingFace dataset name
     parts = file_path.parts
+    filename = parts[-1].replace('.parquet', '').replace('_', '-')
     
+    # Handle nested state-specific files (if they exist)
     if 'states' in parts:
         state_idx = parts.index('states')
         state = parts[state_idx + 1].lower()
-        filename = parts[-1].replace('.parquet', '').replace('_', '-')
         dataset_name = f"states-{state}-{filename}"
         return get_hf_dataset_url(dataset_name)
     
-    return str(file_path)
+    # Handle flat files in gold directory
+    # Map: bills_bills.parquet -> one-bills
+    dataset_mapping = {
+        'bills-bills': 'one-bills',
+        'bills-bill-actions': 'one-bill-actions',
+        'bills-bill-sponsorships': 'one-bill-sponsorships',
+        'bills-map-aggregates': 'one-bills-map-aggregates',
+    }
+    
+    dataset_name = dataset_mapping.get(filename, filename)
+    return get_hf_dataset_url(dataset_name)
 
 
 async def get_pool():
@@ -82,13 +93,17 @@ async def fetch_bills_from_parquet(
     state: str,
     q: Optional[str] = None,
     session: Optional[str] = None,
+    topic: Optional[str] = None,
+    chamber: Optional[str] = None,
+    bill_type: Optional[str] = None,
+    status: Optional[str] = None,
     limit: int = 50,
     offset: int = 0
 ) -> Dict[str, Any]:
     """Fetch bills from parquet files using DuckDB (detailed drill-down)."""
     try:
-        # Build file path
-        bills_file = GOLD_DIR / "states" / state / "bills_bills.parquet"
+        # Use flat file structure (all states in one file)
+        bills_file = GOLD_DIR / "bills_bills.parquet"
         
         # Get data source (local or remote HuggingFace URL)
         data_source = get_data_source(bills_file, use_remote=IS_HF_SPACES)
@@ -96,9 +111,31 @@ async def fetch_bills_from_parquet(
         # Connect to DuckDB
         conn = duckdb.connect()
         
-        # Build SQL query
-        where_clauses = []
-        params = []
+        # Build SQL query - ALWAYS filter by state
+        where_clauses = ["state = ?"]
+        params = [state]
+        
+        # Topic filter (keyword search in title)
+        if topic:
+            topic_keywords = {
+                'fluoride': 'fluorid',
+                'dental': 'dental',
+                'medicaid': 'medicaid',
+                'oral health': 'oral|dental|teeth',
+                'health': 'health',
+                'education': 'education|school',
+            }
+            keyword = topic_keywords.get(topic.lower(), topic)
+            
+            # Handle multiple keywords with OR
+            if '|' in keyword:
+                keyword_parts = keyword.split('|')
+                keyword_clauses = ["LOWER(title) LIKE LOWER(?)"] * len(keyword_parts)
+                where_clauses.append(f"({' OR '.join(keyword_clauses)})")
+                params.extend([f'%{kw}%' for kw in keyword_parts])
+            else:
+                where_clauses.append("LOWER(title) LIKE LOWER(?)")
+                params.append(f'%{keyword}%')
         
         if q:
             where_clauses.append("(LOWER(title) LIKE LOWER(?) OR LOWER(bill_number) LIKE LOWER(?))")
@@ -109,7 +146,51 @@ async def fetch_bills_from_parquet(
             where_clauses.append("session = ?")
             params.append(session)
         
-        where_clause = " AND ".join(where_clauses) if where_clauses else "1=1"
+        # Chamber filter (based on bill number prefix)
+        if chamber:
+            if chamber.lower() == 'house':
+                where_clauses.append("(bill_number LIKE 'HB%' OR bill_number LIKE 'HR%' OR bill_number LIKE 'HJR%' OR bill_number LIKE 'HCR%' OR bill_number LIKE 'HJM%' OR bill_number LIKE 'H %')")
+            elif chamber.lower() == 'senate':
+                where_clauses.append("(bill_number LIKE 'SB%' OR bill_number LIKE 'SR%' OR bill_number LIKE 'SJR%' OR bill_number LIKE 'SCR%' OR bill_number LIKE 'SJM%' OR bill_number LIKE 'S %')")
+            elif chamber.lower() == 'joint':
+                where_clauses.append("(bill_number LIKE '%JR%' OR bill_number LIKE '%JM%')")
+        
+        # Bill type filter (based on bill number pattern)
+        if bill_type:
+            if bill_type == 'bill':
+                where_clauses.append("(bill_number LIKE 'HB%' OR bill_number LIKE 'SB%' OR bill_number LIKE 'AB%')")
+            elif bill_type == 'resolution':
+                where_clauses.append("(bill_number LIKE 'HR%' OR bill_number LIKE 'SR%' OR bill_number LIKE 'AR%')")
+            elif bill_type == 'joint_resolution':
+                where_clauses.append("(bill_number LIKE 'HJR%' OR bill_number LIKE 'SJR%' OR bill_number LIKE 'AJR%')")
+            elif bill_type == 'concurrent_resolution':
+                where_clauses.append("(bill_number LIKE 'HCR%' OR bill_number LIKE 'SCR%')")
+            elif bill_type == 'memorial':
+                where_clauses.append("(bill_number LIKE 'HJM%' OR bill_number LIKE 'SJM%')")
+        
+        # Status filter (based on latest_action_description)
+        if status:
+            status_keywords = {
+                'enacted': 'Enacted',
+                'passed': 'passed|Passed',
+                'adopted': 'Adopted|adopted',
+                'failed': 'Failed|failed',
+                'introduced': 'Introduced|introduced',
+                'referred': 'referred|Referred',
+                'reported': 'reported|Reported'
+            }
+            keyword = status_keywords.get(status.lower(), status)
+            
+            if '|' in keyword:
+                keyword_parts = keyword.split('|')
+                keyword_clauses = ["LOWER(latest_action_description) LIKE LOWER(?)"] * len(keyword_parts)
+                where_clauses.append(f"({' OR '.join(keyword_clauses)})")
+                params.extend([f'%{kw}%' for kw in keyword_parts])
+            else:
+                where_clauses.append("LOWER(latest_action_description) LIKE LOWER(?)")
+                params.append(f'%{keyword}%')
+        
+        where_clause = " AND ".join(where_clauses)
         
         # Count total
         count_sql = f"""
@@ -162,6 +243,10 @@ async def fetch_bills_from_parquet(
         return {
             "state": state,
             "query": q,
+            "topic": topic,
+            "chamber": chamber,
+            "bill_type": bill_type,
+            "status": status,
             "session": session,
             "bills": bills,
             "total": total,
@@ -178,8 +263,8 @@ async def fetch_bills_from_parquet(
 async def fetch_sessions_from_parquet(state: str) -> Dict[str, Any]:
     """Fetch sessions from parquet files using DuckDB."""
     try:
-        # Build file path
-        bills_file = GOLD_DIR / "states" / state / "bills_bills.parquet"
+        # Use flat file structure (all states in one file)
+        bills_file = GOLD_DIR / "bills_bills.parquet"
         
         # Get data source
         data_source = get_data_source(bills_file, use_remote=IS_HF_SPACES)
@@ -187,7 +272,7 @@ async def fetch_sessions_from_parquet(state: str) -> Dict[str, Any]:
         # Connect to DuckDB
         conn = duckdb.connect()
         
-        # Aggregate sessions
+        # Aggregate sessions - filter by state
         sql = """
             SELECT 
                 session,
@@ -196,11 +281,12 @@ async def fetch_sessions_from_parquet(state: str) -> Dict[str, Any]:
                 MAX(latest_action_date) as end_date,
                 COUNT(*) as bill_count
             FROM read_parquet(?)
+            WHERE state = ?
             GROUP BY session, session_name
             ORDER BY session DESC
         """
         
-        rows = conn.execute(sql, [data_source]).fetchall()
+        rows = conn.execute(sql, [data_source, state]).fetchall()
         
         sessions = []
         for row in rows:
@@ -374,6 +460,10 @@ async def get_bills(
     state: str = Query(..., description="State abbreviation (e.g., MA, AL)"),
     q: Optional[str] = Query(None, description="Search query (bill number or title)"),
     session: Optional[str] = Query(None, description="Legislative session"),
+    topic: Optional[str] = Query(None, description="Policy topic (e.g., fluoride, dental, medicaid)"),
+    chamber: Optional[str] = Query(None, description="Legislative chamber (house, senate, joint)"),
+    bill_type: Optional[str] = Query(None, description="Bill type (bill, resolution, joint_resolution, concurrent_resolution, memorial)"),
+    status: Optional[str] = Query(None, description="Bill status (enacted, passed, adopted, failed, introduced, referred, reported)"),
     limit: int = Query(50, ge=1, le=500),
     offset: int = Query(0, ge=0)
 ):
@@ -383,6 +473,10 @@ async def get_bills(
     **Examples:**
     - `/api/bills?state=AL&q=dental` - Search Alabama bills for "dental"
     - `/api/bills?state=AL&session=2024rs` - Get all 2024 regular session bills
+    - `/api/bills?state=AL&topic=fluoride` - Get fluoride-related Alabama bills
+    - `/api/bills?state=AL&chamber=house` - Get House bills only
+    - `/api/bills?state=AL&bill_type=bill` - Get only bills (not resolutions)
+    - `/api/bills?state=AL&status=enacted` - Get enacted bills only
     - `/api/bills?state=AL&limit=50` - Browse recent Alabama bills
     """
     try:
@@ -390,6 +484,10 @@ async def get_bills(
             state=state.upper(),
             q=q,
             session=session,
+            topic=topic,
+            chamber=chamber,
+            bill_type=bill_type,
+            status=status,
             limit=limit,
             offset=offset
         )

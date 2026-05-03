@@ -51,6 +51,14 @@ export default function PolicyMap() {
   const [selectedState, setSelectedState] = useState('AL')
   const [selectedSession, setSelectedSession] = useState<string>('')
   const [searchQuery, setSearchQuery] = useState('')
+  const [sortBy, setSortBy] = useState<'date' | 'name'>('date')
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc')
+  const [expandedBill, setExpandedBill] = useState<string | null>(null)
+  
+  // New filter states
+  const [selectedChamber, setSelectedChamber] = useState<string>('')
+  const [selectedBillType, setSelectedBillType] = useState<string>('')
+  const [selectedStatus, setSelectedStatus] = useState<string>('')
   
   // Read topic from URL, or default to empty (showing topic selector)
   const topicFromUrl = searchParams.get('topic') || ''
@@ -111,7 +119,7 @@ export default function PolicyMap() {
     bills: Bill[]
     pagination: { limit: number; offset: number; has_more: boolean }
   }>({
-    queryKey: ['bills', selectedState, selectedSession, searchQuery, page],
+    queryKey: ['bills', selectedState, selectedSession, searchQuery, selectedTopic, selectedChamber, selectedBillType, selectedStatus, page],
     queryFn: async () => {
       const params = new URLSearchParams({
         state: selectedState,
@@ -120,6 +128,10 @@ export default function PolicyMap() {
       })
       if (selectedSession) params.append('session', selectedSession)
       if (searchQuery) params.append('q', searchQuery)
+      if (selectedTopic) params.append('topic', selectedTopic)
+      if (selectedChamber) params.append('chamber', selectedChamber)
+      if (selectedBillType) params.append('bill_type', selectedBillType)
+      if (selectedStatus) params.append('status', selectedStatus)
 
       const response = await api.get(`/bills?${params}`)
       return response.data
@@ -146,6 +158,22 @@ export default function PolicyMap() {
     setShowTopicSelector(true)
     setSelectedTopic('')
   }
+  
+  // Sort bills client-side
+  const sortedBills = billsData?.bills ? [...billsData.bills].sort((a, b) => {
+    if (sortBy === 'date') {
+      const dateA = a.latest_action_date ? new Date(a.latest_action_date).getTime() : 0
+      const dateB = b.latest_action_date ? new Date(b.latest_action_date).getTime() : 0
+      return sortOrder === 'asc' ? dateA - dateB : dateB - dateA
+    } else {
+      // Sort by bill number
+      const numA = a.bill_number
+      const numB = b.bill_number
+      return sortOrder === 'asc' 
+        ? numA.localeCompare(numB)
+        : numB.localeCompare(numA)
+    }
+  }) : []
 
   const totalStatesWithLegislation = mapData ? Object.values(mapData.states).filter(s => s.total_bills > 0).length : 0
   const totalBillsAcrossStates = mapData ? Object.values(mapData.states).reduce((sum, s) => sum + s.total_bills, 0) : 0
@@ -374,11 +402,55 @@ export default function PolicyMap() {
                       }}
                     >
                       <option value="AL">Alabama</option>
+                      <option value="AK">Alaska</option>
+                      <option value="AZ">Arizona</option>
+                      <option value="AR">Arkansas</option>
+                      <option value="CA">California</option>
+                      <option value="CO">Colorado</option>
+                      <option value="CT">Connecticut</option>
+                      <option value="DE">Delaware</option>
+                      <option value="FL">Florida</option>
                       <option value="GA">Georgia</option>
+                      <option value="HI">Hawaii</option>
+                      <option value="ID">Idaho</option>
+                      <option value="IL">Illinois</option>
                       <option value="IN">Indiana</option>
+                      <option value="IA">Iowa</option>
+                      <option value="KS">Kansas</option>
+                      <option value="KY">Kentucky</option>
+                      <option value="LA">Louisiana</option>
+                      <option value="ME">Maine</option>
+                      <option value="MD">Maryland</option>
                       <option value="MA">Massachusetts</option>
+                      <option value="MI">Michigan</option>
+                      <option value="MN">Minnesota</option>
+                      <option value="MS">Mississippi</option>
+                      <option value="MO">Missouri</option>
+                      <option value="MT">Montana</option>
+                      <option value="NE">Nebraska</option>
+                      <option value="NV">Nevada</option>
+                      <option value="NH">New Hampshire</option>
+                      <option value="NJ">New Jersey</option>
+                      <option value="NM">New Mexico</option>
+                      <option value="NY">New York</option>
+                      <option value="NC">North Carolina</option>
+                      <option value="ND">North Dakota</option>
+                      <option value="OH">Ohio</option>
+                      <option value="OK">Oklahoma</option>
+                      <option value="OR">Oregon</option>
+                      <option value="PA">Pennsylvania</option>
+                      <option value="RI">Rhode Island</option>
+                      <option value="SC">South Carolina</option>
+                      <option value="SD">South Dakota</option>
+                      <option value="TN">Tennessee</option>
+                      <option value="TX">Texas</option>
+                      <option value="UT">Utah</option>
+                      <option value="VT">Vermont</option>
+                      <option value="VA">Virginia</option>
                       <option value="WA">Washington</option>
+                      <option value="WV">West Virginia</option>
                       <option value="WI">Wisconsin</option>
+                      <option value="WY">Wyoming</option>
                     </select>
                   </div>
                 )}
@@ -405,6 +477,78 @@ export default function PolicyMap() {
                     </select>
                   </div>
                 )}
+                
+                {/* Chamber Filter - list view only */}
+                {viewMode === 'list' && (
+                  <div className="flex-1 min-w-[150px]">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Chamber
+                    </label>
+                    <select
+                      className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm text-gray-900 py-2"
+                      value={selectedChamber}
+                      onChange={(e) => {
+                        setSelectedChamber(e.target.value)
+                        setPage(1)
+                      }}
+                    >
+                      <option value="">All Chambers</option>
+                      <option value="house">House</option>
+                      <option value="senate">Senate</option>
+                      <option value="joint">Joint</option>
+                    </select>
+                  </div>
+                )}
+                
+                {/* Bill Type Filter - list view only */}
+                {viewMode === 'list' && (
+                  <div className="flex-1 min-w-[150px]">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Bill Type
+                    </label>
+                    <select
+                      className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm text-gray-900 py-2"
+                      value={selectedBillType}
+                      onChange={(e) => {
+                        setSelectedBillType(e.target.value)
+                        setPage(1)
+                      }}
+                    >
+                      <option value="">All Types</option>
+                      <option value="bill">Bill (HB/SB)</option>
+                      <option value="resolution">Resolution (HR/SR)</option>
+                      <option value="joint_resolution">Joint Resolution (HJR/SJR)</option>
+                      <option value="concurrent_resolution">Concurrent Resolution (HCR/SCR)</option>
+                      <option value="memorial">Memorial (HJM/SJM)</option>
+                    </select>
+                  </div>
+                )}
+                
+                {/* Status Filter - list view only */}
+                {viewMode === 'list' && (
+                  <div className="flex-1 min-w-[150px]">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Status
+                    </label>
+                    <select
+                      className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm text-gray-900 py-2"
+                      value={selectedStatus}
+                      onChange={(e) => {
+                        setSelectedStatus(e.target.value)
+                        setPage(1)
+                      }}
+                    >
+                      <option value="">All Statuses</option>
+                      <option value="enacted">Enacted</option>
+                      <option value="passed">Passed</option>
+                      <option value="adopted">Adopted</option>
+                      <option value="failed">Failed</option>
+                      <option value="introduced">Introduced</option>
+                      <option value="referred">Referred to Committee</option>
+                      <option value="reported">Reported from Committee</option>
+                    </select>
+                  </div>
+                )}
 
                 {/* Search */}
                 <div className="flex-1 min-w-[250px]">
@@ -425,18 +569,47 @@ export default function PolicyMap() {
                 </div>
 
                 {/* Clear button */}
-                {(searchQuery || selectedSession) && (
+                {(searchQuery || selectedSession || selectedChamber || selectedBillType || selectedStatus) && (
                   <button
                     type="button"
                     onClick={() => {
                       setSearchQuery('')
                       setSelectedSession('')
+                      setSelectedChamber('')
+                      setSelectedBillType('')
+                      setSelectedStatus('')
                       setPage(1)
                     }}
                     className="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition-colors text-sm font-medium"
                   >
-                    Clear
+                    Clear Filters
                   </button>
+                )}
+                
+                {/* Sort Controls - list view only */}
+                {viewMode === 'list' && (
+                  <div className="flex-1 min-w-[200px]">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Sort By
+                    </label>
+                    <div className="flex gap-2">
+                      <select
+                        className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm text-gray-900 py-2"
+                        value={sortBy}
+                        onChange={(e) => setSortBy(e.target.value as 'date' | 'name')}
+                      >
+                        <option value="date">Latest Action</option>
+                        <option value="name">Bill Number</option>
+                      </select>
+                      <button
+                        onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
+                        className="px-3 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition-colors text-sm font-medium"
+                        title={sortOrder === 'asc' ? 'Sort Descending' : 'Sort Ascending'}
+                      >
+                        {sortOrder === 'asc' ? '↑' : '↓'}
+                      </button>
+                    </div>
+                  </div>
                 )}
               </div>
             </div>
@@ -619,42 +792,83 @@ export default function PolicyMap() {
                 ) : (
                   <>
                     <div className="space-y-4 mb-6">
-                      {billsData?.bills.map((bill) => (
+                      {sortedBills.map((bill) => {
+                        const isExpanded = expandedBill === bill.bill_id
+                        return (
                         <div
                           key={bill.bill_id}
-                          className="bg-white rounded-lg shadow-sm p-6 hover:shadow-md transition-shadow border-l-4 border-blue-500"
+                          className="bg-white rounded-lg shadow-sm border-l-4 border-blue-500 overflow-hidden transition-shadow hover:shadow-md"
                         >
-                          <div className="flex items-start justify-between">
-                            <div className="flex-1">
-                              <div className="flex items-center gap-3 mb-2">
-                                <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
-                                  {bill.bill_number}
-                                </span>
-                                <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-gray-100 text-gray-800">
-                                  {bill.classification.join(', ')}
-                                </span>
-                                <span className="text-sm text-gray-500">
-                                  {bill.session_name}
-                                </span>
-                              </div>
-                              <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                                {bill.title}
-                              </h3>
-                              <div className="flex items-center gap-4 text-sm text-gray-600">
-                                <span>
-                                  <strong>Latest Action:</strong> {bill.latest_action}
-                                </span>
-                                {bill.latest_action_date && (
-                                  <span>
-                                    <strong>Date:</strong>{' '}
-                                    {new Date(bill.latest_action_date).toLocaleDateString()}
+                          {/* Bill Header - Always Visible */}
+                          <div 
+                            className="p-6 cursor-pointer"
+                            onClick={() => setExpandedBill(isExpanded ? null : bill.bill_id)}
+                          >
+                            <div className="flex items-start justify-between">
+                              <div className="flex-1">
+                                <div className="flex items-center gap-3 mb-2 flex-wrap">
+                                  <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
+                                    {bill.bill_number}
                                   </span>
-                                )}
+                                  {bill.classification && bill.classification.length > 0 && (
+                                    <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-gray-100 text-gray-800">
+                                      {bill.classification.join(', ')}
+                                    </span>
+                                  )}
+                                  <span className="text-sm text-gray-500">
+                                    {bill.session_name}
+                                  </span>
+                                </div>
+                                <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                                  {bill.title}
+                                </h3>
+                                <div className="flex items-center gap-4 text-sm text-gray-600">
+                                  <span>
+                                    <strong>Latest Action:</strong> {bill.latest_action_description || bill.latest_action || 'N/A'}
+                                  </span>
+                                  {bill.latest_action_date && (
+                                    <span>
+                                      <strong>Date:</strong>{' '}
+                                      {new Date(bill.latest_action_date).toLocaleDateString()}
+                                    </span>
+                                  )}
+                                </div>
                               </div>
+                              <button className="ml-4 text-gray-400 hover:text-gray-600">
+                                {isExpanded ? '▼' : '▶'}
+                              </button>
                             </div>
                           </div>
+                          
+                          {/* Expanded Details */}
+                          {isExpanded && (
+                            <div className="px-6 pb-6 border-t border-gray-100">
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                                <div>
+                                  <p className="text-sm font-medium text-gray-700 mb-1">Jurisdiction</p>
+                                  <p className="text-sm text-gray-900">{bill.jurisdiction_name}</p>
+                                </div>
+                                <div>
+                                  <p className="text-sm font-medium text-gray-700 mb-1">Session</p>
+                                  <p className="text-sm text-gray-900">{bill.session_name} ({bill.session})</p>
+                                </div>
+                                {bill.first_action_date && (
+                                  <div>
+                                    <p className="text-sm font-medium text-gray-700 mb-1">First Action</p>
+                                    <p className="text-sm text-gray-900">
+                                      {new Date(bill.first_action_date).toLocaleDateString()}
+                                    </p>
+                                  </div>
+                                )}
+                                <div>
+                                  <p className="text-sm font-medium text-gray-700 mb-1">Bill ID</p>
+                                  <p className="text-xs text-gray-600 font-mono break-all">{bill.bill_id}</p>
+                                </div>
+                              </div>
+                            </div>
+                          )}
                         </div>
-                      ))}
+                      )})}
                     </div>
 
                     {/* Pagination */}

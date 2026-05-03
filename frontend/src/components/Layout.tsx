@@ -166,7 +166,7 @@ export default function Layout() {
                     <img 
                       src={user.avatar_url} 
                       alt={user.full_name || user.email}
-                      className="h-9 w-9 rounded-full border-2 border-primary-500 shadow-sm"
+                      className="h-9 w-9 flex-shrink-0 rounded-full border-2 border-primary-500 shadow-sm object-cover"
                       onError={(e) => {
                         // If image fails to load, hide it and show fallback
                         e.currentTarget.style.display = 'none';
