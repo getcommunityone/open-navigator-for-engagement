@@ -1,5 +1,5 @@
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
-import { useState, Fragment, useEffect } from 'react'
+import React, { useState, Fragment, useEffect } from 'react'
 import { Tab } from '@headlessui/react'
 import { useQuery } from '@tanstack/react-query'
 import api from '../lib/api'
@@ -120,6 +120,7 @@ export default function Home() {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const [keyword, setKeyword] = useState('')
+  const [debouncedKeyword, setDebouncedKeyword] = useState('')
   const [searchScope, setSearchScope] = useState('city') // city, county, state, community (school)
   const [selectedTab, setSelectedTab] = useState(0)
   const [selectedStoryTab, setSelectedStoryTab] = useState(0)
@@ -130,6 +131,18 @@ export default function Home() {
   const { user, isAuthenticated, login, isLoading } = useAuth()
 
   const DOCS_URL = import.meta.env.PROD ? 'https://www.communityone.com/docs/intro' : 'http://localhost:3000/docs/intro'
+  
+  // Debounce keyword input (300ms delay)
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      console.log('⏱️ [Home] Debounced keyword update:', keyword);
+      setDebouncedKeyword(keyword);
+    }, 300);
+
+    return () => {
+      clearTimeout(timer);
+    };
+  }, [keyword]);
 
   // Fetch stats based on location
   const { data: locationStats } = useQuery({
@@ -168,8 +181,10 @@ export default function Home() {
   // Use database causes if available, fallback to empty array while loading
   const trendingTopics = trendingData?.causes || []
 
-  // Generate dynamic stats text based on location
-  const getStatsText = () => {
+  // Generate dynamic stats text based on location (memoized for performance)
+  const statsText = React.useMemo(() => {
+    console.log('📊 [Home] Recomputing stats text, locationStats:', locationStats, 'location:', location);
+    
     // If no location data or stats are loading, show national stats
     if (!locationStats) {
       return '90,000+ jurisdictions • 1.8M nonprofits • 75K+ leaders • 650+ causes • 100% free';
@@ -215,7 +230,7 @@ export default function Home() {
     parts.push('100% free');
     
     return parts.join(' • ');
-  };
+  }, [locationStats, location]);
 
   // Generate dynamic subtitle based on location
   const getSubtitle = () => {
@@ -233,10 +248,10 @@ export default function Home() {
 
   // Live search preview (type-ahead with actual results from API)
   const { data: previewResults, isLoading: previewLoading, error: previewError } = useQuery({
-    queryKey: ['search-preview-home', keyword, location?.state],
+    queryKey: ['search-preview-home', debouncedKeyword, location?.state],
     queryFn: async () => {
-      console.log('🔍 [Home] Fetching preview for:', keyword, 'in state:', location?.state);
-      if (!keyword || keyword.length < 2) {
+      console.log('🔍 [Home] Fetching preview for:', debouncedKeyword, 'in state:', location?.state);
+      if (!debouncedKeyword || debouncedKeyword.length < 2) {
         console.log('⚠️ [Home] Query too short, skipping');
         return null;
       }
@@ -244,7 +259,7 @@ export default function Home() {
       try {
         const url = '/search/';
         const params: any = {
-          q: keyword,
+          q: debouncedKeyword,
           types: 'causes,contacts,organizations',
           limit: 3
         };
@@ -271,10 +286,9 @@ export default function Home() {
         throw error;
       }
     },
-    enabled: keyword.length >= 2, // Removed showSuggestions dependency
+    enabled: debouncedKeyword.length >= 2 && showSuggestions,
     staleTime: 1000,
-    retry: 1, // Only retry once on error
-    retryDelay: 1000
+    retry: false // Don't retry to see errors immediately
   });
 
   // Log when preview state changes
@@ -294,7 +308,7 @@ export default function Home() {
   useEffect(() => {
     const tabParam = searchParams.get('tab')
     if (tabParam === 'community') {
-      setSelectedTab(1) // Switch to "Find My Local Community" tab
+      setSelectedTab(1) // Switch to "Find/Change My Community" tab
     }
   }, [searchParams])
 
@@ -351,6 +365,7 @@ export default function Home() {
   }
 
   const handleAddressFound = (locationData: any) => {
+    console.log('📍 [Home] Address found, updating location:', locationData);
     setLocation({
       address: locationData.address,
       state: locationData.state,
@@ -359,6 +374,7 @@ export default function Home() {
       latitude: locationData.latitude,
       longitude: locationData.longitude,
     })
+    console.log('📍 [Home] Location updated, should trigger stats refetch');
   }
 
   const categories = [
@@ -739,7 +755,7 @@ export default function Home() {
                         {FEATURED_STORIES[selectedStoryTab].description}
                       </p>
                       <p className="text-sm md:text-base text-gray-500 mb-8 font-medium">
-                        {getStatsText()}
+                        {statsText}
                       </p>
                       
                       {/* Search Box */}
@@ -1087,7 +1103,7 @@ export default function Home() {
           <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-2xl w-full" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-2xl font-bold" style={{ color: '#354F52' }}>
-                Find My Community
+                {location ? 'Change My Community' : 'Find My Community'}
               </h2>
               <button
                 onClick={() => setSelectedTab(0)}
@@ -1098,7 +1114,9 @@ export default function Home() {
               </button>
             </div>
             <p className="text-gray-600 mb-6">
-              Enter your address to find local organizations, city councils, county boards, school districts, and charities near you
+              {location 
+                ? `Currently set to ${location.city}, ${location.state}. Enter a new address to change your community.`
+                : 'Enter your address to find local organizations, city councils, county boards, school districts, and charities near you'}
             </p>
             <AddressLookup onLocationFound={handleAddressFound} />
             
@@ -1439,7 +1457,7 @@ export default function Home() {
                       }`}
                       style={selected ? { backgroundColor: '#354F52' } : {}}
                     >
-                      📍 Find My Local Community
+                      📍 {location ? 'Change My Community' : 'Find My Local Community'}
                     </button>
                   )}
                 </Tab>
@@ -1697,10 +1715,12 @@ export default function Home() {
                 <Tab.Panel>
                   <div className="bg-white rounded-xl shadow-lg p-8">
                     <h2 className="text-2xl font-bold mb-3 text-center" style={{ color: '#354F52' }}>
-                      What's Happening in Your Community?
+                      {location ? `What's Happening in ${location.city}, ${location.state}?` : "What's Happening in Your Community?"}
                     </h2>
                     <p className="text-gray-600 text-center mb-6">
-                      Enter your address to find local organizations, city councils, county boards, school districts, and charities near you
+                      {location 
+                        ? 'Update your address to change your community location' 
+                        : 'Enter your address to find local organizations, city councils, county boards, school districts, and charities near you'}
                     </p>
                     <AddressLookup onLocationFound={handleAddressFound} />
                     
