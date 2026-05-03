@@ -1,6 +1,6 @@
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import React, { useState, Fragment, useEffect, useRef } from 'react'
-import { Tab, Menu, Transition } from '@headlessui/react'
+import { Tab } from '@headlessui/react'
 import { useQuery } from '@tanstack/react-query'
 import api from '../lib/api'
 import { 
@@ -32,9 +32,7 @@ import {
   ChevronDownIcon,
   MapIcon,
   BellAlertIcon,
-  EnvelopeIcon,
-  Cog6ToothIcon,
-  ArrowRightOnRectangleIcon
+  EnvelopeIcon
 } from '@heroicons/react/24/outline'
 import { useAuth } from '../contexts/AuthContext'
 import AddressLookup from '../components/AddressLookup'
@@ -131,7 +129,7 @@ export default function Home() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [showLoginMenu, setShowLoginMenu] = useState(false)
   const { location, setLocation } = useLocationContext()
-  const { user, isAuthenticated, login, logout, isLoading } = useAuth()
+  const { user, isAuthenticated, login, isLoading } = useAuth()
   const searchContainerRef = useRef<HTMLDivElement>(null)
 
   const DOCS_URL = import.meta.env.PROD ? 'https://www.communityone.com/docs/intro' : 'http://localhost:3000/docs/intro'
