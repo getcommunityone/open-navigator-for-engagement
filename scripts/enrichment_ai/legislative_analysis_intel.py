@@ -542,13 +542,23 @@ class IntelOptimizedLLM:
         logger.info(f"🎮 Intel Arc GPU detected: {self.has_arc}")
     
     def _detect_arc_gpu(self) -> bool:
-        """Detect Intel Arc graphics"""
+        """Detect Intel Arc graphics via XPU availability"""
         try:
+            import torch
+            # Check if XPU module exists and has devices
+            if hasattr(torch, 'xpu'):
+                try:
+                    return torch.xpu.is_available() and torch.xpu.device_count() > 0
+                except:
+                    pass
+            
+            # Fallback: check lspci for Arc GPU
             import subprocess
             result = subprocess.run(
                 ['lspci'], 
                 capture_output=True, 
-                text=True
+                text=True,
+                timeout=2
             )
             return 'Intel' in result.stdout and 'Arc' in result.stdout
         except:
@@ -560,7 +570,7 @@ class IntelOptimizedLLM:
         
         Options:
         1. OpenVINO: Best for Arc GPU (recommended)
-        2. IPEX-LLM: Good for CPU inference
+        2. IPEX CPU: Good for CPU inference with Intel optimizations
         3. Transformers: Fallback (slower)
         """
         if use_openvino and self.has_arc:
@@ -580,9 +590,10 @@ class IntelOptimizedLLM:
             except Exception as e:
                 logger.warning(f"⚠️  OpenVINO failed: {e}, falling back...")
         
-        # Fallback to standard transformers
-        logger.info("📦 Loading model with transformers...")
+        # Try Intel CPU optimizations
+        logger.info("📦 Loading model with Intel CPU optimizations...")
         from transformers import AutoModelForCausalLM, AutoTokenizer
+        import torch
         import os
         
         # Get HF token from environment or .env file
@@ -590,15 +601,24 @@ class IntelOptimizedLLM:
         
         self.model = AutoModelForCausalLM.from_pretrained(
             self.model_name,
-            device_map="auto",
-            torch_dtype="auto",
+            device_map="cpu",
+            torch_dtype=torch.bfloat16,  # Use bfloat16 for better CPU performance
             token=hf_token  # Pass token for gated models
         )
         self.tokenizer = AutoTokenizer.from_pretrained(
             self.model_name,
             token=hf_token  # Pass token for gated models
         )
-        logger.info("✅ Model loaded")
+        
+        # Apply Intel optimizations
+        try:
+            import intel_extension_for_pytorch as ipex
+            logger.info("🚀 Applying Intel CPU optimizations...")
+            self.model = ipex.optimize(self.model, dtype=torch.bfloat16)
+            logger.info("✅ Model loaded with Intel CPU optimizations")
+        except Exception as e:
+            logger.warning(f"⚠️  Intel optimizations failed: {e}")
+            logger.info("✅ Model loaded (standard PyTorch)")
     
     def extract_interest_groups(
         self, 
