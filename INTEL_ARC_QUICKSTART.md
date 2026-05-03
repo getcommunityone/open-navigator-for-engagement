@@ -17,14 +17,14 @@
 
 ```bash
 cd /path/to/open-navigator
-./scripts/intel_llm_setup.sh
+./scripts/enrichment_ai/intel_llm_setup.sh
 source .venv-intel/bin/activate
 ```
 
 ### 2. Test DuckDB VSS (30 seconds)
 
 ```bash
-python scripts/duckdb_vss_demo.py
+python scripts/enrichment_ai/duckdb_vss_demo.py
 ```
 
 Expected output:
@@ -39,7 +39,7 @@ Expected output:
 ### 3. Run Analysis (1 minute)
 
 ```bash
-python scripts/legislative_analysis_intel.py
+python scripts/enrichment_ai/legislative_analysis_intel.py
 ```
 
 ## 🧠 Code Examples
@@ -264,8 +264,8 @@ testimony = testimony[:10]  # Top 10 only
 
 ## 🎯 Next Steps
 
-1. ✅ Run the demo: `python scripts/duckdb_vss_demo.py`
-2. ✅ Test analysis: `python scripts/legislative_analysis_intel.py`
+1. ✅ Run the demo: `python scripts/enrichment_ai/duckdb_vss_demo.py`
+2. ✅ Test analysis: `python scripts/enrichment_ai/legislative_analysis_intel.py`
 3. 📚 Read full guide: [Intel Arc Optimization Guide](../website/docs/guides/intel-arc-optimization.md)
 4. 🚀 Build your own: Use the `DuckDBLegislativeAnalyzer` class
 5. 🤝 Share results: Open an issue with your findings!

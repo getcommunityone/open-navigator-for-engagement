@@ -11,6 +11,7 @@ scripts/
 ├── deployment/              # Deployment and setup
 ├── development/             # Development and debugging tools
 ├── enrichment/              # Data enrichment (990s, nonprofits)
+├── enrichment_ai/           # AI-powered analysis (Intel Arc optimized)
 ├── huggingface/             # HuggingFace dataset management
 └── maintenance/             # Cleanup and maintenance
 ```
@@ -61,6 +62,15 @@ Scripts to enrich nonprofit data with additional metadata.
 - 990 form downloads and processing
 - Nonprofit profile enrichment
 - Multiple data source integrations
+
+### [enrichment_ai/](enrichment_ai/)
+AI-powered legislative analysis using Intel Arc Graphics optimization.
+- DuckDB + Vector Similarity Search
+- Llama model inference (local)
+- Intel IPEX and OpenVINO acceleration
+- Bill and testimony analysis
+
+See [enrichment_ai/README.md](enrichment_ai/README.md) for setup instructions.
 
 ### [huggingface/](huggingface/)
 HuggingFace dataset preparation and upload.

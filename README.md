@@ -362,14 +362,14 @@ If you have **Intel Core Ultra 7** (or similar) with Arc Graphics + NPU, you can
 
 ```bash
 # Setup Intel-optimized environment
-./scripts/intel_llm_setup.sh
+./scripts/enrichment_ai/intel_llm_setup.sh
 source .venv-intel/bin/activate
 
 # Run DuckDB vector search demo
-python scripts/duckdb_vss_demo.py
+python scripts/enrichment_ai/duckdb_vss_demo.py
 
 # Run legislative analysis with LLM
-python scripts/legislative_analysis_intel.py
+python scripts/enrichment_ai/legislative_analysis_intel.py
 ```
 
 **Why DuckDB for Local AI?**
