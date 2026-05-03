@@ -79,17 +79,23 @@ export default function PolicyMap() {
       setSelectedTopic('')
       setShowTopicSelector(true)
     }
-  }, []) // Only run on mount
+  }, [searchParams]) // Re-run when URL changes
   
   // Sync topic changes TO URL (when user selects a topic)
   useEffect(() => {
+    const currentTopicInUrl = searchParams.get('topic') || ''
+    
     if (selectedTopic && !showTopicSelector) {
-      setSearchParams({ topic: selectedTopic }, { replace: true })
-      console.log('📝 Updated URL with topic:', selectedTopic)
-    } else if (showTopicSelector) {
+      // Only update URL if topic is different
+      if (currentTopicInUrl !== selectedTopic) {
+        setSearchParams({ topic: selectedTopic }, { replace: true })
+        console.log('📝 Updated URL with topic:', selectedTopic)
+      }
+    } else if (showTopicSelector && currentTopicInUrl) {
+      // Clear topic from URL if selector is shown
       setSearchParams({}, { replace: true })
     }
-  }, [selectedTopic, showTopicSelector, setSearchParams])
+  }, [selectedTopic, showTopicSelector, setSearchParams, searchParams])
   
   const [page, setPage] = useState(1)
   const limit = 20
