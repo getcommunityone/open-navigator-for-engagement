@@ -45,10 +45,10 @@ def test_analyzer():
     logger.info(f"   Title: {title[:80]}...")
     logger.info(f"   Abstract: {abstract[:150] if abstract else 'N/A'}...")
     
-    # Initialize analyzer with Llama 3.3
-    logger.info("\n2. Initializing AI analyzer (Llama 3.3)...")
+    # Initialize analyzer with Llama 3.3 (8B model - fits in 32GB WSL allocation)
+    logger.info("\n2. Initializing AI analyzer (Llama 3.3 8B)...")
     analyzer = PolicyReasoningAnalyzer(
-        model="llama3.3:70b",  # or "llama3.3:8b" for faster
+        model="llama3.3",  # 8B model (for 70B, increase WSL memory to 56GB)
         local=True
     )
     

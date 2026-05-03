@@ -57,6 +57,13 @@ export const STATE_NAME_TO_CODE: Record<string, string> = {
 }
 
 /**
+ * Reverse mapping: 2-letter code to full state name
+ */
+export const STATE_CODE_TO_NAME: Record<string, string> = Object.fromEntries(
+  Object.entries(STATE_NAME_TO_CODE).map(([name, code]) => [code, name])
+)
+
+/**
  * Convert a full state name to its 2-letter code
  * @param stateName - Full state name (e.g., "Massachusetts")
  * @returns 2-letter state code (e.g., "MA") or the original string if not found

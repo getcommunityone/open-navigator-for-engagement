@@ -25,10 +25,10 @@ from loguru import logger
 from typing import List, Dict, Any
 
 # Dev states for initial export
-DEV_STATES = ['WA', 'MA', 'AL', 'GA', 'WI']
+DEV_STATES = ['WA', 'MA', 'AL', 'GA', 'WI', 'IN']
 
 # Database connection
-DB_URL = "postgresql://postgres:postgres@localhost:5433/openstates"
+DB_URL = "postgresql://postgres:password@localhost:5433/openstates"
 
 # Output directory
 GOLD_DIR = Path("data/gold")

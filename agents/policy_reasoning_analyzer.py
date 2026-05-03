@@ -67,12 +67,12 @@ class PolicyReasoningAnalyzer:
     Uses LLMs to identify reasoning, tradeoffs, and stakeholder positions.
     """
     
-    def __init__(self, model: str = "llama3.3:70b", local: bool = True):
+    def __init__(self, model: str = "llama3.3", local: bool = True):
         """
         Initialize analyzer
         
         Args:
-            model: LLM model to use (llama3.3:70b, llama3.3:8b, llama3.1:70b, etc.)
+            model: LLM model to use (llama3.3, llama3.3:70b, llama3.3:8b, llama3.1:70b, etc.)
             local: Use local LLM via Ollama (default True for cost-effectiveness)
         """
         self.model = model

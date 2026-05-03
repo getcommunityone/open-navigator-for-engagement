@@ -66,8 +66,8 @@ async def main():
     # ================================================================
     logger.info("[2/5] Extracting policy decisions...")
     
-    # Use local Llama 3.3 for analysis (free, no API key needed)
-    decision_analyzer = DecisionAnalysisAgent(use_local=True, model="llama3.3:70b")
+    # Use local Llama 3.3 8B for analysis (free, no API key needed)
+    decision_analyzer = DecisionAnalysisAgent(use_local=True, model="llama3.3")
     budget_analyzer = BudgetAnalyzer()
     
     all_decisions = []

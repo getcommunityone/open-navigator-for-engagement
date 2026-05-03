@@ -16,6 +16,8 @@ interface BillDetail {
   jurisdiction: string
   state: string
   openstates_url?: string
+  limited_data?: boolean
+  note?: string
   sponsors?: Array<{
     name: string
     primary: boolean
@@ -105,6 +107,19 @@ export default function BillDetail() {
             Back to Policy Map
           </Link>
         </div>
+
+        {/* Limited Data Notice */}
+        {bill.limited_data && (
+          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
+            <div className="flex gap-3">
+              <div className="text-yellow-600 text-xl">ℹ️</div>
+              <div className="flex-1">
+                <h3 className="text-sm font-semibold text-yellow-900 mb-1">Limited Information Available</h3>
+                <p className="text-sm text-yellow-800">{bill.note || 'Full bill details are not available yet for this state. Only summary information is shown.'}</p>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Bill Header */}
         <div className="bg-white rounded-lg shadow-sm p-6 mb-6">

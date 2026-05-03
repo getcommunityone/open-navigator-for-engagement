@@ -958,3 +958,185 @@ async def get_bill_versions(
             status_code=500,
             content=error_detail.model_dump()
         )
+
+
+@router.get("/{bill_id}")
+async def get_bill_details(bill_id: str):
+    """
+    Get detailed information about a specific bill from gold parquet files.
+    
+    Args:
+        bill_id: Bill identifier in format {state}-{bill_number} (e.g., "mo-SB 1548")
+    
+    Returns:
+        Detailed bill information including actions, sponsors, sources
+    
+    Examples:
+        - `/api/bills/ga-HB 123` - Georgia House Bill 123
+        - `/api/bills/mo-SB 1548` - Missouri Senate Bill 1548
+    """
+    try:
+        # Parse bill_id to extract state and bill number
+        if '-' not in bill_id:
+            raise HTTPException(status_code=400, detail="Invalid bill ID format. Expected: STATE-BILLNUMBER")
+        
+        parts = bill_id.split('-', 1)
+        state = parts[0].upper()
+        bill_number = parts[1]
+        
+        # Use consolidated parquet files in gold directory
+        bills_file = GOLD_DIR / "bills_bills.parquet"
+        actions_file = GOLD_DIR / "bills_bill_actions.parquet"
+        sponsors_file = GOLD_DIR / "bills_bill_sponsorships.parquet"
+        map_file = GOLD_DIR / "bills_map_aggregates.parquet"
+        
+        # Get data sources (local or remote HuggingFace URL)
+        bills_source = get_data_source(bills_file, use_remote=IS_HF_SPACES)
+        actions_source = get_data_source(actions_file, use_remote=IS_HF_SPACES)
+        sponsors_source = get_data_source(sponsors_file, use_remote=IS_HF_SPACES)
+        map_source = get_data_source(map_file, use_remote=IS_HF_SPACES)
+        
+        # Connect to DuckDB for querying parquet files
+        conn = duckdb.connect()
+        
+        try:
+            # Query for the specific bill in consolidated bills file
+            bill_query = """
+                SELECT 
+                    bill_id,
+                    bill_number,
+                    title,
+                    classification,
+                    latest_action_description,
+                    latest_action_date,
+                    first_action_date,
+                    session,
+                    session_name,
+                    jurisdiction_name
+                FROM read_parquet(?)
+                WHERE UPPER(state) = ? AND bill_number = ?
+                LIMIT 1
+            """
+            
+            result = conn.execute(bill_query, [bills_source, state, bill_number]).fetchone()
+            
+            if not result:
+                # Try to get sample bill data from map aggregates as fallback
+                logger.info(f"Bill {bill_number} not found in detailed data, checking map aggregates...")
+                
+                map_query = """
+                    SELECT sample_bills
+                    FROM read_parquet(?)
+                    WHERE UPPER(state) = ?
+                    LIMIT 1
+                """
+                
+                map_result = conn.execute(map_query, [map_source, state]).fetchone()
+                
+                if map_result and map_result[0]:
+                    # Search for the bill in sample_bills array
+                    sample_bills = map_result[0]
+                    matching_bill = None
+                    for bill in sample_bills:
+                        if bill.get('bill_number') == bill_number:
+                            matching_bill = bill
+                            break
+                    
+                    if matching_bill:
+                        conn.close()
+                        # Return limited data from map aggregate
+                        return {
+                            "bill_id": f"{state.lower()}-{bill_number}",
+                            "bill_number": bill_number,
+                            "title": matching_bill.get('title', ''),
+                            "classification": [matching_bill.get('type', 'bill')],
+                            "latest_action": matching_bill.get('action', ''),
+                            "latest_action_date": matching_bill.get('date', ''),
+                            "first_action_date": matching_bill.get('date', ''),
+                            "session": '',
+                            "session_name": '',
+                            "jurisdiction": state,
+                            "state": state,
+                            "sponsors": [],
+                            "actions": [{
+                                "description": matching_bill.get('action', ''),
+                                "date": matching_bill.get('date', ''),
+                                "classification": []
+                            }] if matching_bill.get('action') else [],
+                            "sources": [],
+                            "limited_data": True,
+                            "note": "This bill's full details are not available yet. Only summary information is shown."
+                        }
+                
+                conn.close()
+                raise HTTPException(
+                    status_code=404, 
+                    detail=f"Bill {bill_number} not found in {state}. Full bill data is currently available for: AL, GA, MA, WA, WI."
+                )
+            
+            # Parse bill data
+            bill_data = {
+                "bill_id": result[0] if result[0] else bill_id,
+                "bill_number": result[1],
+                "title": result[2],
+                "classification": result[3] if result[3] else [],
+                "latest_action": result[4],
+                "latest_action_date": result[5],
+                "first_action_date": result[6],
+                "session": result[7],
+                "session_name": result[8],
+                "jurisdiction": result[9],
+                "state": state,
+            }
+            
+            # Get sponsors if available
+            try:
+                sponsor_query = """
+                    SELECT name, primary_sponsor, classification
+                    FROM read_parquet(?)
+                    WHERE bill_id = ?
+                    ORDER BY primary_sponsor DESC
+                """
+                sponsor_rows = conn.execute(sponsor_query, [sponsors_source, bill_data["bill_id"]]).fetchall()
+                
+                bill_data["sponsors"] = [
+                    {"name": s[0], "primary": bool(s[1]), "classification": s[2]}
+                    for s in sponsor_rows
+                ]
+            except Exception as e:
+                logger.warning(f"Could not load sponsors for {bill_id}: {e}")
+                bill_data["sponsors"] = []
+            
+            # Get actions if available
+            try:
+                actions_query = """
+                    SELECT description, date, classification
+                    FROM read_parquet(?)
+                    WHERE bill_id = ?
+                    ORDER BY date DESC
+                    LIMIT 10
+                """
+                action_rows = conn.execute(actions_query, [actions_source, bill_data["bill_id"]]).fetchall()
+                
+                bill_data["actions"] = [
+                    {"description": a[0], "date": a[1], "classification": a[2]}
+                    for a in action_rows
+                ]
+            except Exception as e:
+                logger.warning(f"Could not load actions for {bill_id}: {e}")
+                bill_data["actions"] = []
+            
+            conn.close()
+            return bill_data
+            
+        except Exception as e:
+            conn.close()
+            raise
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Bill details error: {e}")
+        import traceback
+        logger.error(traceback.format_exc())
+        raise HTTPException(status_code=500, detail=str(e))

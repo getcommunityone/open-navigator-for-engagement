@@ -1,7 +1,7 @@
 # Evidence-Based Accountability Brief
 ## Tuscaloosa, AL - Student Health and Wellness
 
-**Date:** May 02, 2026  
+**Date:** May 03, 2026  
 **Purpose:** Policy advocacy based on quantified evidence
 
 ---

@@ -736,21 +736,23 @@ async def get_bill_details(bill_id: str):
         state = parts[0].upper()
         bill_number = parts[1]
         
-        # Build file paths for bills data from gold layer
-        bills_file = GOLD_DIR / "states" / state / "bills_bills.parquet"
-        actions_file = GOLD_DIR / "states" / state / "bills_bill_actions.parquet"
-        sponsors_file = GOLD_DIR / "states" / state / "bills_bill_sponsorships.parquet"
+        # Use consolidated parquet files in gold directory
+        bills_file = GOLD_DIR / "bills_bills.parquet"
+        actions_file = GOLD_DIR / "bills_bill_actions.parquet"
+        sponsors_file = GOLD_DIR / "bills_bill_sponsorships.parquet"
+        map_file = GOLD_DIR / "bills_map_aggregates.parquet"
         
         # Get data sources (local or remote HuggingFace URL)
         bills_source = get_data_source(bills_file, use_remote=IS_HF_SPACES)
         actions_source = get_data_source(actions_file, use_remote=IS_HF_SPACES)
         sponsors_source = get_data_source(sponsors_file, use_remote=IS_HF_SPACES)
+        map_source = get_data_source(map_file, use_remote=IS_HF_SPACES)
         
         # Connect to DuckDB for querying parquet files
         conn = duckdb.connect()
         
         try:
-            # Query for the specific bill
+            # Query for the specific bill in consolidated bills file
             bill_query = """
                 SELECT 
                     bill_id,
@@ -764,15 +766,65 @@ async def get_bill_details(bill_id: str):
                     session_name,
                     jurisdiction_name
                 FROM read_parquet(?)
-                WHERE bill_number = ?
+                WHERE UPPER(state) = ? AND bill_number = ?
                 LIMIT 1
             """
             
-            result = conn.execute(bill_query, [bills_source, bill_number]).fetchone()
+            result = conn.execute(bill_query, [bills_source, state, bill_number]).fetchone()
             
             if not result:
+                # Try to get sample bill data from map aggregates as fallback
+                logger.info(f"Bill {bill_number} not found in detailed data, checking map aggregates...")
+                
+                map_query = """
+                    SELECT sample_bills
+                    FROM read_parquet(?)
+                    WHERE UPPER(state) = ?
+                    LIMIT 1
+                """
+                
+                map_result = conn.execute(map_query, [map_source, state]).fetchone()
+                
+                if map_result and map_result[0]:
+                    # Search for the bill in sample_bills array
+                    sample_bills = map_result[0]
+                    matching_bill = None
+                    for bill in sample_bills:
+                        if bill.get('bill_number') == bill_number:
+                            matching_bill = bill
+                            break
+                    
+                    if matching_bill:
+                        conn.close()
+                        # Return limited data from map aggregate
+                        return {
+                            "bill_id": f"{state.lower()}-{bill_number}",
+                            "bill_number": bill_number,
+                            "title": matching_bill.get('title', ''),
+                            "classification": [matching_bill.get('type', 'bill')],
+                            "latest_action": matching_bill.get('action', ''),
+                            "latest_action_date": matching_bill.get('date', ''),
+                            "first_action_date": matching_bill.get('date', ''),
+                            "session": '',
+                            "session_name": '',
+                            "jurisdiction": state,
+                            "state": state,
+                            "sponsors": [],
+                            "actions": [{
+                                "description": matching_bill.get('action', ''),
+                                "date": matching_bill.get('date', ''),
+                                "classification": []
+                            }] if matching_bill.get('action') else [],
+                            "sources": [],
+                            "limited_data": True,
+                            "note": "This bill's full details are not available yet. Only summary information is shown."
+                        }
+                
                 conn.close()
-                raise HTTPException(status_code=404, detail=f"Bill {bill_number} not found in {state}")
+                raise HTTPException(
+                    status_code=404, 
+                    detail=f"Bill {bill_number} not found in {state}. Full bill data is currently available for: AL, GA, MA, WA, WI."
+                )
             
             # Parse bill data
             bill_data = {

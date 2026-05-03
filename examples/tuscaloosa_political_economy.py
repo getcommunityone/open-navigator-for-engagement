@@ -54,8 +54,8 @@ async def run_complete_analysis():
     # ================================================================
     logger.info("\n[2/6] Analyzing decision frames and stakeholder influence...")
     
-    # Use local Llama 3.3 for analysis (free, no API key needed)
-    decision_analyzer = DecisionAnalysisAgent(use_local=True, model="llama3.3:70b")
+    # Use local Llama 3.3 8B for analysis (free, no API key needed)
+    decision_analyzer = DecisionAnalysisAgent(use_local=True, model="llama3.3")
     all_decisions = []
     
     for i, doc in enumerate(documents[:10], 1):  # Limit for demo

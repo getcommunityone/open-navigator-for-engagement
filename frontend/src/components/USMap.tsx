@@ -2,6 +2,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { ComposableMap, Geographies, Geography } from 'react-simple-maps'
+import { STATE_CODE_TO_NAME } from '../utils/stateMapping'
 
 const geoUrl = 'https://cdn.jsdelivr.net/npm/us-atlas@3/states-10m.json'
 
@@ -109,6 +110,11 @@ const getColorForCategory = (category: string): string => {
 const getStateColor = (stateCode: string, stateData: Record<string, StateData>): string => {
   const data = stateData[stateCode]
   
+  // Debug logging for specific states
+  if (stateCode === 'MA' || stateCode === '25') {
+    console.log('🔍 MA Color Debug:', { stateCode, hasData: !!data, data })
+  }
+  
   if (!data || data.total_bills === 0) {
     return '#E3F2FD' // Light blue - no legislation
   }
@@ -171,6 +177,15 @@ export default function USMap({ stateData, onStateClick, legend }: USMapProps) {
   const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const hoveredStateElementRef = useRef<any>(null)
   const containerRef = useRef<HTMLDivElement>(null)
+  
+  // Debug: Log MA data if present
+  useEffect(() => {
+    if (stateData['MA']) {
+      console.log('📊 MA State Data:', stateData['MA'])
+    } else {
+      console.log('⚠️ No MA data in stateData. Available states:', Object.keys(stateData))
+    }
+  }, [stateData])
   
   // Get unique types from actual state data if legend not provided
   const legislationTypes = legend?.types || {}
@@ -284,6 +299,11 @@ export default function USMap({ stateData, onStateClick, legend }: USMapProps) {
               const data = stateData[stateCode]
               const pattern = getPatternForState(stateCode, stateData)
               
+              // Debug Massachusetts specifically
+              if (fips === '25' || stateCode === 'MA') {
+                console.log('🗺️ Rendering MA:', { fips, stateCode, hasData: !!data, data })
+              }
+              
               return (
                 <Geography
                   key={geo.rsmKey}
@@ -338,7 +358,10 @@ export default function USMap({ stateData, onStateClick, legend }: USMapProps) {
               </svg>
             </button>
             <div className="flex items-center justify-between mb-3">
-              <div className="font-bold text-lg">{hoveredState}</div>
+              <div>
+                <div className="font-bold text-lg">{STATE_CODE_TO_NAME[hoveredState] || hoveredState}</div>
+                <div className="text-xs text-gray-400">{hoveredState}</div>
+              </div>
               <div className="text-xs text-gray-400">
                 {hoveredData.total_bills.toLocaleString()} bill{hoveredData.total_bills !== 1 ? 's' : ''}
               </div>

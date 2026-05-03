@@ -96,13 +96,13 @@ class DecisionAnalysisAgent:
         >>>     print(f"Rationale: {decision.primary_rationale}")
     """
     
-    def __init__(self, use_local: bool = True, model: str = "llama3.3:70b"):
+    def __init__(self, use_local: bool = True, model: str = "llama3.3"):
         """
         Initialize the decision analysis agent.
         
         Args:
             use_local: Use local LLM via Ollama (default True for cost-effectiveness)
-            model: Model to use (llama3.3:70b, llama3.3:8b, or OpenAI model if use_local=False)
+            model: Model to use (llama3.3, llama3.3:70b, llama3.3:8b, or OpenAI model if use_local=False)
         """
         self.use_local = use_local
         self.model = model
