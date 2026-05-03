@@ -103,9 +103,16 @@ export default function PolicyMap() {
 
   // Fetch sessions
   const { data: sessionsData } = useQuery({
-    queryKey: ['sessions', selectedState],
+    queryKey: ['sessions', selectedState, selectedTopic, selectedChamber, selectedBillType, selectedStatus, searchQuery],
     queryFn: async () => {
-      const response = await api.get(`/bills/sessions?state=${selectedState}`)
+      const params = new URLSearchParams({ state: selectedState })
+      if (selectedTopic) params.append('topic', selectedTopic)
+      if (selectedChamber) params.append('chamber', selectedChamber)
+      if (selectedBillType) params.append('bill_type', selectedBillType)
+      if (selectedStatus) params.append('status', selectedStatus)
+      if (searchQuery) params.append('q', searchQuery)
+      
+      const response = await api.get(`/bills/sessions?${params}`)
       return response.data
     },
     enabled: viewMode === 'list', // Only fetch sessions in list view
@@ -196,43 +203,55 @@ export default function PolicyMap() {
               </p>
             </div>
             
-            {/* Back to Topics button */}
-            {!showTopicSelector && (
-              <button
-                onClick={handleBackToTopics}
-                className="flex items-center gap-2 px-4 py-2 rounded-md font-medium bg-gray-200 text-gray-700 hover:bg-gray-300 transition-colors"
-              >
-                ← Back to Topics
-              </button>
-            )}
-
-            {/* View Mode Toggle - only show when topic is selected */}
-            {!showTopicSelector && (
-              <div className="flex items-center gap-2">
+            <div className="flex items-center gap-3">
+              {/* Back to Map button - show when in list view */}
+              {!showTopicSelector && viewMode === 'list' && (
                 <button
                   onClick={() => setViewMode('map')}
-                  className={`flex items-center gap-2 px-4 py-2 rounded-md font-medium transition-colors ${
-                    viewMode === 'map'
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                  }`}
+                  className="flex items-center gap-2 px-4 py-2 rounded-md font-medium bg-blue-600 text-white hover:bg-blue-700 transition-colors"
                 >
-                  <MapIconOutline className="h-5 w-5" />
-                  Map View
+                  ← Back to Map
                 </button>
+              )}
+              
+              {/* Back to Topics button */}
+              {!showTopicSelector && (
                 <button
-                  onClick={() => setViewMode('list')}
-                  className={`flex items-center gap-2 px-4 py-2 rounded-md font-medium transition-colors ${
-                    viewMode === 'list'
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                  }`}
+                  onClick={handleBackToTopics}
+                  className="flex items-center gap-2 px-4 py-2 rounded-md font-medium bg-gray-200 text-gray-700 hover:bg-gray-300 transition-colors"
                 >
-                  <ListBulletIcon className="h-5 w-5" />
-                  List View
+                  ← Back to Topics
                 </button>
-              </div>
-            )}
+              )}
+
+              {/* View Mode Toggle - only show when topic is selected */}
+              {!showTopicSelector && (
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setViewMode('map')}
+                    className={`flex items-center gap-2 px-4 py-2 rounded-md font-medium transition-colors ${
+                      viewMode === 'map'
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                    }`}
+                  >
+                    <MapIconOutline className="h-5 w-5" />
+                    Map View
+                  </button>
+                  <button
+                    onClick={() => setViewMode('list')}
+                    className={`flex items-center gap-2 px-4 py-2 rounded-md font-medium transition-colors ${
+                      viewMode === 'list'
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                    }`}
+                  >
+                    <ListBulletIcon className="h-5 w-5" />
+                    List View
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         </div>
 
@@ -788,6 +807,43 @@ export default function PolicyMap() {
                   <div className="text-center py-12">
                     <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
                     <p className="mt-4 text-gray-600">Loading bills...</p>
+                  </div>
+                ) : billsData && billsData.total === 0 ? (
+                  <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-8 text-center">
+                    <div className="text-yellow-600 text-5xl mb-4">📭</div>
+                    <h3 className="text-xl font-semibold text-yellow-900 mb-2">
+                      No Bills Found
+                    </h3>
+                    <p className="text-yellow-700 mb-4">
+                      {selectedState === 'LA' || selectedState === 'Louisiana' ? (
+                        <>Louisiana data is not yet available in our database. We currently have data for Alabama, Georgia, Massachusetts, Washington, and Wisconsin.</>
+                      ) : (
+                        <>No bills found for the selected filters. Try adjusting your search criteria or clearing filters.</>
+                      )}
+                    </p>
+                    <div className="flex gap-3 justify-center">
+                      {(selectedSession || selectedChamber || selectedBillType || selectedStatus || searchQuery) ? (
+                        <button
+                          onClick={() => {
+                            setSearchQuery('')
+                            setSelectedSession('')
+                            setSelectedChamber('')
+                            setSelectedBillType('')
+                            setSelectedStatus('')
+                            setPage(1)
+                          }}
+                          className="px-6 py-2 bg-yellow-600 text-white rounded-md hover:bg-yellow-700 transition-colors font-medium"
+                        >
+                          Clear Filters
+                        </button>
+                      ) : null}
+                      <button
+                        onClick={() => setViewMode('map')}
+                        className="px-6 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition-colors font-medium"
+                      >
+                        Back to Map
+                      </button>
+                    </div>
                   </div>
                 ) : (
                   <>
