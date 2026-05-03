@@ -23,6 +23,9 @@ Without Playwright, Alabama bills will skip the scraper fallback (but other stat
 # Download all available states (including Alabama with automatic scraper fallback)
 python scripts/enrichment_ai/download_bill_text.py --states AL,GA,IN,MA,WA,WI
 
+# Fast mode: Skip slow Alabama scraper fallback (only use direct URLs)
+python scripts/enrichment_ai/download_bill_text.py --states AL,GA,IN,MA,WA,WI --fast
+
 # Download specific state and year
 python scripts/enrichment_ai/download_bill_text.py --states GA --year 2024 --limit 100
 
@@ -37,8 +40,12 @@ python scripts/enrichment_ai/download_bill_text.py --states AL,GA --year 2024
 - ✅ Falls back to URL downloads
 - ✅ **NEW: Automatically uses Alabama scraper for failed Alabama URLs**
 - ✅ Handles Alabama 2017-2022 bills with broken URLs automatically
+- ⚡ **Fast mode (`--fast`)**: Skip scraper fallback for quicker processing
 
 **Output:** `data/gold/bills_bill_text.parquet`
+
+**Fast Mode:**
+Use `--fast` when you need quick results and can skip Alabama bills with broken URLs. This avoids the slow Playwright browser automation and only uses direct URL downloads.
 
 ---
 

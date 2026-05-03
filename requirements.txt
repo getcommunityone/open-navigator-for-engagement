@@ -10,6 +10,7 @@ playwright==1.40.0
 httpx>=0.25.0
 aiohttp==3.9.1
 youtube-transcript-api>=0.6.2
+google-api-python-client>=2.100.0  # YouTube Data API v3
 
 # Document Processing (Multiple Formats)
 pypdf>=6.0.0               # PDF extraction (successor to PyPDF2)

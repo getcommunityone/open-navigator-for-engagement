@@ -68,11 +68,13 @@ class BillTextDownloader:
     def __init__(
         self,
         output_dir: Path = Path("data/gold"),
-        cache_dir: Path = Path("data/cache/bill_text")
+        cache_dir: Path = Path("data/cache/bill_text"),
+        fast_mode: bool = False
     ):
         self.output_dir = output_dir
         self.cache_dir = cache_dir
         self.cache_dir.mkdir(parents=True, exist_ok=True)
+        self.fast_mode = fast_mode
         
         # Output parquet file
         self.output_file = output_dir / "bills_bill_text.parquet"
@@ -84,6 +86,9 @@ class BillTextDownloader:
         # Initialize Alabama scraper for fallback (lazy initialization)
         self.alabama_scraper = None
         self.alabama_scraper_initialized = False
+        
+        if fast_mode:
+            logger.info("⚡ Fast mode enabled - skipping Alabama scraper fallback")
         
     def load_bills_for_processing(
         self,
@@ -409,14 +414,16 @@ class BillTextDownloader:
                 result = self.download_from_url(document_url, bill_id)
                 source_type = 'url_download'
             
-            # Alabama fallback: Use scraper if URL download failed
-            if not result and state == 'AL' and bill_number:
+            # Alabama fallback: Use scraper if URL download failed (unless fast mode)
+            if not result and state == 'AL' and bill_number and not self.fast_mode:
                 session = row.get('session', '')
                 if session:
                     logger.info(f"⚠️  URL download failed for Alabama bill, trying scraper...")
                     result = self.fetch_alabama_bill_text(bill_id, bill_number, session)
                     if result:
                         source_type = 'alabama_scraper'
+            elif not result and state == 'AL' and self.fast_mode:
+                logger.debug(f"⚡ Fast mode: skipping Alabama scraper for {bill_id}")
             
             # If still no result, skip
             if not result:
@@ -512,6 +519,11 @@ def main():
         type=int,
         help='Limit number of bills to process (for testing)'
     )
+    parser.add_argument(
+        '--fast',
+        action='store_true',
+        help='Fast mode: skip slow Alabama scraper fallback (only use direct URLs)'
+    )
     
     args = parser.parse_args()
     
@@ -521,7 +533,7 @@ def main():
         states = [s.strip().upper() for s in args.states.split(',')]
     
     # Initialize downloader
-    downloader = BillTextDownloader()
+    downloader = BillTextDownloader(fast_mode=args.fast)
     
     # Load bills to process
     logger.info("=" * 80)
