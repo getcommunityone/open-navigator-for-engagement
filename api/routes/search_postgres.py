@@ -239,6 +239,8 @@ async def search_contacts_pg(
                 title,
                 organization_name,
                 organization_ein,
+                email,
+                phone,
                 city,
                 state,
                 role_type,
@@ -267,6 +269,7 @@ async def search_contacts_pg(
                     url=f"/people/{row['name'].replace(' ', '-')}",
                     score=1.0,
                     metadata={
+                        'name': row['name'],
                         'title': row['title'],
                         'organization': org_display,
                         'organization_ein': row['organization_ein'],
@@ -274,6 +277,8 @@ async def search_contacts_pg(
                         'city': row['city'],
                         'role_type': row['role_type'],
                         'compensation': row['compensation'],
+                        'email': row.get('email'),
+                        'phone': row.get('phone'),
                         'source': row['source']
                     }
                 ))

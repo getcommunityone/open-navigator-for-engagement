@@ -99,12 +99,12 @@ export default function PeopleFinder() {
   // Convert API contacts to Person format
   const people: Person[] = (contactsData?.results?.contacts || []).map((contact: any, index: number) => ({
     id: index + 1,
-    name: contact.metadata.name,
+    name: contact.title || 'Unknown',  // API puts name in title field
     role: 'decision-makers' as PersonRole,
-    specificRole: contact.metadata.title || 'Official',
-    organization: contact.metadata.jurisdiction || 'Local Government',
-    location: `${contact.metadata.jurisdiction || ''}, ${contact.metadata.state || ''}`.trim().replace(/^,\s*/, ''),
-    contact: undefined,
+    specificRole: contact.metadata.title || contact.metadata.role_type || 'Official',
+    organization: contact.metadata.organization || contact.metadata.state || 'Government',
+    location: `${contact.metadata.city || contact.metadata.state || ''}`.trim(),
+    contact: contact.metadata.email || undefined,
   }))
 
   // Debug logging
@@ -415,6 +415,13 @@ export default function PeopleFinder() {
                             href={`https://github.com/${person.contact.substring(1)}`}
                             target="_blank"
                             rel="noopener noreferrer"
+                            className="text-cyan-600 hover:underline block"
+                          >
+                            {person.contact}
+                          </a>
+                        ) : person.contact.includes('@') ? (
+                          <a 
+                            href={`mailto:${person.contact}`}
                             className="text-cyan-600 hover:underline block"
                           >
                             {person.contact}
