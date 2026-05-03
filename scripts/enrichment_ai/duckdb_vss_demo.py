@@ -256,8 +256,8 @@ def main():
     
     logger.info("\n✅ Demo complete!")
     logger.info("\n🎯 Next steps:")
-    logger.info("   1. Run: ./scripts/intel_llm_setup.sh")
-    logger.info("   2. Use: scripts/legislative_analysis_intel.py")
+    logger.info("   1. Run: ./scripts/enrichment_ai/intel_llm_setup.sh")
+    logger.info("   2. Use: scripts/enrichment_ai/legislative_analysis_intel.py")
     logger.info("   3. See: website/docs/guides/intel-arc-optimization.md")
 
 

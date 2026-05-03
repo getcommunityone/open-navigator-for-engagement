@@ -22,8 +22,17 @@ fi
 if [ ! -d ".venv-intel" ]; then
     echo "📦 Creating Intel-optimized virtual environment..."
     python3 -m venv .venv-intel
+    
+    if [ ! -f ".venv-intel/bin/activate" ]; then
+        echo "❌ Failed to create virtual environment"
+        echo "   Make sure python3-venv is installed:"
+        echo "   sudo apt install python3-venv"
+        exit 1
+    fi
+    echo "✅ Virtual environment created"
 fi
 
+echo "🔧 Activating environment..."
 source .venv-intel/bin/activate
 
 # Install Intel Extension for PyTorch (IPEX-LLM)
@@ -66,4 +75,4 @@ echo "   3. For Ollama users, use Intel-optimized build:"
 echo "      wget https://ollama.com/download/ollama-linux-amd64"
 echo "      export OLLAMA_NUM_GPU=999"
 echo ""
-echo "📖 See scripts/legislative_analysis_intel.py for usage examples"
+echo "📖 See scripts/enrichment_ai/legislative_analysis_intel.py for usage examples"
