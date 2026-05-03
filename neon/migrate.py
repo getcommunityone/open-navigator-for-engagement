@@ -183,11 +183,22 @@ def calculate_national_stats():
                     df = pd.read_parquet(events_file)
                     stats['events_count'] += len(df)
                 
-                # Count contacts
+                # Count contacts (both nonprofit officers and officials/legislators)
                 contacts_file = state_dir / "contacts_nonprofit_officers.parquet"
                 if contacts_file.exists():
                     df = pd.read_parquet(contacts_file)
                     stats['contacts_count'] += len(df)
+                
+                officials_file = state_dir / "contacts_officials.parquet"
+                if officials_file.exists():
+                    df = pd.read_parquet(officials_file)
+                    stats['contacts_count'] += len(df)
+                
+                # Count bills
+                bills_file = state_dir / "bills_bills.parquet"
+                if bills_file.exists():
+                    df = pd.read_parquet(bills_file)
+                    stats['bills_count'] += len(df)
     
     return stats
 
@@ -249,11 +260,22 @@ def calculate_state_stats(state: str):
         df = pd.read_parquet(events_file)
         stats['events_count'] = len(df)
     
-    # Contacts
+    # Contacts (both nonprofit officers and officials/legislators)
     contacts_file = state_dir / "contacts_nonprofit_officers.parquet"
     if contacts_file.exists():
         df = pd.read_parquet(contacts_file)
         stats['contacts_count'] = len(df)
+    
+    officials_file = state_dir / "contacts_officials.parquet"
+    if officials_file.exists():
+        df = pd.read_parquet(officials_file)
+        stats['contacts_count'] += len(df)
+    
+    # Bills
+    bills_file = state_dir / "bills_bills.parquet"
+    if bills_file.exists():
+        df = pd.read_parquet(bills_file)
+        stats['bills_count'] = len(df)
     
     return stats if stats['nonprofits_count'] > 0 else None
 
