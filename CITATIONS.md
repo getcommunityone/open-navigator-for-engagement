@@ -92,6 +92,60 @@ July 2023, Toronto, Canada.
 - Video source discovery could enhance their data
 - We follow their Code of Conduct for all contributions
 
+**State-Specific Scraper Requirements:**
+
+Some states require special setup or API credentials to access their legislative data. Below are the documented requirements:
+
+**California (MySQL Database):**
+- California provides MySQL dumps of their legislative data
+- Requires local MySQL instance to read data
+- Setup process:
+  ```bash
+  # Download data for current session
+  docker-compose run --rm ca-download
+  
+  # Or download specific year
+  docker-compose run --rm ca-download --year YYYY
+  
+  # Run scraper (MySQL container must be running)
+  docker-compose run --rm ca-scrape ca bills --fast
+  ```
+- Documentation: https://docs.openstates.org/contributing/scrapers/
+
+**New York (API Key Required):**
+- API Documentation: http://legislation.nysenate.gov/static/docs/html/index.html
+- Request Form: http://legislation.nysenate.gov/
+- Environment Variable: `NEW_YORK_API_KEY`
+- Usage: Set environment variable before running scrape
+
+**Indiana (API Key Required):**
+- API Documentation: http://docs.api.iga.in.gov/api.html
+- Terms of Service: https://docs.api.iga.in.gov/usage.html
+- Request Process: Email Office of Technology Services Team (apitoken.request@iga.in.gov)
+  - Include: Name, address, phone, email, company name
+  - Confirm you have read the terms of service
+- Environment Variables:
+  - `INDIANA_API_KEY`: API token from IGA
+  - `USER_AGENT`: User agent string (required by Indiana)
+
+**Virginia (FTP Credentials Required):**
+- FTP Documentation: https://lis.virginia.gov/SiteInformation/ftp.html
+- Request Process: Contact Virginia Legislative Information System help desk at (804) 786-9631
+- Environment Variables:
+  - `VIRGINIA_FTP_USER`: FTP username
+  - `VIRGINIA_FTP_PASSWORD`: FTP password
+
+**District of Columbia (API Key Required):**
+- API Documentation: https://lims.dccouncil.us/api/help/index.html
+- Request Form: https://lims.dccouncil.us/developerRegistration
+- Environment Variable: `DC_API_KEY`
+
+**Open States Credential Policy:**
+- Two sets of credentials maintained (development and production) when possible
+- Developers encouraged to obtain their own API keys
+- Test credentials available in limited circumstances for contributors
+- Helps ensure best possible data quality despite access barriers
+
 ### **LegiScan** ⭐
 - Comprehensive legislative tracking and bill text database
 - Organization: LegiScan LLC

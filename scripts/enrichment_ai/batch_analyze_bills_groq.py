@@ -263,6 +263,23 @@ def analyze_batch(
     analyzer.create_bills_table()
     analyzer.create_testimony_table()
     
+    # Load bill texts if available (optional - provides richer context)
+    bill_texts_available = False
+    bill_texts_path = Path(__file__).parent.parent.parent / "data" / "gold" / "bills_bill_text.parquet"
+    if bill_texts_path.exists():
+        logger.info("📄 Loading bill texts (full PDF/HTML content)...")
+        analyzer.conn.execute(f"""
+            CREATE OR REPLACE TABLE bill_texts AS
+            SELECT * FROM read_parquet('{bill_texts_path}')
+            WHERE extraction_status = 'success'
+        """)
+        text_count = analyzer.conn.execute("SELECT COUNT(*) FROM bill_texts").fetchone()[0]
+        logger.info(f"   ✅ Loaded {text_count:,} bill texts")
+        bill_texts_available = True
+    else:
+        logger.info("   ⚠️  Bill texts not found (will use title + abstract instead)")
+        logger.info(f"   💡 Run: python scripts/data/scrape_bill_texts.py --state {state or 'AL'} --limit 10")
+    
     # Find bills to analyze
     logger.info("\n🔍 Finding bills to analyze...")
     
@@ -270,24 +287,67 @@ def analyze_batch(
     if state:
         where_clauses.append(f"state = '{state}'")
     if topic:
-        where_clauses.append(f"(LOWER(title) LIKE '%{topic.lower()}%' OR LOWER(bill_text) LIKE '%{topic.lower()}%')")
+        where_clauses.append(f"(LOWER(title) LIKE '%{topic.lower()}%' OR LOWER(abstract) LIKE '%{topic.lower()}%' OR LOWER(latest_action) LIKE '%{topic.lower()}%')")
     
     where_sql = " AND ".join(where_clauses) if where_clauses else "1=1"
     
-    # Check which bills need analysis
-    if skip_analyzed:
-        query = f"""
-        SELECT b.bill_id, b.state, b.title, b.bill_text
-        FROM bills b
-        LEFT JOIN analysis a ON b.bill_id = a.bill_id
-        WHERE {where_sql}
-          AND a.bill_id IS NULL
-        LIMIT {limit}
+    # Build query with optional bill texts join
+    if bill_texts_available:
+        select_clause = """
+            SELECT b.bill_id, b.state, b.title, 
+                   COALESCE(b.abstract, '') as abstract,
+                   COALESCE(b.latest_action, '') as latest_action,
+                   b.session,
+                   COALESCE(bt.text, '') as bill_text,
+                   bt.text_hash
+            FROM bills b
+            LEFT JOIN bill_texts bt ON b.bill_id = bt.bill_id
         """
     else:
+        select_clause = """
+            SELECT bill_id, state, title, 
+                   COALESCE(abstract, '') as abstract,
+                   COALESCE(latest_action, '') as latest_action,
+                   session,
+                   '' as bill_text,
+                   NULL as text_hash
+            FROM bills
+        """
+    
+    # Check which bills need analysis
+    if skip_analyzed:
+        # Check if analysis table exists
+        table_exists = analyzer.conn.execute(
+            "SELECT count(*) FROM information_schema.tables WHERE table_name = 'analysis'"
+        ).fetchone()[0] > 0
+        
+        if table_exists:
+            if bill_texts_available:
+                query = f"""
+                {select_clause}
+                LEFT JOIN analysis a ON b.bill_id = a.bill_id
+                WHERE {where_sql}
+                  AND a.bill_id IS NULL
+                LIMIT {limit}
+                """
+            else:
+                query = f"""
+                SELECT b.* FROM ({select_clause}) b
+                LEFT JOIN analysis a ON b.bill_id = a.bill_id
+                WHERE {where_sql}
+                  AND a.bill_id IS NULL
+                LIMIT {limit}
+                """
+        else:
+            logger.info("   No previous analysis found, analyzing all matching bills")
+            query = f"""
+            {select_clause}
+            WHERE {where_sql}
+            LIMIT {limit}
+            """
+    else:
         query = f"""
-        SELECT bill_id, state, title, bill_text
-        FROM bills
+        {select_clause}
         WHERE {where_sql}
         LIMIT {limit}
         """
@@ -316,28 +376,54 @@ def analyze_batch(
         bill_id = bill[0]
         state = bill[1]
         title = bill[2]
-        bill_text = bill[3] or ""
+        abstract = bill[3] or ""
+        latest_action = bill[4] or ""
+        session = bill[5] or ""
+        scraped_bill_text = bill[6] or "" if len(bill) > 6 else ""
+        text_hash = bill[7] if len(bill) > 7 else None
         
-        logger.info(f"[{i}/{stats.total_bills}] Analyzing {bill_id}...")
-        logger.info(f"   Title: {title[:70]}...")
+        # Use scraped bill text if available, otherwise combine metadata
+        if scraped_bill_text and len(scraped_bill_text) > 100:
+            # Full bill text available!
+            bill_text = f"{title}\n\n{scraped_bill_text[:5000]}"  # Limit to 5000 chars for API
+            logger.info(f"[{i}/{stats.total_bills}] Analyzing {bill_id}...")
+            logger.info(f"   Title: {title[:70]}...")
+            logger.info(f"   ✨ Using full bill text ({len(scraped_bill_text):,} chars, hash: {text_hash[:8]}...)")
+        else:
+            # Fallback to metadata
+            bill_text = f"{title}\n\n"
+            if abstract:
+                bill_text += f"Summary: {abstract}\n\n"
+            if latest_action:
+                bill_text += f"Latest Action: {latest_action}\n"
+            if session:
+                bill_text += f"Session: {session}\n"
+            
+            logger.info(f"[{i}/{stats.total_bills}] Analyzing {bill_id}...")
+            logger.info(f"   Title: {title[:70]}...")
+            logger.info(f"   ⚠️  No full text available (using metadata only)")
         
         # Get testimony for this bill
         testimony_query = f"""
-        SELECT person_name, organization, position, content
+        SELECT speaker_name, '' as organization, '' as position, testimony_text as content
         FROM testimony
         WHERE bill_id = '{bill_id}'
         LIMIT 10
         """
-        testimony_rows = analyzer.conn.execute(testimony_query).fetchall()
-        testimony = [
-            {
-                'person_name': t[0],
-                'organization': t[1],
-                'position': t[2],
-                'content': t[3]
-            }
-            for t in testimony_rows
-        ]
+        try:
+            testimony_rows = analyzer.conn.execute(testimony_query).fetchall()
+            testimony = [
+                {
+                    'person_name': t[0],
+                    'organization': t[1],
+                    'position': t[2],
+                    'content': t[3]
+                }
+                for t in testimony_rows
+            ]
+        except Exception as e:
+            logger.warning(f"   No testimony found: {e}")
+            testimony = []
         
         # Extract interest groups
         groups = llm.extract_interest_groups(
