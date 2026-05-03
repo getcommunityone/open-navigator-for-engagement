@@ -291,6 +291,13 @@ export default function PolicyMap() {
     }
   }
   
+  // Ensure URL has protocol prefix
+  const ensureProtocol = (url: string | undefined): string | undefined => {
+    if (!url) return undefined
+    if (url.startsWith('http://') || url.startsWith('https://')) return url
+    return `https://${url}`
+  }
+  
   // Sort bills client-side
   const sortedBills = billsData?.bills ? [...billsData.bills].sort((a, b) => {
     if (sortBy === 'date') {
@@ -1102,7 +1109,7 @@ export default function PolicyMap() {
                               {bill.source_url && (
                                 <div className="mt-4 pt-4 border-t border-gray-200">
                                   <a
-                                    href={bill.source_url}
+                                    href={ensureProtocol(bill.source_url)}
                                     target="_blank"
                                     rel="noopener noreferrer"
                                     className="inline-flex items-center gap-2 text-sm text-blue-600 hover:text-blue-800 font-medium"
@@ -1130,7 +1137,7 @@ export default function PolicyMap() {
                                         </div>
                                         {version.document_url && (
                                           <a
-                                            href={version.document_url}
+                                            href={ensureProtocol(version.document_url)}
                                             target="_blank"
                                             rel="noopener noreferrer"
                                             className="ml-2 text-xs text-blue-600 hover:text-blue-800 font-medium"

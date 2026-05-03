@@ -13,9 +13,15 @@ Implements all frameworks:
 Usage:
     python examples/tuscaloosa_political_economy.py
 """
+import sys
+from pathlib import Path
+
+# Add project root to Python path
+project_root = Path(__file__).parent.parent
+sys.path.insert(0, str(project_root))
+
 import asyncio
 import json
-from pathlib import Path
 from datetime import datetime
 from loguru import logger
 
@@ -48,7 +54,8 @@ async def run_complete_analysis():
     # ================================================================
     logger.info("\n[2/6] Analyzing decision frames and stakeholder influence...")
     
-    decision_analyzer = DecisionAnalysisAgent()
+    # Use local Llama 3.3 for analysis (free, no API key needed)
+    decision_analyzer = DecisionAnalysisAgent(use_local=True, model="llama3.3:70b")
     all_decisions = []
     
     for i, doc in enumerate(documents[:10], 1):  # Limit for demo

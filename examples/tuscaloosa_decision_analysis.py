@@ -11,9 +11,15 @@ This script demonstrates how to extract:
 Usage:
     python examples/tuscaloosa_decision_analysis.py
 """
+import sys
+from pathlib import Path
+
+# Add project root to Python path
+project_root = Path(__file__).parent.parent
+sys.path.insert(0, str(project_root))
+
 import asyncio
 import json
-from pathlib import Path
 from loguru import logger
 
 from extraction.decision_analyzer import DecisionAnalysisAgent, PolicyDecision

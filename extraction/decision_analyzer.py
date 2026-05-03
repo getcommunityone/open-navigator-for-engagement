@@ -13,8 +13,16 @@ from typing import List, Dict, Any, Optional
 from dataclasses import dataclass
 from datetime import datetime
 from loguru import logger
+import subprocess
+import json as json_lib
+import os
 
-from openai import OpenAI
+try:
+    from openai import OpenAI
+    OPENAI_AVAILABLE = True
+except ImportError:
+    OPENAI_AVAILABLE = False
+
 from config.settings import settings
 
 
@@ -88,13 +96,39 @@ class DecisionAnalysisAgent:
         >>>     print(f"Rationale: {decision.primary_rationale}")
     """
     
-    def __init__(self):
-        """Initialize the decision analysis agent."""
-        if not settings.openai_api_key:
-            raise ValueError("OpenAI API key required. Set OPENAI_API_KEY environment variable.")
+    def __init__(self, use_local: bool = True, model: str = "llama3.3:70b"):
+        """
+        Initialize the decision analysis agent.
         
-        self.client = OpenAI(api_key=settings.openai_api_key)
-        self.model = "gpt-4o"  # Need the smarter model for complex reasoning
+        Args:
+            use_local: Use local LLM via Ollama (default True for cost-effectiveness)
+            model: Model to use (llama3.3:70b, llama3.3:8b, or OpenAI model if use_local=False)
+        """
+        self.use_local = use_local
+        self.model = model
+        
+        if use_local:
+            # Check if Ollama is available
+            try:
+                result = subprocess.run(['ollama', 'list'], capture_output=True, text=True)
+                model_name = self.model.split(':')[0]
+                if model_name not in result.stdout:
+                    logger.warning(f"Model {self.model} not found. Install with: ollama pull {self.model}")
+                    logger.info("Falling back to mock analysis for now")
+                logger.info(f"Using local LLM: {self.model}")
+            except FileNotFoundError:
+                logger.error("Ollama not installed. Install from: https://ollama.ai")
+                logger.info("Falling back to mock analysis")
+            self.client = None
+        else:
+            # Use OpenAI API
+            if not OPENAI_AVAILABLE:
+                raise ImportError("OpenAI package not installed. Run: pip install openai")
+            if not settings.openai_api_key:
+                raise ValueError("OpenAI API key required. Set OPENAI_API_KEY environment variable.")
+            self.client = OpenAI(api_key=settings.openai_api_key)
+            if not model.startswith("gpt") and not model.startswith("o1"):
+                self.model = "gpt-4o"  # Default to GPT-4o for OpenAI
         
     def analyze_document(
         self,
@@ -122,23 +156,26 @@ class DecisionAnalysisAgent:
         prompt = self._build_analysis_prompt(document, focus_topics)
         
         try:
-            response = self.client.chat.completions.create(
-                model=self.model,
-                messages=[
-                    {
-                        "role": "system",
-                        "content": self._get_system_prompt()
-                    },
-                    {
-                        "role": "user",
-                        "content": prompt
-                    }
-                ],
-                temperature=0.2,  # Low temperature for factual analysis
-                response_format={"type": "json_object"}  # Request JSON output
-            )
+            if self.use_local:
+                response_text = self._call_ollama(prompt)
+            else:
+                response = self.client.chat.completions.create(
+                    model=self.model,
+                    messages=[
+                        {
+                            "role": "system",
+                            "content": self._get_system_prompt()
+                        },
+                        {
+                            "role": "user",
+                            "content": prompt
+                        }
+                    ],
+                    temperature=0.2,  # Low temperature for factual analysis
+                    response_format={"type": "json_object"}  # Request JSON output
+                )
+                response_text = response.choices[0].message.content
             
-            response_text = response.choices[0].message.content
             import json
             parsed = json.loads(response_text)
             
@@ -313,6 +350,46 @@ Return a JSON object with this structure:
 - For confidence: 1.0 = explicit and clear, 0.5 = mentioned but unclear
 """
         return prompt.strip()
+    
+    def _call_ollama(self, prompt: str) -> str:
+        """Call Ollama for local LLM inference."""
+        try:
+            # Combine system prompt and user prompt for Ollama
+            full_prompt = self._get_system_prompt() + "\n\n" + prompt
+            
+            # Call Ollama
+            result = subprocess.run(
+                ['ollama', 'run', self.model, '--format', 'json'],
+                input=full_prompt,
+                capture_output=True,
+                text=True,
+                timeout=180  # 3 minute timeout
+            )
+            
+            if result.returncode != 0:
+                logger.error(f"Ollama error: {result.stderr}")
+                return '{"decisions": []}'
+            
+            # Return the generated JSON
+            output = result.stdout.strip()
+            
+            # Validate it's JSON
+            try:
+                json_lib.loads(output)
+                return output
+            except json_lib.JSONDecodeError:
+                logger.error(f"Invalid JSON from Ollama: {output[:200]}")
+                return '{"decisions": []}'
+                
+        except subprocess.TimeoutExpired:
+            logger.error("Ollama request timed out")
+            return '{"decisions": []}'
+        except FileNotFoundError:
+            logger.error("Ollama not found. Install from: https://ollama.ai")
+            return '{"decisions": []}'
+        except Exception as e:
+            logger.error(f"Ollama error: {e}")
+            return '{"decisions": []}'
     
     def _create_policy_decision(
         self,

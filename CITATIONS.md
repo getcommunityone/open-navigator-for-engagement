@@ -151,6 +151,61 @@ July 2023, Toronto, Canada.
 - Paid API provides higher rate limits and bulk downloads
 - Use LegiScan for bill text analysis, Open States for structured legislative data
 
+### **GovTrack.us** ⭐
+- Congressional bill tracking, categorization, and civic engagement platform
+- Organization: Civic Impulse LLC
+- Source: https://www.govtrack.us/
+- API: https://www.govtrack.us/developers/api
+- GitHub: https://github.com/govtrack/govtrack.us-web
+- License: Open data (public domain for U.S. government data); code is open source
+- Coverage: U.S. Congress (House and Senate)
+
+**Coverage:**
+- All congressional bills since 1973
+- Bill text, status tracking, and legislative history
+- Congressional voting records
+- Legislator information and committee assignments
+- Bill categorization and topic classification (20+ policy areas)
+- Bill summaries and plain-language explanations
+
+**What we use:**
+- Bill topic classification methodology (inspiration for state-level topic extraction)
+- Congressional bill categorization approach (health, education, defense, etc.)
+- Legislative data analysis patterns
+- Bill similarity and tracking techniques
+
+**Features:**
+- Automatic bill categorization into policy areas
+- Plain-language bill summaries
+- Legislator voting records and analysis
+- Committee tracking and hearing schedules
+- Email alerts for bill tracking
+- Open data downloads (JSON, XML, CSV)
+
+**Resources:**
+- Website: https://www.govtrack.us/
+- API Documentation: https://www.govtrack.us/developers/api
+- Data Downloads: https://www.govtrack.us/developers/data
+- GitHub Repository: https://github.com/govtrack/govtrack.us-web
+- Blog: https://govtrackinsider.com/
+
+**BibTeX:**
+```bibtex
+@software{govtrack,
+    title = {GovTrack.us},
+    author = {{Civic Impulse LLC}},
+    year = {2024},
+    url = {https://www.govtrack.us/},
+    note = {Congressional bill tracking and civic engagement platform with automatic topic categorization and legislative analysis}
+}
+```
+
+**Relevance to Open Navigator:**
+- Their bill categorization methodology informs our state-level topic extraction
+- Proven approach to making complex legislation accessible
+- Open source codebase provides technical patterns for legislative data processing
+- Topic taxonomy (health, education, infrastructure, etc.) adapted for state bills
+
 ### **Harvard Dataverse**
 - Meeting datasets and civic engagement research
 - Source: https://dataverse.harvard.edu/

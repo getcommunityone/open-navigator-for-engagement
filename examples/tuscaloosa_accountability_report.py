@@ -9,9 +9,15 @@ the debate from "need" to "why aren't you acting?"
 Usage:
     python examples/tuscaloosa_accountability_report.py
 """
+import sys
+from pathlib import Path
+
+# Add project root to Python path
+project_root = Path(__file__).parent.parent
+sys.path.insert(0, str(project_root))
+
 import asyncio
 import json
-from pathlib import Path
 from datetime import datetime
 from typing import List, Dict, Any
 from loguru import logger
@@ -60,7 +66,8 @@ async def main():
     # ================================================================
     logger.info("[2/5] Extracting policy decisions...")
     
-    decision_analyzer = DecisionAnalysisAgent()
+    # Use local Llama 3.3 for analysis (free, no API key needed)
+    decision_analyzer = DecisionAnalysisAgent(use_local=True, model="llama3.3:70b")
     budget_analyzer = BudgetAnalyzer()
     
     all_decisions = []
