@@ -22,10 +22,77 @@ import {
   BuildingOfficeIcon,
   UserIcon,
   CheckCircleIcon,
-  MapPinIcon
+  MapPinIcon,
+  PlusIcon,
+  BellIcon,
+  FireIcon
 } from '@heroicons/react/24/outline'
 import AddressLookup from '../components/AddressLookup'
 import { useLocation as useLocationContext } from '../contexts/LocationContext'
+
+// Trending topics/causes
+const TRENDING_TOPICS = [
+  { name: 'World Press Freedom Day', icon: '📰', category: 'Global' },
+  { name: 'Business & Markets', icon: '💼', category: 'Economics' },
+  { name: 'Artificial Intelligence', icon: '🤖', category: 'Technology' },
+  { name: 'Health & Medicine', icon: '⚕️', category: 'Healthcare' },
+  { name: 'Premier League', icon: '⚽', category: 'Sports' },
+  { name: 'Soccer', icon: '⚽', category: 'Sports' },
+  { name: 'Baseball', icon: '⚾', category: 'Sports' },
+  { name: 'Donald Trump', icon: '🏛️', category: 'Politics' },
+  { name: 'IPL', icon: '🏏', category: 'Sports' },
+  { name: 'Social Media', icon: '📱', category: 'Technology' },
+  { name: 'Trump Administration', icon: '🇺🇸', category: 'Politics' },
+]
+
+// Featured story (hero banner)
+const FEATURED_STORY = {
+  title: 'World Press Freedom Day: 43,726 Nonprofits Fighting for Transparency',
+  subtitle: 'How local journalism and civic organizations are tracking government decisions across 925 jurisdictions',
+  image: 'https://images.unsplash.com/photo-1504711434969-e33886168f5c?w=1200&h=600&fit=crop',
+  category: 'Civic Engagement',
+  link: '/search?q=press+freedom'
+}
+
+// Top stories
+const TOP_STORIES = [
+  {
+    title: 'AI Policy Tracking: 15,000+ Government Decisions Analyzed',
+    topic: 'Artificial Intelligence',
+    image: 'https://images.unsplash.com/photo-1677442136019-21780ecad995?w=400&h=300&fit=crop',
+    link: '/search?q=artificial+intelligence'
+  },
+  {
+    title: 'Healthcare Access: Dental Clinics in Focus',
+    topic: 'Health & Medicine',
+    image: 'https://images.unsplash.com/photo-1588776814546-1ffcf47267a5?w=400&h=300&fit=crop',
+    link: '/search?q=dental+health'
+  },
+  {
+    title: 'Local Sports Funding: $2.5B in Community Programs',
+    topic: 'Sports & Recreation',
+    image: 'https://images.unsplash.com/photo-1461896836934-ffe607ba8211?w=400&h=300&fit=crop',
+    link: '/search?q=sports+funding'
+  },
+  {
+    title: 'Social Media Policies: Cities Set New Guidelines',
+    topic: 'Technology',
+    image: 'https://images.unsplash.com/photo-1611162617474-5b21e879e113?w=400&h=300&fit=crop',
+    link: '/search?q=social+media+policy'
+  },
+  {
+    title: 'Business Development: 8,000+ Economic Initiatives',
+    topic: 'Business & Markets',
+    image: 'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=400&h=300&fit=crop',
+    link: '/search?q=business+development'
+  },
+  {
+    title: 'Government Transparency: 12,000+ Hours of Meeting Video',
+    topic: 'Civic Engagement',
+    image: 'https://images.unsplash.com/photo-1555421689-d68471e189f2?w=400&h=300&fit=crop',
+    link: '/documents'
+  },
+]
 
 export default function Home() {
   const navigate = useNavigate()
@@ -182,19 +249,128 @@ export default function Home() {
   }
 
   return (
-    <div className="min-h-screen" style={{ backgroundColor: '#F1F5F9' }}>
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-20 pb-16">
-        <div className="text-center">
-          <h1 className="text-5xl font-bold mb-6" style={{ color: '#354F52' }}>
-            Open Navigator
-          </h1>
-          <p className="text-xl mb-12 max-w-3xl mx-auto" style={{ color: '#354F52' }}>
-            Track what local governments and charities say, spend—and block.
-            <br />
-            Find leaders by name. Discover causes.{' '}
-            <Link to="/jurisdictions" className="font-semibold hover:underline">925 jurisdictions</Link>.{' '}
-            <Link to="/search?types=organizations" className="font-semibold hover:underline">43,726 nonprofits</Link>. All free.
-          </p>
+    <div className="min-h-screen bg-white">
+      {/* Trending Topics Bar */}
+      <div className="bg-gray-50 border-b border-gray-200">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
+          <div className="flex items-center gap-2 text-xs text-gray-600 mb-2">
+            <FireIcon className="h-4 w-4 text-orange-500" />
+            <span className="font-semibold uppercase">Trending Topics</span>
+          </div>
+          {/* First row of topics */}
+          <div className="flex flex-wrap gap-2 mb-2">
+            {TRENDING_TOPICS.slice(0, 6).map((topic) => (
+              <button
+                key={topic.name}
+                onClick={() => navigate(`/search?q=${encodeURIComponent(topic.name)}`)}
+                className="group inline-flex items-center gap-1.5 px-3 py-1.5 bg-white border border-gray-300 rounded-full hover:border-primary-500 hover:bg-primary-50 transition-all text-sm"
+              >
+                <span>{topic.icon}</span>
+                <span className="font-medium text-gray-700 group-hover:text-primary-700">{topic.name}</span>
+                <PlusIcon className="h-3.5 w-3.5 text-gray-400 group-hover:text-primary-600" />
+              </button>
+            ))}
+          </div>
+          {/* Second row of topics */}
+          <div className="flex flex-wrap gap-2">
+            {TRENDING_TOPICS.slice(6).map((topic) => (
+              <button
+                key={topic.name}
+                onClick={() => navigate(`/search?q=${encodeURIComponent(topic.name)}`)}
+                className="group inline-flex items-center gap-1.5 px-3 py-1.5 bg-white border border-gray-300 rounded-full hover:border-primary-500 hover:bg-primary-50 transition-all text-sm"
+              >
+                <span>{topic.icon}</span>
+                <span className="font-medium text-gray-700 group-hover:text-primary-700">{topic.name}</span>
+                <PlusIcon className="h-3.5 w-3.5 text-gray-400 group-hover:text-primary-600" />
+              </button>
+            ))}
+            <button
+              onClick={() => navigate('/search')}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-primary-50 border border-primary-300 rounded-full hover:bg-primary-100 transition-all text-sm"
+            >
+              <BellIcon className="h-3.5 w-3.5 text-primary-600" />
+              <span className="font-medium text-primary-700">Follow Topics</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Featured Story Hero */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <Link to={FEATURED_STORY.link} className="group block">
+          <div className="relative overflow-hidden rounded-2xl bg-gray-900 shadow-2xl h-[500px]">
+            <img
+              src={FEATURED_STORY.image}
+              alt={FEATURED_STORY.title}
+              className="absolute inset-0 w-full h-full object-cover opacity-60 group-hover:opacity-50 transition-opacity duration-300"
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-black via-black/50 to-transparent" />
+            <div className="absolute bottom-0 left-0 right-0 p-8 md:p-12">
+              <span className="inline-block px-3 py-1 bg-primary-600 text-white text-xs font-semibold uppercase rounded mb-4">
+                {FEATURED_STORY.category}
+              </span>
+              <h2 className="text-3xl md:text-5xl font-bold text-white mb-4 leading-tight group-hover:text-primary-300 transition-colors">
+                {FEATURED_STORY.title}
+              </h2>
+              <p className="text-lg md:text-xl text-gray-200 max-w-3xl">
+                {FEATURED_STORY.subtitle}
+              </p>
+            </div>
+          </div>
+        </Link>
+      </div>
+
+      {/* Top Stories Grid */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-2xl font-bold text-gray-900">Top Stories</h2>
+          <Link to="/search" className="text-primary-600 hover:text-primary-700 font-medium flex items-center gap-1">
+            View All <ArrowRightIcon className="h-4 w-4" />
+          </Link>
+        </div>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
+          {TOP_STORIES.map((story, idx) => (
+            <Link
+              key={idx}
+              to={story.link}
+              className="group bg-white border border-gray-200 rounded-xl overflow-hidden hover:shadow-lg transition-all"
+            >
+              <div className="relative h-48 overflow-hidden bg-gray-100">
+                <img
+                  src={story.image}
+                  alt={story.title}
+                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                />
+                <div className="absolute top-3 left-3">
+                  <span className="px-2 py-1 bg-white/90 backdrop-blur-sm text-xs font-semibold text-gray-900 rounded">
+                    {story.topic}
+                  </span>
+                </div>
+              </div>
+              <div className="p-4">
+                <h3 className="font-bold text-gray-900 group-hover:text-primary-600 transition-colors line-clamp-2">
+                  {story.title}
+                </h3>
+              </div>
+            </Link>
+          ))}
+        </div>
+      </div>
+
+      {/* Search Section (Collapsible) */}
+      <div className="bg-gray-50 py-12 border-t border-gray-200">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-8">
+            <h2 className="text-3xl font-bold mb-4" style={{ color: '#354F52' }}>
+              Search Your Community
+            </h2>
+            <p className="text-lg text-gray-600 max-w-2xl mx-auto">
+              Track local governments and charities. Find leaders by name. Discover causes.{' '}
+              <Link to="/jurisdictions" className="font-semibold hover:underline">925 jurisdictions</Link>.{' '}
+              <Link to="/search?types=organizations" className="font-semibold hover:underline">43,726 nonprofits</Link>. All free.
+            </p>
+          </div>
 
           {/* Tabbed Interface */}
           <div className="max-w-5xl mx-auto mb-8">
