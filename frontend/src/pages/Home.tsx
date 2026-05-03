@@ -55,7 +55,7 @@ const FEATURED_STORIES = [
     title: 'CommunityOne',
     subtitle: 'Track Local Decisions. Take Action.',
     description: 'Follow leaders, charities, and causes in your community.',
-    stats: '925 jurisdictions • 43.7K nonprofits • 362 leaders • 650+ causes • 100% free',
+    stats: '925 jurisdictions • 43.7K nonprofits • 8.8K legislators • 650+ causes • 100% free',
     category: 'Home',
     link: '/'
   },
