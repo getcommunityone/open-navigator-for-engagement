@@ -222,7 +222,9 @@ def export_bills_bills(conn, state: str, jurisdiction_id: str, state_dir: Path):
             b.latest_action_date,
             b.latest_action_description,
             b.created_at,
-            b.updated_at
+            b.updated_at,
+            (SELECT abstract FROM opencivicdata_billabstract WHERE bill_id = b.id LIMIT 1) as abstract,
+            (SELECT url FROM opencivicdata_billsource WHERE bill_id = b.id LIMIT 1) as source_url
         FROM opencivicdata_bill b
         JOIN opencivicdata_legislativesession s ON b.legislative_session_id = s.id
         JOIN opencivicdata_jurisdiction j ON s.jurisdiction_id = j.id
@@ -240,6 +242,53 @@ def export_bills_bills(conn, state: str, jurisdiction_id: str, state_dir: Path):
     df.to_parquet(output_path, index=False, engine='pyarrow', compression='snappy')
     
     logger.info(f"  ✅ Exported {len(df):,} bills")
+    logger.info(f"  📝 With abstracts: {df['abstract'].notna().sum():,}")
+    logger.info(f"  🔗 With source URLs: {df['source_url'].notna().sum():,}")
+    
+    return df
+
+
+def export_bills_versions(conn, state: str, jurisdiction_id: str, state_dir: Path):
+    """Export bill versions and their document links."""
+    logger.info(f"  Exporting bills_versions for {state}...")
+    
+    if not jurisdiction_id:
+        logger.warning(f"  No jurisdiction ID for {state}, skipping bill versions export")
+        return None
+    
+    query = """
+        SELECT 
+            v.id as version_id,
+            v.bill_id,
+            b.identifier as bill_number,
+            v.note as version_note,
+            v.date as version_date,
+            v.classification,
+            vl.url as document_url,
+            vl.media_type,
+            j.name as jurisdiction_name,
+            s.identifier as session
+        FROM opencivicdata_billversion v
+        JOIN opencivicdata_bill b ON v.bill_id = b.id
+        JOIN opencivicdata_legislativesession s ON b.legislative_session_id = s.id
+        JOIN opencivicdata_jurisdiction j ON s.jurisdiction_id = j.id
+        LEFT JOIN opencivicdata_billversionlink vl ON vl.version_id = v.id
+        WHERE j.id = %s
+        ORDER BY b.identifier, v.date DESC
+    """
+    
+    df = pd.read_sql(query, conn, params=(jurisdiction_id,))
+    
+    if len(df) == 0:
+        logger.info(f"  ℹ️  No bill versions found for {state}")
+        return None
+    
+    output_path = state_dir / "bills_versions.parquet"
+    df.to_parquet(output_path, index=False, engine='pyarrow', compression='snappy')
+    
+    logger.info(f"  ✅ Exported {len(df):,} bill versions")
+    logger.info(f"  📄 Unique bills with versions: {df['bill_id'].nunique():,}")
+    logger.info(f"  🔗 With document URLs: {df['document_url'].notna().sum():,}")
     
     return df
 
@@ -444,6 +493,7 @@ def main():
             # Export all datasets for this state
             export_contacts_officials(conn, state, state_dir)
             export_bills_bills(conn, state, jurisdiction_id, state_dir)
+            export_bills_versions(conn, state, jurisdiction_id, state_dir)
             export_bills_bill_actions(conn, state, jurisdiction_id, state_dir)
             export_bills_bill_sponsorships(conn, state, jurisdiction_id, state_dir)
             export_events_events(conn, state, jurisdiction_id, state_dir)

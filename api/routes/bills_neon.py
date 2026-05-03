@@ -163,6 +163,7 @@ async def fetch_bills_from_parquet(
         
         # Bill type filter (multi-select - based on bill number pattern)
         if bill_types and len(bill_types) > 0:
+            logger.info(f"🔍 Applying bill_types filter: {bill_types}")
             type_conditions = []
             for bill_type in bill_types:
                 if bill_type == 'bill':
@@ -176,6 +177,7 @@ async def fetch_bills_from_parquet(
                 elif bill_type == 'memorial':
                     type_conditions.append("(bill_number LIKE 'HJM%' OR bill_number LIKE 'SJM%')")
             if type_conditions:
+                logger.info(f"✅ Adding type_conditions: {type_conditions}")
                 where_clauses.append(f"({' OR '.join(type_conditions)})")
         
         # Status filter (multi-select - based on latest_action_description)
@@ -229,7 +231,9 @@ async def fetch_bills_from_parquet(
                 first_action_date,
                 latest_action_date,
                 latest_action_description,
-                jurisdiction_name
+                jurisdiction_name,
+                abstract,
+                source_url
             FROM read_parquet(?)
             WHERE {where_clause}
             ORDER BY latest_action_date DESC NULLS LAST, bill_number DESC
@@ -251,7 +255,9 @@ async def fetch_bills_from_parquet(
                 "first_action_date": str(row[6]) if row[6] else None,
                 "latest_action_date": str(row[7]) if row[7] else None,
                 "latest_action_description": row[8],
-                "jurisdiction_name": row[9]
+                "jurisdiction_name": row[9],
+                "abstract": row[10],
+                "source_url": row[11],
             })
         
         conn.close()
@@ -583,6 +589,9 @@ async def get_bills(
         bill_type_list = bill_types.split(',') if bill_types else None
         status_list = statuses.split(',') if statuses else None
         
+        # Debug logging
+        logger.info(f"📊 Bills request: state={state}, q={q}, sessions={session_list}, topic={topic}, chambers={chamber_list}, bill_types={bill_type_list}, statuses={status_list}")
+        
         result = await fetch_bills_from_parquet(
             state=state.upper(),
             q=q,
@@ -699,6 +708,170 @@ async def get_bill_map_data(
         error_detail = parse_error(e, context={
             "topic": topic,
             "session": session
+        })
+        
+        return JSONResponse(
+            status_code=500,
+            content=error_detail.model_dump()
+        )
+
+
+@router.get("/filter-options")
+async def get_filter_options(
+    state: str = Query(..., description="State abbreviation (e.g., AL, GA)"),
+    topic: Optional[str] = Query(None, description="Topic filter"),
+    q: Optional[str] = Query(None, description="Search query")
+):
+    """
+    Get available filter options for a state based on actual data.
+    Returns only bill types, chambers, and statuses that exist for the selected state/topic.
+    """
+    try:
+        bills_file = GOLD_DIR / "bills_bills.parquet"
+        data_source = get_data_source(bills_file, use_remote=IS_HF_SPACES)
+        
+        conn = duckdb.connect()
+        
+        # Build WHERE clause
+        where_conditions = ["state = ?"]
+        params = [data_source, state]
+        
+        # Topic filter
+        if topic:
+            topic_keywords = {
+                'fluoride': 'fluorid',
+                'dental': 'dental',
+                'medicaid': 'medicaid',
+                'oral health': 'oral|dental|teeth',
+                'health': 'health',
+                'education': 'education|school'
+            }
+            keyword = topic_keywords.get(topic.lower(), topic)
+            where_conditions.append(f"REGEXP_MATCHES(LOWER(title), LOWER(?))")
+            params.append(keyword)
+        
+        # Search query
+        if q:
+            where_conditions.append("(LOWER(title) LIKE ? OR LOWER(bill_number) LIKE ?)")
+            search_pattern = f"%{q.lower()}%"
+            params.append(search_pattern)
+            params.append(search_pattern)
+        
+        where_clause = " AND ".join(where_conditions)
+        
+        # Get bill types
+        sql_types = f"""
+            SELECT 
+                CASE 
+                    WHEN bill_number LIKE 'HB%' OR bill_number LIKE 'SB%' OR bill_number LIKE 'AB%' THEN 'bill'
+                    WHEN bill_number LIKE 'HR%' OR bill_number LIKE 'SR%' OR bill_number LIKE 'AR%' THEN 'resolution'
+                    WHEN bill_number LIKE 'HJR%' OR bill_number LIKE 'SJR%' OR bill_number LIKE 'AJR%' THEN 'joint_resolution'
+                    WHEN bill_number LIKE 'HCR%' OR bill_number LIKE 'SCR%' THEN 'concurrent_resolution'
+                    WHEN bill_number LIKE 'HJM%' OR bill_number LIKE 'SJM%' THEN 'memorial'
+                END as bill_type,
+                COUNT(*) as count
+            FROM read_parquet(?)
+            WHERE {where_clause}
+            GROUP BY bill_type
+            HAVING bill_type IS NOT NULL
+            ORDER BY count DESC
+        """
+        
+        type_rows = conn.execute(sql_types, params).fetchall()
+        
+        # Get chambers
+        sql_chambers = f"""
+            SELECT 
+                CASE 
+                    WHEN bill_number LIKE 'HB%' OR bill_number LIKE 'HR%' OR bill_number LIKE 'HJR%' OR 
+                         bill_number LIKE 'HCR%' OR bill_number LIKE 'HJM%' OR bill_number LIKE 'H %' THEN 'house'
+                    WHEN bill_number LIKE 'SB%' OR bill_number LIKE 'SR%' OR bill_number LIKE 'SJR%' OR 
+                         bill_number LIKE 'SCR%' OR bill_number LIKE 'SJM%' OR bill_number LIKE 'S %' THEN 'senate'
+                    WHEN bill_number LIKE '%JR%' OR bill_number LIKE '%JM%' THEN 'joint'
+                END as chamber,
+                COUNT(*) as count
+            FROM read_parquet(?)
+            WHERE {where_clause}
+            GROUP BY chamber
+            HAVING chamber IS NOT NULL
+            ORDER BY count DESC
+        """
+        
+        chamber_rows = conn.execute(sql_chambers, params).fetchall()
+        
+        # Get statuses
+        sql_statuses = f"""
+            SELECT 
+                CASE 
+                    WHEN LOWER(latest_action_description) LIKE '%enact%' THEN 'enacted'
+                    WHEN LOWER(latest_action_description) LIKE '%pass%' THEN 'passed'
+                    WHEN LOWER(latest_action_description) LIKE '%adopt%' THEN 'adopted'
+                    WHEN LOWER(latest_action_description) LIKE '%fail%' THEN 'failed'
+                    WHEN LOWER(latest_action_description) LIKE '%introduc%' THEN 'introduced'
+                    WHEN LOWER(latest_action_description) LIKE '%refer%' THEN 'referred'
+                    WHEN LOWER(latest_action_description) LIKE '%report%' THEN 'reported'
+                END as status,
+                COUNT(*) as count
+            FROM read_parquet(?)
+            WHERE {where_clause} AND latest_action_description IS NOT NULL
+            GROUP BY status
+            HAVING status IS NOT NULL
+            ORDER BY count DESC
+        """
+        
+        status_rows = conn.execute(sql_statuses, params).fetchall()
+        
+        conn.close()
+        
+        # Map to labels
+        type_labels = {
+            'bill': 'Bill (HB/SB)',
+            'resolution': 'Resolution (HR/SR)',
+            'joint_resolution': 'Joint Resolution (HJR/SJR)',
+            'concurrent_resolution': 'Concurrent Resolution (HCR/SCR)',
+            'memorial': 'Memorial (HJM/SJM)'
+        }
+        
+        chamber_labels = {
+            'house': 'House',
+            'senate': 'Senate',
+            'joint': 'Joint'
+        }
+        
+        status_labels = {
+            'enacted': 'Enacted',
+            'passed': 'Passed',
+            'adopted': 'Adopted',
+            'failed': 'Failed',
+            'introduced': 'Introduced',
+            'referred': 'Referred to Committee',
+            'reported': 'Reported from Committee'
+        }
+        
+        return {
+            "state": state,
+            "topic": topic,
+            "bill_types": [
+                {"value": row[0], "label": type_labels.get(row[0], row[0]), "count": row[1]}
+                for row in type_rows
+            ],
+            "chambers": [
+                {"value": row[0], "label": chamber_labels.get(row[0], row[0]), "count": row[1]}
+                for row in chamber_rows
+            ],
+            "statuses": [
+                {"value": row[0], "label": status_labels.get(row[0], row[0]), "count": row[1]}
+                for row in status_rows
+            ]
+        }
+        
+    except Exception as e:
+        logger.error(f"Filter options query error for state={state}: {e}")
+        
+        error_detail = parse_error(e, context={
+            "state": state,
+            "topic": topic,
+            "q": q
         })
         
         return JSONResponse(

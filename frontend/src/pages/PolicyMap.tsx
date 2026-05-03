@@ -19,6 +19,8 @@ interface Bill {
   latest_action_description: string
   jurisdiction: string
   jurisdiction_name: string
+  abstract?: string
+  source_url?: string
 }
 
 interface Session {
@@ -50,6 +52,11 @@ interface StateData {
 
 export default function PolicyMap() {
   const [searchParams, setSearchParams] = useSearchParams()
+  
+  // Initialize topic state from URL to prevent flickering
+  const initialTopic = searchParams.get('topic') || ''
+  const initialShowTopicSelector = !initialTopic
+  
   const [viewMode, setViewMode] = useState<'map' | 'list'>('map')
   const [selectedState, setSelectedState] = useState('AL')
   const [selectedSession, setSelectedSession] = useState<string>('')
@@ -64,28 +71,21 @@ export default function PolicyMap() {
   const [selectedBillTypes, setSelectedBillTypes] = useState<string[]>([])
   const [selectedStatuses, setSelectedStatuses] = useState<string[]>([])
   
-  // Read topic from URL - use state that syncs with URL
-  const [selectedTopic, setSelectedTopic] = useState<string>('')
-  const [showTopicSelector, setShowTopicSelector] = useState(true)
+  // Read topic from URL - initialize from URL to prevent flicker
+  const [selectedTopic, setSelectedTopic] = useState<string>(initialTopic)
+  const [showTopicSelector, setShowTopicSelector] = useState(initialShowTopicSelector)
   
   // Advanced filters sidebar state
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false)
   
-  // Sync topic FROM URL to state (on mount and URL changes)
+  // Sync topic FROM URL when URL changes (e.g., browser back/forward)
   useEffect(() => {
     const topicFromUrl = searchParams.get('topic') || ''
-    if (topicFromUrl) {
-      setSelectedTopic(topicFromUrl)
-      setShowTopicSelector(false)
-      console.log('🔗 Initialized topic from URL:', topicFromUrl)
-    } else {
-      setSelectedTopic('')
-      setShowTopicSelector(true)
-    }
-  }, [searchParams]) // Re-run when URL changes
+    setSelectedTopic(topicFromUrl)
+    setShowTopicSelector(!topicFromUrl)
+  }, [searchParams]) // Only re-run when URL changes
   
   // Sync topic changes TO URL (when user selects a topic)
-  // IMPORTANT: Don't include searchParams in deps to avoid circular updates
   useEffect(() => {
     const currentTopicInUrl = searchParams.get('topic') || ''
     
@@ -93,7 +93,6 @@ export default function PolicyMap() {
       // Only update URL if topic is different
       if (currentTopicInUrl !== selectedTopic) {
         setSearchParams({ topic: selectedTopic }, { replace: true })
-        console.log('📝 Updated URL with topic:', selectedTopic)
       }
     } else if (showTopicSelector && currentTopicInUrl) {
       // Clear topic from URL if selector is shown
@@ -178,28 +177,28 @@ export default function PolicyMap() {
     gcTime: 5 * 60 * 1000, // Cache for 5 minutes
   })
 
-  // Auto-select most recent session ONLY when drilling down from map (state/topic change with no active filters)
-  useEffect(() => {
-    // Only run if we have sessions data and no filters are active
-    const hasNoFilters = selectedChambers.length === 0 && 
-                        selectedBillTypes.length === 0 && 
-                        selectedStatuses.length === 0 && 
-                        !searchQuery
+  // Fetch dynamic filter options based on state and topic
+  const { data: filterOptions } = useQuery<{
+    bill_types: Array<{value: string, label: string, count: number}>
+    chambers: Array<{value: string, label: string, count: number}>
+    statuses: Array<{value: string, label: string, count: number}>
+  }>({
+    queryKey: ['filter-options', selectedState, selectedTopic, searchQuery],
+    queryFn: async () => {
+      const params = new URLSearchParams({ state: selectedState })
+      if (selectedTopic) params.append('topic', selectedTopic)
+      if (searchQuery) params.append('q', searchQuery)
+      
+      const response = await api.get(`/bills/filter-options?${params}`)
+      return response.data
+    },
+    enabled: viewMode === 'list' && !showTopicSelector, // Always enabled in list view
+    staleTime: 2 * 60 * 1000, // 2 minutes
+    gcTime: 5 * 60 * 1000,
+  })
 
-    if (
-      sessionsData?.sessions && 
-      sessionsData.sessions.length > 0 && 
-      selectedSessions.length === 0 &&
-      hasNoFilters
-    ) {
-      // Auto-select most recent session
-      const mostRecentSession = sessionsData.sessions[0]
-      console.log('📅 Auto-selecting most recent session:', mostRecentSession.session_name)
-      setSelectedSessions([mostRecentSession.session])
-    }
-    // Only depend on state/topic changes and sessions data, NOT on selectedSessions to avoid loops
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedState, selectedTopic, sessionsData?.sessions])
+  // DO NOT auto-select sessions - let user see all bills across all sessions by default
+  // This was causing confusion where total said "3 bills" but only 1 was shown
 
   // Fetch bills
   const { data: billsData, isLoading, error: billsError } = useQuery<{
@@ -681,60 +680,45 @@ export default function PolicyMap() {
                         />
                       </div>
                       
-                      {/* Chamber Filter */}
+                      {/* Chamber Filter - Dynamic */}
                       <div>
                         <MultiSelect
                           label="Chamber"
-                          options={[
-                            { value: 'house', label: 'House' },
-                            { value: 'senate', label: 'Senate' },
-                            { value: 'joint', label: 'Joint' }
-                          ]}
+                          options={filterOptions?.chambers || []}
                           selected={selectedChambers}
                           onChange={(values) => {
                             setSelectedChambers(values)
+                            setSelectedSessions([]) // Clear sessions when chamber changes
                             setPage(1)
                           }}
                           placeholder="All Chambers"
                         />
                       </div>
                       
-                      {/* Bill Type Filter */}
+                      {/* Bill Type Filter - Dynamic */}
                       <div>
                         <MultiSelect
                           label="Bill Type"
-                          options={[
-                            { value: 'bill', label: 'Bill (HB/SB)' },
-                            { value: 'resolution', label: 'Resolution (HR/SR)' },
-                            { value: 'joint_resolution', label: 'Joint Resolution (HJR/SJR)' },
-                            { value: 'concurrent_resolution', label: 'Concurrent Resolution (HCR/SCR)' },
-                            { value: 'memorial', label: 'Memorial (HJM/SJM)' }
-                          ]}
+                          options={filterOptions?.bill_types || []}
                           selected={selectedBillTypes}
                           onChange={(values) => {
                             setSelectedBillTypes(values)
+                            setSelectedSessions([]) // Clear sessions when bill type changes
                             setPage(1)
                           }}
                           placeholder="All Types"
                         />
                       </div>
                       
-                      {/* Status Filter */}
+                      {/* Status Filter - Dynamic */}
                       <div>
                         <MultiSelect
                           label="Status"
-                          options={[
-                            { value: 'enacted', label: 'Enacted' },
-                            { value: 'passed', label: 'Passed' },
-                            { value: 'adopted', label: 'Adopted' },
-                            { value: 'failed', label: 'Failed' },
-                            { value: 'introduced', label: 'Introduced' },
-                            { value: 'referred', label: 'Referred to Committee' },
-                            { value: 'reported', label: 'Reported from Committee' }
-                          ]}
+                          options={filterOptions?.statuses || []}
                           selected={selectedStatuses}
                           onChange={(values) => {
                             setSelectedStatuses(values)
+                            setSelectedSessions([]) // Clear sessions when status changes
                             setPage(1)
                           }}
                           placeholder="All Statuses"
@@ -1057,6 +1041,14 @@ export default function PolicyMap() {
                           {/* Expanded Details */}
                           {isExpanded && (
                             <div className="px-6 pb-6 border-t border-gray-100">
+                              {/* Abstract Section */}
+                              {bill.abstract && (
+                                <div className="mt-4 mb-4 p-4 bg-gray-50 rounded-lg">
+                                  <p className="text-sm font-medium text-gray-700 mb-2">Bill Summary</p>
+                                  <p className="text-sm text-gray-900 leading-relaxed">{bill.abstract}</p>
+                                </div>
+                              )}
+                              
                               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
                                 <div>
                                   <p className="text-sm font-medium text-gray-700 mb-1">Jurisdiction</p>
@@ -1079,6 +1071,23 @@ export default function PolicyMap() {
                                   <p className="text-xs text-gray-600 font-mono break-all">{bill.bill_id}</p>
                                 </div>
                               </div>
+                              
+                              {/* Source Link */}
+                              {bill.source_url && (
+                                <div className="mt-4 pt-4 border-t border-gray-200">
+                                  <a
+                                    href={bill.source_url}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="inline-flex items-center gap-2 text-sm text-blue-600 hover:text-blue-800 font-medium"
+                                  >
+                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                                    </svg>
+                                    View full bill on legislature website
+                                  </a>
+                                </div>
+                              )}
                             </div>
                           )}
                         </div>
