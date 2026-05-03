@@ -21,7 +21,7 @@ fi
 # Create virtual environment if it doesn't exist
 if [ ! -d ".venv-intel" ]; then
     echo "📦 Creating Intel-optimized virtual environment..."
-    python3 -m venv .venv-intel
+    python3 -m venv .venv-intel --upgrade-deps
     
     if [ ! -f ".venv-intel/bin/activate" ]; then
         echo "❌ Failed to create virtual environment"
@@ -35,30 +35,36 @@ fi
 echo "🔧 Activating environment..."
 source .venv-intel/bin/activate
 
+# Verify we're in the virtual environment
+if [[ "$VIRTUAL_ENV" != *".venv-intel"* ]]; then
+    echo "❌ Failed to activate virtual environment"
+    exit 1
+fi
+
 # Install Intel Extension for PyTorch (IPEX-LLM)
 echo "📥 Installing Intel Extension for PyTorch..."
-pip install --upgrade pip setuptools wheel
+.venv-intel/bin/pip install --upgrade pip setuptools wheel
 
 # Install IPEX-LLM (Intel's optimized LLM library)
-pip install intel-extension-for-pytorch
-pip install oneccl_bind_pt --extra-index-url https://pytorch-extension.intel.com/release-whl/stable/cpu/us/
+.venv-intel/bin/pip install intel-extension-for-pytorch
+.venv-intel/bin/pip install oneccl_bind_pt --extra-index-url https://pytorch-extension.intel.com/release-whl/stable/cpu/us/
 
 # Install LLM frameworks optimized for Intel
-pip install transformers accelerate bitsandbytes optimum[openvino]
+.venv-intel/bin/pip install transformers accelerate bitsandbytes optimum[openvino]
 
 # Install DuckDB with extensions
 echo "📥 Installing DuckDB with VSS extension..."
-pip install duckdb
-pip install duckdb-engine sqlalchemy
+.venv-intel/bin/pip install duckdb
+.venv-intel/bin/pip install duckdb-engine sqlalchemy
 
 # Install Hugging Face datasets
-pip install datasets huggingface_hub
+.venv-intel/bin/pip install datasets huggingface_hub
 
 # Install vector search libraries
-pip install faiss-cpu sentence-transformers
+.venv-intel/bin/pip install faiss-cpu sentence-transformers
 
 # Install other dependencies
-pip install loguru pandas pyarrow tqdm
+.venv-intel/bin/pip install loguru pandas pyarrow tqdm
 
 echo ""
 echo "✅ Intel-optimized environment ready!"
