@@ -15,7 +15,9 @@ interface Bill {
   first_action_date: string
   latest_action_date: string
   latest_action: string
+  latest_action_description: string
   jurisdiction: string
+  jurisdiction_name: string
 }
 
 interface Session {
