@@ -7,6 +7,13 @@ set -e
 cd /home/developer/projects/open-navigator
 source .venv/bin/activate
 
+# Load environment variables from .env
+if [ -f .env ]; then
+    set -a
+    source .env
+    set +a
+fi
+
 echo "=========================================="
 echo "DISCOVERING ORAL HEALTH FOCUS STATES"
 echo "=========================================="
@@ -19,10 +26,14 @@ for STATE in "${STATES[@]}"; do
     echo "Discovering ${STATE}..."
     echo "=========================================="
     
-    python scripts/discovery/comprehensive_discovery_pipeline.py \
-        --state ${STATE} \
-        --youtube-api-key ${YOUTUBE_API_KEY} \
-        --max-concurrent 5
+    # Build command with optional YouTube API key
+    CMD="python scripts/discovery/comprehensive_discovery_pipeline.py --state ${STATE} --all --max-concurrent 5"
+    
+    if [ ! -z "${YOUTUBE_API_KEY}" ]; then
+        CMD="${CMD} --youtube-api-key ${YOUTUBE_API_KEY}"
+    fi
+    
+    eval $CMD
     
     echo ""
     echo "✅ ${STATE} complete!"

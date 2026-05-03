@@ -6,6 +6,13 @@ set -e
 cd /home/developer/projects/open-navigator
 source .venv/bin/activate
 
+# Load environment variables from .env
+if [ -f .env ]; then
+    set -a
+    source .env
+    set +a
+fi
+
 # Default to top 100, can override with argument
 TOP_N=${1:-100}
 
@@ -14,10 +21,14 @@ echo "DISCOVERING TOP ${TOP_N} JURISDICTIONS"
 echo "=========================================="
 echo ""
 
-python scripts/discovery/comprehensive_discovery_pipeline.py \
-    --top ${TOP_N} \
-    --youtube-api-key ${YOUTUBE_API_KEY} \
-    --max-concurrent 5
+# Build command with optional YouTube API key
+CMD="python scripts/discovery/comprehensive_discovery_pipeline.py --top ${TOP_N} --max-concurrent 5"
+
+if [ ! -z "${YOUTUBE_API_KEY}" ]; then
+    CMD="${CMD} --youtube-api-key ${YOUTUBE_API_KEY}"
+fi
+
+eval $CMD
 
 echo ""
 echo "=========================================="
