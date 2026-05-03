@@ -1,3 +1,7 @@
+---
+sidebar_position: 5
+---
+
 # 🚀 Intel Arc + DuckDB Quick Reference
 
 **Get started with local AI legislative analysis in 5 minutes**
@@ -198,84 +202,17 @@ similar = conn.execute("""
 **DON'T** process one at a time:
 ```python
 for bill_id in bill_ids:  # Slow!
-    result = analyze_single_bill(bill_id)
+    result = llm.analyze(bill_id)
 ```
 
-**DO** batch efficiently:
+**DO** batch process:
 ```python
-# Fast - processes 100 bills in parallel
-results = llm.extract_interest_groups_batch(
-    bill_contexts=bills,
-    testimony_batches=all_testimony,
-    batch_size=32  # Fits in Arc GPU memory
-)
+# Fast - GPU parallelism
+results = llm.batch_analyze(bill_ids, batch_size=32)
 ```
 
-### 3. Monitor GPU Usage
+## 📚 Additional Resources
 
-```bash
-# Linux: intel_gpu_top
-sudo apt install intel-gpu-tools
-intel_gpu_top
-
-# Windows: Task Manager → Performance → GPU
-# Look for "GPU 0 - Intel Arc Graphics"
-```
-
-## 🐛 Troubleshooting
-
-### Issue: "ModuleNotFoundError: optimum"
-
-```bash
-pip install optimum[openvino]
-```
-
-### Issue: Slow inference (still using CPU)
-
-Check device:
-```python
-import torch
-print(f"Device: {torch.cuda.get_device_name(0)}")  # Should show Arc GPU
-
-# Force GPU
-model = OVModelForCausalLM.from_pretrained(
-    model_name,
-    device="GPU"  # Explicitly set
-)
-```
-
-### Issue: Out of memory
-
-Use smaller model or reduce batch size:
-```python
-# Use 3B instead of 8B
-model_name = "meta-llama/Llama-3.2-3B-Instruct"
-
-# Reduce context
-testimony = testimony[:10]  # Top 10 only
-```
-
-## 📚 Resources
-
-- **Full Guide**: [website/docs/guides/intel-arc-optimization.md](../website/docs/guides/intel-arc-optimization.md)
-- **DuckDB Docs**: https://duckdb.org/docs/
-- **Intel IPEX**: https://github.com/intel/intel-extension-for-pytorch
-- **OpenVINO**: https://docs.openvino.ai/
-
-## 🎯 Next Steps
-
-1. ✅ Run the demo: `python scripts/enrichment_ai/duckdb_vss_demo.py`
-2. ✅ Test analysis: `python scripts/enrichment_ai/legislative_analysis_intel.py`
-3. 📚 Read full guide: [Intel Arc Optimization Guide](../website/docs/guides/intel-arc-optimization.md)
-4. 🚀 Build your own: Use the `DuckDBLegislativeAnalyzer` class
-5. 🤝 Share results: Open an issue with your findings!
-
-## 💬 Questions?
-
-- **GitHub Issues**: https://github.com/getcommunityone/open-navigator/issues
-- **Documentation**: https://www.communityone.com/docs
-- **Intel AI Forums**: https://community.intel.com/t5/Intel-AI-Analytics-and/bd-p/software-ai
-
----
-
-**Built with ❤️ for Data Engineering Managers who want local, private, fast legislative intelligence.**
+- [DuckDB Vector Similarity Search](https://duckdb.org/docs/extensions/vss.html)
+- [Intel Arc GPU Setup](https://www.intel.com/content/www/us/en/developer/articles/guide/optimization-for-pytorch-with-intel-gpus.html)
+- [OpenVINO Toolkit](https://docs.openvino.ai/)
