@@ -60,7 +60,7 @@ Each spider file contains `start_urls` with:
 ```bash
 cd /home/developer/projects/open-navigator
 source venv/bin/activate
-python scripts/discovery/city_scrapers_urls.py
+python scripts/datasources/cityscrapers/city_scrapers_urls.py
 ```
 
 **Output**: `bronze/city_scrapers_urls` table with 100-500 validated URLs

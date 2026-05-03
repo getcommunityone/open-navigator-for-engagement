@@ -181,7 +181,7 @@ NACo may provide:
 - Video URL extraction from Granicus pages
 - YouTube embedded video scraping
 
-**Implementation:** `discovery/city_scrapers_urls.py`
+**Implementation:** `scripts/datasources/cityscrapers/city_scrapers_urls.py`
 
 **Quality:** ⭐⭐⭐ Good - validated URLs but needs video extraction
 

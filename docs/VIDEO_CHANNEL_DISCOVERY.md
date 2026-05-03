@@ -31,7 +31,7 @@
 - **Extracts:** YouTube channels, Vimeo accounts, Granicus portals from jurisdiction metadata
 
 **3. City Scrapers (GitHub)**
-- **File:** [`discovery/city_scrapers_urls.py`](../discovery/city_scrapers_urls.py)
+- **File:** [`scripts/datasources/cityscrapers/city_scrapers_urls.py`](../scripts/datasources/cityscrapers/city_scrapers_urls.py)
 - **Status:** ⚠️ Partial - extracts start_urls but not video links yet
 - **Coverage:** 100-500 agencies from Chicago, Pittsburgh, Detroit, Cleveland, LA
 - **Note:** Granicus video pages with embedded YouTube, but extraction not fully implemented

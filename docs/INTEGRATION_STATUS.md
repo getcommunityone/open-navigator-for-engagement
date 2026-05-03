@@ -5,7 +5,7 @@
 | Source | Status | Video URLs? | Files Created |
 |--------|--------|-------------|---------------|
 | **MeetingBank** | ✅ **NOW INTEGRATED** | ✅ **YES - YouTube/Vimeo/Archive.org** | Updated: `discovery/meetingbank_ingestion.py` |
-| **City Scrapers / Documenters.org** | ✅ **NOW INTEGRATED** | ✅ **YES - Granicus → YouTube** | Created: `discovery/city_scrapers_urls.py` |
+| **City Scrapers / Documenters.org** | ✅ **NOW INTEGRATED** | ✅ **YES - Granicus → YouTube** | Created: `scripts/datasources/cityscrapers/city_scrapers_urls.py` |
 | **Open States** | ✅ **NOW INTEGRATED** | ✅ **YES - YouTube channels** | Created: `discovery/openstates_sources.py` |
 
 ---
@@ -52,7 +52,7 @@ python scripts/discovery/meetingbank_ingestion.py
 ### What We Built:
 Complete integration that clones City Scrapers repos and extracts URLs from spider files.
 
-### File: `discovery/city_scrapers_urls.py`
+### File: `scripts/datasources/cityscrapers/city_scrapers_urls.py`
 
 ### Repos Covered:
 1. **Chicago** (~100 agencies) - https://github.com/city-scrapers/city-scrapers
@@ -77,7 +77,7 @@ Complete integration that clones City Scrapers repos and extracts URLs from spid
 ```bash
 cd /home/developer/projects/open-navigator
 source venv/bin/activate
-python scripts/discovery/city_scrapers_urls.py
+python scripts/datasources/cityscrapers/city_scrapers_urls.py
 ```
 
 **Note**: Requires `git` command available (for cloning repos)
@@ -196,7 +196,7 @@ python scripts/discovery/meetingbank_ingestion.py
 ```bash
 cd /home/developer/projects/open-navigator
 source venv/bin/activate
-python scripts/discovery/city_scrapers_urls.py
+python scripts/datasources/cityscrapers/city_scrapers_urls.py
 ```
 
 **Expected**: 100-500 agency URLs loaded to Bronze layer (2-5 minutes, depends on git clone speed)

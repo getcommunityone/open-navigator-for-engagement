@@ -54,13 +54,13 @@ Each spider file contains `start_urls` with:
 - PDF agendas/minutes
 
 ### Status:
-✅ **INTEGRATED** - [`discovery/city_scrapers_urls.py`](../discovery/city_scrapers_urls.py)
+✅ **INTEGRATED** - [`scripts/datasources/cityscrapers/city_scrapers_urls.py`](../scripts/datasources/cityscrapers/city_scrapers_urls.py)
 
 ### To Run:
 ```bash
 cd /home/developer/projects/open-navigator
 source venv/bin/activate
-python scripts/discovery/city_scrapers_urls.py
+python scripts/datasources/cityscrapers/city_scrapers_urls.py
 ```
 
 **Output**: `bronze/city_scrapers_urls` table with 100-500 validated URLs
@@ -251,4 +251,4 @@ It **consumes** Legistar data, doesn't produce new URLs. Going through Councilma
 
 **Others are libraries/research** - No URLs to extract, but we use their patterns
 
-See [`discovery/city_scrapers_urls.py`](../discovery/city_scrapers_urls.py) for the City Scrapers integration that just got implemented! 🎉
+See [`scripts/datasources/cityscrapers/city_scrapers_urls.py`](../scripts/datasources/cityscrapers/city_scrapers_urls.py) for the City Scrapers integration that just got implemented! 🎉

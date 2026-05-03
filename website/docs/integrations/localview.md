@@ -176,7 +176,7 @@ Based on the LocalView research paper:
 ```bash
 # After running LocalView ingestion
 python scripts/discovery/meetingbank_ingestion.py      # 1,366 meetings
-python scripts/discovery/city_scrapers_urls.py         # 100-500 agencies
+python scripts/datasources/cityscrapers/city_scrapers_urls.py         # 100-500 agencies
 python scripts/discovery/openstates_sources.py         # 50+ legislatures
 
 # Total: 7,000-12,000 verified URLs!

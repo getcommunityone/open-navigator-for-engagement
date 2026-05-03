@@ -77,7 +77,7 @@ Complete integration that clones City Scrapers repos and extracts URLs from spid
 ```bash
 cd /home/developer/projects/open-navigator
 source venv/bin/activate
-python scripts/discovery/city_scrapers_urls.py
+python scripts/datasources/cityscrapers/city_scrapers_urls.py
 ```
 
 **Note**: Requires `git` command available (for cloning repos)
@@ -196,7 +196,7 @@ python scripts/discovery/meetingbank_ingestion.py
 ```bash
 cd /home/developer/projects/open-navigator
 source venv/bin/activate
-python scripts/discovery/city_scrapers_urls.py
+python scripts/datasources/cityscrapers/city_scrapers_urls.py
 ```
 
 **Expected**: 100-500 agency URLs loaded to Bronze layer (2-5 minutes, depends on git clone speed)

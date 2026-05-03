@@ -23,7 +23,7 @@ Successfully improved the Legistar scraper by discovering and integrating the of
 
 **Found:**
 - `discovery/platform_detector.py` - Detects Legistar, Granicus, and other platforms
-- `discovery/city_scrapers_urls.py` - Extracts URLs from City Scrapers GitHub repos
+- `scripts/datasources/cityscrapers/city_scrapers_urls.py` - Extracts URLs from City Scrapers GitHub repos
 - `discovery/meetingbank_ingestion.py` - Ingests HuggingFace datasets
 - `discovery/localview_ingestion.py` - Processes Harvard Dataverse data
 
@@ -177,7 +177,7 @@ python main.py scrape --url "https://chicago.legistar.com/Calendar.aspx" \
    - Generic municipal websites
 
 3. **Integrate City Scrapers URLs**
-   - Run `discovery/city_scrapers_urls.py` to extract 100-500 URLs
+   - Run `scripts/datasources/cityscrapers/city_scrapers_urls.py` to extract 100-500 URLs
    - Add to scraping pipeline
 
 ### Long Term (Next Month)

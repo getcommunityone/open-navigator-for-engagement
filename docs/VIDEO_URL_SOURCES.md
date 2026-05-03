@@ -149,7 +149,7 @@ meetingbank_transcripts = load_dataset("lytang/MeetingBank-transcript")
    ```
 
 ### 🔥 ACTION NEEDED:
-Create `discovery/city_scrapers_urls.py`:
+Create `scripts/datasources/cityscrapers/city_scrapers_urls.py`:
 
 ```python
 """
