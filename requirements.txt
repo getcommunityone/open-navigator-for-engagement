@@ -12,7 +12,8 @@ aiohttp==3.9.1
 youtube-transcript-api>=0.6.2
 
 # Document Processing (Multiple Formats)
-PyPDF2>=3.0.0              # PDF extraction
+pypdf>=6.0.0               # PDF extraction (successor to PyPDF2)
+PyPDF2>=3.0.0              # PDF extraction (legacy, some scripts may use)
 pdfplumber>=0.10.0         # Advanced PDF extraction (tables)
 python-pptx>=0.6.0         # PowerPoint extraction
 python-docx>=1.0.0         # Word document extraction

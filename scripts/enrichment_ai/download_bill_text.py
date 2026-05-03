@@ -42,6 +42,9 @@ from loguru import logger
 import polars as pl
 import httpx
 from bs4 import BeautifulSoup
+from pypdf import PdfReader
+import io
+import xml.etree.ElementTree as ET
 
 # Import our bill text source configuration
 from scripts.enrichment_ai.bill_text_sources import (
@@ -88,7 +91,29 @@ class BillTextDownloader:
         
         # Load bills
         logger.info(f"📖 Loading bills from {self.bills_file}")
-        bills_df = pl.read_parquet(self.bills_file)
+        # Handle timezone issues in parquet file (offset-based tzinfo like '-05:00')
+        try:
+            bills_df = pl.read_parquet(self.bills_file)
+        except pl.exceptions.ComputeError as e:
+            if "time zone" in str(e):
+                logger.warning("Timezone parsing issue, converting offset-based timestamps...")
+                import pyarrow.parquet as pq
+                import pyarrow.compute as pc
+                
+                table = pq.read_table(self.bills_file)
+                # Convert timestamp columns to remove timezone offset
+                for col_name in table.schema.names:
+                    col = table.schema.field(col_name)
+                    if str(col.type).startswith('timestamp'):
+                        # Cast to timestamp without timezone
+                        table = table.set_column(
+                            table.schema.get_field_index(col_name),
+                            col_name,
+                            pc.cast(table[col_name], 'timestamp[us]')
+                        )
+                bills_df = pl.from_arrow(table)
+            else:
+                raise
         
         # Filter by state
         if states:
@@ -137,6 +162,26 @@ class BillTextDownloader:
         
         return text
     
+    def extract_text_from_pdf(self, pdf_content: bytes) -> str:
+        """Extract plain text from PDF bytes"""
+        try:
+            pdf_reader = PdfReader(io.BytesIO(pdf_content))
+            text_parts = []
+            
+            for page in pdf_reader.pages:
+                text = page.extract_text()
+                if text:
+                    text_parts.append(text)
+            
+            full_text = '\n'.join(text_parts)
+            # Clean up excessive whitespace
+            full_text = re.sub(r'\n\s*\n', '\n\n', full_text)
+            return full_text.strip()
+            
+        except Exception as e:
+            logger.error(f"Error extracting PDF text: {e}")
+            return ""
+    
     def download_from_url(
         self,
         url: str,
@@ -147,6 +192,12 @@ class BillTextDownloader:
         
         Returns dict with text and metadata or None
         """
+        # Skip old Alabama URLs that are broken (2017-2022)
+        if 'alisondb.legislature.state.al.us' in url:
+            logger.debug(f"Skipping broken old Alabama URL: {url}")
+            logger.debug(f"Use scripts/enrichment_ai/download_alabama_bills_scraper.py for AL 2017-2022")
+            return None
+        
         try:
             with httpx.Client(timeout=30.0, follow_redirects=True) as client:
                 response = client.get(url)
@@ -156,9 +207,12 @@ class BillTextDownloader:
                 content_type = response.headers.get('content-type', '').lower()
                 
                 if 'pdf' in content_type or url.endswith('.pdf'):
-                    # PDF - would need PyPDF2 or pdfplumber
-                    logger.warning(f"PDF detected for {bill_id}, skipping (need PDF parser)")
-                    return None
+                    # PDF - extract text
+                    text = self.extract_text_from_pdf(response.content)
+                    if not text:
+                        logger.warning(f"Failed to extract text from PDF for {bill_id}")
+                        return None
+                    text_format = 'pdf'
                 
                 elif 'html' in content_type or url.endswith('.html'):
                     # HTML - extract text
@@ -185,17 +239,59 @@ class BillTextDownloader:
     def fetch_georgia_bill_text(
         self,
         bill_id: str,
-        session: str
+        session: str,
+        bill_number: str = None
     ) -> Optional[Dict]:
         """
         Fetch bill text from Georgia SOAP API
         
         Returns dict with text and metadata or None
         """
-        # TODO: Implement Georgia SOAP API integration
-        # This would use the GetLegislationDetail endpoint
-        logger.debug(f"Georgia API not yet implemented for {bill_id}")
-        return None
+        if not bill_number:
+            logger.debug(f"No bill number provided for Georgia API")
+            return None
+        
+        try:
+            # Georgia SOAP API endpoint
+            api_url = "http://webservices.legis.ga.gov/GGAServices/Service/Service.asmx/GetLegislationDetail"
+            
+            # Extract session year from session string (e.g., '2023_24' -> '2023')
+            session_year = session.split('_')[0] if '_' in session else session
+            
+            # Make SOAP request
+            params = {
+                'sessionId': session_year,
+                'legislationId': bill_number.replace(' ', '')
+            }
+            
+            with httpx.Client(timeout=30.0) as client:
+                response = client.get(api_url, params=params)
+                response.raise_for_status()
+                
+                # Parse XML response
+                root = ET.fromstring(response.content)
+                
+                # Find LegislationText element (namespace handling)
+                text_elem = root.find('.//{http://www.legis.ga.gov/}LegislationText')
+                if text_elem is None:
+                    text_elem = root.find('.//LegislationText')
+                
+                if text_elem is not None and text_elem.text:
+                    text = text_elem.text.strip()
+                    return {
+                        'text': text,
+                        'text_format': 'txt',
+                        'source_url': f"{api_url}?sessionId={session_year}&legislationId={bill_number}",
+                        'character_count': len(text),
+                        'word_count': len(text.split())
+                    }
+                else:
+                    logger.debug(f"No text found in Georgia API response for {bill_number}")
+                    return None
+                    
+        except Exception as e:
+            logger.debug(f"Georgia API error for {bill_number}: {e}")
+            return None
     
     def process_bills(
         self,
@@ -213,6 +309,7 @@ class BillTextDownloader:
             state = row.get('state')
             version_note = row.get('version_note', 'Unknown')
             document_url = row.get('document_url')
+            bill_number = row.get('bill_number')
             
             if not bill_id:
                 continue
@@ -221,21 +318,26 @@ class BillTextDownloader:
             
             # Determine source
             source = get_bill_text_source(state)
+            result = None
+            source_type = 'unknown'
             
             # Try state-specific API first
             if source == BillTextSource.GEORGIA_SOAP:
                 result = self.fetch_georgia_bill_text(
                     bill_id,
-                    row.get('session', '')
+                    row.get('session', ''),
+                    bill_number
                 )
-                source_type = 'state_api'
+                if result:
+                    source_type = 'state_api'
             
-            # Fall back to URL download if we have one
-            elif document_url:
+            # Fall back to URL download if state API didn't work and we have a URL
+            if not result and document_url:
                 result = self.download_from_url(document_url, bill_id)
                 source_type = 'url_download'
             
-            else:
+            # If still no result, skip
+            if not result:
                 logger.warning(f"No source available for {bill_id}")
                 continue
             
