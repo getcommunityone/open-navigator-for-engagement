@@ -31,7 +31,12 @@ logger.add(sys.stderr, level="INFO")
 # Paths
 PROJECT_ROOT = Path(__file__).parent.parent.parent  # Go up to project root from scripts/enrichment_ai/
 DATA_DIR = PROJECT_ROOT / "data"
+GOLD_DIR = DATA_DIR / "gold"
+ANALYSIS_DIR = DATA_DIR / "gold" / "analysis"  # Store analysis results here
 DUCKDB_PATH = DATA_DIR / "legislative.duckdb"
+
+# Ensure output directories exist
+ANALYSIS_DIR.mkdir(parents=True, exist_ok=True)
 
 
 @dataclass
@@ -270,6 +275,152 @@ class DuckDBLegislativeAnalyzer:
             }
             for row in result
         ]
+    
+    def is_bill_analyzed(self, bill_id: str) -> bool:
+        """
+        Check if a bill has already been analyzed (incremental processing)
+        
+        Returns:
+            True if analysis exists in Parquet, False otherwise
+        """
+        analysis_file = ANALYSIS_DIR / "interest_groups_analysis.parquet"
+        
+        if not analysis_file.exists():
+            return False
+        
+        try:
+            result = self.conn.execute(f"""
+                SELECT COUNT(*) 
+                FROM read_parquet('{analysis_file}')
+                WHERE bill_id = ?
+            """, [bill_id]).fetchone()
+            
+            return result[0] > 0 if result else False
+        except:
+            return False
+    
+    def save_analysis_results(
+        self, 
+        results: List[InterestGroup],
+        append: bool = True
+    ) -> Path:
+        """
+        Save analysis results to Parquet file (proper data pipeline!)
+        
+        Args:
+            results: List of InterestGroup analysis results
+            append: If True, append to existing file; if False, overwrite
+            
+        Returns:
+            Path to saved Parquet file
+        """
+        if not results:
+            logger.warning("No results to save")
+            return None
+        
+        import pandas as pd
+        
+        # Convert to DataFrame
+        df = pd.DataFrame([r.to_dict() for r in results])
+        
+        # Add metadata
+        df['analyzed_at'] = pd.Timestamp.now()
+        df['model'] = 'llama-3.2-3b'  # or from config
+        
+        output_file = ANALYSIS_DIR / "interest_groups_analysis.parquet"
+        
+        if append and output_file.exists():
+            # Append to existing Parquet
+            logger.info(f"📊 Appending {len(results)} results to {output_file}")
+            
+            # Read existing
+            existing_df = pd.read_parquet(output_file)
+            
+            # Remove duplicates (keep newest)
+            df_combined = pd.concat([existing_df, df], ignore_index=True)
+            df_combined = df_combined.drop_duplicates(
+                subset=['bill_id', 'group_name'], 
+                keep='last'
+            )
+            
+            # Save
+            df_combined.to_parquet(output_file, index=False)
+            logger.info(f"✅ Saved {len(df_combined)} total records")
+        else:
+            # Create new file
+            logger.info(f"📊 Saving {len(results)} results to {output_file}")
+            df.to_parquet(output_file, index=False)
+            logger.info(f"✅ Created new analysis file")
+        
+        return output_file
+    
+    def get_bills_to_analyze(
+        self,
+        state: Optional[str] = None,
+        topic_filter: Optional[str] = None,
+        limit: int = 100,
+        skip_analyzed: bool = True
+    ) -> List[Dict[str, Any]]:
+        """
+        Get bills that need analysis (incremental processing support)
+        
+        Args:
+            state: Filter by state code (e.g., 'GA', 'AL')
+            topic_filter: Search term in title (e.g., 'fluorid')
+            limit: Maximum bills to return
+            skip_analyzed: Skip bills already in analysis Parquet
+            
+        Returns:
+            List of bill dicts ready for analysis
+        """
+        # Build query
+        where_clauses = []
+        params = []
+        
+        if state:
+            where_clauses.append("state = ?")
+            params.append(state)
+        
+        if topic_filter:
+            where_clauses.append("LOWER(title) LIKE ?")
+            params.append(f"%{topic_filter.lower()}%")
+        
+        where_sql = " AND ".join(where_clauses) if where_clauses else "1=1"
+        
+        # Get bills
+        query = f"""
+            SELECT bill_id, bill_number, title, abstract, state, jurisdiction_name
+            FROM bills
+            WHERE {where_sql}
+            LIMIT ?
+        """
+        params.append(limit * 2)  # Get extra in case we filter some out
+        
+        bills = self.conn.execute(query, params).fetchall()
+        
+        # Convert to dicts
+        result = []
+        for row in bills:
+            bill = {
+                'bill_id': row[0],
+                'bill_number': row[1],
+                'title': row[2],
+                'abstract': row[3],
+                'state': row[4],
+                'jurisdiction': row[5]
+            }
+            
+            # Skip if already analyzed (incremental!)
+            if skip_analyzed and self.is_bill_analyzed(bill['bill_id']):
+                logger.debug(f"Skipping {bill['bill_number']} - already analyzed")
+                continue
+            
+            result.append(bill)
+            
+            if len(result) >= limit:
+                break
+        
+        return result
     
     def analyze_bill_statistics(self):
         """Fast analytical queries on bill data"""
@@ -518,18 +669,25 @@ Return only valid JSON."""
 
 
 def main():
-    """Demo: Intel-optimized legislative analysis"""
+    """Demo: Intel-optimized legislative analysis with incremental processing"""
     logger.info("🚀 Intel Arc-Optimized Legislative Analysis Demo")
     logger.info("=" * 60)
+    logger.info("")
+    logger.info("📁 Data Pipeline Architecture:")
+    logger.info("   Source:      Parquet files (bills, sponsors, officials)")
+    logger.info("   Processing:  DuckDB (fast queries) + Llama (AI analysis)")
+    logger.info("   Results:     Parquet files (for reuse & sharing)")
+    logger.info("   Incremental: Skip already-analyzed bills")
+    logger.info("")
     
     # Initialize DuckDB analyzer
     with DuckDBLegislativeAnalyzer() as analyzer:
-        # Create tables
+        # Create tables (DuckDB queries Parquet directly - no copying!)
         analyzer.create_bills_table()
         analyzer.create_testimony_table()
         
         # Show statistics
-        logger.info("\n📊 Bill Statistics:")
+        logger.info("📊 Bill Statistics:")
         stats = analyzer.analyze_bill_statistics()
         logger.info(f"   Top states: {stats.get('top_states', [])[:5]}")
         if 'top_subjects' in stats:
@@ -538,13 +696,72 @@ def main():
             logger.info(f"   Top sessions: {stats.get('top_sessions', [])[:5]}")
         elif 'top_topics' in stats:
             logger.info(f"   Top topics: {stats.get('top_topics', [])[:5]}")
+        
+        # Demonstrate incremental processing
+        logger.info("\n🔄 Incremental Processing Demo:")
+        
+        # Check for existing analysis results
+        analysis_file = ANALYSIS_DIR / "interest_groups_analysis.parquet"
+        if analysis_file.exists():
+            # Show what's already analyzed
+            result = analyzer.conn.execute(f"""
+                SELECT 
+                    COUNT(DISTINCT bill_id) as bills_analyzed,
+                    COUNT(*) as total_groups,
+                    COUNT(DISTINCT group_name) as unique_groups
+                FROM read_parquet('{analysis_file}')
+            """).fetchone()
+            
+            logger.info(f"   ✅ Found existing analysis:")
+            logger.info(f"      - {result[0]} bills analyzed")
+            logger.info(f"      - {result[1]} interest groups extracted")
+            logger.info(f"      - {result[2]} unique organizations")
+        else:
+            logger.info(f"   📝 No existing analysis found")
+            logger.info(f"   💾 Results will be saved to: {analysis_file}")
+        
+        # Get bills that need analysis (skips already-analyzed)
+        logger.info("\n🔍 Finding bills to analyze...")
+        bills_to_analyze = analyzer.get_bills_to_analyze(
+            state='GA',  # Georgia bills
+            topic_filter='fluorid',  # Fluoride-related
+            limit=5,
+            skip_analyzed=True  # Incremental processing!
+        )
+        
+        if bills_to_analyze:
+            logger.info(f"   📋 Found {len(bills_to_analyze)} unanalyzed bills:")
+            for bill in bills_to_analyze[:3]:
+                logger.info(f"      - {bill['bill_number']}: {bill['title'][:60]}...")
+        else:
+            logger.info(f"   ✅ All matching bills already analyzed!")
+            logger.info(f"   💡 To re-analyze, delete {analysis_file}")
     
-    logger.info("\n✅ Demo complete!")
-    logger.info("\n🎯 Next Steps:")
-    logger.info("   1. Load testimony data into DuckDB")
-    logger.info("   2. Generate embeddings for vector search")
-    logger.info("   3. Run LLM extraction on specific bills")
-    logger.info("   4. Export results to JSON/Parquet")
+    logger.info("\n" + "=" * 60)
+    logger.info("✅ Demo complete!")
+    logger.info("")
+    logger.info("🎯 Why this architecture?")
+    logger.info("")
+    logger.info("   Parquet Storage:")
+    logger.info("   ✅ Portable - share with anyone")
+    logger.info("   ✅ Fast - columnar format")
+    logger.info("   ✅ Compatible - works with Pandas, Spark, DuckDB")
+    logger.info("   ✅ Versioned - track in git (if small) or DVC")
+    logger.info("")
+    logger.info("   DuckDB Query Engine:")
+    logger.info("   ✅ 10-100x faster than Postgres for analytics")
+    logger.info("   ✅ Queries Parquet directly (no import needed)")
+    logger.info("   ✅ Embedded - no server to manage")
+    logger.info("   ✅ SQL interface - easy to use")
+    logger.info("")
+    logger.info("   Incremental Processing:")
+    logger.info("   ✅ Skip already-analyzed bills")
+    logger.info("   ✅ Resume after failures")
+    logger.info("   ✅ Append new results to Parquet")
+    logger.info("")
+    logger.info("📖 Next: Run batch analysis with:")
+    logger.info("   python scripts/enrichment_ai/batch_analyze_bills.py")
+
 
 
 if __name__ == "__main__":
