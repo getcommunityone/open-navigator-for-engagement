@@ -29,7 +29,7 @@ logger.remove()
 logger.add(sys.stderr, level="INFO")
 
 # Paths
-PROJECT_ROOT = Path(__file__).parent.parent
+PROJECT_ROOT = Path(__file__).parent.parent.parent  # Go up to project root from scripts/enrichment_ai/
 DATA_DIR = PROJECT_ROOT / "data"
 DUCKDB_PATH = DATA_DIR / "legislative.duckdb"
 
@@ -101,7 +101,7 @@ class DuckDBLegislativeAnalyzer:
         logger.info("📋 Creating bills table...")
         
         # Read from OpenStates bulk data if available
-        bills_parquet = DATA_DIR / "gold" / "national" / "bills_search.parquet"
+        bills_parquet = DATA_DIR / "gold" / "bills_bills.parquet"
         
         if not bills_parquet.exists():
             logger.warning(f"⚠️  Bills parquet not found: {bills_parquet}")
@@ -316,6 +316,32 @@ class DuckDBLegislativeAnalyzer:
             """).fetchall()
             stats['top_topics'] = [{'topic': r[0], 'count': r[1]} for r in result]
             
+        elif 'state' in col_names and 'jurisdiction_name' in col_names:
+            # This is OpenStates bills format (current data)
+            logger.info("   Using OpenStates bills format")
+            
+            # Bills by state
+            result = self.conn.execute("""
+                SELECT state, jurisdiction_name, COUNT(*) as count
+                FROM bills
+                WHERE state IS NOT NULL
+                GROUP BY state, jurisdiction_name
+                ORDER BY count DESC
+                LIMIT 10
+            """).fetchall()
+            stats['top_states'] = [{'state': r[0], 'jurisdiction': r[1], 'count': r[2]} for r in result]
+            
+            # Bills by session
+            result = self.conn.execute("""
+                SELECT session_name, COUNT(*) as count
+                FROM bills
+                WHERE session_name IS NOT NULL
+                GROUP BY session_name
+                ORDER BY count DESC
+                LIMIT 10
+            """).fetchall()
+            stats['top_sessions'] = [{'session': r[0], 'count': r[1]} for r in result]
+            
         elif 'from_organization_state' in col_names and 'subject' in col_names:
             # This is individual bills format (OpenStates schema)
             logger.info("   Using individual bills format (OpenStates schema)")
@@ -506,7 +532,12 @@ def main():
         logger.info("\n📊 Bill Statistics:")
         stats = analyzer.analyze_bill_statistics()
         logger.info(f"   Top states: {stats.get('top_states', [])[:5]}")
-        logger.info(f"   Top subjects: {stats.get('top_subjects', [])[:5]}")
+        if 'top_subjects' in stats:
+            logger.info(f"   Top subjects: {stats.get('top_subjects', [])[:5]}")
+        elif 'top_sessions' in stats:
+            logger.info(f"   Top sessions: {stats.get('top_sessions', [])[:5]}")
+        elif 'top_topics' in stats:
+            logger.info(f"   Top topics: {stats.get('top_topics', [])[:5]}")
     
     logger.info("\n✅ Demo complete!")
     logger.info("\n🎯 Next Steps:")
