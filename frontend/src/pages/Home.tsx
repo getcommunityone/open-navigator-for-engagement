@@ -350,7 +350,7 @@ export default function Home() {
                 <div className="relative">
                   <button
                     onClick={() => setShowLoginMenu(!showLoginMenu)}
-                    className="px-4 py-2 text-white rounded-lg transition-colors text-sm font-medium flex items-center gap-2"
+                    className="px-6 py-2.5 text-white rounded-lg transition-colors text-sm font-semibold flex items-center gap-2"
                     style={{ backgroundColor: '#354F52' }}
                     onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#2e4346'}
                     onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#354F52'}

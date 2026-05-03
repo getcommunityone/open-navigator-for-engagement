@@ -1,5 +1,10 @@
 # Data Integration Examples
 
+> **📁 Note**: Demo scripts and documentation have been reorganized:
+> - **Data source demos**: Moved to `scripts/datasources/[source]/`
+> - **General demos**: Moved to `scripts/examples/`
+> - This README provides an overview and links to the new locations.
+
 This directory contains working examples and documentation for all major data integrations in the Open Navigator platform.
 
 ## 🎯 Available Integrations
@@ -9,12 +14,12 @@ This directory contains working examples and documentation for all major data in
 **What it does**: Track federal grant opportunities and match them to eligible nonprofits
 
 **Files**:
-- `demo_grants_gov.py` - Working demo
-- `GRANTS_GOV_VALUE.md` - Data comparison and value proposition
+- `scripts/datasources/grants_gov/demo_grants_gov.py` - Working demo
+- `scripts/datasources/grants_gov/GRANTS_GOV_VALUE.md` - Data comparison and value proposition
 
 **Quick start**:
 ```bash
-python examples/demo_grants_gov.py
+python scripts/datasources/grants_gov/demo_grants_gov.py
 ```
 
 **Documentation**: [website/docs/integrations/grants-gov-api.md](../website/docs/integrations/grants-gov-api.md)
@@ -28,14 +33,14 @@ python examples/demo_grants_gov.py
 **What it does**: Track political donations by nonprofit leadership and analyze influence on grant awards
 
 **Files**:
-- `demo_political_influence.py` - Working demo
-- `POLITICAL_INFLUENCE_INTEGRATION.md` - Complete analysis guide
-- `POLITICAL_FINANCE_QUICK_START.md` - Quick start guide
+- `scripts/datasources/fec/demo_political_influence.py` - Working demo
+- `scripts/datasources/fec/POLITICAL_INFLUENCE_INTEGRATION.md` - Complete analysis guide
+- `scripts/datasources/fec/POLITICAL_FINANCE_QUICK_START.md` - Quick start guide
 
 **Quick start**:
 ```bash
 # Get free API key at: https://api.data.gov/signup/
-python examples/demo_political_influence.py --api-key YOUR_KEY
+python scripts/datasources/fec/demo_political_influence.py --api-key YOUR_KEY
 ```
 
 **Documentation**: [website/docs/integrations/fec-political-contributions.md](../website/docs/integrations/fec-political-contributions.md)
@@ -94,10 +99,10 @@ Public API - just run the demos
 
 ```bash
 # 1. Federal grant opportunities (no key needed)
-python examples/demo_grants_gov.py
+python scripts/datasources/grants_gov/demo_grants_gov.py
 
 # 2. Political contributions (requires FEC key)
-python examples/demo_political_influence.py --api-key YOUR_FEC_KEY
+python scripts/datasources/fec/demo_political_influence.py --api-key YOUR_FEC_KEY
 ```
 
 ### Step 3: Review Output
@@ -122,13 +127,13 @@ print(grants[['opportunityTitle', 'agencyName', 'openDate']].head())
 ### For Quick Reference
 
 Start here:
-1. **[POLITICAL_FINANCE_QUICK_START.md](POLITICAL_FINANCE_QUICK_START.md)** - Overview and quick start
-2. **[GRANTS_GOV_VALUE.md](GRANTS_GOV_VALUE.md)** - What Grants.gov adds to your data
+1. **[scripts/datasources/fec/POLITICAL_FINANCE_QUICK_START.md](../scripts/datasources/fec/POLITICAL_FINANCE_QUICK_START.md)** - Overview and quick start
+2. **[scripts/datasources/grants_gov/GRANTS_GOV_VALUE.md](../scripts/datasources/grants_gov/GRANTS_GOV_VALUE.md)** - What Grants.gov adds to your data
 
 ### For Complete Analysis
 
 Deep dives:
-1. **[POLITICAL_INFLUENCE_INTEGRATION.md](POLITICAL_INFLUENCE_INTEGRATION.md)** - Complete political analysis guide
+1. **[scripts/datasources/fec/POLITICAL_INFLUENCE_INTEGRATION.md](../scripts/datasources/fec/POLITICAL_INFLUENCE_INTEGRATION.md)** - Complete political analysis guide
 2. **[../website/docs/integrations/grants-gov-api.md](../website/docs/integrations/grants-gov-api.md)** - Full Grants.gov docs
 3. **[../website/docs/integrations/fec-political-contributions.md](../website/docs/integrations/fec-political-contributions.md)** - Full FEC docs
 
@@ -330,10 +335,10 @@ print(f"Total potential funding: ${matches['award_ceiling'].sum():,.0f}")
 **Solution**:
 ```bash
 # Get free key at: https://api.data.gov/signup/
-python examples/demo_political_influence.py --api-key YOUR_KEY
+python scripts/datasources/fec/demo_political_influence.py --api-key YOUR_KEY
 
 # Or use DEMO_KEY for testing (limited to 30 requests/hour)
-python examples/demo_political_influence.py --api-key DEMO_KEY
+python scripts/datasources/fec/demo_political_influence.py --api-key DEMO_KEY
 ```
 
 ### "File not found" Error
@@ -343,8 +348,8 @@ python examples/demo_political_influence.py --api-key DEMO_KEY
 **Solution**:
 ```bash
 # Run demos to generate data first
-python examples/demo_grants_gov.py
-python examples/demo_political_influence.py --api-key YOUR_KEY
+python scripts/datasources/grants_gov/demo_grants_gov.py
+python scripts/datasources/fec/demo_political_influence.py --api-key YOUR_KEY
 
 # Or generate specific state data
 python -c "
