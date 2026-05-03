@@ -129,10 +129,14 @@ export default function PolicyMap() {
     refetchOnWindowFocus: false,
     retry: 2,
     retryDelay: 1000,
+    placeholderData: (previousData) => previousData, // Prevent flickering during mode transitions
   })
 
   // Fetch sessions
-  const { data: sessionsData } = useQuery({
+  const { data: sessionsData } = useQuery<{
+    total_sessions: number
+    sessions: Session[]
+  }>({
     queryKey: ['sessions', selectedState, selectedTopic, selectedChambers, selectedBillTypes, selectedStatuses, searchQuery],
     queryFn: async () => {
       const params = new URLSearchParams({ state: selectedState })
@@ -165,7 +169,18 @@ export default function PolicyMap() {
     refetchOnWindowFocus: false,
     retry: 2,
     retryDelay: 1000,
+    placeholderData: (previousData) => previousData, // Prevent flickering by keeping old data while fetching new
   })
+
+  // Auto-select most recent session when sessions data loads (e.g., after drilling down from map)
+  useEffect(() => {
+    if (sessionsData?.sessions && sessionsData.sessions.length > 0 && selectedSessions.length === 0) {
+      // Get the most recent session (they're already sorted by end_date DESC)
+      const mostRecentSession = sessionsData.sessions[0]
+      console.log('📅 Auto-selecting most recent session:', mostRecentSession.session_name)
+      setSelectedSessions([mostRecentSession.session])
+    }
+  }, [sessionsData, selectedSessions.length])
 
   // Fetch bills
   const { data: billsData, isLoading, error: billsError } = useQuery<{
@@ -195,13 +210,22 @@ export default function PolicyMap() {
     refetchOnWindowFocus: false,
     retry: 2,
     retryDelay: 1000,
+    placeholderData: (previousData) => previousData, // Prevent flickering by keeping old data while fetching new
   })
 
   const totalPages = Math.ceil((billsData?.total || 0) / limit)
 
   const handleStateClick = (stateCode: string) => {
     console.log('🗺️ State clicked:', stateCode, 'Current topic:', selectedTopic)
+    // Batch updates to prevent flickering - setState calls are already batched in React 18
     setSelectedState(stateCode)
+    // Clear any existing filters to start fresh
+    setSelectedSessions([])
+    setSelectedChambers([])
+    setSelectedBillTypes([])
+    setSelectedStatuses([])
+    setSearchQuery('')
+    setPage(1)
     setViewMode('list')
   }
 
