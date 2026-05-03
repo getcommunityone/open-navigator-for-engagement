@@ -21,7 +21,7 @@ export default function Settings() {
   const [saveStatus, setSaveStatus] = useState<'success' | 'error' | null>(null)
   const [errors, setErrors] = useState<Record<string, string>>({})
 
-  const API_URL = import.meta.env.PROD ? '/api' : 'http://localhost:8000'
+  const API_URL = '/api'  // Vite proxy handles dev routing
 
   // Update form when user data changes
   useEffect(() => {

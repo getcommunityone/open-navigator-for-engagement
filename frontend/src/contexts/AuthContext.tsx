@@ -33,9 +33,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [isLoading, setIsLoading] = useState(true);
   const [authError, setAuthError] = useState<string | null>(null);
 
-  const API_URL = import.meta.env.PROD 
-    ? '/api'
-    : 'http://localhost:8000';
+  // Use /api for both dev and prod - Vite proxy handles dev routing
+  const API_URL = '/api';
 
   // Load user from localStorage on mount
   useEffect(() => {

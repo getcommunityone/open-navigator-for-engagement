@@ -408,7 +408,7 @@ async def search_organizations_pg(
                     title=row['name'],
                     subtitle=location,
                     description=description,
-                    url=f"/organizations/{row['ein']}",
+                    url=f"/search?types=organizations&state={row['state']}&ein={row['ein']}",
                     score=1.0,
                     metadata={
                         'ein': row['ein'],

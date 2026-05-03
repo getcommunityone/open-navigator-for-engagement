@@ -75,8 +75,7 @@ export default function HomeModern() {
   // In production: Use custom domain to avoid HuggingFace Spaces URL in links
   let docsBaseUrl = import.meta.env.VITE_DOCS_URL || 
     (import.meta.env.DEV ? 'http://localhost:3000/docs' : 'https://www.communityone.com/docs')
-  let apiBaseUrl = import.meta.env.VITE_API_URL || 
-    (import.meta.env.DEV ? 'http://localhost:8000' : '')
+  let apiBaseUrl = import.meta.env.VITE_API_URL || '/api'
 
   // Fix mixed content: Force HTTPS if page is HTTPS and URLs start with http://
   if (typeof window !== 'undefined' && window.location.protocol === 'https:') {

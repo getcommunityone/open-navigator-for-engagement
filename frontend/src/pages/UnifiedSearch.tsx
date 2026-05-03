@@ -68,6 +68,7 @@ export default function UnifiedSearch() {
   // Initialize state directly from URL params (lazy initializer for performance)
   const [query, setQuery] = useState(() => searchParams.get('q') || '')
   const [activeQuery, setActiveQuery] = useState(() => searchParams.get('q') || '')
+  const [selectedEin, setSelectedEin] = useState(() => searchParams.get('ein') || '')
   const [selectedTypes, setSelectedTypes] = useState<string[]>(() => {
     const typesParam = searchParams.get('types')
     if (typesParam) {
@@ -146,6 +147,7 @@ export default function UnifiedSearch() {
     const queryParam = searchParams.get('q')
     const stateParam = searchParams.get('state')
     const typesParam = searchParams.get('types')
+    const einParam = searchParams.get('ein')
     searchParams.get('page') // Read but don't store
     searchParams.get('sort') // Read but don't store
     searchParams.get('ntee') // Read but don't store
@@ -154,6 +156,9 @@ export default function UnifiedSearch() {
     if (queryParam) {
       setQuery(queryParam)
       setActiveQuery(queryParam)
+    }
+    if (einParam) {
+      setSelectedEin(einParam)
     }
     if (stateParam) {
       setSelectedState(stateParam)
@@ -221,10 +226,10 @@ export default function UnifiedSearch() {
 
   // Main search results
   const { data: searchResults, isLoading: isSearching, error } = useQuery<SearchResponse>({
-    queryKey: ['unified-search', activeQuery, selectedTypes, selectedState, currentPage, sortBy, nteeCategory],
+    queryKey: ['unified-search', activeQuery, selectedTypes, selectedState, currentPage, sortBy, nteeCategory, selectedEin],
     queryFn: async () => {
-      // Allow searching with query OR with filters (browse mode)
-      if (!activeQuery && !selectedState && !selectedTypes.length) {
+      // Allow searching with query OR with filters (browse mode) OR with EIN
+      if (!activeQuery && !selectedState && !selectedTypes.length && !selectedEin) {
         return null
       }
       
@@ -237,6 +242,11 @@ export default function UnifiedSearch() {
       // Query is optional - can browse by state/type
       if (activeQuery) {
         params.q = activeQuery
+      }
+      
+      // If EIN is specified, search for it specifically
+      if (selectedEin) {
+        params.ein = selectedEin
       }
       
       if (selectedState) {
@@ -255,8 +265,8 @@ export default function UnifiedSearch() {
       const response = await api.get('/search/', { params })
       return response.data
     },
-    // Enable if we have query OR filters (browse mode)
-    enabled: (activeQuery && activeQuery.length >= 2) || selectedState !== '' || selectedTypes.length > 0
+    // Enable if we have query OR filters (browse mode) OR EIN
+    enabled: (activeQuery && activeQuery.length >= 2) || selectedState !== '' || selectedTypes.length > 0 || selectedEin !== ''
   })
 
   const handleSearch = (e?: React.FormEvent) => {

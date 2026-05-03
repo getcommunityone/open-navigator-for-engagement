@@ -17,8 +17,8 @@ if (import.meta.env.PROD) {
     console.warn('⚠️ [API] Using hardcoded /api instead')
   }
 } else {
-  // Development: Use environment variable or default to localhost
-  API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api'
+  // Development: Use /api (Vite proxy handles routing to localhost:8000)
+  API_BASE_URL = import.meta.env.VITE_API_URL || '/api'
   console.log('🔧 [API] Development mode:', API_BASE_URL)
 }
 

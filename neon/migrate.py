@@ -28,7 +28,8 @@ logger.info(f"Using: {'DEV' if NEON_DATABASE_URL_DEV else 'PROD'} database")
 
 # Paths - relative to this script's location
 SCRIPT_DIR = Path(__file__).parent
-GOLD_DIR = SCRIPT_DIR / "data" / "gold"
+PROJECT_ROOT = SCRIPT_DIR.parent  # One level up from neon/ to project root
+GOLD_DIR = PROJECT_ROOT / "data" / "gold"
 SCHEMA_PATH = SCRIPT_DIR / "schema.sql"
 
 
@@ -298,95 +299,124 @@ def load_nonprofits_search(conn, limit_states: Optional[list] = None):
     """
     logger.info("🏢 Loading nonprofits search data...")
     
-    states_to_load = limit_states or []
+    # Check if we have a consolidated file (all states) or state-specific files
+    consolidated_file = GOLD_DIR / "nonprofits_organizations.parquet"
+    states_dir = GOLD_DIR / "states"
     
-    # If no limit, scan all states
-    if not limit_states:
-        states_dir = GOLD_DIR / "states"
-        if states_dir.exists():
+    if consolidated_file.exists():
+        # Load from consolidated file
+        logger.info("  Loading from consolidated nonprofits file...")
+        df = pd.read_parquet(consolidated_file)
+        
+        # Filter by states if limit specified
+        if limit_states:
+            df = df[df['state'].isin(limit_states)]
+            logger.info(f"  Filtered to states: {limit_states}")
+        
+        total_loaded = load_nonprofits_from_df(conn, df)
+        
+    elif states_dir.exists():
+        # Load from state-specific files (old format)
+        states_to_load = limit_states or []
+        
+        # If no limit, scan all states
+        if not limit_states:
             states_to_load = [d.name for d in states_dir.iterdir() if d.is_dir()]
-    
-    total_loaded = 0
-    cursor = conn.cursor()
-    
-    for state in states_to_load:
-        np_file = GOLD_DIR / "states" / state / "nonprofits_organizations.parquet"
-        if not np_file.exists():
-            logger.warning(f"  No nonprofits file for {state}")
-            continue
         
-        logger.info(f"  Loading nonprofits from {state}...")
-        df = pd.read_parquet(np_file)
+        total_loaded = 0
         
-        # Prepare data for insertion (use lowercase column names)
-        # Filter out rows with null EIN
-        df_valid = df[df['ein'].notna()].copy()
-        
-        records = []
-        for _, row in df_valid.iterrows():
-            # Convert ruling date from YYYYMM to proper date
-            ruling_date = parse_yyyymm_date(row.get('ruling'))
+        for state in states_to_load:
+            np_file = states_dir / state / "nonprofits_organizations.parquet"
+            if not np_file.exists():
+                logger.warning(f"  No nonprofits file for {state}")
+                continue
             
-            record = (
-                row.get('ein'),
-                row.get('name', ''),
-                row.get('street', ''),
-                row.get('city', ''),
-                state,  # Use the state variable directly
-                row.get('zip', ''),
-                '',  # county - not in source data
-                row.get('ntee_cd', ''),
-                None,  # ntee_description - join later
-                row.get('subsection', ''),
-                row.get('affiliation', ''),
-                row.get('classification', ''),
-                clean_numeric(row.get('form_990_total_revenue')),  # Clean numeric fields
-                clean_numeric(row.get('form_990_total_assets')),
-                clean_numeric(row.get('income_amt')),
-                ruling_date,  # Converted ruling date
-                row.get('foundation', ''),
-                row.get('pf_filing_req_cd', ''),
-                clean_numeric(row.get('acct_pd')),
-                row.get('asset_cd', ''),
-                row.get('income_cd', ''),
-                row.get('filing_req_cd', ''),
-                row.get('status', ''),  # Use 'status' for exempt_org_status_cd
-                clean_numeric(row.get('tax_period')),
-                clean_numeric(row.get('asset_amt')),
-                clean_numeric(row.get('income_amt')),
-                clean_numeric(row.get('revenue_amt')),  # Use revenue_amt
-                'irs_bmf',
-                datetime.now()
-            )
-            records.append(record)
-        
-        # Batch insert
-        if records:
-            execute_values(cursor, """
-                INSERT INTO nonprofits_search 
-                (ein, name, street_address, city, state, zip_code, county,
-                 ntee_code, ntee_description, subsection_code, affiliation_code, classification_code,
-                 revenue, assets, income, ruling_date, foundation_code, pf_filing_requirement_code,
-                 accounting_period, asset_code, income_code, filing_requirement_code,
-                 exempt_organization_status_code, tax_period, asset_amount, income_amount,
-                 form_990_revenue_amount, source, last_updated)
-                VALUES %s
-                ON CONFLICT (ein) DO UPDATE SET
-                    name = EXCLUDED.name,
-                    city = EXCLUDED.city,
-                    state = EXCLUDED.state,
-                    revenue = EXCLUDED.revenue,
-                    assets = EXCLUDED.assets,
-                    last_updated = EXCLUDED.last_updated
-            """, records)
-            
-            total_loaded += len(records)
-            logger.info(f"    Loaded {len(records)} nonprofits from {state}")
+            logger.info(f"  Loading nonprofits from {state}...")
+            df = pd.read_parquet(np_file)
+            total_loaded += load_nonprofits_from_df(conn, df, state_override=state)
+    else:
+        logger.warning("  No nonprofit data found (neither consolidated nor state-specific files)")
+        total_loaded = 0
     
-    conn.commit()
-    logger.success(f"✅ Loaded {total_loaded} nonprofits into search table")
+    logger.success(f"✅ Loaded {total_loaded:,} nonprofits into search table")
     record_sync(conn, 'nonprofits_search', total_loaded)
     return True
+
+
+def load_nonprofits_from_df(conn, df, state_override=None):
+    """Helper function to load nonprofits from a DataFrame"""
+    cursor = conn.cursor()
+    
+    # Filter out rows with null EIN
+    df_valid = df[df['ein'].notna()].copy()
+    
+    records = []
+    for _, row in df_valid.iterrows():
+        # Use state from data or override
+        state = state_override or row.get('state', '')
+        
+        # Convert ruling date from YYYYMM to proper date
+        ruling_date = parse_yyyymm_date(row.get('ruling_date'))
+        
+        record = (
+            str(row.get('ein', '')),
+            row.get('organization_name', ''),
+            '',  # street_address - not in new format
+            row.get('city', ''),
+            state,
+            row.get('zip_code', ''),
+            '',  # county - not in source data
+            row.get('ntee_code', ''),
+            row.get('ntee_description'),
+            row.get('subsection_code', ''),
+            '',  # affiliation_code - not in new format
+            '',  # classification_code - not in new format
+            clean_numeric(row.get('form_990_total_revenue')),
+            clean_numeric(row.get('form_990_total_assets')),
+            clean_numeric(row.get('form_990_net_income')),
+            ruling_date,
+            '',  # foundation_code - not in new format
+            '',  # pf_filing_req_cd - not in new format
+            None,  # accounting_period
+            '',  # asset_code
+            '',  # income_code
+            '',  # filing_req_cd
+            row.get('subsection_code', ''),  # exempt_org_status_cd
+            clean_numeric(row.get('tax_period')),
+            clean_numeric(row.get('form_990_total_assets')),
+            clean_numeric(row.get('form_990_net_income')),
+            clean_numeric(row.get('form_990_total_revenue')),
+            'irs_bmf',
+            datetime.now()
+        )
+        records.append(record)
+    
+    # Batch insert
+    if records:
+        execute_values(cursor, """
+            INSERT INTO nonprofits_search 
+            (ein, name, street_address, city, state, zip_code, county,
+             ntee_code, ntee_description, subsection_code, affiliation_code, classification_code,
+             revenue, assets, income, ruling_date, foundation_code, pf_filing_requirement_code,
+             accounting_period, asset_code, income_code, filing_requirement_code,
+             exempt_organization_status_code, tax_period, asset_amount, income_amount,
+             form_990_revenue_amount, source, last_updated)
+            VALUES %s
+            ON CONFLICT (ein) DO UPDATE SET
+                name = EXCLUDED.name,
+                city = EXCLUDED.city,
+                state = EXCLUDED.state,
+                revenue = EXCLUDED.revenue,
+                assets = EXCLUDED.assets,
+                last_updated = EXCLUDED.last_updated
+        """, records)
+        
+        conn.commit()
+        logger.info(f"    Loaded {len(records):,} nonprofits")
+        return len(records)
+    
+    return 0
+
 
 
 def load_reference_data(conn):
