@@ -442,7 +442,7 @@ def load_jurisdictions_search(conn):
     total_loaded = 0
     
     # Load cities
-    cities_file = GOLD_DIR / "reference" / "jurisdictions_cities.parquet"
+    cities_file = GOLD_DIR / "jurisdictions_cities.parquet"
     if cities_file.exists():
         df = pd.read_parquet(cities_file)
         records = [
@@ -466,7 +466,7 @@ def load_jurisdictions_search(conn):
         logger.info(f"  Loaded {len(records):,} cities")
     
     # Load counties
-    counties_file = GOLD_DIR / "reference" / "jurisdictions_counties.parquet"
+    counties_file = GOLD_DIR / "jurisdictions_counties.parquet"
     if counties_file.exists():
         df = pd.read_parquet(counties_file)
         records = [
@@ -490,7 +490,7 @@ def load_jurisdictions_search(conn):
         logger.info(f"  Loaded {len(records):,} counties")
     
     # Load townships
-    townships_file = GOLD_DIR / "reference" / "jurisdictions_townships.parquet"
+    townships_file = GOLD_DIR / "jurisdictions_townships.parquet"
     if townships_file.exists():
         df = pd.read_parquet(townships_file)
         records = [
@@ -514,7 +514,7 @@ def load_jurisdictions_search(conn):
         logger.info(f"  Loaded {len(records):,} townships")
     
     # Load school districts
-    districts_file = GOLD_DIR / "reference" / "jurisdictions_school_districts.parquet"
+    districts_file = GOLD_DIR / "jurisdictions_school_districts.parquet"
     if districts_file.exists():
         df = pd.read_parquet(districts_file)
         records = [

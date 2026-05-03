@@ -81,6 +81,10 @@ export default function JurisdictionsSearch() {
   const [selectedCounty, setSelectedCounty] = useState(() => searchParams.get('county') || '')
   const [currentPage, setCurrentPage] = useState(() => parseInt(searchParams.get('page') || '1'))
   const [showFilters, setShowFilters] = useState(false)
+  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false)
+  const [hasWebsite, setHasWebsite] = useState(false)
+  const [hasYouTube, setHasYouTube] = useState(false)
+  const [hasMeetingPlatform, setHasMeetingPlatform] = useState(false)
   
   const searchInputRef = useRef<HTMLInputElement>(null)
 
@@ -283,10 +287,22 @@ export default function JurisdictionsSearch() {
               }`}
             >
               <AdjustmentsHorizontalIcon className="h-5 w-5" />
-              Filters
-              {selectedState && (
+              Basic Filters
+            </button>
+
+            <button
+              onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg border-2 transition-colors ${
+                showAdvancedFilters
+                  ? 'border-primary-500 bg-primary-50 text-primary-700'
+                  : 'border-gray-300 text-gray-700 hover:border-gray-400 hover:bg-gray-50'
+              }`}
+            >
+              <AdjustmentsHorizontalIcon className="h-5 w-5" />
+              Advanced Filters
+              {(hasWebsite || hasYouTube || hasMeetingPlatform) && (
                 <span className="ml-1 px-2 py-0.5 bg-primary-600 text-white text-xs rounded-full">
-                  1
+                  {[hasWebsite, hasYouTube, hasMeetingPlatform].filter(Boolean).length}
                 </span>
               )}
             </button>
@@ -464,6 +480,152 @@ export default function JurisdictionsSearch() {
                 </button>
               </div>
             </div>
+          )}
+          
+          {/* Advanced Filters Sidebar */}
+          {showAdvancedFilters && (
+            <>
+              {/* Backdrop */}
+              <div 
+                className="fixed inset-0 bg-black bg-opacity-50 z-40"
+                onClick={() => setShowAdvancedFilters(false)}
+              />
+              
+              {/* Sidebar */}
+              <div className="fixed right-0 top-0 h-full w-full md:w-96 bg-white shadow-2xl z-50 overflow-y-auto">
+                <div className="p-6">
+                  {/* Header */}
+                  <div className="flex items-center justify-between mb-6">
+                    <h3 className="text-xl font-bold text-gray-900">Advanced Jurisdiction Filters</h3>
+                    <button
+                      onClick={() => setShowAdvancedFilters(false)}
+                      className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-md transition-colors"
+                    >
+                      <XMarkIcon className="h-6 w-6" />
+                    </button>
+                  </div>
+
+                  {/* Filters */}
+                  <div className="space-y-6">
+                    {/* Data Availability Filters */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-3">
+                        Data Availability
+                      </label>
+                      <div className="space-y-3">
+                        <label className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 cursor-pointer transition-colors">
+                          <input
+                            type="checkbox"
+                            checked={hasWebsite}
+                            onChange={(e) => {
+                              setHasWebsite(e.target.checked)
+                              setCurrentPage(1)
+                            }}
+                            className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
+                          />
+                          <div className="flex-1">
+                            <div className="text-sm font-medium text-gray-900">Has Official Website</div>
+                            <div className="text-xs text-gray-500">Show jurisdictions with .gov domains</div>
+                          </div>
+                        </label>
+                        
+                        <label className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 cursor-pointer transition-colors">
+                          <input
+                            type="checkbox"
+                            checked={hasYouTube}
+                            onChange={(e) => {
+                              setHasYouTube(e.target.checked)
+                              setCurrentPage(1)
+                            }}
+                            className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
+                          />
+                          <div className="flex-1">
+                            <div className="text-sm font-medium text-gray-900">Has YouTube Channel</div>
+                            <div className="text-xs text-gray-500">Meeting recordings available</div>
+                          </div>
+                        </label>
+                        
+                        <label className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 cursor-pointer transition-colors">
+                          <input
+                            type="checkbox"
+                            checked={hasMeetingPlatform}
+                            onChange={(e) => {
+                              setHasMeetingPlatform(e.target.checked)
+                              setCurrentPage(1)
+                            }}
+                            className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
+                          />
+                          <div className="flex-1">
+                            <div className="text-sm font-medium text-gray-900">Has Meeting Platform</div>
+                            <div className="text-xs text-gray-500">Legistar, Granicus, etc.</div>
+                          </div>
+                        </label>
+                      </div>
+                    </div>
+
+                    {/* Oral Health Focus States */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-3">
+                        Quick Filters
+                      </label>
+                      <button
+                        onClick={() => {
+                          setSelectedState('')
+                          setSelectedLevels(['city'])
+                          setTimeout(() => handleSearch(), 0)
+                        }}
+                        className="w-full px-4 py-2.5 bg-blue-50 text-blue-700 border border-blue-200 rounded-lg hover:bg-blue-100 transition-colors font-medium text-left"
+                      >
+                        🦷 Oral Health Focus States
+                        <div className="text-xs text-blue-600 mt-1">AL, GA, IN, MA, WA, WI cities</div>
+                      </button>
+                    </div>
+
+                    {/* Population Filter (Placeholder) */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Minimum Population
+                      </label>
+                      <select
+                        className="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 text-gray-900 py-2.5"
+                        defaultValue="any"
+                      >
+                        <option value="any">Any Size</option>
+                        <option value="10000">10,000+</option>
+                        <option value="50000">50,000+</option>
+                        <option value="100000">100,000+</option>
+                        <option value="500000">500,000+</option>
+                        <option value="1000000">1,000,000+</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  {/* Footer Actions */}
+                  <div className="mt-8 pt-6 border-t border-gray-200 space-y-3">
+                    <button
+                      onClick={() => {
+                        setHasWebsite(false)
+                        setHasYouTube(false)
+                        setHasMeetingPlatform(false)
+                        setCurrentPage(1)
+                      }}
+                      className="w-full px-4 py-2.5 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition-colors font-medium"
+                    >
+                      Clear Advanced Filters
+                    </button>
+                    <button
+                      onClick={() => {
+                        setShowAdvancedFilters(false)
+                        handleSearch()
+                      }}
+                      className="w-full px-4 py-2.5 bg-primary-600 text-white rounded-md hover:bg-primary-700 transition-colors font-medium"
+                    >
+                      Apply Filters
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </>
           )}
         </div>
 
