@@ -26,8 +26,10 @@ if not DATABASE_URL:
 
 logger.info(f"Using: {'DEV' if NEON_DATABASE_URL_DEV else 'PROD'} database")
 
-# Paths
-GOLD_DIR = Path("data/gold")
+# Paths - relative to this script's location
+SCRIPT_DIR = Path(__file__).parent
+GOLD_DIR = SCRIPT_DIR / "data" / "gold"
+SCHEMA_PATH = SCRIPT_DIR / "schema.sql"
 
 
 def parse_yyyymm_date(yyyymm):
@@ -66,13 +68,12 @@ def get_db_connection():
 
 def execute_schema(conn):
     """Execute schema.sql to create tables"""
-    schema_path = Path("neon/schema.sql")
-    if not schema_path.exists():
-        logger.error(f"Schema file not found: {schema_path}")
+    if not SCHEMA_PATH.exists():
+        logger.error(f"Schema file not found: {SCHEMA_PATH}")
         return False
     
     logger.info("📋 Creating database schema...")
-    with open(schema_path, 'r') as f:
+    with open(SCHEMA_PATH, 'r') as f:
         schema_sql = f.read()
     
     try:

@@ -25,7 +25,7 @@ import {
   MapPinIcon,
   PlusIcon,
   BellIcon,
-  FireIcon,
+  ArrowTrendingUpIcon,
   Bars3Icon,
   XMarkIcon,
   UserCircleIcon,
@@ -131,6 +131,25 @@ export default function Home() {
 
   const DOCS_URL = import.meta.env.PROD ? 'https://www.communityone.com/docs/intro' : 'http://localhost:3000/docs/intro'
 
+  // Fetch stats based on location
+  const { data: locationStats } = useQuery({
+    queryKey: ['location-stats', location?.state, location?.city, location?.county],
+    queryFn: async () => {
+      if (!location) return null;
+      
+      const params: any = {};
+      if (location.state) params.state = location.state;
+      if (location.city) params.city = location.city;
+      if (location.county) params.county = location.county;
+      
+      const response = await api.get('/stats', { params });
+      console.log('📊 [Home] Location stats:', response.data);
+      return response.data;
+    },
+    enabled: !!location,
+    staleTime: 5 * 60 * 1000 // Cache for 5 minutes
+  });
+
   // Fetch trending causes from database (replaces hardcoded TRENDING_TOPICS)
   const { data: trendingData } = useQuery({
     queryKey: ['trending-causes'],
@@ -148,6 +167,69 @@ export default function Home() {
 
   // Use database causes if available, fallback to empty array while loading
   const trendingTopics = trendingData?.causes || []
+
+  // Generate dynamic stats text based on location
+  const getStatsText = () => {
+    // If no location data or stats are loading, show national stats
+    if (!locationStats) {
+      return '90,000+ jurisdictions • 1.8M nonprofits • 75K+ leaders • 650+ causes • 100% free';
+    }
+
+    // If database returns zeros, show location-specific message
+    if (locationStats.jurisdictions === 0 && 
+        locationStats.nonprofits === 0 && 
+        locationStats.contacts === 0) {
+      // Show which location we're looking at
+      const locationName = locationStats.city || locationStats.county || locationStats.state || 'this area';
+      return `Searching ${locationName} • Database loading • Check back soon • 100% free`;
+    }
+
+    const parts = [];
+    
+    // Format jurisdictions count
+    if (locationStats.jurisdictions && locationStats.jurisdictions > 0) {
+      const count = locationStats.jurisdictions >= 1000 
+        ? `${(locationStats.jurisdictions / 1000).toFixed(1)}K` 
+        : locationStats.jurisdictions.toLocaleString();
+      parts.push(`${count} jurisdiction${locationStats.jurisdictions === 1 ? '' : 's'}`);
+    }
+    
+    // Format nonprofits count
+    if (locationStats.nonprofits && locationStats.nonprofits > 0) {
+      const count = locationStats.nonprofits >= 1000 
+        ? `${(locationStats.nonprofits / 1000).toFixed(1)}K` 
+        : locationStats.nonprofits.toLocaleString();
+      parts.push(`${count} nonprofit${locationStats.nonprofits === 1 ? '' : 's'}`);
+    }
+    
+    // Format contacts count (leaders)
+    if (locationStats.contacts && locationStats.contacts > 0) {
+      const count = locationStats.contacts >= 1000 
+        ? `${(locationStats.contacts / 1000).toFixed(1)}K` 
+        : locationStats.contacts.toLocaleString();
+      parts.push(`${count} leader${locationStats.contacts === 1 ? '' : 's'}`);
+    }
+    
+    // Add causes count (estimate or fixed)
+    parts.push('650+ causes');
+    parts.push('100% free');
+    
+    return parts.join(' • ');
+  };
+
+  // Generate dynamic subtitle based on location
+  const getSubtitle = () => {
+    if (!location) {
+      return 'Track Local Decisions. Take Action.';
+    }
+    if (location.city && location.state) {
+      return `Track Decisions in ${location.city}, ${location.state}`;
+    }
+    if (location.state) {
+      return `Track Decisions in ${location.state}`;
+    }
+    return 'Track Local Decisions. Take Action.';
+  };
 
   // Live search preview (type-ahead with actual results from API)
   const { data: previewResults, isLoading: previewLoading, error: previewError } = useQuery({
@@ -189,21 +271,22 @@ export default function Home() {
         throw error;
       }
     },
-    enabled: keyword.length >= 2 && showSuggestions,
+    enabled: keyword.length >= 2, // Removed showSuggestions dependency
     staleTime: 1000,
     retry: 1, // Only retry once on error
     retryDelay: 1000
   });
 
-  // Log when preview results change
+  // Log when preview state changes
   useEffect(() => {
-    console.log('🔄 [Home] Preview results updated:', {
-      hasResults: !!previewResults,
-      totalResults: previewResults?.total_results,
-      showSuggestions,
+    console.log('🔄 [Home] Preview state:', {
       keyword,
+      keywordLength: keyword.length,
+      showSuggestions,
       isLoading: previewLoading,
-      error: previewError
+      hasError: !!previewError,
+      hasResults: !!previewResults,
+      totalResults: previewResults?.total_results
     });
   }, [previewResults, showSuggestions, keyword, previewLoading, previewError]);
 
@@ -547,7 +630,7 @@ export default function Home() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2">
           <div className="flex items-center gap-3">
             {/* Trending Icon */}
-            <FireIcon className="h-5 w-5 text-orange-500 flex-shrink-0" />
+            <ArrowTrendingUpIcon className="h-5 w-5 text-green-600 flex-shrink-0" />
             
             {/* Scrollable topics row */}
             <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide flex-1">
@@ -650,13 +733,13 @@ export default function Home() {
                         WebkitTextFillColor: 'transparent',
                         backgroundClip: 'text'
                       }}>
-                        {FEATURED_STORIES[selectedStoryTab].subtitle}
+                        {getSubtitle()}
                       </h1>
                       <p className="text-lg md:text-xl text-gray-600 mb-6">
                         {FEATURED_STORIES[selectedStoryTab].description}
                       </p>
                       <p className="text-sm md:text-base text-gray-500 mb-8 font-medium">
-                        {FEATURED_STORIES[selectedStoryTab].stats}
+                        {getStatsText()}
                       </p>
                       
                       {/* Search Box */}
@@ -709,6 +792,138 @@ export default function Home() {
                                       </svg>
                                       <span className="text-sm text-gray-600">Searching...</span>
                                     </div>
+                                  </div>
+                                )}
+                                
+                                {/* Preview Results Dropdown */}
+                                {keyword.length >= 2 && showSuggestions && !previewLoading && !previewError && previewResults && (
+                                  <div className="absolute top-full left-0 right-0 mt-2 z-20 bg-white border border-gray-200 rounded-lg shadow-xl max-h-96 overflow-y-auto">
+                                    {/* No Results Message */}
+                                    {previewResults.total_results === 0 && (
+                                      <div className="px-4 py-8 text-center">
+                                        <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                                        </svg>
+                                        <h3 className="mt-2 text-sm font-medium text-gray-900">No results found</h3>
+                                        <p className="mt-1 text-sm text-gray-500">
+                                          Try searching for different keywords or check back later.
+                                        </p>
+                                        <p className="mt-2 text-xs text-gray-400">
+                                          Database may be empty. Run data ingestion scripts to populate.
+                                        </p>
+                                      </div>
+                                    )}
+                                    
+                                    {/* Causes Section */}
+                                    {previewResults.total_results > 0 && previewResults.results?.causes?.length > 0 && (
+                                      <div className="border-b border-gray-200">
+                                        <div className="px-4 py-2 bg-gray-50 flex items-center justify-between">
+                                          <div className="flex items-center gap-2">
+                                            <HeartIcon className="h-4 w-4 text-gray-500" />
+                                            <span className="text-xs font-semibold text-gray-700 uppercase">Causes</span>
+                                          </div>
+                                          <button
+                                            type="button"
+                                            onClick={() => handleViewAllCategory('causes')}
+                                            className="text-xs text-[#354F52] hover:text-[#2e4346] font-medium"
+                                          >
+                                            View All
+                                          </button>
+                                        </div>
+                                        {previewResults.results.causes.slice(0, 3).map((result: any, idx: number) => (
+                                          <button
+                                            key={idx}
+                                            type="button"
+                                            onClick={() => handleSelectSuggestion(result.title)}
+                                            className="w-full text-left px-4 py-2 hover:bg-gray-50 flex items-start gap-3 transition-colors"
+                                          >
+                                            <HeartIcon className="h-5 w-5 text-gray-600 mt-0.5 flex-shrink-0" />
+                                            <div className="flex-1 min-w-0">
+                                              <div className="font-medium text-gray-900 truncate">{result.title}</div>
+                                              <div className="text-sm text-gray-600 truncate">{result.subtitle || result.description}</div>
+                                            </div>
+                                          </button>
+                                        ))}
+                                      </div>
+                                    )}
+
+                                    {/* Organizations Section */}
+                                    {previewResults.total_results > 0 && previewResults.results?.organizations?.length > 0 && (
+                                      <div className="border-b border-gray-200">
+                                        <div className="px-4 py-2 bg-gray-50 flex items-center justify-between">
+                                          <div className="flex items-center gap-2">
+                                            <BuildingLibraryIcon className="h-4 w-4 text-gray-500" />
+                                            <span className="text-xs font-semibold text-gray-700 uppercase">Organizations</span>
+                                          </div>
+                                          <button
+                                            type="button"
+                                            onClick={() => handleViewAllCategory('organizations')}
+                                            className="text-xs text-[#354F52] hover:text-[#2e4346] font-medium"
+                                          >
+                                            View All
+                                          </button>
+                                        </div>
+                                        {previewResults.results.organizations.slice(0, 3).map((result: any, idx: number) => (
+                                          <button
+                                            key={idx}
+                                            type="button"
+                                            onClick={() => handleSelectSuggestion(result.title)}
+                                            className="w-full text-left px-4 py-2 hover:bg-gray-50 flex items-start gap-3 transition-colors"
+                                          >
+                                            <BuildingLibraryIcon className="h-5 w-5 text-gray-600 mt-0.5 flex-shrink-0" />
+                                            <div className="flex-1 min-w-0">
+                                              <div className="font-medium text-gray-900 truncate">{result.title}</div>
+                                              <div className="text-sm text-gray-600 truncate">{result.subtitle || result.description}</div>
+                                            </div>
+                                          </button>
+                                        ))}
+                                      </div>
+                                    )}
+
+                                    {/* Contacts Section */}
+                                    {previewResults.total_results > 0 && previewResults.results?.contacts?.length > 0 && (
+                                      <div className="border-b border-gray-200">
+                                        <div className="px-4 py-2 bg-gray-50 flex items-center justify-between">
+                                          <div className="flex items-center gap-2">
+                                            <UserGroupIcon className="h-4 w-4 text-gray-500" />
+                                            <span className="text-xs font-semibold text-gray-700 uppercase">People</span>
+                                          </div>
+                                          <button
+                                            type="button"
+                                            onClick={() => handleViewAllCategory('contacts')}
+                                            className="text-xs text-[#354F52] hover:text-[#2e4346] font-medium"
+                                          >
+                                            View All
+                                          </button>
+                                        </div>
+                                        {previewResults.results.contacts.slice(0, 3).map((result: any, idx: number) => (
+                                          <button
+                                            key={idx}
+                                            type="button"
+                                            onClick={() => handleSelectSuggestion(result.title)}
+                                            className="w-full text-left px-4 py-2 hover:bg-gray-50 flex items-start gap-3 transition-colors"
+                                          >
+                                            <UserGroupIcon className="h-5 w-5 text-gray-600 mt-0.5 flex-shrink-0" />
+                                            <div className="flex-1 min-w-0">
+                                              <div className="font-medium text-gray-900 truncate">{result.title}</div>
+                                              <div className="text-sm text-gray-600 truncate">{result.subtitle || result.description}</div>
+                                            </div>
+                                          </button>
+                                        ))}
+                                      </div>
+                                    )}
+
+                                    {/* Footer with total results */}
+                                    {previewResults.total_results > 0 && (
+                                      <div className="px-4 py-3 bg-gray-50 text-center border-t border-gray-200">
+                                        <button
+                                          type="submit"
+                                          className="text-sm text-[#354F52] hover:text-[#2e4346] font-medium"
+                                        >
+                                          See all {previewResults.total_results} results →
+                                        </button>
+                                      </div>
+                                    )}
                                   </div>
                                 )}
                               </div>
