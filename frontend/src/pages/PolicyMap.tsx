@@ -127,9 +127,9 @@ export default function PolicyMap() {
     enabled: viewMode === 'map' && !showTopicSelector && selectedTopic !== '',
     staleTime: 5 * 60 * 1000, // 5 minutes - prevent refetch jitters
     refetchOnWindowFocus: false,
-    retry: 2,
+    retry: 1, // Reduce retries on mobile
     retryDelay: 1000,
-    placeholderData: (previousData) => previousData, // Prevent flickering during mode transitions
+    gcTime: 10 * 60 * 1000, // Cache for 10 minutes
   })
 
   // Fetch sessions
@@ -164,23 +164,42 @@ export default function PolicyMap() {
       })
       return response.data
     },
-    enabled: viewMode === 'list' && !showTopicSelector && (selectedTopic !== '' || searchQuery !== ''), // Only fetch when actually needed - run if topic OR search query
+    enabled: viewMode === 'list' && !showTopicSelector && (
+      selectedTopic !== '' || 
+      searchQuery !== '' || 
+      selectedChambers.length > 0 || 
+      selectedBillTypes.length > 0 || 
+      selectedStatuses.length > 0
+    ), // Fetch sessions filtered by any active criteria
     staleTime: 1 * 60 * 1000, // 1 minute - ensure filters are respected
     refetchOnWindowFocus: false,
-    retry: 2,
+    retry: 1, // Reduce retries on mobile
     retryDelay: 1000,
-    placeholderData: (previousData) => previousData, // Prevent flickering by keeping old data while fetching new
+    gcTime: 5 * 60 * 1000, // Cache for 5 minutes
   })
 
-  // Auto-select most recent session when sessions data loads (e.g., after drilling down from map)
+  // Auto-select most recent session ONLY when drilling down from map (state/topic change with no active filters)
   useEffect(() => {
-    if (sessionsData?.sessions && sessionsData.sessions.length > 0 && selectedSessions.length === 0) {
-      // Get the most recent session (they're already sorted by end_date DESC)
+    // Only run if we have sessions data and no filters are active
+    const hasNoFilters = selectedChambers.length === 0 && 
+                        selectedBillTypes.length === 0 && 
+                        selectedStatuses.length === 0 && 
+                        !searchQuery
+
+    if (
+      sessionsData?.sessions && 
+      sessionsData.sessions.length > 0 && 
+      selectedSessions.length === 0 &&
+      hasNoFilters
+    ) {
+      // Auto-select most recent session
       const mostRecentSession = sessionsData.sessions[0]
       console.log('📅 Auto-selecting most recent session:', mostRecentSession.session_name)
       setSelectedSessions([mostRecentSession.session])
     }
-  }, [sessionsData, selectedSessions.length])
+    // Only depend on state/topic changes and sessions data, NOT on selectedSessions to avoid loops
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedState, selectedTopic, sessionsData?.sessions])
 
   // Fetch bills
   const { data: billsData, isLoading, error: billsError } = useQuery<{
@@ -205,12 +224,19 @@ export default function PolicyMap() {
       const response = await api.get(`/bills?${params}`)
       return response.data
     },
-    enabled: viewMode === 'list' && !showTopicSelector && (selectedTopic !== '' || searchQuery !== ''), // Only fetch when actually needed - run if topic OR search query
+    enabled: viewMode === 'list' && !showTopicSelector && (
+      selectedTopic !== '' || 
+      searchQuery !== '' || 
+      selectedSessions.length > 0 || 
+      selectedChambers.length > 0 || 
+      selectedBillTypes.length > 0 || 
+      selectedStatuses.length > 0
+    ), // Allow querying with topic, search, OR any advanced filters
     staleTime: 1 * 60 * 1000, // 1 minute - ensure filters are respected
     refetchOnWindowFocus: false,
-    retry: 2,
+    retry: 1, // Reduce retries on mobile
     retryDelay: 1000,
-    placeholderData: (previousData) => previousData, // Prevent flickering by keeping old data while fetching new
+    gcTime: 5 * 60 * 1000, // Cache for 5 minutes
   })
 
   const totalPages = Math.ceil((billsData?.total || 0) / limit)
