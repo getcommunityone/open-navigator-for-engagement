@@ -64,6 +64,7 @@ export default function PolicyMap() {
   const [sortBy, setSortBy] = useState<'date' | 'name'>('date')
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc')
   const [expandedBill, setExpandedBill] = useState<string | null>(null)
+  const [billVersions, setBillVersions] = useState<Record<string, any[]>>({})
   
   // Multi-select filter states
   const [selectedSessions, setSelectedSessions] = useState<string[]>([])
@@ -263,6 +264,31 @@ export default function PolicyMap() {
   const handleBackToTopics = () => {
     setShowTopicSelector(true)
     setSelectedTopic('')
+  }
+  
+  // Fetch bill versions when bill is expanded
+  const fetchBillVersions = async (billId: string) => {
+    if (billVersions[billId]) return // Already loaded
+    
+    try {
+      const response = await api.get(`/bills/versions?bill_id=${encodeURIComponent(billId)}`)
+      setBillVersions(prev => ({ ...prev, [billId]: response.data.versions || [] }))
+    } catch (error) {
+      console.error('Failed to fetch bill versions:', error)
+      setBillVersions(prev => ({ ...prev, [billId]: [] }))
+    }
+  }
+  
+  // Handle bill expansion
+  const handleBillExpand = (billId: string) => {
+    const isCurrentlyExpanded = expandedBill === billId
+    
+    if (isCurrentlyExpanded) {
+      setExpandedBill(null)
+    } else {
+      setExpandedBill(billId)
+      fetchBillVersions(billId)
+    }
   }
   
   // Sort bills client-side
@@ -1000,7 +1026,7 @@ export default function PolicyMap() {
                           {/* Bill Header - Always Visible */}
                           <div 
                             className="p-6 cursor-pointer"
-                            onClick={() => setExpandedBill(isExpanded ? null : bill.bill_id)}
+                            onClick={() => handleBillExpand(bill.bill_id)}
                           >
                             <div className="flex items-start justify-between">
                               <div className="flex-1">
@@ -1084,8 +1110,37 @@ export default function PolicyMap() {
                                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
                                     </svg>
-                                    View full bill on legislature website
+                                    View bill on legislature website
                                   </a>
+                                </div>
+                              )}
+                              
+                              {/* Bill Versions */}
+                              {billVersions[bill.bill_id] && billVersions[bill.bill_id].length > 0 && (
+                                <div className="mt-4 pt-4 border-t border-gray-200">
+                                  <p className="text-sm font-medium text-gray-700 mb-3">Bill Versions ({billVersions[bill.bill_id].length})</p>
+                                  <div className="space-y-2">
+                                    {billVersions[bill.bill_id].map((version: any, idx: number) => (
+                                      <div key={idx} className="flex items-start justify-between p-2 bg-gray-50 rounded hover:bg-gray-100">
+                                        <div className="flex-1">
+                                          <p className="text-sm font-medium text-gray-900">{version.version_note || 'Bill Text'}</p>
+                                          {version.version_date && (
+                                            <p className="text-xs text-gray-500">{new Date(version.version_date).toLocaleDateString()}</p>
+                                          )}
+                                        </div>
+                                        {version.document_url && (
+                                          <a
+                                            href={version.document_url}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="ml-2 text-xs text-blue-600 hover:text-blue-800 font-medium"
+                                          >
+                                            View PDF →
+                                          </a>
+                                        )}
+                                      </div>
+                                    ))}
+                                  </div>
                                 </div>
                               )}
                             </div>

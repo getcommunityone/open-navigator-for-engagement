@@ -878,3 +878,83 @@ async def get_filter_options(
             status_code=500,
             content=error_detail.model_dump()
         )
+
+
+@router.get("/versions")
+async def get_bill_versions(
+    bill_id: str = Query(..., description="Bill ID (e.g., ocd-bill/...)")
+):
+    """
+    Get all versions (text versions) for a specific bill.
+    Returns different versions like "Introduced", "Engrossed", "Enacted" with document links.
+    """
+    try:
+        versions_file = GOLD_DIR / "bills_versions.parquet"
+        
+        if not versions_file.exists():
+            return {
+                "bill_id": bill_id,
+                "versions": [],
+                "message": "Bill versions data not available"
+            }
+        
+        data_source = get_data_source(versions_file, use_remote=IS_HF_SPACES)
+        
+        conn = duckdb.connect()
+        
+        # Fetch versions for this bill
+        sql = """
+            SELECT 
+                version_id,
+                bill_id,
+                bill_number,
+                version_note,
+                version_date,
+                classification,
+                document_url,
+                media_type,
+                jurisdiction_name,
+                session,
+                state
+            FROM read_parquet(?)
+            WHERE bill_id = ?
+            ORDER BY version_date DESC NULLS LAST
+        """
+        
+        rows = conn.execute(sql, [data_source, bill_id]).fetchall()
+        
+        versions = []
+        for row in rows:
+            versions.append({
+                "version_id": row[0],
+                "bill_id": row[1],
+                "bill_number": row[2],
+                "version_note": row[3],
+                "version_date": row[4],
+                "classification": row[5],
+                "document_url": row[6],
+                "media_type": row[7],
+                "jurisdiction_name": row[8],
+                "session": row[9],
+                "state": row[10],
+            })
+        
+        conn.close()
+        
+        return {
+            "bill_id": bill_id,
+            "total": len(versions),
+            "versions": versions
+        }
+        
+    except Exception as e:
+        logger.error(f"Bill versions query error for bill_id={bill_id}: {e}")
+        
+        error_detail = parse_error(e, context={
+            "bill_id": bill_id
+        })
+        
+        return JSONResponse(
+            status_code=500,
+            content=error_detail.model_dump()
+        )
