@@ -32,6 +32,7 @@ from pathlib import Path
 from loguru import logger
 from tqdm.asyncio import tqdm
 import pandas as pd
+import polars as pl
 
 # Add parent directory to path for imports
 import sys
@@ -57,7 +58,8 @@ class ComprehensiveDiscoveryPipeline:
         self,
         youtube_api_key: Optional[str] = None,
         max_concurrent: int = 10,
-        output_dir: str = "data/bronze/discovered_sources"
+        output_dir: str = "data/bronze/discovered_sources",
+        gold_output_dir: str = "data/gold"
     ):
         """
         Initialize discovery pipeline.
@@ -71,6 +73,11 @@ class ComprehensiveDiscoveryPipeline:
         self.max_concurrent = max_concurrent
         self.output_dir = Path(output_dir)
         self.output_dir.mkdir(parents=True, exist_ok=True)
+        self.gold_output_dir = Path(gold_output_dir)
+        self.gold_output_dir.mkdir(parents=True, exist_ok=True)
+        
+        # Load LocalView channels if available
+        self.localview_channels = self._load_localview_channels()
         
         # Initialize discovery agents
         # Note: URLDiscoveryAgent is optional - we use direct pattern matching
@@ -98,6 +105,7 @@ class ComprehensiveDiscoveryPipeline:
             
             results = {
                 'jurisdiction': jurisdiction,
+                'jurisdiction_id': jurisdiction.get('GEOID', ''),
                 'discovery_timestamp': datetime.now().isoformat(),
                 'websites': [],
                 'youtube_channels': [],
@@ -126,6 +134,12 @@ class ComprehensiveDiscoveryPipeline:
                 youtube_channels = await self._discover_youtube(
                     name, state, jtype, homepage_url
                 )
+                
+                # Add LocalView channels if available
+                localview_channel = self._get_localview_channel(name, state)
+                if localview_channel:
+                    youtube_channels.append(localview_channel)
+                
                 results['youtube_channels'] = youtube_channels
                 
                 # Step 3: Discover other video platforms (Vimeo, etc.)
@@ -496,6 +510,66 @@ class ComprehensiveDiscoveryPipeline:
         pd.DataFrame(summary).to_csv(csv_file, index=False)
         
         logger.info(f"Saved CSV: {csv_file}")
+        
+        # Save to Gold parquet with GEOID linking
+        gold_data = []
+        for r in results:
+            j = r['jurisdiction']
+            gold_data.append({
+                'jurisdiction_id': r.get('jurisdiction_id', ''),
+                'jurisdiction_name': j.get('name', j.get('NAME', '')),
+                'state': j.get('state_code', j.get('USPS', '')),
+                'jurisdiction_type': j.get('type', j.get('jurisdiction_type', 'city')),
+                'population': j.get('population', 0),
+                'discovery_timestamp': r['discovery_timestamp'],
+                'website_url': r['websites'][0]['url'] if r['websites'] else None,
+                'youtube_channel_count': len(r['youtube_channels']),
+                'youtube_channels': str(r['youtube_channels']),  # JSON string
+                'meeting_platform_count': len(r['meeting_platforms']),
+                'meeting_platforms': str(r['meeting_platforms']),  # JSON string
+                'social_media': str(r['social_media']),  # JSON string
+                'agenda_portal_count': len(r['agenda_portals']),
+                'status': r['status']
+            })
+        
+        gold_file = self.gold_output_dir / f'jurisdictions_details.parquet'
+        pl.DataFrame(gold_data).write_parquet(gold_file)
+        logger.info(f"Saved Gold parquet: {gold_file}")
+    
+    def _load_localview_channels(self) -> Dict[str, Dict]:
+        """Load LocalView municipality channels from CSV."""
+        channels_file = Path('data/cache/localview/municipality_channels.csv')
+        if not channels_file.exists():
+            logger.warning("LocalView channels file not found")
+            return {}
+        
+        try:
+            df = pl.read_csv(channels_file)
+            # Create lookup: (city, state) -> channel_data
+            channels = {}
+            for row in df.iter_rows(named=True):
+                # Parse "City, ST" format
+                muni = row['municipality']
+                if ',' in muni:
+                    city = muni.split(',')[0].strip()
+                    state = row['state']
+                    key = (city.lower(), state.upper())
+                    channels[key] = {
+                        'channel_id': row['channel_id'],
+                        'url': f"https://youtube.com/channel/{row['channel_id']}",
+                        'source': 'localview',
+                        'municipality': muni
+                    }
+            logger.info(f"Loaded {len(channels)} LocalView channels")
+            return channels
+        except Exception as e:
+            logger.warning(f"Error loading LocalView channels: {e}")
+            return {}
+    
+    def _get_localview_channel(self, name: str, state: str) -> Optional[Dict]:
+        """Get LocalView channel for a jurisdiction if available."""
+        key = (name.lower(), state.upper())
+        return self.localview_channels.get(key)
     
     def load_jurisdictions(
         self,
@@ -503,37 +577,59 @@ class ComprehensiveDiscoveryPipeline:
         top_n: Optional[int] = None
     ) -> List[Dict]:
         """
-        Load jurisdiction list from Census/NACo data.
+        Load jurisdiction list from gold tables.
         
         Args:
             state_filter: Filter to specific state (e.g., 'AL')
-            top_n: Limit to top N by population
+            top_n: Limit to top N by population (requires population data)
             
         Returns:
-            List of jurisdiction dicts
+            List of jurisdiction dicts with GEOID linking
         """
-        logger.info("Loading jurisdiction list...")
+        logger.info("Loading jurisdiction list from gold tables...")
         
-        # Check if we have Census data
-        census_file = Path('data/cache/census_jurisdictions.parquet')
+        # Load from gold parquet files
+        cities_file = Path('data/gold/jurisdictions_cities.parquet')
+        counties_file = Path('data/gold/jurisdictions_counties.parquet')
         
-        if census_file.exists():
-            # Load from cached Census data
-            df = pd.read_parquet(census_file)
+        jurisdictions = []
+        
+        if cities_file.exists():
+            logger.info("Loading cities from gold table...")
+            cities_df = pl.read_parquet(cities_file)
             
+            # Filter by state if requested
             if state_filter:
-                df = df[df['state_code'] == state_filter]
+                cities_df = cities_df.filter(pl.col('USPS') == state_filter)
             
-            if top_n:
-                df = df.nlargest(top_n, 'population')
+            # Convert to list of dicts
+            for row in cities_df.iter_rows(named=True):
+                jurisdictions.append({
+                    'GEOID': row['GEOID'],
+                    'name': row['NAME'].replace(' city', '').replace(' town', ''),
+                    'state_code': row['USPS'],
+                    'type': 'city',
+                    'population': 0,  # Add from census if available
+                    'ANSICODE': row.get('ANSICODE', ''),
+                    'full_name': row['NAME']
+                })
             
-            jurisdictions = df.to_dict('records')
-            logger.info(f"Loaded {len(jurisdictions)} jurisdictions from Census data")
-            
-        else:
-            # Generate sample list from NACo/known data
-            logger.warning("Census data not found, using sample list")
+            logger.info(f"Loaded {len(jurisdictions)} cities")
+        
+        if counties_file.exists() and not state_filter:
+            # Only load counties if not filtering (too many)
+            logger.info("Skipping counties (use --state to include)")
+        
+        # Apply top_n limit if requested
+        if top_n and top_n < len(jurisdictions):
+            jurisdictions = jurisdictions[:top_n]
+            logger.info(f"Limited to top {top_n} jurisdictions")
+        
+        if not jurisdictions:
+            logger.warning("No jurisdictions found in gold tables, using sample list")
             jurisdictions = self._generate_sample_list(state_filter, top_n)
+        
+        return jurisdictions
         
         return jurisdictions
     
