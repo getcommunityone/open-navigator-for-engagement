@@ -367,6 +367,19 @@ export default function UnifiedSearch() {
     })
   }
 
+  // Auto-expand organization when EIN is specified in URL
+  useEffect(() => {
+    if (selectedEin && searchResults?.results?.organizations) {
+      // Check if the organization with this EIN is in the results
+      const hasOrg = searchResults.results.organizations.some(
+        (org: any) => org.metadata?.ein === selectedEin
+      )
+      if (hasOrg) {
+        setExpandedOrganizations(new Set([selectedEin]))
+      }
+    }
+  }, [selectedEin, searchResults])
+
   const getTypeIcon = (type: string) => {
     switch (type) {
       case 'contact':
