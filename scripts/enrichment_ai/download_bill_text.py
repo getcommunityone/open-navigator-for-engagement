@@ -136,8 +136,9 @@ class BillTextDownloader:
         if states:
             bills_df = bills_df.filter(pl.col("state").is_in(states))
         
-        # Filter by year if specified
+        # Filter by year if specified (supports single year or multiple years)
         if year:
+            # Support passing multiple years like "2024|2025|2026"
             bills_df = bills_df.filter(
                 pl.col("session").str.contains(str(year))
             )
@@ -210,6 +211,7 @@ class BillTextDownloader:
         Returns dict with text and metadata or None
         """
         # Skip old Alabama URLs that are broken (2017-2022)
+        # New working URLs (2023+): www.legislature.state.al.us and alison.legislature.state.al.us
         if 'alisondb.legislature.state.al.us' in url:
             logger.debug(f"Skipping broken old Alabama URL: {url}")
             logger.debug(f"Use scripts/enrichment_ai/download_alabama_bills_scraper.py for AL 2017-2022")
@@ -511,8 +513,8 @@ def main():
     )
     parser.add_argument(
         '--year',
-        type=int,
-        help='Legislative session year (e.g., 2024)'
+        type=str,
+        help='Legislative session year pattern (e.g., 2024 or "2024|2025|2026" for multiple years)'
     )
     parser.add_argument(
         '--limit',

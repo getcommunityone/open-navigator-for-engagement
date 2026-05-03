@@ -823,22 +823,61 @@ def load_bills_search(conn, limit_states=None):
                 # ocd-jurisdiction/country:us/state:ma/government -> MA
                 state_code = state.upper()
                 
+                # Convert values to Python native types to avoid numpy array issues
+                def safe_str(val):
+                    """Convert value to string, handling None and arrays"""
+                    if pd.isna(val):
+                        return ''
+                    if isinstance(val, (list, tuple)):
+                        return str(val[0]) if len(val) > 0 else ''
+                    return str(val)
+                
+                def safe_date(val):
+                    """Convert value to date, handling None and NaT"""
+                    if pd.isna(val):
+                        return None
+                    # Check for NaT string representation
+                    if str(val) == 'NaT':
+                        return None
+                    try:
+                        dt = pd.to_datetime(val)
+                        if pd.isna(dt):
+                            return None
+                        return dt.date()
+                    except:
+                        return None
+                
+                def safe_datetime(val):
+                    """Convert value to datetime, handling None and NaT"""
+                    if pd.isna(val):
+                        return None
+                    # Check for NaT string representation  
+                    if str(val) == 'NaT':
+                        return None
+                    try:
+                        dt = pd.to_datetime(val)
+                        if pd.isna(dt):
+                            return None
+                        return dt
+                    except:
+                        return None
+                
                 record = (
-                    row.get('bill_id', ''),
-                    row.get('bill_number', ''),
-                    row.get('title', ''),
-                    row.get('classification', ''),
-                    row.get('session', ''),
-                    row.get('session_name', ''),
-                    row.get('jurisdiction_name', ''),
+                    safe_str(row.get('bill_id', '')),
+                    safe_str(row.get('bill_number', '')),
+                    safe_str(row.get('title', '')),
+                    safe_str(row.get('classification', '')),
+                    safe_str(row.get('session', '')),
+                    safe_str(row.get('session_name', '')),
+                    safe_str(row.get('jurisdiction_name', '')),
                     state_code,
-                    pd.to_datetime(row.get('first_action_date')).date() if pd.notna(row.get('first_action_date')) else None,
-                    pd.to_datetime(row.get('latest_action_date')).date() if pd.notna(row.get('latest_action_date')) else None,
-                    row.get('latest_action_description', ''),
-                    row.get('abstract', ''),
-                    row.get('source_url', ''),
-                    pd.to_datetime(row.get('created_at')) if pd.notna(row.get('created_at')) else None,
-                    pd.to_datetime(row.get('updated_at')) if pd.notna(row.get('updated_at')) else None,
+                    safe_date(row.get('first_action_date')),
+                    safe_date(row.get('latest_action_date')),
+                    safe_str(row.get('latest_action_description', '')),
+                    safe_str(row.get('abstract', '')),
+                    safe_str(row.get('source_url', '')),
+                    safe_datetime(row.get('created_at')),
+                    safe_datetime(row.get('updated_at')),
                     datetime.now()
                 )
                 records.append(record)
@@ -865,6 +904,7 @@ def load_bills_search(conn, limit_states=None):
     logger.success(f"✅ Loaded {total_loaded:,} bills into search table")
     record_sync(conn, 'bills_search', total_loaded)
     return True
+
 
 
 def record_sync(conn, table_name: str, records_synced: int, status: str = 'success', error: Optional[str] = None):

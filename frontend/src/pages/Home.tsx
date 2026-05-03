@@ -1716,6 +1716,39 @@ export default function Home() {
                                   </div>
                                 )}
 
+                                {/* Bills Section */}
+                                {previewResults.results.bills && previewResults.results.bills.length > 0 && (
+                                  <div className="border-b border-gray-200">
+                                    <div className="px-4 py-2 bg-gray-50 flex items-center justify-between">
+                                      <div className="flex items-center gap-2">
+                                        <DocumentTextIcon className="h-4 w-4 text-gray-500" />
+                                        <span className="text-xs font-semibold text-gray-700 uppercase">Bills</span>
+                                      </div>
+                                      <button
+                                        type="button"
+                                        onClick={() => handleViewAllCategory('bills')}
+                                        className="text-xs text-primary-600 hover:text-primary-700 font-medium"
+                                      >
+                                        View All
+                                      </button>
+                                    </div>
+                                    {previewResults.results.bills.slice(0, 3).map((result: any, idx: number) => (
+                                      <button
+                                        key={idx}
+                                        type="button"
+                                        onClick={() => handleSelectSuggestion(result.title)}
+                                        className="w-full text-left px-4 py-2 hover:bg-gray-50 flex items-start gap-3 transition-colors"
+                                      >
+                                        <DocumentTextIcon className="h-5 w-5 text-gray-600 mt-0.5 flex-shrink-0" />
+                                        <div className="flex-1 min-w-0">
+                                          <div className="font-medium text-gray-900 truncate">{result.title}</div>
+                                          <div className="text-sm text-gray-600 truncate">{result.subtitle || result.description}</div>
+                                        </div>
+                                      </button>
+                                    ))}
+                                  </div>
+                                )}
+
                                 {/* Footer with total results */}
                                 <div className="px-4 py-2 bg-gray-50 text-center border-t border-gray-200">
                                   <button

@@ -16,7 +16,8 @@ export default defineConfig({
       '/api': {
         target: 'http://localhost:8000',
         changeOrigin: true,
-        followRedirects: true,
+        // Don't follow redirects - let browser handle OAuth redirects
+        followRedirects: false,
         configure: (proxy, _options) => {
           proxy.on('error', (err, _req, _res) => {
             console.log('proxy error', err);
