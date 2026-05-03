@@ -308,6 +308,13 @@ class BillTextDownloader:
                     logger.debug(f"No text found in Georgia API response for {bill_number}")
                     return None
                     
+        except httpx.HTTPStatusError as e:
+            # 404 is expected for bill versions or unavailable bills - fallback to URL download
+            if e.response.status_code == 404:
+                return None  # Silent fallback
+            else:
+                logger.debug(f"Georgia API error for {bill_number}: {e}")
+                return None
         except Exception as e:
             logger.debug(f"Georgia API error for {bill_number}: {e}")
             return None
@@ -403,13 +410,20 @@ class BillTextDownloader:
             
             # Try state-specific API first
             if source == BillTextSource.GEORGIA_SOAP:
-                result = self.fetch_georgia_bill_text(
-                    bill_id,
-                    row.get('session', ''),
-                    bill_number
-                )
-                if result:
-                    source_type = 'state_api'
+                session = row.get('session', '')
+                session_year = session.split('_')[0] if '_' in session else session
+                
+                # Skip API for 2025+ sessions (data not yet available in API)
+                if session_year.isdigit() and int(session_year) >= 2025:
+                    logger.debug(f"Skipping Georgia API for {session_year} session (not yet available)")
+                else:
+                    result = self.fetch_georgia_bill_text(
+                        bill_id,
+                        session,
+                        bill_number
+                    )
+                    if result:
+                        source_type = 'state_api'
             
             # Fall back to URL download if state API didn't work and we have a URL
             if not result and document_url:
