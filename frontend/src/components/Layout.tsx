@@ -288,7 +288,7 @@ export default function Layout() {
                   onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#354F52'}
                 >
                   <UserCircleIcon className="h-5 w-5" />
-                  <span className="hidden md:inline">Register</span>
+                  <span className="hidden md:inline">Register/Login</span>
                   <ChevronDownIcon className="h-4 w-4" />
                 </button>
                 

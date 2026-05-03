@@ -25,25 +25,27 @@ import {
   MapPinIcon,
   PlusIcon,
   BellIcon,
-  FireIcon
+  FireIcon,
+  Bars3Icon,
+  XMarkIcon,
+  UserCircleIcon,
+  ChevronDownIcon,
+  MapIcon,
+  BellAlertIcon
 } from '@heroicons/react/24/outline'
+import { useAuth } from '../contexts/AuthContext'
 import AddressLookup from '../components/AddressLookup'
 import { useLocation as useLocationContext } from '../contexts/LocationContext'
 
-// Trending topics/causes
-const TRENDING_TOPICS = [
-  { name: 'World Press Freedom Day', icon: '📰', category: 'Global' },
-  { name: 'Business & Markets', icon: '💼', category: 'Economics' },
-  { name: 'Artificial Intelligence', icon: '🤖', category: 'Technology' },
-  { name: 'Health & Medicine', icon: '⚕️', category: 'Healthcare' },
-  { name: 'Premier League', icon: '⚽', category: 'Sports' },
-  { name: 'Soccer', icon: '⚽', category: 'Sports' },
-  { name: 'Baseball', icon: '⚾', category: 'Sports' },
-  { name: 'Donald Trump', icon: '🏛️', category: 'Politics' },
-  { name: 'IPL', icon: '🏏', category: 'Sports' },
-  { name: 'Social Media', icon: '📱', category: 'Technology' },
-  { name: 'Trump Administration', icon: '🇺🇸', category: 'Politics' },
-]
+// Trending topic/cause interface
+interface TrendingCause {
+  name: string
+  icon: string
+  category: string
+  description?: string
+  image_url?: string
+  popularity_rank?: number
+}
 
 // Featured story (hero banner)
 const FEATURED_STORY = {
@@ -101,9 +103,30 @@ export default function Home() {
   const [searchScope, setSearchScope] = useState('city') // city, county, state, community (school), national
   const [selectedTab, setSelectedTab] = useState(0)
   const [showSuggestions, setShowSuggestions] = useState(false)
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const [showLoginMenu, setShowLoginMenu] = useState(false)
   const { location, setLocation } = useLocationContext()
+  const { user, isAuthenticated, login, logout, isLoading } = useAuth()
 
   const DOCS_URL = import.meta.env.PROD ? 'https://www.communityone.com/docs/intro' : 'http://localhost:3000/docs/intro'
+
+  // Fetch trending causes from database (replaces hardcoded TRENDING_TOPICS)
+  const { data: trendingData } = useQuery({
+    queryKey: ['trending-causes'],
+    queryFn: async () => {
+      const response = await api.get('/trending', {
+        params: {
+          source: 'mixed',  // Mix of everyorg and ntee causes
+          limit: 12
+        }
+      })
+      return response.data
+    },
+    staleTime: 5 * 60 * 1000,  // Cache for 5 minutes
+  })
+
+  // Use database causes if available, fallback to empty array while loading
+  const trendingTopics = trendingData?.causes || []
 
   // Live search preview (type-ahead with actual results from API)
   const { data: previewResults, isLoading: previewLoading, error: previewError } = useQuery({
@@ -250,16 +273,217 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-white">
-      {/* Trending Topics Bar */}
-      <div className="bg-gray-50 border-b border-gray-200">
+      {/* Navigation Header */}
+      <nav className="sticky top-0 z-50 bg-white/95 backdrop-blur-sm border-b border-gray-200 shadow-sm">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between h-20">
+            {/* Logo */}
+            <Link to="/" className="flex items-center gap-3">
+              <img 
+                src="/communityone_logo.svg" 
+                alt="CommunityOne Logo" 
+                className="h-12"
+              />
+              <span className="text-xl font-bold" style={{ color: '#354F52' }}>
+                Open Navigator
+              </span>
+            </Link>
+
+            {/* Desktop Navigation Links - Centered with underline */}
+            <div className="hidden md:flex items-center gap-8">
+              <Link 
+                to="/" 
+                className="text-sm font-medium text-[#354F52] transition-colors pb-1 border-b-2 border-[#354F52]"
+              >
+                Home
+              </Link>
+              <Link 
+                to="/explore" 
+                className="text-sm font-medium text-gray-600 hover:text-[#354F52] transition-colors pb-1 border-b-2 border-transparent hover:border-[#354F52]"
+              >
+                Explore
+              </Link>
+              <Link 
+                to="/search" 
+                className="text-sm font-medium text-gray-600 hover:text-[#354F52] transition-colors pb-1 border-b-2 border-transparent hover:border-[#354F52]"
+              >
+                Search
+              </Link>
+              <Link 
+                to="/policy-map" 
+                className="text-sm font-medium text-gray-600 hover:text-[#354F52] transition-colors pb-1 border-b-2 border-transparent hover:border-[#354F52]"
+              >
+                Policy Map
+              </Link>
+              <Link 
+                to="/nonprofits" 
+                className="text-sm font-medium text-gray-600 hover:text-[#354F52] transition-colors pb-1 border-b-2 border-transparent hover:border-[#354F52]"
+              >
+                Nonprofits
+              </Link>
+            </div>
+
+            {/* Desktop CTA Button */}
+            <div className="hidden md:flex items-center gap-3">
+              {isLoading ? (
+                <div className="px-3 py-2">
+                  <div className="animate-spin h-8 w-8 border-3 border-gray-300 border-t-primary-600 rounded-full"></div>
+                </div>
+              ) : isAuthenticated && user ? (
+                <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-gray-100">
+                  {user.avatar_url ? (
+                    <img 
+                      src={user.avatar_url} 
+                      alt={user.full_name || user.email}
+                      className="h-8 w-8 rounded-full border-2 border-primary-500 object-cover"
+                    />
+                  ) : (
+                    <div className="h-8 w-8 rounded-full bg-gradient-to-br from-primary-500 to-primary-600 flex items-center justify-center text-white font-bold text-sm">
+                      {(user.full_name || user.username || user.email).charAt(0).toUpperCase()}
+                    </div>
+                  )}
+                  <span className="text-sm font-medium text-gray-700">
+                    {user.full_name || user.username || user.email.split('@')[0]}
+                  </span>
+                </div>
+              ) : (
+                <div className="relative">
+                  <button
+                    onClick={() => setShowLoginMenu(!showLoginMenu)}
+                    className="px-4 py-2 text-white rounded-lg transition-colors text-sm font-medium flex items-center gap-2"
+                    style={{ backgroundColor: '#354F52' }}
+                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#2e4346'}
+                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#354F52'}
+                  >
+                    <UserCircleIcon className="h-5 w-5" />
+                    <span>Register/Login</span>
+                    <ChevronDownIcon className="h-4 w-4" />
+                  </button>
+                  
+                  {showLoginMenu && (
+                    <div className="absolute right-0 mt-2 w-64 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-50">
+                      <div className="px-4 py-2 border-b border-gray-200">
+                        <p className="text-sm font-medium text-gray-900">Sign in with:</p>
+                      </div>
+                      <button
+                        onClick={() => { login('google'); setShowLoginMenu(false); }}
+                        className="flex items-center gap-3 w-full px-4 py-3 hover:bg-gray-100 transition-colors"
+                      >
+                        <div className="w-6 h-6 flex items-center justify-center flex-shrink-0">
+                          <svg viewBox="0 0 24 24" className="w-5 h-5" preserveAspectRatio="xMidYMid meet">
+                            <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                            <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                            <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+                            <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+                          </svg>
+                        </div>
+                        <span className="text-sm font-medium text-gray-700">Google</span>
+                      </button>
+                      <button
+                        onClick={() => { login('facebook'); setShowLoginMenu(false); }}
+                        className="flex items-center gap-3 w-full px-4 py-3 hover:bg-gray-100 transition-colors"
+                      >
+                        <div className="w-6 h-6 flex items-center justify-center">
+                          <svg viewBox="0 0 24 24" className="w-5 h-5" fill="#1877F2">
+                            <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
+                          </svg>
+                        </div>
+                        <span className="text-sm font-medium text-gray-700">Facebook</span>
+                      </button>
+                      <button
+                        onClick={() => { login('github'); setShowLoginMenu(false); }}
+                        className="flex items-center gap-3 w-full px-4 py-3 hover:bg-gray-100 transition-colors"
+                      >
+                        <div className="w-6 h-6 flex items-center justify-center">
+                          <svg viewBox="0 0 24 24" className="w-5 h-5" fill="#181717">
+                            <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
+                          </svg>
+                        </div>
+                        <span className="text-sm font-medium text-gray-700">GitHub</span>
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+              <Link
+                to="/explore"
+                className="px-6 py-2.5 rounded-lg text-white font-semibold hover:shadow-lg transition-all"
+                style={{ backgroundColor: '#354F52' }}
+              >
+                Explore Now
+              </Link>
+            </div>
+
+            {/* Mobile Menu Button */}
+            <button
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              className="md:hidden p-2 rounded-lg text-gray-600 hover:bg-gray-100 transition-colors"
+              aria-label="Toggle menu"
+            >
+              {mobileMenuOpen ? (
+                <XMarkIcon className="h-6 w-6" />
+              ) : (
+                <Bars3Icon className="h-6 w-6" />
+              )}
+            </button>
+          </div>
+        </div>
+
+        {/* Mobile Menu */}
+        {mobileMenuOpen && (
+          <div className="md:hidden border-t border-gray-200 bg-white">
+            <div className="px-4 py-3 space-y-1">
+              <Link
+                to="/"
+                className="block px-4 py-3 rounded-lg text-base font-medium bg-[#354F52] text-white"
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                Home
+              </Link>
+              <Link
+                to="/explore"
+                className="block px-4 py-3 rounded-lg text-base font-medium text-gray-700 hover:bg-gray-100"
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                Explore
+              </Link>
+              <Link
+                to="/search"
+                className="block px-4 py-3 rounded-lg text-base font-medium text-gray-700 hover:bg-gray-100"
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                Search
+              </Link>
+              <Link
+                to="/policy-map"
+                className="block px-4 py-3 rounded-lg text-base font-medium text-gray-700 hover:bg-gray-100"
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                Policy Map
+              </Link>
+              <Link
+                to="/nonprofits"
+                className="block px-4 py-3 rounded-lg text-base font-medium text-gray-700 hover:bg-gray-100"
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                Nonprofits
+              </Link>
+            </div>
+          </div>
+        )}
+      </nav>
+
+      {/* Trending Topics Bar with gradient background */}
+      <div className="border-b border-gray-200" style={{ background: 'linear-gradient(135deg, #F1F5F9 0%, #E8EEF2 100%)' }}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
           <div className="flex items-center gap-2 text-xs text-gray-600 mb-2">
             <FireIcon className="h-4 w-4 text-orange-500" />
-            <span className="font-semibold uppercase">Trending Topics</span>
+            <span className="font-semibold uppercase">Trending Causes</span>
+            <span className="text-gray-400">({trendingTopics.length} from database)</span>
           </div>
           {/* First row of topics */}
           <div className="flex flex-wrap gap-2 mb-2">
-            {TRENDING_TOPICS.slice(0, 6).map((topic) => (
+            {trendingTopics.slice(0, 6).map((topic: TrendingCause) => (
               <button
                 key={topic.name}
                 onClick={() => navigate(`/search?q=${encodeURIComponent(topic.name)}`)}
@@ -273,7 +497,7 @@ export default function Home() {
           </div>
           {/* Second row of topics */}
           <div className="flex flex-wrap gap-2">
-            {TRENDING_TOPICS.slice(6).map((topic) => (
+            {trendingTopics.slice(6, 12).map((topic: TrendingCause) => (
               <button
                 key={topic.name}
                 onClick={() => navigate(`/search?q=${encodeURIComponent(topic.name)}`)}
@@ -289,15 +513,16 @@ export default function Home() {
               className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-primary-50 border border-primary-300 rounded-full hover:bg-primary-100 transition-all text-sm"
             >
               <BellIcon className="h-3.5 w-3.5 text-primary-600" />
-              <span className="font-medium text-primary-700">Follow Topics</span>
+              <span className="font-medium text-primary-700">Follow Causes</span>
             </button>
           </div>
         </div>
       </div>
 
-      {/* Featured Story Hero */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <Link to={FEATURED_STORY.link} className="group block">
+      {/* Featured Story Hero with gradient background */}
+      <div className="py-8" style={{ background: 'linear-gradient(135deg, #F1F5F9 0%, #E8EEF2 100%)' }}>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <Link to={FEATURED_STORY.link} className="group block animate-[slideUp_0.6s_ease-out]">
           <div className="relative overflow-hidden rounded-2xl bg-gray-900 shadow-2xl h-[500px]">
             <img
               src={FEATURED_STORY.image}
@@ -318,18 +543,20 @@ export default function Home() {
             </div>
           </div>
         </Link>
+        </div>
       </div>
 
       {/* Top Stories Grid */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-2xl font-bold text-gray-900">Top Stories</h2>
-          <Link to="/search" className="text-primary-600 hover:text-primary-700 font-medium flex items-center gap-1">
+        <div className="text-center mb-8 animate-[slideUp_0.8s_ease-out_0.4s_both]">
+          <h2 className="text-3xl md:text-4xl font-bold mb-2" style={{ color: '#354F52' }}>Top Stories</h2>
+          <div className="w-24 h-1 bg-gradient-to-r from-[#52796F] to-[#84A98C] mx-auto rounded mb-4"></div>
+          <Link to="/search" className="text-primary-600 hover:text-primary-700 font-medium hover:underline hover:decoration-2 inline-flex items-center gap-1">
             View All <ArrowRightIcon className="h-4 w-4" />
           </Link>
         </div>
         
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12 animate-[slideUp_0.8s_ease-out_0.6s_both]">
           {TOP_STORIES.map((story, idx) => (
             <Link
               key={idx}
@@ -358,16 +585,160 @@ export default function Home() {
         </div>
       </div>
 
+      {/* Features Section */}
+      <section className="py-16 px-4 bg-white">
+        <div className="max-w-7xl mx-auto">
+          <div className="text-center mb-12 animate-[slideUp_0.8s_ease-out_0.8s_both]">
+            <h2 className="text-3xl md:text-4xl font-bold mb-2" style={{ color: '#354F52' }}>
+              Everything You Need
+            </h2>
+            <div className="w-24 h-1 bg-gradient-to-r from-[#52796F] to-[#84A98C] mx-auto rounded mb-4"></div>
+            <p className="text-lg text-gray-600">
+              Powerful tools to stay informed and engaged
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 animate-[slideUp_0.8s_ease-out_1s_both]">
+            <Link
+              to="/documents"
+              className="group bg-gradient-to-br from-gray-50 to-white border-2 border-gray-200 rounded-2xl p-8 hover:border-[#354F52] hover:shadow-xl transition-all"
+            >
+              <div
+                className="w-14 h-14 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform"
+                style={{ backgroundColor: '#354F5215' }}
+              >
+                <DocumentTextIcon className="h-7 w-7" style={{ color: '#354F52' }} />
+              </div>
+              <h3 className="text-xl font-bold mb-3" style={{ color: '#354F52' }}>
+                Policy Decisions
+              </h3>
+              <p className="text-gray-600 mb-4">
+                Track 500K+ meeting pages with decision analysis, deferral patterns, and stakeholder positions
+              </p>
+              <span className="inline-flex items-center gap-2 text-sm font-medium" style={{ color: '#354F52' }}>
+                Learn more <ArrowRightIcon className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
+              </span>
+            </Link>
+
+            <Link
+              to="/analytics"
+              className="group bg-gradient-to-br from-gray-50 to-white border-2 border-gray-200 rounded-2xl p-8 hover:border-[#52796F] hover:shadow-xl transition-all"
+            >
+              <div
+                className="w-14 h-14 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform"
+                style={{ backgroundColor: '#52796F15' }}
+              >
+                <ChartBarIcon className="h-7 w-7" style={{ color: '#52796F' }} />
+              </div>
+              <h3 className="text-xl font-bold mb-3" style={{ color: '#354F52' }}>
+                Budget Analysis
+              </h3>
+              <p className="text-gray-600 mb-4">
+                Compare budget rhetoric to reality with $2T+ in tracked spending and delta analysis
+              </p>
+              <span className="inline-flex items-center gap-2 text-sm font-medium" style={{ color: '#52796F' }}>
+                Learn more <ArrowRightIcon className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
+              </span>
+            </Link>
+
+            <Link
+              to="/people"
+              className="group bg-gradient-to-br from-gray-50 to-white border-2 border-gray-200 rounded-2xl p-8 hover:border-[#84A98C] hover:shadow-xl transition-all"
+            >
+              <div
+                className="w-14 h-14 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform"
+                style={{ backgroundColor: '#84A98C15' }}
+              >
+                <UserGroupIcon className="h-7 w-7" style={{ color: '#84A98C' }} />
+              </div>
+              <h3 className="text-xl font-bold mb-3" style={{ color: '#354F52' }}>
+                Elected Officials
+              </h3>
+              <p className="text-gray-600 mb-4">
+                Follow 362 officials across 925 jurisdictions with voting records and decision patterns
+              </p>
+              <span className="inline-flex items-center gap-2 text-sm font-medium" style={{ color: '#84A98C' }}>
+                Learn more <ArrowRightIcon className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
+              </span>
+            </Link>
+
+            <Link
+              to="/policy-map"
+              className="group bg-gradient-to-br from-gray-50 to-white border-2 border-gray-200 rounded-2xl p-8 hover:border-[#4A90E2] hover:shadow-xl transition-all"
+            >
+              <div
+                className="w-14 h-14 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform"
+                style={{ backgroundColor: '#4A90E215' }}
+              >
+                <MapIcon className="h-7 w-7" style={{ color: '#4A90E2' }} />
+              </div>
+              <h3 className="text-xl font-bold mb-3" style={{ color: '#354F52' }}>
+                Policy Map
+              </h3>
+              <p className="text-gray-600 mb-4">
+                Track state legislation and bills across all sessions. Search 13,000+ bills by topic and status
+              </p>
+              <span className="inline-flex items-center gap-2 text-sm font-medium" style={{ color: '#4A90E2' }}>
+                Learn more <ArrowRightIcon className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
+              </span>
+            </Link>
+
+            <Link
+              to="/nonprofits"
+              className="group bg-gradient-to-br from-gray-50 to-white border-2 border-gray-200 rounded-2xl p-8 hover:border-[#9B59B6] hover:shadow-xl transition-all"
+            >
+              <div
+                className="w-14 h-14 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform"
+                style={{ backgroundColor: '#9B59B615' }}
+              >
+                <BuildingLibraryIcon className="h-7 w-7" style={{ color: '#9B59B6' }} />
+              </div>
+              <h3 className="text-xl font-bold mb-3" style={{ color: '#354F52' }}>
+                Nonprofits & Churches
+              </h3>
+              <p className="text-gray-600 mb-4">
+                43,726 nonprofits including 4,372 churches with financial data from 5 states
+              </p>
+              <span className="inline-flex items-center gap-2 text-sm font-medium" style={{ color: '#9B59B6' }}>
+                Learn more <ArrowRightIcon className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
+              </span>
+            </Link>
+
+            <Link
+              to="/debate-grader"
+              className="group bg-gradient-to-br from-gray-50 to-white border-2 border-gray-200 rounded-2xl p-8 hover:border-[#E74C3C] hover:shadow-xl transition-all"
+            >
+              <div
+                className="w-14 h-14 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform"
+                style={{ backgroundColor: '#E74C3C15' }}
+              >
+                <BellAlertIcon className="h-7 w-7" style={{ color: '#E74C3C' }} />
+              </div>
+              <h3 className="text-xl font-bold mb-3" style={{ color: '#354F52' }}>
+                Fact-Checking
+              </h3>
+              <p className="text-gray-600 mb-4">
+                Verify claims with integrated PolitiFact, FactCheck.org, and Google Fact Check data
+              </p>
+              <span className="inline-flex items-center gap-2 text-sm font-medium" style={{ color: '#E74C3C' }}>
+                Learn more <ArrowRightIcon className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
+              </span>
+            </Link>
+          </div>
+        </div>
+      </section>
+
       {/* Search Section (Collapsible) */}
       <div className="bg-gray-50 py-12 border-t border-gray-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-8">
-            <h2 className="text-3xl font-bold mb-4" style={{ color: '#354F52' }}>
+          <div className="text-center mb-8 animate-[slideUp_0.8s_ease-out_0.8s_both]">
+            <h2 className="text-3xl md:text-4xl font-bold mb-2" style={{ color: '#354F52' }}>
               Search Your Community
             </h2>
+            <div className="w-24 h-1 bg-gradient-to-r from-[#52796F] to-[#84A98C] mx-auto rounded mb-4"></div>
             <p className="text-lg text-gray-600 max-w-2xl mx-auto">
               Track local governments and charities. Find leaders by name. Discover causes.{' '}
-              <Link to="/jurisdictions" className="font-semibold hover:underline">925 jurisdictions</Link>.{' '}
+              <Link to="/jurisdictions" className="font-semibold text-[#52796F] hover:text-[#354F52] hover:underline hover:decoration-2 transition-colors">925 jurisdictions</Link>.{' '}
               <Link to="/search?types=organizations" className="font-semibold hover:underline">43,726 nonprofits</Link>. All free.
             </p>
           </div>

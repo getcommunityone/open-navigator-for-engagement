@@ -30,12 +30,12 @@ import NotFound from './pages/NotFound'
 function App() {
   return (
     <Routes>
-      {/* Modern home page without Layout (has its own header) */}
-      <Route path="/" element={<HomeModern />} />
+      {/* Ground News-style homepage without Layout (has its own header) */}
+      <Route path="/" element={<Home />} />
       
-      {/* Classic home page (if needed) */}
+      {/* Old modern home page (if needed) */}
       <Route path="/classic" element={<Layout />}>
-        <Route index element={<Home />} />
+        <Route index element={<HomeModern />} />
       </Route>
       
       {/* All other pages with sidebar layout */}

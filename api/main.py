@@ -287,6 +287,7 @@ from api.routes import contact as contact_routes
 # Use hybrid approach for bills: Neon for map, parquet for drill-down (saves space)
 from api.routes import bills_neon as bills_routes  # Was: bills
 from api.routes import data_deletion as data_deletion_routes
+from api.routes import trending as trending_routes
 from api.database import init_db
 
 app.include_router(auth_routes.router, prefix="/api")
@@ -296,6 +297,7 @@ app.include_router(stats_routes.router, prefix="/api", tags=["stats"])
 app.include_router(contact_routes.router, prefix="/api")
 app.include_router(bills_routes.router, prefix="/api")
 app.include_router(data_deletion_routes.router, prefix="/api", tags=["privacy"])
+app.include_router(trending_routes.router)
 
 # Custom Swagger UI with logo
 @app.get("/docs", include_in_schema=False)
