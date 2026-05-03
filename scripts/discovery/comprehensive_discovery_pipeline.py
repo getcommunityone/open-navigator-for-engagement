@@ -44,6 +44,7 @@ from scripts.discovery.url_discovery_agent import URLDiscoveryAgent
 from scripts.datasources.youtube.youtube_channel_discovery import YouTubeChannelDiscovery
 from scripts.datasources.social_media.social_media_discovery import SocialMediaDiscovery
 from scripts.discovery.platform_detector import detect_platform
+from scripts.datasources.wikidata.wikidata_integration import WikidataQuery
 import httpx
 
 
@@ -89,6 +90,7 @@ class ComprehensiveDiscoveryPipeline:
         # Initialize discovery agents
         # Note: URLDiscoveryAgent is optional - we use direct pattern matching
         self.semaphore = asyncio.Semaphore(max_concurrent)
+        self.wikidata = WikidataQuery()  # Free enrichment for missing data
     
     async def discover_jurisdiction(
         self,
@@ -174,6 +176,11 @@ class ComprehensiveDiscoveryPipeline:
                     logger.debug(f"  Step 6/6: Finding agenda portals")
                     agendas = await self._find_agenda_portals(homepage_url, name)
                     results['agenda_portals'] = agendas
+                
+                # Step 7: Wikidata enrichment (fallback for missing data)
+                if not homepage_url or results['status'] == 'partial':
+                    logger.debug(f"  Step 7/7: Wikidata enrichment (filling gaps)")
+                    await self._enrich_with_wikidata(results, name, state, jtype)
                 
                 # Calculate completeness score
                 results['completeness_score'] = self._calculate_completeness(results)
@@ -425,6 +432,77 @@ class ComprehensiveDiscoveryPipeline:
         
         await client.aclose()
         return portals
+    
+    async def _enrich_with_wikidata(
+        self,
+        results: Dict,
+        name: str,
+        state: str,
+        jtype: str
+    ):
+        """
+        Enrich discovery results with Wikidata (free fallback for missing data).
+        
+        Wikidata can provide:
+        - Official website URL
+        - Population
+        - Social media accounts (Facebook, Twitter, YouTube)
+        
+        This is especially useful for smaller jurisdictions where direct discovery fails.
+        """
+        try:
+            wiki_info = await self.wikidata.get_jurisdiction_info(name, state, jtype)
+            
+            if not wiki_info:
+                return
+            
+            # Fill in website if missing
+            if not results['websites'] and wiki_info.get('website'):
+                results['websites'].append({
+                    'url': wiki_info['website'],
+                    'final_url': wiki_info['website'],
+                    'status': 'active',
+                    'discovery_method': 'wikidata',
+                    'confidence': 0.8
+                })
+                logger.info(f"   ✓ Added website from Wikidata: {wiki_info['website']}")
+                results['status'] = 'success'  # Upgrade from partial
+            
+            # Add YouTube channel if found
+            if wiki_info.get('youtube_channel_id'):
+                channel_exists = any(
+                    c.get('channel_id') == wiki_info['youtube_channel_id']
+                    for c in results['youtube_channels']
+                )
+                if not channel_exists:
+                    results['youtube_channels'].append({
+                        'channel_url': f"https://www.youtube.com/channel/{wiki_info['youtube_channel_id']}",
+                        'channel_id': wiki_info['youtube_channel_id'],
+                        'discovery_method': 'wikidata',
+                        'confidence': 0.8
+                    })
+                    logger.info(f"   ✓ Added YouTube channel from Wikidata")
+            
+            # Add social media links if missing
+            if not results.get('social_media'):
+                results['social_media'] = {}
+            
+            if wiki_info.get('facebook') and not results['social_media'].get('facebook'):
+                fb_url = f"https://www.facebook.com/{wiki_info['facebook']}"
+                results['social_media']['facebook'] = [fb_url]
+                logger.info(f"   ✓ Added Facebook from Wikidata: {fb_url}")
+            
+            if wiki_info.get('twitter') and not results['social_media'].get('twitter'):
+                tw_url = f"https://twitter.com/{wiki_info['twitter']}"
+                results['social_media']['twitter'] = [tw_url]
+                logger.info(f"   ✓ Added Twitter from Wikidata: {tw_url}")
+            
+            # Update population if missing
+            if wiki_info.get('population'):
+                results['jurisdiction']['population'] = int(wiki_info['population'])
+                
+        except Exception as e:
+            logger.debug(f"Wikidata enrichment failed for {name}, {state}: {e}")
     
     def _calculate_completeness(self, results: Dict) -> float:
         """Calculate how complete the discovery is (0.0 to 1.0)."""

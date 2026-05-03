@@ -16,6 +16,11 @@ Automates discovery of data sources for all U.S. cities and counties (22,000+ ju
 - Social media accounts
 - Meeting schedules and archives
 
+**Features:**
+- **Wikidata Enrichment** - Automatically fills in missing data (websites, social media) from Wikidata for jurisdictions with incomplete discovery
+- **Incremental Mode** - Skips already-discovered jurisdictions to save time and API costs
+- **LocalView Integration** - Automatically includes known YouTube channels from LocalView database
+
 ### Usage
 
 **Run for all jurisdictions (incremental mode):**
@@ -26,6 +31,22 @@ python scripts/discovery/comprehensive_discovery_pipeline.py --all
 **Run for specific state:**
 ```bash
 python scripts/discovery/comprehensive_discovery_pipeline.py --state AL
+```
+
+**Run for the 6 in-scope oral health states (AL, GA, IN, MA, WA, WI):**
+```bash
+# Automated script runs all 6 states sequentially with incremental mode
+bash scripts/discovery/discover_oral_health_states.sh
+```
+
+Or run individual states manually:
+```bash
+python scripts/discovery/comprehensive_discovery_pipeline.py --state AL
+python scripts/discovery/comprehensive_discovery_pipeline.py --state GA
+python scripts/discovery/comprehensive_discovery_pipeline.py --state IN
+python scripts/discovery/comprehensive_discovery_pipeline.py --state MA
+python scripts/discovery/comprehensive_discovery_pipeline.py --state WA
+python scripts/discovery/comprehensive_discovery_pipeline.py --state WI
 ```
 
 **Run for top N cities by population:**
@@ -51,6 +72,26 @@ By default, the script runs in **incremental mode**:
 - Significantly reduces API costs and processing time
 - Use `--no-incremental` to force rediscovery of all jurisdictions
 
+### Wikidata Enrichment
+
+The pipeline automatically enriches incomplete discoveries using **Wikidata** (free, no API key required):
+
+**What Wikidata Provides:**
+- Official government website URLs
+- Population data
+- Social media accounts (Facebook, Twitter, YouTube channel IDs)
+
+**When It's Used:**
+- Automatically applied when primary discovery fails or is incomplete
+- Especially helpful for smaller jurisdictions (CDPs, small cities)
+- Example: "Alexandria CDP, AL" might have no direct .gov domain, but Wikidata may have its official Facebook page
+
+**Benefits:**
+- ✅ Completely free (no API limits)
+- ✅ Community-maintained (Wikipedia's structured data)
+- ✅ High quality for major cities
+- ⚠️ May have gaps for very small jurisdictions
+
 ### Options
 
 - `--state` - Filter to specific state (e.g., AL, CA, TX)
@@ -64,11 +105,26 @@ By default, the script runs in **incremental mode**:
 ### Output
 
 Discovery results are saved to:
-- `data/gold/discovered_urls.parquet` - All discovered URLs
-- `data/gold/youtube_channels.parquet` - YouTube channel data
-- `data/gold/social_media.parquet` - Social media accounts
+- `data/gold/jurisdictions_details.parquet` - Consolidated jurisdiction details including:
+  - Website URLs
+  - YouTube channel counts and data
+  - Meeting platforms detected
+  - Social media accounts
+  - Discovery timestamps
+  - Completeness scores
+- `data/bronze/discovered_sources/discovery_results_*.json` - Detailed JSON output
+- `data/bronze/discovered_sources/discovery_summary_*.csv` - Summary CSV reports
 
 ## Other Discovery Tools
+
+### Discover Oral Health States
+**Script:** `discover_oral_health_states.sh`
+
+Convenience script that runs comprehensive discovery for all 6 in-scope oral health states (AL, GA, IN, MA, WA, WI) sequentially with incremental mode enabled.
+
+```bash
+bash scripts/discovery/discover_oral_health_states.sh
+```
 
 ### URL Discovery Agent
 **Script:** `url_discovery_agent.py`

@@ -372,6 +372,102 @@ class WikidataQuery:
         logger.info(f"✅ Found {len(officials)} elected officials")
         return officials
     
+    async def get_jurisdiction_info(
+        self,
+        name: str,
+        state: str,
+        jurisdiction_type: str = "city"
+    ) -> Optional[Dict]:
+        """
+        Get jurisdiction information from Wikidata (website, population, etc.).
+        
+        Args:
+            name: Jurisdiction name (e.g., "Alexandria", "Alabaster")
+            state: State code or name (e.g., "AL" or "Alabama")
+            jurisdiction_type: "city" or "county"
+            
+        Returns:
+            Dict with jurisdiction info or None if not found
+        """
+        # Map state codes to full names for better Wikidata matching
+        state_map = {
+            "AL": "Alabama", "GA": "Georgia", "IN": "Indiana",
+            "MA": "Massachusetts", "WA": "Washington", "WI": "Wisconsin"
+        }
+        state_name = state_map.get(state, state)
+        
+        # Choose Wikidata item type
+        item_type = "Q515" if jurisdiction_type == "city" else "Q28575"  # city or county
+        
+        # Clean up name (remove "city", "CDP", etc.)
+        clean_name = name.replace(" city", "").replace(" CDP", "").replace(" town", "").strip()
+        
+        query = f"""
+        SELECT DISTINCT ?place ?placeLabel ?website ?population ?facebook ?twitter ?youtube
+        WHERE {{
+          # Place is an instance of city/county
+          ?place wdt:P31 wd:{item_type} .
+          
+          # Located in the state
+          ?place wdt:P131+ ?state .
+          ?state wdt:P31 wd:Q35657 .  # US state
+          ?state rdfs:label "{state_name}"@en .
+          
+          # Name matches (flexible matching)
+          ?place rdfs:label ?placeLabel .
+          FILTER(LANG(?placeLabel) = "en")
+          FILTER(CONTAINS(LCASE(?placeLabel), "{clean_name.lower()}"))
+          
+          # Optional: official website
+          OPTIONAL {{ ?place wdt:P856 ?website . }}
+          
+          # Optional: population
+          OPTIONAL {{ ?place wdt:P1082 ?population . }}
+          
+          # Optional: social media
+          OPTIONAL {{ ?place wdt:P2013 ?facebook . }}  # Facebook username
+          OPTIONAL {{ ?place wdt:P2002 ?twitter . }}   # Twitter username
+          OPTIONAL {{ ?place wdt:P2397 ?youtube . }}   # YouTube channel ID
+          
+          SERVICE wikibase:label {{ bd:serviceParam wikibase:language "en". }}
+        }}
+        LIMIT 5
+        """
+        
+        try:
+            results = await self.execute_sparql(query)
+            
+            if not results:
+                logger.debug(f"No Wikidata entry found for {name}, {state}")
+                return None
+            
+            # Take first result (most likely match)
+            result = results[0]
+            
+            info = {
+                "name": result.get("placeLabel", name),
+                "wikidata_id": result.get("place", "").split("/")[-1],
+                "website": result.get("website"),
+                "population": result.get("population"),
+                "facebook": result.get("facebook"),
+                "twitter": result.get("twitter"),
+                "youtube_channel_id": result.get("youtube"),
+                "state": state,
+                "source": "wikidata",
+                "confidence": 0.8,  # Medium confidence for automated matching
+                "fetched_at": datetime.utcnow().isoformat()
+            }
+            
+            logger.info(f"✅ Found Wikidata entry for {name}, {state}")
+            if info.get("website"):
+                logger.info(f"   Website: {info['website']}")
+            
+            return info
+            
+        except Exception as e:
+            logger.error(f"Error querying Wikidata for {name}, {state}: {e}")
+            return None
+    
     def save_to_json(self, data: List[Dict], filename: str):
         """Save data to JSON cache."""
         import json
