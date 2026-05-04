@@ -47,7 +47,8 @@ from youtube_transcript_api import YouTubeTranscriptApi
 from youtube_transcript_api._errors import (
     TranscriptsDisabled, 
     NoTranscriptFound, 
-    VideoUnavailable
+    VideoUnavailable,
+    IpBlocked
 )
 import yt_dlp
 
@@ -74,7 +75,8 @@ class YouTubeEventsLoader:
         days_lookback: Optional[int] = None,
         fetch_transcripts: bool = True,
         force_full_fetch: bool = False,
-        transcript_delay: float = 2.0
+        transcript_delay: float = 2.0,
+        use_ytdlp_fallback: bool = True
     ):
         self.database_url = database_url
         self.youtube_api_key = youtube_api_key
@@ -83,6 +85,7 @@ class YouTubeEventsLoader:
         self.fetch_transcripts = fetch_transcripts
         self.force_full_fetch = force_full_fetch
         self.transcript_delay = transcript_delay  # Delay between transcript fetches (seconds)
+        self.use_ytdlp_fallback = use_ytdlp_fallback  # Whether to fall back to yt-dlp when youtube_transcript_api fails
         
         # Initialize YouTube scraper
         self.scraper = MunicipalYouTubeScraper(api_key=youtube_api_key)
@@ -480,18 +483,44 @@ class YouTubeEventsLoader:
     def extract_channel_ids(self, youtube_channels_json: Any) -> List[Dict[str, str]]:
         """Extract channel IDs and metadata from youtube_channels JSONB field.
         
-        Filters out non-government channels (news, entertainment, music, etc.)
+        Filters to ONLY include government/official channels using:
+        1. in_localview = true (verified government channels)
+        2. policy_score > 0 (channels with policy/government relevance)
+        3. Government-related title keywords
+        
+        Excludes churches, businesses, news, entertainment, etc.
         """
         if not youtube_channels_json:
             return []
         
-        # Exclude patterns for CLEARLY non-government channels
-        # Be conservative - only exclude obvious non-government content
+        # INCLUDE patterns for government channels (must have at least one)
+        GOVERNMENT_KEYWORDS = [
+            'city', 'town', 'village', 'municipal', 'municipality',
+            'county', 'parish',
+            'state', 'commonwealth', 'government', 'gov',
+            'council', 'commission', 'board',
+            'school district', 'public schools',
+            'department of', 'bureau of', 'office of'
+        ]
+        
+        # EXCLUDE patterns for CLEARLY non-government channels
         EXCLUDE_PATTERNS = [
+            'church', 'chapel', 'cathedral', 'ministry', 'ministries',  # Religious
+            'bible', 'christian', 'baptist', 'methodist', 'lutheran', 'catholic',  # Religious
+            'llc', 'inc', 'incorporated', 'company', 'corp',  # Business entities
+            'carpet', 'floor', 'furniture', 'auto', 'car', 'truck',  # Businesses
+            'software', 'tech', 'technologies',  # Software/tech companies
             'cnn', 'fox news', 'msnbc', 'nbc news', 'abc news', 'cbs news',  # Major news networks
+            'news network', 'breaking news', 'live news',  # News channels
+            'news.net', 'news group', 'newsgroup', 'newspaper', 'the post', ' post',  # News media
+            'press', 'media', 'journalism',  # News media
+            'coast to coast', 'radio', 'am official', 'fm official',  # Radio shows
+            'gossip', 'rumors', 'drama', 'tea', 'free press', 'getto',  # Gossip/drama channels
             '- topic',  # YouTube auto-generated channels
             'vevo',  # Music video platform
             'last week tonight', 'john oliver', 'daily show', 'stephen colbert',  # Entertainment shows
+            'podcast', 'radio show',  # Media shows
+            'real estate', 'realty', 'properties',  # Real estate
         ]
         
         channels = []
@@ -521,11 +550,40 @@ class YouTubeEventsLoader:
                         logger.debug(f"  Skipping flagged channel: {channel_title} - {flag_reason}")
                         continue
                     
-                    # Skip if channel title matches exclusion patterns
+                    # FIRST: Check exclusion patterns (hard block)
                     if channel_title:
                         title_lower = channel_title.lower()
                         if any(pattern in title_lower for pattern in EXCLUDE_PATTERNS):
-                            logger.debug(f"  Skipping non-government channel: {channel_title}")
+                            logger.debug(f"  ❌ Excluding non-government channel: {channel_title}")
+                            continue
+                    
+                    # SECOND: Check if channel is verified in LocalView (auto-include)
+                    in_localview = item.get('in_localview', False)
+                    if in_localview:
+                        logger.debug(f"  ✓ Including LocalView channel: {channel_title}")
+                        # This is a verified government channel, include it
+                    else:
+                        # NOT in LocalView - need additional validation
+                        
+                        # Check policy_score (only include if > 0)
+                        policy_score = item.get('policy_score', 0)
+                        
+                        # Check if title contains government keywords
+                        has_govt_keyword = False
+                        if channel_title:
+                            title_lower = channel_title.lower()
+                            has_govt_keyword = any(keyword in title_lower for keyword in GOVERNMENT_KEYWORDS)
+                        
+                        # ONLY include if policy_score > 0 OR has government keywords
+                        if policy_score == 0 and not has_govt_keyword:
+                            logger.debug(f"  ⏭️  Skipping non-government channel: {channel_title} (policy_score={policy_score}, no govt keywords)")
+                            continue
+                        
+                        if policy_score > 0 or has_govt_keyword:
+                            logger.debug(f"  ✓ Including government channel: {channel_title} (policy_score={policy_score})")
+                        else:
+                            # Neither policy_score nor keywords indicate government
+                            logger.debug(f"  ⏭️  Skipping unverified channel: {channel_title}")
                             continue
                     
                     # Determine channel type
@@ -828,17 +886,24 @@ class YouTubeEventsLoader:
         except VideoUnavailable:
             logger.debug(f"    Video {video_id} unavailable")
             return None
+        except IpBlocked:
+            # IP is blocked - don't make more requests with yt-dlp!
+            logger.warning(f"    ⚠️ IP blocked by YouTube for {video_id}")
+            raise Exception(f"RATE_LIMITED: IP blocked by YouTube")
         except (NoTranscriptFound, Exception) as e:
-            # Fall back to yt-dlp for other errors
+            # Fall back to yt-dlp ONLY if enabled and not rate limited
             error_msg = str(e)
             # Check for rate limiting
             if '429' in error_msg or 'Too Many Requests' in error_msg:
                 logger.warning(f"    ⚠️ Rate limited (YouTube API) for {video_id}")
                 # Signal rate limit to caller
                 raise Exception(f"RATE_LIMITED: {error_msg}")
-            else:
+            elif self.use_ytdlp_fallback:
                 logger.debug(f"    youtube_transcript_api failed for {video_id}, trying yt-dlp fallback...")
-            return self.fetch_transcript_ytdlp(video_id)
+                return self.fetch_transcript_ytdlp(video_id)
+            else:
+                logger.debug(f"    youtube_transcript_api failed for {video_id}, yt-dlp fallback disabled")
+                return None
     
     def insert_events(self, events: List[Dict[str, Any]], batch_size: int = 500) -> int:
         """Insert events into events_search table."""
@@ -1264,6 +1329,12 @@ def main():
     )
     
     parser.add_argument(
+        '--no-ytdlp-fallback',
+        action='store_true',
+        help='Disable yt-dlp VTT fallback for transcripts (reduces API calls to YouTube, use if getting IP blocked)'
+    )
+    
+    parser.add_argument(
         '--transcript-delay',
         type=float,
         default=2.0,
@@ -1292,7 +1363,8 @@ def main():
         days_lookback=args.days,
         fetch_transcripts=not args.skip_transcripts,
         force_full_fetch=args.force,
-        transcript_delay=args.transcript_delay
+        transcript_delay=args.transcript_delay,
+        use_ytdlp_fallback=not args.no_ytdlp_fallback
     )
     
     try:
