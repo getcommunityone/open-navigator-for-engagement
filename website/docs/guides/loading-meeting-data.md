@@ -154,7 +154,7 @@ data/gold/
 ├── states/
 │   ├── AL/
 │   │   ├── events_events.parquet          # OpenStates legislative events
-│   │   ├── events_event_participants.parquet
+│   │   ├── events_participants.parquet
 │   │   ├── meetings_local.parquet         # LocalView municipal meetings
 │   │   └── contacts_officials.parquet     # Legislators + local officials
 │   ├── GA/

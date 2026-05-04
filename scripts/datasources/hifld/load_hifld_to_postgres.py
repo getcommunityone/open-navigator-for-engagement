@@ -250,10 +250,14 @@ def load_parquet_to_postgres(
             'name', 'address', 'city', 'state', 'zip', 'county',
             'latitude', 'longitude', 'telephone', 'website', 'source_id'
         }
-        additional_info = {
-            k: v for k, v in row.to_dict().items()
-            if k not in standard_fields and pd.notna(v)
-        }
+        additional_info = {}
+        for k, v in row.to_dict().items():
+            if k not in standard_fields and pd.notna(v):
+                # Convert Timestamp objects to strings
+                if isinstance(v, pd.Timestamp):
+                    additional_info[k] = str(v)
+                else:
+                    additional_info[k] = v
         
         record = {
             'source_id': str(row.get('source_id', '')),
@@ -267,7 +271,7 @@ def load_parquet_to_postgres(
             'latitude': float(row.get('latitude')) if pd.notna(row.get('latitude')) else None,
             'longitude': float(row.get('longitude')) if pd.notna(row.get('longitude')) else None,
             'telephone': str(row.get('telephone', ''))[:50] if pd.notna(row.get('telephone')) else None,
-            'website': str(row.get('website', ''))[:500] if pd.notna(row.get('website')) else None,
+            'website': str(row.get('website', ''))[:500] if pd.notna(row.get('website')) and str(row.get('website', '')).upper() != 'NOT AVAILABLE' else None,
             'source_dataset': dataset_name,
             'additional_info': additional_info if additional_info else None
         }

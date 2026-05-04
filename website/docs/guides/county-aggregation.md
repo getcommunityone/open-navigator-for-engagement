@@ -113,7 +113,7 @@ SELECT
   z.state_fips,
   COUNT(DISTINCT n.ein) as nonprofit_count,
   SUM(n.revenue) as total_revenue
-FROM nonprofits_search n
+FROM organizations_nonprofit_search n
 JOIN zip_county_mapping z ON n.zip_code = z.zcta
 GROUP BY z.county_name, z.state_fips
 ORDER BY nonprofit_count DESC;
@@ -206,7 +206,7 @@ SELECT
     z.county_name,
     COUNT(DISTINCT n.ein) as nonprofit_count,
     ROUND(COUNT(DISTINCT n.ein)::numeric / c.population * 100000, 2) as nonprofits_per_100k
-FROM nonprofits_search n
+FROM organizations_nonprofit_search n
 JOIN zip_county_mapping z ON n.zip_code = z.zcta
 JOIN (
     SELECT county, state, SUM(population) as population

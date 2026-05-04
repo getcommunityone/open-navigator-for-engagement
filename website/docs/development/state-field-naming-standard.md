@@ -185,7 +185,7 @@ Based on current schema audit (2026-05-03):
 | `jurisdictions_search` | `state` (2-char) | ✅ Yes |
 | `contacts_search` | `state` (2-char) | ✅ Yes |
 | `events_search` | `state` (2-char) | ✅ Yes |
-| `nonprofits_search` | `state` (2-char) | ✅ Yes |
+| `organizations_nonprofit_search` | `state` (2-char) | ✅ Yes |
 | `bills_search` | `state` (2-char) | ✅ Yes |
 | `bills_map_aggregates` | `state_code` (2-char) | ✅ Needs `state` added |
 | `zip_county_mapping` | `state_abbr` (2-char) | ✅ Rename to `state_code` |

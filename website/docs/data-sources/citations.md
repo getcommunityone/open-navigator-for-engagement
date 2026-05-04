@@ -1527,30 +1527,40 @@ Identify churches with active health ministries in Tuscaloosa, AL that provide f
 
 ### Homeland Infrastructure Foundation-Level Data (HIFLD)
 
+> **⚠️ 2026 Update:** The HIFLD Open portal (hifld-geoplatform.opendata.arcgis.com) has been officially sunsetted. Data has migrated to the Data Rescue Project (portal.datarescueproject.org), ArcGIS Online mirrors, and USGS re-indexing.
+
 **Organization:** U.S. Department of Homeland Security (DHS)  
 **What we use:** Geospatial databases of critical infrastructure and community resources for mapping service locations and identifying gaps.
 
-- **Source:** https://hifld-geoplatform.opendata.arcgis.com/
-- **API Access:** https://www.arcgis.com (datasets accessible via ArcGIS Online)
+- **Legacy Source:** ~~https://hifld-geoplatform.opendata.arcgis.com/~~ (Sunset)
+- **New Sources:** 
+  - https://portal.datarescueproject.org/ (Rescued datasets)
+  - https://www.arcgis.com (Re-indexed datasets)
 - **Format:** Shapefile, GeoJSON, CSV, Parquet
 - **License:** Public Domain (U.S. Government)
 
-**Available Datasets:**
+**Currently Loaded (2026):**
 
-| Infrastructure Type | Item ID | Record Count | Description |
-|---------------------|---------|--------------|-------------|
-| **Law Enforcement** | `333a74c8e9c64cb6870689d31e8836af` | 23,486 | Police stations, sheriff offices, correctional facilities |
-| **Places of Worship** | [Find on HIFLD Portal](https://hifld-geoplatform.opendata.arcgis.com/) | 350,000+ | Churches, mosques, synagogues, temples |
-| **Schools** | [Find on HIFLD Portal](https://hifld-geoplatform.opendata.arcgis.com/) | Varies | K-12 schools, universities, educational facilities |
-| **Hospitals** | [Find on HIFLD Portal](https://hifld-geoplatform.opendata.arcgis.com/) | Varies | Hospitals, urgent care, medical centers |
-| **Emergency Services** | See Law Enforcement above | 23,486 | Fire stations, EMS, emergency operations centers |
-| **Government Buildings** | [Find on HIFLD Portal](https://hifld-geoplatform.opendata.arcgis.com/) | Varies | City halls, courthouses, federal buildings |
+| Infrastructure Type | Item ID | Record Count | Portal | Status |
+|---------------------|---------|--------------|--------|--------|
+| **Places of Worship** | `495cc33ef490462ab2d8933247a66a87` | 254,742 | ArcGIS Online | ✅ Loaded |
+| **Hospitals** | `f36521f6e07f4a859e838f0ad7536898` | 7,496 | ArcGIS Online | ✅ Loaded |
+| **Law Enforcement** | `333a74c8e9c64cb6870689d31e8836af` | 46,972 | ArcGIS Online | ✅ Loaded |
 
-**How to Find Item IDs:**
-1. Visit https://hifld-geoplatform.opendata.arcgis.com/
-2. Search for the dataset you need
-3. Click on the dataset
-4. The Item ID is in the URL: `https://www.arcgis.com/home/item.html?id=ITEM_ID_HERE`
+**Available but Not Yet Loaded:**
+
+| Infrastructure Type | Identifier | Portal | Status |
+|---------------------|------------|--------|--------|
+| **Public Schools** | `hifld-open-public-schools` | Data Rescue | ⚠️ Requires different API |
+| **Private Schools** | `hifld-open-private-schools` | Data Rescue | ⚠️ Requires different API |
+| **Fire Stations** | `d33b8b5d03a84170847b48d7d4c1bdf6` | ArcGIS Online | ⚠️ Dataset format incompatible |
+| **Courthouses** | `f4007823f38c4b12b508f7b76400c0a9` | ArcGIS Online | 🔍 Proxy for gov buildings |
+
+**How to Find Item IDs (2026):**
+1. **ArcGIS Online**: Search https://www.arcgis.com/home/search.html for "HIFLD [dataset name]"
+2. Click on the dataset
+3. The Item ID is in the URL: `https://www.arcgis.com/home/item.html?id=ITEM_ID_HERE`
+4. **Data Rescue Project**: Visit https://portal.datarescueproject.org/ (uses slug identifiers, not Item IDs)
 
 **Common Fields Across Datasets:**
 - NAME - Facility name
@@ -1568,33 +1578,28 @@ Identify churches with active health ministries in Tuscaloosa, AL that provide f
 4. **Partnership outreach** - Locate facilities for collaboration opportunities
 5. **Emergency planning** - Understand infrastructure distribution
 
-**Automated Download:**
+**Automated Download (ArcGIS Online datasets):**
 ```bash
-# Download Law Enforcement dataset (GeoJSON with geometry)
+# Download Places of Worship (254,742 records)
 python scripts/datasources/hifld/download_arcgis_dataset.py \
-  --item-id 333a74c8e9c64cb6870689d31e8836af \
-  --format GeoJSON
+  --item-id 495cc33ef490462ab2d8933247a66a87 \
+  --to-parquet
 
-# Download as CSV (no geometry, lighter file size)
+# Download Hospitals (7,496 records)
 python scripts/datasources/hifld/download_arcgis_dataset.py \
-  --item-id 333a74c8e9c64cb6870689d31e8836af \
-  --format CSV
+  --item-id f36521f6e07f4a859e838f0ad7536898 \
+  --to-parquet
 
-# Download and convert to Parquet (optimized for data analysis)
+# Download Law Enforcement (46,972 records)
 python scripts/datasources/hifld/download_arcgis_dataset.py \
   --item-id 333a74c8e9c64cb6870689d31e8836af \
   --to-parquet
 
-# Just get metadata to verify dataset before downloading
-python scripts/datasources/hifld/download_arcgis_dataset.py \
-  --item-id 333a74c8e9c64cb6870689d31e8836af \
-  --metadata-only
-
-# Download other datasets (replace Item ID)
-python scripts/datasources/hifld/download_arcgis_dataset.py \
-  --item-id YOUR_ITEM_ID_HERE \
-  --to-parquet
+# Load all downloaded datasets to PostgreSQL
+python scripts/datasources/hifld/load_hifld_to_postgres.py
 ```
+
+**Data Rescue Project datasets** (Public/Private Schools) require a different download approach and are not yet supported by the automated scripts.
 
 **Dependencies:**
 ```bash
@@ -1607,17 +1612,21 @@ pip install arcgis geopandas loguru
 **Dataset-Specific Citations:**
 ```
 # Law Enforcement
-"HIFLD: Local Law Enforcement Locations. U.S. Department of Homeland Security. 
-https://www.arcgis.com/home/item.html?id=333a74c8e9c64cb6870689d31e8836af"
+"HIFLD: Local Law Enforcement Locations. U.S. Department of Homeland Security. Accessed via ArcGIS Online and Data Rescue Project, 2026."
 
-# Places of Worship (when Item ID is found)
-"HIFLD: Places of Worship. U.S. Department of Homeland Security. 
-https://hifld-geoplatform.opendata.arcgis.com/"
+**Dataset-Specific Citations:**
 ```
+# Places of Worship (254,742 locations)
+"HIFLD: All Places of Worship. U.S. Department of Homeland Security. 
+https://www.arcgis.com/home/item.html?id=495cc33ef490462ab2d8933247a66a87"
 
----
+# Hospitals (7,496 locations)
+"HIFLD: Hospitals. U.S. Department of Homeland Security. 
+https://www.arcgis.com/home/item.html?id=f36521f6e07f4a859e838f0ad7536898"
 
-### National Congregations Study (NCS)
+# Law Enforcement (46,972 locations)
+"HIFLD: Local Law Enforcement Locations. U.S. Department of Homeland Security. 
+https://www.arcgis.com/home/item.html?id=333a74c8e9c64cb6870689d31e8836af
 
 **Organization:** Duke University  
 **What we use:** Representative survey of U.S. congregations to understand social service provision, health programs, and civic engagement patterns.

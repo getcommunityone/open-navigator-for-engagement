@@ -1,16 +1,23 @@
 # HIFLD Data Scripts
 
-Scripts for downloading and processing Homeland Infrastructure Foundation-Level Data (HIFLD) from the U.S. Department of Homeland Security.
+> **⚠️ IMPORTANT (2026 Update):** The HIFLD Open portal (hifld-geoplatform.opendata.arcgis.com) has been officially sunsetted. Data has been migrated to:
+> - **Data Rescue Project**: portal.datarescueproject.org (for Public/Private Schools and other rescued datasets)
+> - **ArcGIS Online**: Specialized mirrors and re-indexed datasets
+> - **USGS Mirrors**: Some infrastructure datasets maintained by USGS
 
 ## Overview
 
-HIFLD provides geospatial data on critical infrastructure and community resources including:
-- **Places of worship** - 350,000+ churches, mosques, synagogues, temples
-- **Schools and educational facilities** - K-12 schools, universities, vocational centers
-- **Hospitals and healthcare facilities** - Hospitals, urgent care centers, clinics
-- **Emergency services** - Law enforcement (23,486 locations), fire stations, EMS
-- **Government buildings** - City halls, courthouses, federal facilities
-- **And more** - Libraries, post offices, airports, prisons, etc.
+HIFLD (Homeland Infrastructure Foundation-Level Data) provided geospatial data on critical infrastructure and community resources. Following the portal sunset, data is now distributed across multiple sources:
+
+### ✅ Currently Accessible (via these scripts)
+- **Places of worship** - 254,742+ churches, mosques, synagogues, temples
+- **Hospitals and healthcare facilities** - 7,496+ hospitals, urgent care centers, clinics
+- **Law enforcement** - 46,972+ locations (police, sheriff, special jurisdiction)
+
+### ⚠️ Requires Alternative Download Methods
+- **Schools** - Now on Data Rescue Project (requires different API)
+- **Fire Stations** - Available but dataset structure incompatible with current scripts
+- **Government buildings** - May be available as "Courthouses" dataset
 
 **Data is public domain** (U.S. Government work) with no usage restrictions.
 
@@ -65,25 +72,35 @@ python scripts/datasources/hifld/download_arcgis_dataset.py \
 
 ## Finding Dataset IDs
 
-1. Go to https://hifld-geoplatform.opendata.arcgis.com/
-2. Search for your dataset (e.g., "hospitals", "schools", "places of worship")
-3. Click on the dataset you want
-4. Look at the URL - the Item ID is at the end:
-   ```
-   https://www.arcgis.com/home/item.html?id=YOUR_ITEM_ID_HERE
-   ```
-5. Copy that Item ID and use it with the download script
+### 2026 Updated Sources
 
-**Available Datasets:**
+Due to the HIFLD portal sunset, datasets are now scattered across multiple portals:
 
-| Dataset | Item ID | Count | Status |
-|---------|---------|-------|--------|
-| Law Enforcement Locations | `333a74c8e9c64cb6870689d31e8836af` | 23,486 | ✅ Verified |
-| Places of Worship | [Find Item ID](https://hifld-geoplatform.opendata.arcgis.com/) | 350,000+ | 🔍 Search for ID |
-| Schools | [Find Item ID](https://hifld-geoplatform.opendata.arcgis.com/) | Varies | 🔍 Search for ID |
-| Hospitals | [Find Item ID](https://hifld-geoplatform.opendata.arcgis.com/) | Varies | 🔍 Search for ID |
-| Fire Stations | [Find Item ID](https://hifld-geoplatform.opendata.arcgis.com/) | Varies | 🔍 Search for ID |
-| Government Buildings | [Find Item ID](https://hifld-geoplatform.opendata.arcgis.com/) | Varies | 🔍 Search for ID |
+**1. ArcGIS Online** (arcgis.com)
+- Search at https://www.arcgis.com/home/search.html
+- Look for datasets tagged with "HIFLD"
+- Copy Item ID from URL
+
+**2. Data Rescue Project** (portal.datarescueproject.org)
+- Rescued datasets from old HIFLD portal
+- Uses different identifier format (slugs, not Item IDs)
+- **Not compatible with current download scripts**
+
+**3. USGS and State Mirrors**
+- Some datasets re-hosted by USGS or state agencies
+- May have updated Item IDs
+
+### Available Datasets (2026)
+
+| Dataset | Item ID | Portal | Count | Status |
+|---------|---------|--------|-------|--------|
+| **Places of Worship** | `495cc33ef490462ab2d8933247a66a87` | ArcGIS Online | 254,742 | ✅ Working |
+| **Hospitals** | `f36521f6e07f4a859e838f0ad7536898` | ArcGIS Online | 7,496 | ✅ Working |
+| **Law Enforcement** | `333a74c8e9c64cb6870689d31e8836af` | ArcGIS Online | 46,972 | ✅ Working |
+| **Fire Stations** | `d33b8b5d03a84170847b48d7d4c1bdf6` | ArcGIS Online | Unknown | ⚠️ API incompatible |
+| **Public Schools** | `hifld-open-public-schools` | Data Rescue | Unknown | ⚠️ Requires different API |
+| **Private Schools** | `hifld-open-private-schools` | Data Rescue | Unknown | ⚠️ Requires different API |
+| **Courthouses** | `f4007823f38c4b12b508f7b76400c0a9` | ArcGIS Online | Unknown | 🔍 Not verified |
 
 ## Data Output
 

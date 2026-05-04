@@ -269,7 +269,7 @@ state_name VARCHAR(50)     -- Use state instead
    - Connection: `postgresql://postgres:password@localhost:5433/openstates`
 
 2. **Neon PostgreSQL** (cloud - for production)
-   - Used for `contacts_search`, `jurisdictions_search`, `nonprofits_search`
+   - Used for `contacts_search`, `jurisdictions_search`, `organizations_nonprofit_search`
    - Connection via `NEON_DATABASE_URL` or `NEON_DATABASE_URL_DEV`
    - Managed via `neon/migrate.py` script
 

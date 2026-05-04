@@ -1,3 +1,7 @@
+---
+sidebar_position: 5
+---
+
 # Neon Database Deployment Checklist
 
 ## ✅ Completed
@@ -198,5 +202,3 @@ After successful deployment:
 
 - **Neon Support:** https://neon.tech/docs
 - **asyncpg Docs:** https://magicstack.github.io/asyncpg
-- **Migration Script:** `neon/migrate.py` (has detailed logs)
-- **Full Guide:** `neon/README.md`

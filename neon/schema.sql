@@ -5,7 +5,7 @@
 
 -- Drop existing tables if rerunning (careful in production!)
 DROP TABLE IF EXISTS stats_aggregates CASCADE;
-DROP TABLE IF EXISTS nonprofits_search CASCADE;
+DROP TABLE IF EXISTS organizations_nonprofit_search CASCADE;
 DROP TABLE IF EXISTS jurisdictions_search CASCADE;
 DROP TABLE IF EXISTS contacts_search CASCADE;
 DROP TABLE IF EXISTS events_search CASCADE;
@@ -60,7 +60,7 @@ CREATE INDEX idx_stats_state_city ON stats_aggregates(state_code, city) WHERE ci
 -- ============================================================================
 
 -- Nonprofits search table (most frequently searched)
-CREATE TABLE nonprofits_search (
+CREATE TABLE organizations_nonprofit_search (
     ein VARCHAR(20) PRIMARY KEY,
     name TEXT NOT NULL,
     street_address TEXT,
@@ -102,13 +102,13 @@ CREATE TABLE nonprofits_search (
 );
 
 -- Full-text search indexes
-CREATE INDEX idx_nonprofits_name_search ON nonprofits_search USING GIN (to_tsvector('english', name));
-CREATE INDEX idx_nonprofits_state_code ON nonprofits_search(state_code);
-CREATE INDEX idx_nonprofits_state ON nonprofits_search(state);
-CREATE INDEX idx_nonprofits_city_state ON nonprofits_search(city, state_code);
-CREATE INDEX idx_nonprofits_county ON nonprofits_search(county);
-CREATE INDEX idx_nonprofits_ntee ON nonprofits_search(ntee_code);
-CREATE INDEX idx_nonprofits_zip ON nonprofits_search(zip_code);
+CREATE INDEX idx_organizations_nonprofit_name_search ON organizations_nonprofit_search USING GIN (to_tsvector('english', name));
+CREATE INDEX idx_organizations_nonprofit_state_code ON organizations_nonprofit_search(state_code);
+CREATE INDEX idx_organizations_nonprofit_state ON organizations_nonprofit_search(state);
+CREATE INDEX idx_organizations_nonprofit_city_state ON organizations_nonprofit_search(city, state_code);
+CREATE INDEX idx_organizations_nonprofit_county ON organizations_nonprofit_search(county);
+CREATE INDEX idx_organizations_nonprofit_ntee ON organizations_nonprofit_search(ntee_code);
+CREATE INDEX idx_organizations_nonprofit_zip ON organizations_nonprofit_search(zip_code);
 
 
 -- Jurisdictions search table (cities, counties, townships)
@@ -400,7 +400,7 @@ SELECT
     ntee_description,
     revenue,
     assets
-FROM nonprofits_search
+FROM organizations_nonprofit_search
 WHERE exempt_organization_status_code IS NULL 
    OR exempt_organization_status_code NOT IN ('T', 'X')  -- Exclude terminated
 ORDER BY revenue DESC NULLS LAST;
@@ -432,7 +432,7 @@ SELECT
     city,
     revenue,
     ROW_NUMBER() OVER (PARTITION BY state ORDER BY revenue DESC NULLS LAST) as rank
-FROM nonprofits_search
+FROM organizations_nonprofit_search
 WHERE revenue IS NOT NULL
 ORDER BY state, rank;
 

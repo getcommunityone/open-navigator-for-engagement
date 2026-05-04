@@ -40,7 +40,7 @@ async def update_national_stats():
         
         # Count nonprofits
         nonprofits_count = await conn.fetchval(
-            "SELECT COUNT(*) FROM nonprofits_search"
+            "SELECT COUNT(*) FROM organizations_nonprofit_search"
         )
         
         # Sum financials (handle NULL values)
@@ -48,7 +48,7 @@ async def update_national_stats():
             SELECT 
                 COALESCE(SUM(revenue), 0) as total_revenue,
                 COALESCE(SUM(assets), 0) as total_assets
-            FROM nonprofits_search
+            FROM organizations_nonprofit_search
             WHERE revenue IS NOT NULL OR assets IS NOT NULL
         """)
         
@@ -104,7 +104,7 @@ async def update_state_stats(conn):
     # Get all states with data
     states = await conn.fetch("""
         SELECT DISTINCT state 
-        FROM nonprofits_search 
+        FROM organizations_nonprofit_search 
         WHERE state IS NOT NULL 
         ORDER BY state
     """)
@@ -126,7 +126,7 @@ async def update_state_stats(conn):
         
         # Count nonprofits
         nonprofits_count = await conn.fetchval(
-            "SELECT COUNT(*) FROM nonprofits_search WHERE state = $1",
+            "SELECT COUNT(*) FROM organizations_nonprofit_search WHERE state = $1",
             state
         )
         
@@ -135,7 +135,7 @@ async def update_state_stats(conn):
             SELECT 
                 COALESCE(SUM(revenue), 0) as total_revenue,
                 COALESCE(SUM(assets), 0) as total_assets
-            FROM nonprofits_search
+            FROM organizations_nonprofit_search
             WHERE state = $1
         """, state)
         

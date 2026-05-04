@@ -442,7 +442,7 @@ async def search_organizations_pg(
                 assets,
                 income,
                 tax_period
-            FROM nonprofits_search
+            FROM organizations_nonprofit_search
             WHERE {where_sql}
             ORDER BY {order_by}
             LIMIT ${param_idx}

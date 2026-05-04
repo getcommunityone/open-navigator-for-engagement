@@ -7,9 +7,9 @@ OLD NAMING → NEW NAMING:
 - meetings_calendar.parquet → events_events.parquet (merged)
 - meetings_transcripts.parquet → events_event_documents.parquet
 - meetings_topics.parquet → events_event_agenda_items.parquet
-- meetings_demographics.parquet → events_event_participants.parquet
+- meetings_demographics.parquet → events_participants.parquet
 - meetings_decisions.parquet → events_event_bills.parquet
-- contacts_meeting_attendance.parquet → events_event_participants.parquet (merged)
+- contacts_meeting_attendance.parquet → events_participants.parquet (merged)
 
 This script will:
 1. Find all old-named files in data/gold/
@@ -37,16 +37,17 @@ RENAME_MAP = {
     "meetings_calendar.parquet": "events.parquet",  # Will be merged if both exist
     "meetings_transcripts.parquet": "event_documents.parquet",
     "meetings_topics.parquet": "event_agenda_items.parquet",
-    "meetings_demographics.parquet": "event_participants.parquet",
+    "meetings_demographics.parquet": "events_participants.parquet",
     "meetings_decisions.parquet": "event_bills.parquet",
-    "contacts_meeting_attendance.parquet": "event_participants.parquet",  # Merge with participants
-    # Rename old events_event_* to new event_* naming
+    "contacts_meeting_attendance.parquet": "events_participants.parquet",  # Merge with participants
+    # Rename old events_event_* to new events_participants naming
     "events_events.parquet": "events.parquet",
     "events_event_documents.parquet": "event_documents.parquet",
-    "events_event_participants.parquet": "event_participants.parquet",
+    "events_event_participants.parquet": "events_participants.parquet",
     "events_event_agenda_items.parquet": "event_agenda_items.parquet",
     "events_event_bills.parquet": "event_bills.parquet",
     "events_event_media.parquet": "event_media.parquet",
+    "event_participants.parquet": "events_participants.parquet",  # Final standardization
 }
 
 

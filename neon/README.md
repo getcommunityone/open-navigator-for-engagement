@@ -67,7 +67,7 @@ neon/
    - Financials: total revenue, total assets
    - **Primary use**: Dashboard `/api/stats` endpoint
 
-2. **`nonprofits_search`** - Searchable nonprofit data
+2. **`organizations_nonprofit_search`** - Searchable nonprofit data
    - Full-text search on name
    - Geographic filters (state, city, county)
    - Financial data (revenue, assets)
@@ -149,7 +149,7 @@ python neon/migrate.py
 📊 Migration Summary:
 ============================================================
   stats_aggregates               2 records  (2026-04-30 ...)
-  nonprofits_search         45,123 records  (2026-04-30 ...)
+  organizations_nonprofit_search         45,123 records  (2026-04-30 ...)
   reference_ntee_codes          32 records  (2026-04-30 ...)
   reference_causes             450 records  (2026-04-30 ...)
 ============================================================
@@ -166,7 +166,7 @@ psql "postgresql://neondb_owner:npg_6WMcFKpIgj3T@ep-noisy-fire-anrnmxxy-pooler.c
 # Test queries:
 SELECT * FROM stats_aggregates WHERE level = 'national';
 SELECT * FROM stats_aggregates WHERE state = 'MA';
-SELECT name, city, revenue FROM nonprofits_search WHERE state = 'MA' LIMIT 5;
+SELECT name, city, revenue FROM organizations_nonprofit_search WHERE state = 'MA' LIMIT 5;
 SELECT * FROM reference_ntee_codes LIMIT 5;
 ```
 

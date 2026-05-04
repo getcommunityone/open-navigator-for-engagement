@@ -1,3 +1,7 @@
+---
+sidebar_position: 4
+---
+
 # Meeting Data Loading Summary
 
 ## 📊 Current Status
@@ -204,12 +208,11 @@ al_attendance = attendance.filter(pl.col('jurisdiction').str.contains('AL'))
 print(f"Alabama meeting attendance records: {len(al_attendance):,}")
 ```
 
-## 📚 Documentation
+## 📚 Related Documentation
 
-- **Full Guide**: [website/docs/guides/loading-meeting-data.md](../website/docs/guides/loading-meeting-data.md)
-- **LocalView Integration**: [docs/LOCALVIEW_INTEGRATION_GUIDE.md](LOCALVIEW_INTEGRATION_GUIDE.md)
-- **Contacts Workflow**: [docs/CONTACTS_MEETINGS_WORKFLOW.md](CONTACTS_MEETINGS_WORKFLOW.md)
-- **Data Sources**: [docs/DATA_SOURCES.md](DATA_SOURCES.md)
+- **LocalView Integration**: See full integration guide in docs
+- **Contacts Workflow**: Contact management documentation
+- **Data Sources**: Complete data sources overview
 
 ## ❓ FAQ
 

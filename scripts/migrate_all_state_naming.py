@@ -8,7 +8,7 @@ This script migrates ALL tables to use the standard naming convention:
 
 Tables to migrate:
 - stats_aggregates
-- nonprofits_search
+- organizations_nonprofit_search
 - contacts_search
 - events_search
 - bills_search
@@ -38,7 +38,7 @@ STATE_NAMES = {
 
 TABLES_TO_MIGRATE = [
     'stats_aggregates',
-    'nonprofits_search',
+    'organizations_nonprofit_search',
     'contacts_search',
     'events_search',
     'bills_search'

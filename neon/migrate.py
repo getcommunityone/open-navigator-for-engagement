@@ -328,7 +328,7 @@ def insert_stat(cursor, level, state, county, city, **metrics):
     ))
 
 
-def load_nonprofits_search(conn, limit_states: Optional[list] = None):
+def load_organizations_nonprofit_search(conn, limit_states: Optional[list] = None):
     """
     Load nonprofits into search table
     Args:
@@ -377,7 +377,7 @@ def load_nonprofits_search(conn, limit_states: Optional[list] = None):
         total_loaded = 0
     
     logger.success(f"✅ Loaded {total_loaded:,} nonprofits into search table")
-    record_sync(conn, 'nonprofits_search', total_loaded)
+    record_sync(conn, 'organizations_nonprofit_search', total_loaded)
     return True
 
 
@@ -435,7 +435,7 @@ def load_nonprofits_from_df(conn, df, state_override=None):
     # Batch insert
     if records:
         execute_values(cursor, """
-            INSERT INTO nonprofits_search 
+            INSERT INTO organizations_nonprofit_search 
             (ein, name, street_address, city, state_code, state, zip_code, county,
              ntee_code, ntee_description, subsection_code, affiliation_code, classification_code,
              revenue, assets, income, ruling_date, foundation_code, pf_filing_requirement_code,
@@ -1028,7 +1028,7 @@ def main():
         # Step 4: Load nonprofit search data (start with MA as example)
         logger.info("⚠️  Loading only MA nonprofits (full load would be 3M+ records)")
         logger.info("   To load all states, modify limit_states parameter")
-        if not load_nonprofits_search(conn, limit_states=['MA']):
+        if not load_organizations_nonprofit_search(conn, limit_states=['MA']):
             return 1
         
         # Step 5: Load jurisdictions (all jurisdictions - reference data)

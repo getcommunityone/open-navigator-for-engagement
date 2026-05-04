@@ -139,7 +139,7 @@ class Cause(Base):
 
 class Official(Base):
     """Public officials (elected, appointed) - renamed from Leader to match OpenStates"""
-    __tablename__ = "officials"
+    __tablename__ = "contacts_officials"
     
     id = Column(Integer, primary_key=True, index=True)
     ocd_person_id = Column(String(255), unique=True, index=True, nullable=True)  # OpenCivicData ID
@@ -221,14 +221,14 @@ class UserFollow(Base):
 
 class OfficialFollow(Base):
     """User following an official (renamed from LeaderFollow)"""
-    __tablename__ = "official_follows"
+    __tablename__ = "contact_official_follows"
     __table_args__ = (
-        UniqueConstraint('user_id', 'official_id', name='unique_official_follow'),
+        UniqueConstraint('user_id', 'official_id', name='unique_contact_official_follow'),
     )
-    
+
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey('users.id', ondelete='CASCADE'), nullable=False, index=True)
-    official_id = Column(Integer, ForeignKey('officials.id', ondelete='CASCADE'), nullable=False, index=True)
+    official_id = Column(Integer, ForeignKey('contacts_officials.id', ondelete='CASCADE'), nullable=False, index=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     
     def __repr__(self):

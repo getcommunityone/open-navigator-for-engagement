@@ -28,7 +28,7 @@ sidebar_position: 5
 ### 1. Database Schema (neon/schema.sql)
 All 7 search tables updated with `state_code` + `state` columns:
 - ✅ `stats_aggregates`
-- ✅ `nonprofits_search`
+- ✅ `organizations_nonprofit_search`
 - ✅ `jurisdictions_search`
 - ✅ `jurisdictions_details_search`
 - ✅ `contacts_search`
@@ -64,7 +64,7 @@ All existing database tables migrated using `scripts/migrate_all_state_naming.py
 - ✅ `contacts_local_officials.parquet`
 - ✅ `contacts_officials.parquet`
 - ✅ `events_documents.parquet`
-- ✅ `event_participants.parquet`
+- ✅ `events_participants.parquet`
 - ✅ `jurisdictions_cities.parquet` (was using 'USPS')
 - ✅ `jurisdictions_counties.parquet` (was using 'USPS')
 - ✅ `jurisdictions_details.parquet` (already migrated previously)
@@ -91,7 +91,7 @@ All original files backed up with `_backup` suffix (e.g., `bills_bills_backup.pa
 All load functions updated to use new column names:
 
 **Updated Functions:**
-- ✅ `load_nonprofits_search()` - Uses `state_code` column from parquet, inserts both `state_code` and `state` to database
+- ✅ `load_organizations_nonprofit_search()` - Uses `state_code` column from parquet, inserts both `state_code` and `state` to database
 - ✅ `load_contacts_search()` - All three contact sources (state legislators, local officials, nonprofit officers) updated
 - ✅ `load_events_search()` - Inserts both `state_code` and `state`
 - ✅ `load_bills_search()` - Inserts both `state_code` and `state`
@@ -145,7 +145,7 @@ Both scripts are **idempotent** and can be run multiple times safely.
 -- Verify columns exist
 SELECT column_name, data_type 
 FROM information_schema.columns 
-WHERE table_name = 'nonprofits_search' 
+WHERE table_name = 'organizations_nonprofit_search' 
 AND column_name IN ('state_code', 'state');
 
 -- Should return:

@@ -51,7 +51,7 @@ data/gold/
 ├── contacts_officials.parquet          (461 KB)
 ├── domains_gsa_domains.parquet         (596 KB)
 ├── events_documents.parquet             (366 MB)
-├── event_participants.parquet          (808 KB)
+├── events_participants.parquet          (808 KB)
 ├── events.parquet                      (1.8 MB)
 ├── jurisdictions_cities.parquet        (2.0 MB)
 ├── jurisdictions_counties.parquet      (244 KB)

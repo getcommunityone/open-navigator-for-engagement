@@ -40,7 +40,7 @@ python scripts/migrations/migrate_state_naming.py --all
 - `jurisdictions_search`
 - `contacts_search`
 - `events_search`
-- `nonprofits_search`
+- `organizations_nonprofit_search`
 - `bills_search`
 - `bills_map_aggregates`
 - `jurisdictions_details_search`
