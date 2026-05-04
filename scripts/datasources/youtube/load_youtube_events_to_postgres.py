@@ -93,6 +93,7 @@ class YouTubeEventsLoader:
         # Ensure tables and columns exist
         self._add_jurisdiction_id_column()
         self._create_events_text_search_table()
+        self._create_events_channels_search_table()
     
     def _add_jurisdiction_id_column(self):
         """Add jurisdiction_id and channel_id columns to events_search if they don't exist."""
@@ -125,6 +126,30 @@ class YouTubeEventsLoader:
             cursor.execute("""
                 ALTER TABLE events_search
                 ADD COLUMN IF NOT EXISTS like_count INTEGER;
+            """)
+            
+            # Add language column
+            cursor.execute("""
+                ALTER TABLE events_search
+                ADD COLUMN IF NOT EXISTS language VARCHAR(10);
+            """)
+            
+            # Add channel_type column
+            cursor.execute("""
+                ALTER TABLE events_search
+                ADD COLUMN IF NOT EXISTS channel_type VARCHAR(50);
+            """)
+            
+            # Add location_description column
+            cursor.execute("""
+                ALTER TABLE events_search
+                ADD COLUMN IF NOT EXISTS location_description TEXT;
+            """)
+            
+            # Add channel_url column
+            cursor.execute("""
+                ALTER TABLE events_search
+                ADD COLUMN IF NOT EXISTS channel_url TEXT;
             """)
             
             # Create index for jurisdiction_id
@@ -166,7 +191,7 @@ class YouTubeEventsLoader:
             """)
             
             self.conn.commit()
-            logger.success("✓ Ensured jurisdiction_id, channel_id, view_count, duration_minutes, like_count columns exist")
+            logger.success("✓ Ensured jurisdiction_id, channel_id, metrics, language, location, and channel_url columns exist")
             
         except Exception as e:
             self.conn.rollback()
@@ -245,6 +270,153 @@ class YouTubeEventsLoader:
         finally:
             cursor.close()
     
+    def _create_events_channels_search_table(self):
+        """Create events_channels_search table if it doesn't exist."""
+        cursor = self.conn.cursor()
+        
+        try:
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS events_channels_search (
+                    id SERIAL PRIMARY KEY,
+                    channel_id VARCHAR(50) UNIQUE NOT NULL,
+                    channel_url TEXT NOT NULL,
+                    channel_title VARCHAR(500),
+                    channel_type VARCHAR(50),
+                    subscriber_count INTEGER,
+                    video_count INTEGER,
+                    
+                    -- Source tracking
+                    in_localview BOOLEAN DEFAULT FALSE,
+                    in_jurisdictions_details BOOLEAN DEFAULT FALSE,
+                    on_public_website BOOLEAN DEFAULT FALSE,
+                    in_wikidata BOOLEAN DEFAULT FALSE,
+                    
+                    -- Discovery metadata
+                    discovery_method VARCHAR(100),
+                    discovery_date TIMESTAMP,
+                    confidence_score FLOAT,
+                    
+                    -- Jurisdiction associations
+                    jurisdictions JSONB,
+                    
+                    -- Quality flags
+                    is_verified BOOLEAN DEFAULT FALSE,
+                    is_government BOOLEAN DEFAULT NULL,
+                    flagged_as_junk BOOLEAN DEFAULT FALSE,
+                    flag_reason TEXT,
+                    
+                    -- Metadata
+                    last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    last_video_check TIMESTAMP,
+                    notes TEXT
+                );
+            """)
+            
+            # Create indexes
+            cursor.execute("""
+                CREATE INDEX IF NOT EXISTS idx_channels_channel_id 
+                ON events_channels_search(channel_id);
+            """)
+            
+            cursor.execute("""
+                CREATE INDEX IF NOT EXISTS idx_channels_in_localview 
+                ON events_channels_search(in_localview);
+            """)
+            
+            cursor.execute("""
+                CREATE INDEX IF NOT EXISTS idx_channels_is_government 
+                ON events_channels_search(is_government);
+            """)
+            
+            cursor.execute("""
+                CREATE INDEX IF NOT EXISTS idx_channels_flagged 
+                ON events_channels_search(flagged_as_junk);
+            """)
+            
+            self.conn.commit()
+            logger.success("✓ Ensured events_channels_search table exists")
+            
+        except Exception as e:
+            self.conn.rollback()
+            logger.warning(f"Note: {e}")
+        finally:
+            cursor.close()
+    
+    def upsert_channel(
+        self,
+        channel_id: str,
+        channel_url: str,
+        channel_title: str,
+        channel_type: str,
+        jurisdiction_id: str,
+        jurisdiction_name: str,
+        state_code: str,
+        discovery_method: str = 'jurisdictions_details',
+        confidence_score: float = None
+    ):
+        """Upsert channel information into events_channels_search table."""
+        cursor = self.conn.cursor()
+        
+        try:
+            # Check if channel exists in LocalView (events with same channel_id from localview source)
+            cursor.execute("""
+                SELECT EXISTS(
+                    SELECT 1 FROM events_search 
+                    WHERE channel_id = %s AND source = 'localview'
+                )
+            """, (channel_id,))
+            in_localview = cursor.fetchone()[0]
+            
+            # Prepare jurisdiction data
+            jurisdiction_data = {
+                'jurisdiction_id': jurisdiction_id,
+                'jurisdiction_name': jurisdiction_name,
+                'state_code': state_code
+            }
+            
+            cursor.execute("""
+                INSERT INTO events_channels_search (
+                    channel_id, channel_url, channel_title, channel_type,
+                    in_localview, in_jurisdictions_details,
+                    discovery_method, discovery_date, confidence_score,
+                    jurisdictions, last_updated
+                ) VALUES (
+                    %s, %s, %s, %s,
+                    %s, TRUE,
+                    %s, CURRENT_TIMESTAMP, %s,
+                    %s::jsonb, CURRENT_TIMESTAMP
+                )
+                ON CONFLICT (channel_id) DO UPDATE SET
+                    channel_title = COALESCE(EXCLUDED.channel_title, events_channels_search.channel_title),
+                    channel_type = COALESCE(EXCLUDED.channel_type, events_channels_search.channel_type),
+                    in_localview = EXCLUDED.in_localview OR events_channels_search.in_localview,
+                    in_jurisdictions_details = TRUE,
+                    confidence_score = COALESCE(EXCLUDED.confidence_score, events_channels_search.confidence_score),
+                    jurisdictions = CASE
+                        WHEN events_channels_search.jurisdictions IS NULL THEN %s::jsonb
+                        WHEN NOT events_channels_search.jurisdictions @> %s::jsonb 
+                        THEN events_channels_search.jurisdictions || %s::jsonb
+                        ELSE events_channels_search.jurisdictions
+                    END,
+                    last_updated = CURRENT_TIMESTAMP
+            """, (
+                channel_id, channel_url, channel_title, channel_type,
+                in_localview,
+                discovery_method, confidence_score,
+                json.dumps([jurisdiction_data]),
+                json.dumps([jurisdiction_data]),
+                json.dumps([jurisdiction_data]),
+                json.dumps([jurisdiction_data])
+            ))
+            
+            self.conn.commit()
+            
+        except Exception as e:
+            self.conn.rollback()
+            logger.error(f"Error upserting channel {channel_id}: {e}")
+        finally:
+            cursor.close()
+    
     def get_jurisdictions_with_youtube(self, states_filter: Optional[List[str]] = None) -> List[Dict]:
         """Get all jurisdictions that have YouTube channels."""
         cursor = self.conn.cursor(cursor_factory=RealDictCursor)
@@ -277,10 +449,50 @@ class YouTubeEventsLoader:
         logger.info(f"Found {len(jurisdictions)} jurisdictions with YouTube channels")
         return jurisdictions
     
+    def is_channel_flagged(self, channel_id: str) -> tuple[bool, str]:
+        """Check if channel is flagged as junk in events_channels_search."""
+        cursor = self.conn.cursor()
+        
+        try:
+            cursor.execute("""
+                SELECT flagged_as_junk, flag_reason, is_government
+                FROM events_channels_search
+                WHERE channel_id = %s
+            """, (channel_id,))
+            
+            result = cursor.fetchone()
+            
+            if result:
+                flagged, reason, is_govt = result
+                if flagged:
+                    return True, reason or "Flagged as junk"
+                if is_govt == False:  # Explicitly marked as NOT government
+                    return True, "Confirmed non-government channel"
+            
+            return False, ""
+            
+        except Exception as e:
+            logger.debug(f"Error checking channel flag status: {e}")
+            return False, ""
+        finally:
+            cursor.close()
+    
     def extract_channel_ids(self, youtube_channels_json: Any) -> List[Dict[str, str]]:
-        """Extract channel IDs and metadata from youtube_channels JSONB field."""
+        """Extract channel IDs and metadata from youtube_channels JSONB field.
+        
+        Filters out non-government channels (news, entertainment, music, etc.)
+        """
         if not youtube_channels_json:
             return []
+        
+        # Exclude patterns for CLEARLY non-government channels
+        # Be conservative - only exclude obvious non-government content
+        EXCLUDE_PATTERNS = [
+            'cnn', 'fox news', 'msnbc', 'nbc news', 'abc news', 'cbs news',  # Major news networks
+            '- topic',  # YouTube auto-generated channels
+            'vevo',  # Music video platform
+            'last week tonight', 'john oliver', 'daily show', 'stephen colbert',  # Entertainment shows
+        ]
         
         channels = []
         
@@ -298,12 +510,45 @@ class YouTubeEventsLoader:
                         item.get('id')
                     )
                     
-                    if channel_id:
-                        channels.append({
-                            'channel_id': channel_id,
-                            'channel_title': item.get('channel_title') or item.get('title', ''),
-                            'channel_url': item.get('channel_url') or f"https://www.youtube.com/channel/{channel_id}"
-                        })
+                    channel_title = item.get('channel_title') or item.get('title', '')
+                    
+                    if not channel_id:
+                        continue
+                    
+                    # Check if channel is flagged in database
+                    is_flagged, flag_reason = self.is_channel_flagged(channel_id)
+                    if is_flagged:
+                        logger.debug(f"  Skipping flagged channel: {channel_title} - {flag_reason}")
+                        continue
+                    
+                    # Skip if channel title matches exclusion patterns
+                    if channel_title:
+                        title_lower = channel_title.lower()
+                        if any(pattern in title_lower for pattern in EXCLUDE_PATTERNS):
+                            logger.debug(f"  Skipping non-government channel: {channel_title}")
+                            continue
+                    
+                    # Determine channel type
+                    channel_type = 'unknown'
+                    if channel_title:
+                        title_lower = channel_title.lower()
+                        if any(word in title_lower for word in ['city', 'town', 'village', 'municipal']):
+                            channel_type = 'municipal'
+                        elif any(word in title_lower for word in ['county']):
+                            channel_type = 'county'
+                        elif any(word in title_lower for word in ['state', 'commonwealth']):
+                            channel_type = 'state'
+                        elif any(word in title_lower for word in ['school', 'district', 'education']):
+                            channel_type = 'school'
+                    
+                    # Add channel to list
+                    channel_url = item.get('channel_url') or f"https://www.youtube.com/channel/{channel_id}"
+                    channels.append({
+                        'channel_id': channel_id,
+                        'channel_title': channel_title,
+                        'channel_type': channel_type,
+                        'channel_url': channel_url
+                    })
         
         return channels
     
@@ -315,7 +560,8 @@ class YouTubeEventsLoader:
         jurisdiction_type: str,
         state_code: str,
         state: str,
-        channel_id: str
+        channel_id: str,
+        channel_type: str = 'unknown'
     ) -> Dict[str, Any]:
         """Convert YouTube video metadata to events_search record format."""
         
@@ -339,9 +585,13 @@ class YouTubeEventsLoader:
         # Use description as-is, don't append view/duration info
         description = video.get('description', '')
         
+        # Construct channel URL
+        channel_url = f"https://www.youtube.com/channel/{channel_id}" if channel_id else None
+        
         return {
             'jurisdiction_id': jurisdiction_id,
             'channel_id': channel_id,
+            'channel_url': channel_url,
             'title': video.get('title', 'Meeting Video')[:500],  # Limit length
             'description': description,
             'event_date': event_date,
@@ -352,6 +602,7 @@ class YouTubeEventsLoader:
             'state': state,
             'city': city,
             'location': None,
+            'location_description': video.get('location_description'),
             'meeting_type': video.get('meeting_type', 'YouTube Video'),
             'status': 'completed',
             'agenda_url': None,
@@ -360,6 +611,8 @@ class YouTubeEventsLoader:
             'view_count': video.get('view_count'),
             'duration_minutes': video.get('duration_minutes'),
             'like_count': video.get('like_count'),
+            'language': video.get('language', 'en'),
+            'channel_type': channel_type,
             'source': 'youtube',
             'last_updated': datetime.now(),
             'video_id': video.get('video_id')  # Store video_id for transcript linking
@@ -594,18 +847,20 @@ class YouTubeEventsLoader:
         
         insert_query = """
             INSERT INTO events_search (
-                jurisdiction_id, channel_id, title, description, event_date, event_time,
+                jurisdiction_id, channel_id, channel_url, title, description, event_date, event_time,
                 jurisdiction_name, jurisdiction_type, state_code, state, city,
-                location, meeting_type, status,
+                location, location_description, meeting_type, status,
                 agenda_url, minutes_url, video_url,
                 view_count, duration_minutes, like_count,
+                language, channel_type,
                 source, last_updated
             ) VALUES (
-                %(jurisdiction_id)s, %(channel_id)s, %(title)s, %(description)s, %(event_date)s, %(event_time)s,
+                %(jurisdiction_id)s, %(channel_id)s, %(channel_url)s, %(title)s, %(description)s, %(event_date)s, %(event_time)s,
                 %(jurisdiction_name)s, %(jurisdiction_type)s, %(state_code)s, %(state)s, %(city)s,
-                %(location)s, %(meeting_type)s, %(status)s,
+                %(location)s, %(location_description)s, %(meeting_type)s, %(status)s,
                 %(agenda_url)s, %(minutes_url)s, %(video_url)s,
                 %(view_count)s, %(duration_minutes)s, %(like_count)s,
+                %(language)s, %(channel_type)s,
                 %(source)s, %(last_updated)s
             )
             ON CONFLICT DO NOTHING
@@ -733,13 +988,17 @@ class YouTubeEventsLoader:
             cursor.close()
     
     def get_most_recent_video_date(self, jurisdiction_id: str, channel_id: str) -> Optional[datetime]:
-        """Get the most recent video date for a specific channel within a jurisdiction."""
+        """Get the most recent video insertion timestamp for a specific channel within a jurisdiction.
+        
+        Uses last_updated timestamp instead of event_date since event_date may be NULL
+        for videos without proper date parsing.
+        """
         cursor = self.conn.cursor()
         
         try:
-            # Get the most recent video date for this specific channel
+            # Get the most recent last_updated timestamp for this specific channel
             cursor.execute("""
-                SELECT MAX(event_date) 
+                SELECT MAX(last_updated) 
                 FROM events_search 
                 WHERE jurisdiction_id = %s
                 AND channel_id = %s
@@ -749,10 +1008,12 @@ class YouTubeEventsLoader:
             
             result = cursor.fetchone()
             if result and result[0]:
-                # Convert date to timezone-aware datetime (UTC) for comparison with YouTube API
-                naive_dt = datetime.combine(result[0], datetime.min.time())
-                # Make it timezone-aware (assume UTC)
-                return naive_dt.replace(tzinfo=timezone.utc)
+                # last_updated is already a datetime, just make it timezone-aware
+                if result[0].tzinfo is None:
+                    # If naive, assume UTC
+                    return result[0].replace(tzinfo=timezone.utc)
+                else:
+                    return result[0]
             return None
             
         finally:
@@ -783,15 +1044,30 @@ class YouTubeEventsLoader:
         for channel in channels:
             channel_id = channel['channel_id']
             channel_title = channel.get('channel_title', 'Unknown Channel')
+            channel_url = channel.get('channel_url', f"https://www.youtube.com/channel/{channel_id}")
+            channel_type = channel.get('channel_type', 'unknown')
+            
+            # Track this channel in events_channels_search
+            self.upsert_channel(
+                channel_id=channel_id,
+                channel_url=channel_url,
+                channel_title=channel_title,
+                channel_type=channel_type,
+                jurisdiction_id=jurisdiction_id,
+                jurisdiction_name=jurisdiction_name,
+                state_code=state_code,
+                discovery_method='jurisdictions_details',
+                confidence_score=None  # Could extract from jurisdictions_details_search if available
+            )
             
             logger.info(f"  Fetching videos from: {channel_title} ({channel_id})")
             
-            # Get most recent video date for THIS SPECIFIC CHANNEL
+            # Get most recent video insertion timestamp for THIS SPECIFIC CHANNEL
             most_recent_date = None
             if not self.force_full_fetch:
                 most_recent_date = self.get_most_recent_video_date(jurisdiction_id, channel_id)
                 if most_recent_date:
-                    logger.info(f"    Most recent video for this channel: {most_recent_date.date()}")
+                    logger.info(f"    Last video added to database: {most_recent_date.strftime('%Y-%m-%d %H:%M:%S')}")
             
             try:
                 # Determine published_after date (use most recent date for incremental fetching)
@@ -801,7 +1077,10 @@ class YouTubeEventsLoader:
                     logger.info(f"    Filtering videos from last {self.days_lookback} days")
                 elif most_recent_date:
                     # Incremental: only fetch videos newer than what we have for this channel
+                    # Note: This compares insertion timestamp with video publish date
+                    # Videos published before last insertion are likely already in DB
                     published_after = most_recent_date
+                    logger.info(f"    Incremental: fetching videos published after {most_recent_date.strftime('%Y-%m-%d')}")
                     logger.info(f"    Incremental: fetching videos newer than {most_recent_date.date()}")
                 
                 # Get videos from channel
@@ -826,7 +1105,8 @@ class YouTubeEventsLoader:
                         jurisdiction_type=jurisdiction_type,
                         state_code=state_code,
                         state=state,
-                        channel_id=channel_id
+                        channel_id=channel_id,
+                        channel_type=channel.get('channel_type', 'unknown')
                     )
                     all_events.append(event)
                 

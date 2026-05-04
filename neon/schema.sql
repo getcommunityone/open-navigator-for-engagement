@@ -212,11 +212,59 @@ CREATE TABLE events_search (
     view_count INTEGER,           -- Number of views
     duration_minutes INTEGER,     -- Video duration in minutes
     like_count INTEGER,           -- Number of likes
+    language VARCHAR(10),         -- Video language (e.g., 'en', 'es', 'fr')
+    channel_type VARCHAR(50),     -- Type of channel (municipal, county, state, school, etc.)
+    channel_url TEXT,             -- YouTube channel URL
+    location_description TEXT,    -- Location description from YouTube (if available)
     
     -- Metadata
     source VARCHAR(50) DEFAULT 'legistar',
     last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+-- ============================================================================
+-- EVENTS CHANNELS TRACKING
+-- ============================================================================
+
+CREATE TABLE IF NOT EXISTS events_channels_search (
+    id SERIAL PRIMARY KEY,
+    channel_id VARCHAR(50) UNIQUE NOT NULL,
+    channel_url TEXT NOT NULL,
+    channel_title VARCHAR(500),
+    channel_type VARCHAR(50),        -- municipal, county, state, school, unknown
+    subscriber_count INTEGER,
+    video_count INTEGER,
+    
+    -- Source tracking
+    in_localview BOOLEAN DEFAULT FALSE,           -- Channel exists in LocalView dataset
+    in_jurisdictions_details BOOLEAN DEFAULT FALSE,  -- Channel in jurisdictions_details_search
+    on_public_website BOOLEAN DEFAULT FALSE,      -- Channel linked on jurisdiction's public website
+    in_wikidata BOOLEAN DEFAULT FALSE,            -- Channel linked in WikiData
+    
+    -- Discovery metadata
+    discovery_method VARCHAR(100),   -- How channel was discovered (youtube_api, manual, wikidata, etc.)
+    discovery_date TIMESTAMP,
+    confidence_score FLOAT,          -- Confidence this is the correct government channel (0-1)
+    
+    -- Jurisdiction associations (JSONB for flexibility)
+    jurisdictions JSONB,             -- Array of {jurisdiction_id, jurisdiction_name, state_code}
+    
+    -- Quality flags
+    is_verified BOOLEAN DEFAULT FALSE,         -- YouTube verified badge
+    is_government BOOLEAN DEFAULT NULL,        -- NULL=unknown, TRUE=confirmed govt, FALSE=confirmed not govt
+    flagged_as_junk BOOLEAN DEFAULT FALSE,     -- Manually flagged as non-government
+    flag_reason TEXT,                          -- Why it was flagged
+    
+    -- Metadata
+    last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    last_video_check TIMESTAMP,                -- Last time we checked for new videos
+    notes TEXT
+);
+
+CREATE INDEX idx_channels_channel_id ON events_channels_search(channel_id);
+CREATE INDEX idx_channels_in_localview ON events_channels_search(in_localview);
+CREATE INDEX idx_channels_is_government ON events_channels_search(is_government);
+CREATE INDEX idx_channels_flagged ON events_channels_search(flagged_as_junk);
 
 CREATE INDEX idx_events_title_search ON events_search USING GIN (to_tsvector('english', title));
 CREATE INDEX idx_events_date ON events_search(event_date DESC);

@@ -211,7 +211,7 @@ class MunicipalYouTubeScraper:
         try:
             response = self.youtube.videos().list(
                 id=video_id,
-                part='snippet,contentDetails,statistics'
+                part='snippet,contentDetails,statistics,recordingDetails'
             ).execute()
             
             if not response.get('items'):
@@ -220,6 +220,7 @@ class MunicipalYouTubeScraper:
             item = response['items'][0]
             snippet = item['snippet']
             content_details = item['contentDetails']
+            recording_details = item.get('recordingDetails', {})
             
             # Parse duration (ISO 8601 format: PT1H2M10S)
             duration_str = content_details['duration']
@@ -230,6 +231,13 @@ class MunicipalYouTubeScraper:
             
             # Detect meeting type from title
             meeting_type = self.detect_meeting_type(snippet['title'])
+            
+            # Extract language (prefer audio language, fallback to default language)
+            language = snippet.get('defaultAudioLanguage') or snippet.get('defaultLanguage') or 'en'
+            
+            # Extract location if available
+            location_description = recording_details.get('locationDescription')
+            location_coords = recording_details.get('location')  # {latitude, longitude}
             
             return {
                 'video_id': video_id,
@@ -243,6 +251,8 @@ class MunicipalYouTubeScraper:
                 'view_count': int(item['statistics'].get('viewCount', 0)),
                 'like_count': int(item['statistics'].get('likeCount', 0)),
                 'meeting_type': meeting_type,
+                'language': language,
+                'location_description': location_description,
                 'video_url': f"https://www.youtube.com/watch?v={video_id}"
             }
         
@@ -409,6 +419,7 @@ class MunicipalYouTubeScraper:
                         'duration_minutes': duration_minutes,
                         'has_captions': False,  # yt-dlp doesn't provide this easily
                         'view_count': entry.get('view_count', 0),
+                        'like_count': entry.get('like_count', 0),  # May be 0 if not available from yt-dlp
                         'meeting_type': meeting_type,
                         'video_url': entry.get('url', f"https://www.youtube.com/watch?v={entry.get('id')}")
                     }
