@@ -105,8 +105,12 @@ def fetch_transcript_simple(video_id: str) -> Optional[Dict[str, Any]]:
         
     except (TranscriptsDisabled, VideoUnavailable):
         return None
-    except Exception:
-        # Try yt-dlp fallback
+    except Exception as e:
+        # Check for rate limiting - re-raise to handle in caller
+        error_msg = str(e)
+        if '429' in error_msg or 'Too Many Requests' in error_msg:
+            raise  # Re-raise rate limit errors
+        # Try yt-dlp fallback for other errors
         try:
             ydl_opts = {
                 'skip_download': True,
@@ -213,8 +217,12 @@ def fetch_transcript_simple(video_id: str) -> Optional[Dict[str, Any]]:
                     'transcript_source': 'yt-dlp'
                 }
                 
-        except Exception:
-            return None
+        except Exception as e:
+            # Check for rate limiting - re-raise to handle in caller
+            error_msg = str(e)
+            if '429' in error_msg or 'Too Many Requests' in error_msg:
+                raise  # Re-raise rate limit errors
+            return None  # Other errors - no transcript available
 
 
 def get_events_missing_transcripts(conn, states: Optional[List[str]] = None, limit: Optional[int] = None) -> List[Dict]:
@@ -291,8 +299,22 @@ def backfill_transcripts(
         # Process each event
         inserted = 0
         failed = 0
+        rate_limited = 0
+        consecutive_rate_limits = 0
+        max_backoff = 60  # Maximum 60 seconds backoff
+        base_delay = 2.0  # 2 seconds between fetches
+        
+        import time
         
         for i, event in enumerate(events, 1):
+            # Progressive delay based on rate limit history
+            if consecutive_rate_limits > 0:
+                # Exponential backoff: 2s, 4s, 8s, 16s, 32s, 60s (max)
+                backoff_delay = min(base_delay * (2 ** consecutive_rate_limits), max_backoff)
+                logger.warning(f"  ⏱️  Backing off {backoff_delay:.1f}s due to {consecutive_rate_limits} consecutive rate limits...")
+                time.sleep(backoff_delay)
+            elif i > 1:
+                time.sleep(base_delay)  # Normal delay between requests
             event_id = event['id']
             video_url = event['video_url']
             title = event['title']
@@ -311,7 +333,25 @@ def backfill_transcripts(
             logger.debug(f"  Video ID: {video_id}, Event ID: {event_id}")
             
             # Fetch transcript (inline - avoid loader initialization)
-            transcript_data = fetch_transcript_simple(video_id)
+            try:
+                transcript_data = fetch_transcript_simple(video_id)
+                if transcript_data:
+                    consecutive_rate_limits = 0  # Reset on success
+            except Exception as e:
+                error_msg = str(e)
+                if '429' in error_msg or 'Too Many Requests' in error_msg:
+                    rate_limited += 1
+                    consecutive_rate_limits += 1
+                    logger.warning(f"  ⚠️  Rate limited! ({rate_limited} total, {consecutive_rate_limits} consecutive)")
+                    if consecutive_rate_limits >= 5:
+                        logger.error(f"  ❌ Too many consecutive rate limits ({consecutive_rate_limits}), stopping")
+                        break
+                    failed += 1
+                    continue
+                else:
+                    logger.warning(f"  ⊘ No transcript available: {error_msg[:100]}")
+                    failed += 1
+                    continue
             
             if transcript_data:
                 # Insert transcript
@@ -357,7 +397,14 @@ def backfill_transcripts(
                     
                 except Exception as e:
                     conn.rollback()
-                    logger.error(f"  ✗ Error inserting transcript: {e}")
+                    error_msg = str(e)
+                    if '429' in error_msg or 'Too Many Requests' in error_msg:
+                        logger.warning(f"  ✗ Rate limited during insert: {error_msg[:100]}")
+                        rate_limited += 1
+                        consecutive_rate_limits += 1
+                        time.sleep(5)  # Longer pause after rate limit
+                    else:
+                        logger.error(f"  ✗ Error inserting transcript: {e}")
                     failed += 1
                 finally:
                     cursor.close()
@@ -372,6 +419,8 @@ def backfill_transcripts(
         logger.success("=" * 80)
         logger.success(f"Transcripts inserted: {inserted}")
         logger.success(f"Failed/unavailable: {failed}")
+        if rate_limited > 0:
+            logger.warning(f"Rate limited: {rate_limited} (consider reducing concurrency)")
         logger.success(f"Total processed: {len(events)}")
         
     finally:

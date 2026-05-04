@@ -73,7 +73,8 @@ class YouTubeEventsLoader:
         max_videos_per_channel: int = 100,
         days_lookback: Optional[int] = None,
         fetch_transcripts: bool = True,
-        force_full_fetch: bool = False
+        force_full_fetch: bool = False,
+        transcript_delay: float = 2.0
     ):
         self.database_url = database_url
         self.youtube_api_key = youtube_api_key
@@ -81,6 +82,7 @@ class YouTubeEventsLoader:
         self.days_lookback = days_lookback
         self.fetch_transcripts = fetch_transcripts
         self.force_full_fetch = force_full_fetch
+        self.transcript_delay = transcript_delay  # Delay between transcript fetches (seconds)
         
         # Initialize YouTube scraper
         self.scraper = MunicipalYouTubeScraper(api_key=youtube_api_key)
@@ -107,6 +109,22 @@ class YouTubeEventsLoader:
             cursor.execute("""
                 ALTER TABLE events_search 
                 ADD COLUMN IF NOT EXISTS channel_id VARCHAR(50);
+            """)
+            
+            # Add YouTube metrics columns
+            cursor.execute("""
+                ALTER TABLE events_search
+                ADD COLUMN IF NOT EXISTS view_count INTEGER;
+            """)
+            
+            cursor.execute("""
+                ALTER TABLE events_search
+                ADD COLUMN IF NOT EXISTS duration_minutes INTEGER;
+            """)
+            
+            cursor.execute("""
+                ALTER TABLE events_search
+                ADD COLUMN IF NOT EXISTS like_count INTEGER;
             """)
             
             # Create index for jurisdiction_id
@@ -148,7 +166,7 @@ class YouTubeEventsLoader:
             """)
             
             self.conn.commit()
-            logger.success("✓ Ensured jurisdiction_id, channel_id columns and unique constraint exist")
+            logger.success("✓ Ensured jurisdiction_id, channel_id, view_count, duration_minutes, like_count columns exist")
             
         except Exception as e:
             self.conn.rollback()
@@ -318,15 +336,8 @@ class YouTubeEventsLoader:
             # Remove state suffix like ", AL" from "Birmingham, AL"
             city = jurisdiction_name.split(',')[0].strip()
         
-        # Build description
-        description_parts = [video.get('description', '')]
-        
-        if video.get('view_count'):
-            description_parts.append(f"Views: {video['view_count']:,}")
-        if video.get('duration_minutes'):
-            description_parts.append(f"Duration: {video['duration_minutes']} minutes")
-        
-        description = '\n\n'.join([p for p in description_parts if p])
+        # Use description as-is, don't append view/duration info
+        description = video.get('description', '')
         
         return {
             'jurisdiction_id': jurisdiction_id,
@@ -346,6 +357,9 @@ class YouTubeEventsLoader:
             'agenda_url': None,
             'minutes_url': None,
             'video_url': video.get('video_url'),
+            'view_count': video.get('view_count'),
+            'duration_minutes': video.get('duration_minutes'),
+            'like_count': video.get('like_count'),
             'source': 'youtube',
             'last_updated': datetime.now(),
             'video_id': video.get('video_id')  # Store video_id for transcript linking
@@ -492,7 +506,14 @@ class YouTubeEventsLoader:
                 }
                 
         except Exception as e:
-            logger.debug(f"    yt-dlp transcript error for {video_id}: {e}")
+            error_msg = str(e)
+            # Check for rate limiting
+            if '429' in error_msg or 'Too Many Requests' in error_msg:
+                logger.warning(f"    ⚠️ Rate limited (yt-dlp) for {video_id}")
+                # Signal rate limit to caller
+                raise Exception(f"RATE_LIMITED: {error_msg}")
+            else:
+                logger.debug(f"    yt-dlp transcript error for {video_id}: {error_msg[:200]}")
             return None
     
     def fetch_transcript(self, video_id: str) -> Optional[Dict[str, Any]]:
@@ -556,7 +577,14 @@ class YouTubeEventsLoader:
             return None
         except (NoTranscriptFound, Exception) as e:
             # Fall back to yt-dlp for other errors
-            logger.debug(f"    youtube_transcript_api failed for {video_id}, trying yt-dlp fallback...")
+            error_msg = str(e)
+            # Check for rate limiting
+            if '429' in error_msg or 'Too Many Requests' in error_msg:
+                logger.warning(f"    ⚠️ Rate limited (YouTube API) for {video_id}")
+                # Signal rate limit to caller
+                raise Exception(f"RATE_LIMITED: {error_msg}")
+            else:
+                logger.debug(f"    youtube_transcript_api failed for {video_id}, trying yt-dlp fallback...")
             return self.fetch_transcript_ytdlp(video_id)
     
     def insert_events(self, events: List[Dict[str, Any]], batch_size: int = 500) -> int:
@@ -569,12 +597,16 @@ class YouTubeEventsLoader:
                 jurisdiction_id, channel_id, title, description, event_date, event_time,
                 jurisdiction_name, jurisdiction_type, state_code, state, city,
                 location, meeting_type, status,
-                agenda_url, minutes_url, video_url, source, last_updated
+                agenda_url, minutes_url, video_url,
+                view_count, duration_minutes, like_count,
+                source, last_updated
             ) VALUES (
                 %(jurisdiction_id)s, %(channel_id)s, %(title)s, %(description)s, %(event_date)s, %(event_time)s,
                 %(jurisdiction_name)s, %(jurisdiction_type)s, %(state_code)s, %(state)s, %(city)s,
                 %(location)s, %(meeting_type)s, %(status)s,
-                %(agenda_url)s, %(minutes_url)s, %(video_url)s, %(source)s, %(last_updated)s
+                %(agenda_url)s, %(minutes_url)s, %(video_url)s,
+                %(view_count)s, %(duration_minutes)s, %(like_count)s,
+                %(source)s, %(last_updated)s
             )
             ON CONFLICT DO NOTHING
             RETURNING id
@@ -600,9 +632,11 @@ class YouTubeEventsLoader:
             
             # Fetch and insert transcripts if enabled
             if self.fetch_transcripts and event_ids:
-                logger.info(f"  Fetching transcripts for {len(event_ids)} videos...")
+                logger.info(f"  📝 Fetching transcripts for {len(event_ids)} videos (delay: {self.transcript_delay}s each)...")
                 transcripts_inserted = self.insert_transcripts(event_ids)
-                logger.info(f"  Inserted {transcripts_inserted} transcripts")
+                logger.info(f"  ✓ Inserted {transcripts_inserted} transcripts")
+            elif not self.fetch_transcripts and event_ids:
+                logger.info(f"  ⏭️  Skipped fetching transcripts for {len(event_ids)} videos (use --skip-transcripts=false to enable)")
             
             return inserted
             
@@ -614,9 +648,13 @@ class YouTubeEventsLoader:
             cursor.close()
     
     def insert_transcripts(self, event_ids: Dict[str, int]) -> int:
-        """Fetch and insert transcripts for events."""
+        """Fetch and insert transcripts for events with exponential backoff on rate limits."""
+        import time
         cursor = self.conn.cursor()
         inserted = 0
+        rate_limit_count = 0
+        consecutive_rate_limits = 0
+        max_backoff = 60  # Maximum 60 seconds backoff
         
         insert_query = """
             INSERT INTO events_text_search (
@@ -630,9 +668,35 @@ class YouTubeEventsLoader:
         """
         
         try:
-            for video_id, event_id in event_ids.items():
-                # Fetch transcript
-                transcript_data = self.fetch_transcript(video_id)
+            for i, (video_id, event_id) in enumerate(event_ids.items(), 1):
+                # Progressive delay based on rate limit history
+                base_delay = self.transcript_delay
+                if consecutive_rate_limits > 0:
+                    # Exponential backoff: 2s, 4s, 8s, 16s, 32s, 60s (max)
+                    backoff_delay = min(base_delay * (2 ** consecutive_rate_limits), max_backoff)
+                    logger.warning(f"  ⏱️  Backing off {backoff_delay:.1f}s due to {consecutive_rate_limits} consecutive rate limits...")
+                    time.sleep(backoff_delay)
+                elif i > 1:
+                    time.sleep(base_delay)
+                
+                # Fetch transcript with rate limit handling
+                transcript_data = None
+                try:
+                    transcript_data = self.fetch_transcript(video_id)
+                    consecutive_rate_limits = 0  # Reset on success
+                except Exception as e:
+                    if 'RATE_LIMITED' in str(e):
+                        rate_limit_count += 1
+                        consecutive_rate_limits += 1
+                        logger.warning(f"  ⚠️  Rate limited! ({rate_limit_count} total, {consecutive_rate_limits} consecutive)")
+                        if consecutive_rate_limits >= 5:
+                            logger.error(f"  ❌ Too many consecutive rate limits ({consecutive_rate_limits}), stopping transcript fetching")
+                            break
+                        continue
+                    else:
+                        # Other error, skip this video
+                        logger.debug(f"  Error fetching transcript for {video_id}: {e}")
+                        continue
                 
                 if transcript_data:
                     transcript_data['event_id'] = event_id
@@ -651,7 +715,14 @@ class YouTubeEventsLoader:
                     if inserted % 10 == 0:
                         self.conn.commit()
             
+            # Final commit
             self.conn.commit()
+            
+            # Report rate limiting if it occurred
+            if rate_limit_count > 0:
+                logger.warning(f"  ⚠️  Total rate limits encountered: {rate_limit_count}")
+                logger.warning(f"  💡 Consider increasing --transcript-delay (current: {self.transcript_delay}s)")
+            
             return inserted
             
         except Exception as e:
@@ -783,7 +854,14 @@ class YouTubeEventsLoader:
         logger.info("=" * 80)
         logger.info(f"Database: {self.database_url.split('@')[1] if '@' in self.database_url else 'localhost'}")
         logger.info(f"Max videos per channel: {self.max_videos}")
-        logger.info(f"Fetch transcripts: {self.fetch_transcripts}")
+        
+        if self.fetch_transcripts:
+            logger.info(f"Fetch transcripts: YES (delay: {self.transcript_delay}s between fetches)")
+            logger.warning("⚠️  Transcript fetching may hit rate limits. Use --skip-transcripts to load events only.")
+        else:
+            logger.success("Fetch transcripts: NO (skipped - faster load, no rate limits)")
+            logger.info("💡 Run backfill_transcripts.py later to add transcripts")
+        
         logger.info(f"Incremental mode: {not self.force_full_fetch}")
         if self.days_lookback:
             logger.info(f"Only videos from last {self.days_lookback} days")
@@ -848,11 +926,27 @@ class YouTubeEventsLoader:
         else:
             logger.info("Incremental update successful - only new videos were added.")
         
+        # Provide guidance based on transcript mode
         logger.info("")
-        logger.info("Next steps:")
-        logger.info("1. Query events: SELECT jurisdiction_name, COUNT(*) FROM events_search WHERE source='youtube' GROUP BY jurisdiction_name ORDER BY COUNT(*) DESC LIMIT 10")
-        logger.info("2. Query transcripts: SELECT COUNT(*) FROM events_text_search")
-        logger.info("3. View in app: http://localhost:5173/meetings")
+        if not self.fetch_transcripts:
+            logger.info("⚡ Next step: Add transcripts (without rate limits)")
+            logger.info("")
+            logger.info("  Run backfill script to fetch transcripts for existing events:")
+            logger.info(f"  python scripts/datasources/youtube/backfill_transcripts.py --states {','.join(states_filter) if states_filter else 'AL,GA,IN,MA,WA,WI'} --limit 100")
+            logger.info("")
+            logger.info("  💡 Backfill uses slower delays (2s) to avoid rate limits")
+        elif transcript_count < stats[0]:
+            missing = stats[0] - transcript_count
+            logger.warning(f"⚠️  Missing transcripts: {missing:,} events don't have transcripts")
+            logger.info("  Run backfill to fetch missing transcripts:")
+            logger.info(f"  python scripts/datasources/youtube/backfill_transcripts.py --states {','.join(states_filter) if states_filter else 'AL,GA,IN,MA,WA,WI'}")
+        
+        logger.info("")
+        logger.info("Query examples:")
+        logger.info("  SELECT jurisdiction_name, COUNT(*) FROM events_search WHERE source='youtube' GROUP BY jurisdiction_name ORDER BY COUNT(*) DESC LIMIT 10")
+        logger.info("  SELECT COUNT(*) FROM events_text_search")
+        logger.info("")
+        logger.info("View in app: http://localhost:5173/meetings")
     
     def close(self):
         """Close database connection."""
@@ -886,8 +980,16 @@ def main():
     parser.add_argument(
         '--skip-transcripts',
         action='store_true',
-        help='Skip fetching video transcripts (faster)'
+        help='Skip fetching video transcripts - MUCH FASTER, avoids rate limits (recommended for large loads)'
     )
+    
+    parser.add_argument(
+        '--transcript-delay',
+        type=float,
+        default=2.0,
+        help='Delay between transcript fetches in seconds (default: 2.0, increase if rate limited)'
+    )
+    
     parser.add_argument(
         '--force',
         action='store_true',
@@ -902,14 +1004,15 @@ def main():
     if args.states:
         states_filter = [s.strip().upper() for s in args.states.split(',')]
     
-    # Initialize loader,
-        force_full_fetch=args.force
+    # Initialize loader
     loader = YouTubeEventsLoader(
         database_url=DATABASE_URL,
         youtube_api_key=YOUTUBE_API_KEY,
         max_videos_per_channel=args.max_videos,
         days_lookback=args.days,
-        fetch_transcripts=not args.skip_transcripts
+        fetch_transcripts=not args.skip_transcripts,
+        force_full_fetch=args.force,
+        transcript_delay=args.transcript_delay
     )
     
     try:

@@ -62,6 +62,8 @@ class MunicipalYouTubeScraper:
     def __init__(self, api_key: Optional[str] = None):
         self.api_key = api_key or os.getenv('YOUTUBE_API_KEY')
         self.use_ytdlp_fallback = False  # Track if we should use fallback
+        self.quota_exceeded_at = None  # Track when quota was exceeded
+        self.quota_cooldown_minutes = 15  # Wait 15 minutes before retrying API
         
         # Try to initialize YouTube API
         if self.api_key:
@@ -113,6 +115,23 @@ class MunicipalYouTubeScraper:
         Returns:
             List of video dictionaries with metadata
         """
+        # Check if we're in quota cooldown period
+        if self.quota_exceeded_at:
+            time_since_quota_exceeded = (datetime.now() - self.quota_exceeded_at).total_seconds() / 60
+            if time_since_quota_exceeded < self.quota_cooldown_minutes:
+                remaining = self.quota_cooldown_minutes - time_since_quota_exceeded
+                logger.info(f"API quota cooldown active ({remaining:.1f} min remaining), using yt-dlp fallback")
+                return self.get_channel_videos_ytdlp(channel_id, max_results, published_after)
+            else:
+                # Cooldown expired, reset and try API again
+                logger.info(f"Quota cooldown expired, attempting YouTube API again")
+                self.quota_exceeded_at = None
+                self.use_ytdlp_fallback = False
+        
+        # Use yt-dlp fallback if previously failed or no API key
+        if self.use_ytdlp_fallback or not self.youtube:
+            return self.get_channel_videos_ytdlp(channel_id, max_results, published_after)
+        
         videos = []
         
         try:
@@ -170,8 +189,9 @@ class MunicipalYouTubeScraper:
             # Check if it's a quota error
             if 'quotaExceeded' in str(e) or e.resp.status == 403:
                 logger.warning(f"YouTube API quota exceeded for channel {channel_id}")
-                logger.info("Switching to yt-dlp fallback method...")
+                logger.warning(f"⏱️  Entering {self.quota_cooldown_minutes}-minute cooldown - will use yt-dlp fallback")
                 self.use_ytdlp_fallback = True
+                self.quota_exceeded_at = datetime.now()
                 
                 # Try yt-dlp fallback
                 return self.get_channel_videos_ytdlp(channel_id, max_results, published_after)
@@ -182,6 +202,12 @@ class MunicipalYouTubeScraper:
     
     def get_video_details(self, video_id: str) -> Optional[Dict]:
         """Get detailed information about a video"""
+        # Skip API if in quota cooldown
+        if self.quota_exceeded_at:
+            time_since_quota_exceeded = (datetime.now() - self.quota_exceeded_at).total_seconds() / 60
+            if time_since_quota_exceeded < self.quota_cooldown_minutes:
+                return None  # Will be handled by fallback methods
+        
         try:
             response = self.youtube.videos().list(
                 id=video_id,
@@ -215,6 +241,7 @@ class MunicipalYouTubeScraper:
                 'duration_minutes': duration_minutes,
                 'has_captions': has_captions,
                 'view_count': int(item['statistics'].get('viewCount', 0)),
+                'like_count': int(item['statistics'].get('likeCount', 0)),
                 'meeting_type': meeting_type,
                 'video_url': f"https://www.youtube.com/watch?v={video_id}"
             }
@@ -290,6 +317,8 @@ class MunicipalYouTubeScraper:
             'no_warnings': True,
             'extract_flat': True,  # Don't download, just get metadata
             'playlistend': max_results,
+            'ignoreerrors': True,  # Continue on download errors
+            'nocheckcertificate': True,  # Avoid SSL issues
         }
         
         info = None
@@ -298,24 +327,53 @@ class MunicipalYouTubeScraper:
         try:
             logger.info(f"Using yt-dlp fallback for channel {channel_id}")
             
-            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-                # Try each URL pattern until one works
-                for channel_url in url_patterns:
-                    try:
-                        info = ydl.extract_info(channel_url, download=False)
-                        if info and 'entries' in info:
-                            successful_url = channel_url
-                            logger.debug(f"Successfully extracted from: {channel_url}")
-                            break
-                    except Exception as url_error:
-                        logger.debug(f"Failed {channel_url}: {str(url_error)[:100]}")
-                        continue
+            # Suppress yt-dlp error output to stderr
+            import sys
+            import os
+            
+            # Save original stderr
+            original_stderr = sys.stderr
+            
+            try:
+                # Redirect stderr to devnull to suppress yt-dlp ERROR messages
+                sys.stderr = open(os.devnull, 'w')
                 
-                if not info or 'entries' not in info:
-                    logger.warning(f"No videos found for channel {channel_id} after trying all URL patterns")
-                    return []
+                with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                    # Try each URL pattern until one works
+                    for channel_url in url_patterns:
+                        try:
+                            info = ydl.extract_info(channel_url, download=False)
+                            if info and 'entries' in info:
+                                successful_url = channel_url
+                                # Restore stderr before logging
+                                sys.stderr.close()
+                                sys.stderr = original_stderr
+                                
+                                # Log which pattern worked
+                                if '/videos' in channel_url:
+                                    logger.success(f"  ✓ Extracted from videos tab")
+                                elif '/streams' in channel_url:
+                                    logger.success(f"  ✓ Extracted from streams tab (no videos tab)")
+                                else:
+                                    logger.success(f"  ✓ Extracted from channel homepage (no videos/streams tabs)")
+                                break
+                        except Exception as url_error:
+                            # These are expected errors as we try different patterns
+                            continue
                 
-                for entry in info['entries']:
+            finally:
+                # Always restore stderr
+                if sys.stderr != original_stderr:
+                    sys.stderr.close()
+                    sys.stderr = original_stderr
+            
+            # Check if we successfully found content
+            if not info or 'entries' not in info:
+                logger.warning(f"No videos found for channel {channel_id} after trying all URL patterns")
+                return []
+            
+            # Process video entries
+            for entry in info['entries']:
                     if not entry:
                         continue
                     
@@ -360,9 +418,11 @@ class MunicipalYouTubeScraper:
                     if len(videos) >= max_results:
                         break
             
+            # Log final count
             if videos:
-                url_type = "videos tab" if "/videos" in successful_url else "streams tab" if "/streams" in successful_url else "channel homepage"
-                logger.success(f"yt-dlp: Found {len(videos)} videos from channel {channel_id} ({url_type})")
+                logger.info(f"  → Found {len(videos)} videos")
+            else:
+                logger.warning(f"  → No videos found (channel may be empty)")
             
         except Exception as e:
             logger.error(f"yt-dlp error for channel {channel_id}: {e}")

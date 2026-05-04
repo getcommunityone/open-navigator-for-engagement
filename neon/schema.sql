@@ -208,6 +208,11 @@ CREATE TABLE events_search (
     minutes_url TEXT,
     video_url TEXT UNIQUE,        -- Unique constraint prevents duplicate videos
     
+    -- YouTube video metrics (for source='youtube')
+    view_count INTEGER,           -- Number of views
+    duration_minutes INTEGER,     -- Video duration in minutes
+    like_count INTEGER,           -- Number of likes
+    
     -- Metadata
     source VARCHAR(50) DEFAULT 'legistar',
     last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP
