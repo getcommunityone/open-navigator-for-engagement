@@ -301,6 +301,7 @@ def update_jurisdictions_with_gsa_data(
         
         updates = []
         match_sources = []  # Track which source matched
+        matched_domain_keys = set()  # Track which domains were matched
         
         for jurisdiction in jurisdictions:
             jid = jurisdiction['jurisdiction_id']
@@ -390,6 +391,10 @@ def update_jurisdictions_with_gsa_data(
             # Extract data from matched domains
             domain_names = [d['domain_name'] for d in matched_domains]
             
+            # Mark these domain records as matched
+            for d in matched_domains:
+                matched_domain_keys.add(d['domain_name'])
+            
             # Use first domain's metadata (they should be consistent)
             first_domain = matched_domains[0]
             security_email = first_domain.get('security_contact_email')
@@ -459,15 +464,7 @@ def update_jurisdictions_with_gsa_data(
             logger.info("PHASE 2: Creating new records for unmatched GSA domains...")
             logger.info("=" * 80)
             
-            # Track which domain records were already matched
-            matched_domain_keys = set()
-            for update in updates:
-                # Reconstruct the keys that were matched
-                # This is approximate - we'll check by domain name instead
-                for domain in update.get('gov_domains', '[]'):
-                    if domain.strip('"[]'):
-                        matched_domain_keys.add(domain.strip('"[]'))
-            
+            # Use the matched_domain_keys set that was populated during Phase 1
             # Find unmatched domain records
             new_records = []
             for (state_code, normalized_name, jtype), domain_list in jurisdiction_domains.items():
@@ -613,15 +610,24 @@ async def main(states: Optional[str] = None, dry_run: bool = False, create_new: 
     logger.info("=" * 80)
     logger.info("ENRICHMENT SUMMARY")
     logger.info("=" * 80)
-    logger.info(f"  - Via jurisdictions_details_search: {stats['matched_by_details']:,}")
-    logger.info(f"  - Via jurisdictions_search (Census): {stats['matched_by_census']:,}")
-    logger.info(f"  - Via jurisdictions_wikidata: {stats['matched_by_wikidata']:,}")
-    logger.info(f"  - Via domain name extraction: {stats['matched_by_domain']:,}")
-    logger.info(f"Total jurisdictions checked: {stats['total_jurisdictions']:,}")
-    logger.info(f"Matched with GSA domains: {stats['matched']:,}")
-    logger.info(f"Updated in database: {stats['updated']:,}")
-    logger.info(f"No GSA match found: {stats['no_match']:,}")
-    logger.info(f"Match rate: {stats['matched']/stats['total_jurisdictions']*100:.1f}%")
+    logger.info(f"Total GSA domains processed: {stats.get('total_gsa_domains', 0):,}")
+    logger.info(f"Total existing jurisdictions checked: {stats['total_jurisdictions']:,}")
+    logger.info("")
+    logger.info("PHASE 1: Enriched existing jurisdictions")
+    logger.info(f"  Matched with GSA domains: {stats['matched']:,}")
+    logger.info(f"    - Via jurisdictions_details_search: {stats['matched_by_details']:,}")
+    logger.info(f"    - Via jurisdictions_search (Census): {stats['matched_by_census']:,}")
+    logger.info(f"    - Via jurisdictions_wikidata: {stats['matched_by_wikidata']:,}")
+    logger.info(f"    - Via domain name extraction: {stats['matched_by_domain']:,}")
+    logger.info(f"  Updated in database: {stats['updated']:,}")
+    logger.info(f"  No match found: {stats['no_match']:,}")
+    logger.info(f"  Match rate: {stats['matched']/stats['total_jurisdictions']*100:.1f}%")
+    logger.info("")
+    logger.info("PHASE 2: Created new jurisdiction records")
+    logger.info(f"  New records from unmatched GSA domains: {stats.get('created', 0):,}")
+    logger.info("")
+    logger.info("TOTAL IMPACT")
+    logger.info(f"  Total jurisdictions with GSA data: {stats['updated'] + stats.get('created', 0):,}")
     
     if stats['errors']:
         logger.warning(f"Errors encountered: {stats['errors']}")
@@ -640,6 +646,7 @@ if __name__ == "__main__":
         '--dry-run',
         action='store_true',
         help='Show what would be updated without actually updating'
+    )
     parser.add_argument(
         '--no-create-new',
         action='store_true',
@@ -652,5 +659,4 @@ if __name__ == "__main__":
         states=args.states, 
         dry_run=args.dry_run,
         create_new=not args.no_create_new
-    
-    asyncio.run(main(states=args.states, dry_run=args.dry_run))
+    ))

@@ -1525,33 +1525,95 @@ Identify churches with active health ministries in Tuscaloosa, AL that provide f
 
 ---
 
-### Homeland Infrastructure Foundation-Level Data (HIFLD): Places of Worship
+### Homeland Infrastructure Foundation-Level Data (HIFLD)
 
 **Organization:** U.S. Department of Homeland Security (DHS)  
-**What we use:** Geospatial database of 350,000+ places of worship for mapping faith-based health service locations and identifying service gaps.
+**What we use:** Geospatial databases of critical infrastructure and community resources for mapping service locations and identifying gaps.
 
 - **Source:** https://hifld-geoplatform.opendata.arcgis.com/
-- **Dataset:** https://hifld-geoplatform.opendata.arcgis.com/datasets/places-of-worship
-- **Format:** Shapefile, GeoJSON, CSV
-- **Coverage:** 350,000+ churches, mosques, synagogues, temples
+- **API Access:** https://www.arcgis.com (datasets accessible via ArcGIS Online)
+- **Format:** Shapefile, GeoJSON, CSV, Parquet
 - **License:** Public Domain (U.S. Government)
 
-**Fields Available:**
-- Name of place of worship
-- Address (street, city, state, ZIP)
-- Latitude/Longitude (precise geolocation)
-- Denomination
-- Religious tradition
-- Facility type
+**Available Datasets:**
+
+| Infrastructure Type | Item ID | Record Count | Description |
+|---------------------|---------|--------------|-------------|
+| **Law Enforcement** | `333a74c8e9c64cb6870689d31e8836af` | 23,486 | Police stations, sheriff offices, correctional facilities |
+| **Places of Worship** | [Find on HIFLD Portal](https://hifld-geoplatform.opendata.arcgis.com/) | 350,000+ | Churches, mosques, synagogues, temples |
+| **Schools** | [Find on HIFLD Portal](https://hifld-geoplatform.opendata.arcgis.com/) | Varies | K-12 schools, universities, educational facilities |
+| **Hospitals** | [Find on HIFLD Portal](https://hifld-geoplatform.opendata.arcgis.com/) | Varies | Hospitals, urgent care, medical centers |
+| **Emergency Services** | See Law Enforcement above | 23,486 | Fire stations, EMS, emergency operations centers |
+| **Government Buildings** | [Find on HIFLD Portal](https://hifld-geoplatform.opendata.arcgis.com/) | Varies | City halls, courthouses, federal buildings |
+
+**How to Find Item IDs:**
+1. Visit https://hifld-geoplatform.opendata.arcgis.com/
+2. Search for the dataset you need
+3. Click on the dataset
+4. The Item ID is in the URL: `https://www.arcgis.com/home/item.html?id=ITEM_ID_HERE`
+
+**Common Fields Across Datasets:**
+- NAME - Facility name
+- ADDRESS - Street address
+- CITY, STATE, ZIP - Location details
+- LATITUDE, LONGITUDE - Precise geolocation
+- TYPE - Facility type/category
+- TELEPHONE - Contact phone
+- WEBSITE - Organization website
 
 **Use Cases:**
-1. **Map faith-based health providers** - Overlay churches with health ministries on city maps
-2. **Identify service deserts** - Find areas underserved by both clinics and church programs
-3. **Route mobile dental units** - Plan stops at large congregations
-4. **Partnership outreach** - Locate churches near schools or clinics
+1. **Map service providers** - Overlay infrastructure on jurisdiction maps
+2. **Identify service deserts** - Find areas underserved by critical facilities
+3. **Route mobile services** - Plan stops at schools, churches, or community centers
+4. **Partnership outreach** - Locate facilities for collaboration opportunities
+5. **Emergency planning** - Understand infrastructure distribution
+
+**Automated Download:**
+```bash
+# Download Law Enforcement dataset (GeoJSON with geometry)
+python scripts/datasources/hifld/download_arcgis_dataset.py \
+  --item-id 333a74c8e9c64cb6870689d31e8836af \
+  --format GeoJSON
+
+# Download as CSV (no geometry, lighter file size)
+python scripts/datasources/hifld/download_arcgis_dataset.py \
+  --item-id 333a74c8e9c64cb6870689d31e8836af \
+  --format CSV
+
+# Download and convert to Parquet (optimized for data analysis)
+python scripts/datasources/hifld/download_arcgis_dataset.py \
+  --item-id 333a74c8e9c64cb6870689d31e8836af \
+  --to-parquet
+
+# Just get metadata to verify dataset before downloading
+python scripts/datasources/hifld/download_arcgis_dataset.py \
+  --item-id 333a74c8e9c64cb6870689d31e8836af \
+  --metadata-only
+
+# Download other datasets (replace Item ID)
+python scripts/datasources/hifld/download_arcgis_dataset.py \
+  --item-id YOUR_ITEM_ID_HERE \
+  --to-parquet
+```
+
+**Dependencies:**
+```bash
+pip install arcgis geopandas loguru
+```
 
 **Citation:**
-> "Homeland Infrastructure Foundation-Level Data (HIFLD): Places of Worship. U.S. Department of Homeland Security. https://hifld-geoplatform.opendata.arcgis.com/"
+> "Homeland Infrastructure Foundation-Level Data (HIFLD). U.S. Department of Homeland Security. https://hifld-geoplatform.opendata.arcgis.com/"
+
+**Dataset-Specific Citations:**
+```
+# Law Enforcement
+"HIFLD: Local Law Enforcement Locations. U.S. Department of Homeland Security. 
+https://www.arcgis.com/home/item.html?id=333a74c8e9c64cb6870689d31e8836af"
+
+# Places of Worship (when Item ID is found)
+"HIFLD: Places of Worship. U.S. Department of Homeland Security. 
+https://hifld-geoplatform.opendata.arcgis.com/"
+```
 
 ---
 

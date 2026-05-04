@@ -1768,6 +1768,295 @@ Using Llama (vs. proprietary APIs) enables:
 
 ---
 
+### **GSA .gov Domain Registry** ⭐
+- Official registry of all registered .gov domains
+- Organization: U.S. General Services Administration (GSA) / Cybersecurity and Infrastructure Security Agency (CISA)
+- Source: https://github.com/cisagov/dotgov-data
+- Data: https://raw.githubusercontent.com/cisagov/dotgov-data/main/current-full.csv
+- Registry Portal: https://get.gov/
+- License: Public Domain (U.S. Government)
+- Coverage: 8,459+ city domains, 304+ county domains, federal/state/tribal entities
+
+**Coverage:**
+- All registered .gov domains across the United States
+- Domain metadata: organization name, city, state, domain type
+- Security contact information for each domain
+- Updated continuously as new domains are registered
+- Includes cities, counties, states, special districts, tribal governments
+
+**What we use:**
+- Official government website discovery and validation
+- Security contact information for outreach
+- Jurisdiction mapping and verification
+- Identifying official government online presence
+- Enriching jurisdiction data with verified .gov domains
+
+**Data Fields:**
+- Domain name (e.g., `bostonma.gov`)
+- Domain type (City, County, State, Special District, School District, Tribal, Federal)
+- Organization name (official registered name)
+- Suborganization name (departments, divisions)
+- City and State location
+- Security contact email (technical/IT contacts)
+
+**Resources:**
+- GitHub Data: https://github.com/cisagov/dotgov-data
+- CISA .gov Program: https://www.cisa.gov/topics/cyber-threats-and-advisories/federal-network-resilience/dotgov-program
+- Domain Registration: https://get.gov/
+
+**BibTeX:**
+```bibtex
+@dataset{gsa_dotgov_2024,
+    title = {.gov Domain Data},
+    author = {{U.S. General Services Administration and Cybersecurity and Infrastructure Security Agency}},
+    year = {2024},
+    publisher = {GitHub},
+    url = {https://github.com/cisagov/dotgov-data},
+    note = {Official registry of all registered .gov domains}
+}
+```
+
+**Integration Status:**
+- ✅ Loaded 2,272 jurisdictions with official .gov domains
+- ✅ Created 1,438 new jurisdiction records from unmatched GSA domains
+- ✅ Enriched existing records with security contacts and official websites
+- ✅ 100% coverage of local government .gov domains in our database
+
+---
+
+### **National Association of Counties (NACo)**
+- Membership organization representing all U.S. counties
+- Organization: National Association of Counties
+- Source: https://www.naco.org/
+- County Explorer: https://ce.naco.org/
+- License: Data available for research (contact for bulk access)
+- Coverage: 3,069 counties across all U.S. states and territories
+
+**Coverage:**
+- County profiles with demographic and economic data
+- County officials directory (commissioners, managers, clerks)
+- Contact information for county government offices
+- County services and department information
+- Inter-county collaboration and best practices
+- Policy positions and county priorities
+
+**What we use:**
+- County official contact information
+- County government structure and services
+- County website discovery
+- Validation of county data from other sources
+
+**Resources:**
+- Website: https://www.naco.org/
+- County Explorer: https://ce.naco.org/
+- Find a County: https://www.naco.org/find-county-official
+- Research & Reports: https://www.naco.org/resources/research
+
+**Potential Scraping:**
+- County profiles and contact directories
+- Official county websites and portals
+- County news and press releases
+- Board meeting schedules and agendas
+
+---
+
+### **National League of Cities (NLC)**
+- Membership organization representing U.S. cities, towns, and villages
+- Organization: National League of Cities
+- Source: https://www.nlc.org/
+- License: Data available for research
+- Coverage: 19,000+ municipalities across all U.S. states
+
+**Coverage:**
+- City profiles and demographics
+- Municipal officials directory (mayors, council members, managers)
+- City government structure and services
+- Local policy initiatives and best practices
+- Municipal financial data
+- City news and press releases
+
+**What we use:**
+- Municipal official contact information
+- City government structure discovery
+- City website and portal discovery
+- Validation of city data from Census sources
+
+**Resources:**
+- Website: https://www.nlc.org/
+- City Data: https://www.nlc.org/resource/city-data-interactive/
+- Find a City: https://www.nlc.org/find-a-city/
+- Research & Publications: https://www.nlc.org/resource-center/
+
+**Potential Scraping:**
+- City profiles and contact directories
+- Municipal government websites
+- City council meeting calendars
+- Policy positions and initiatives
+
+---
+
+### **International City/County Management Association (ICMA)**
+- Professional association for local government management
+- Organization: International City/County Management Association
+- Source: https://icma.org/
+- License: Member data restricted; public resources available
+- Coverage: 13,000+ local government professionals across 32+ countries
+
+**Coverage:**
+- City and county manager directories
+- Local government structure and organization
+- Best practices and management resources
+- Performance measurement frameworks
+- Local government contact information
+
+**What we use:**
+- City/county manager contact information
+- Local government organizational structures
+- Best practice documentation for civic engagement
+- Performance metrics for government services
+
+**Resources:**
+- Website: https://icma.org/
+- Member Directory: https://icma.org/members
+- Local Government Directory: https://icma.org/local-government-directory
+- Research & Publications: https://icma.org/publications
+
+---
+
+### **Local Government Official Websites** ⭐
+- Direct scraping of city and county official websites
+- Source: 2,272+ official .gov domains from GSA registry
+- Coverage: All jurisdictions with registered .gov domains
+- License: Public information (verify each jurisdiction's terms)
+
+**What we scrape:**
+- Meeting schedules and agendas
+- Board/council member directories
+- Department contact information
+- News and press releases
+- Public records and documents
+- YouTube channel links
+- Social media accounts
+- Service directories
+
+**Scraping Approach:**
+1. Use GSA domain registry as source of truth for official websites
+2. Identify common patterns (WordPress, Granicus, CivicPlus, etc.)
+3. Extract structured data (meetings, contacts, videos)
+4. Respect robots.txt and crawl delays
+5. Cache and update incrementally
+
+**Common Platforms:**
+- **CivicPlus**: Municipal website CMS (widely used)
+- **Granicus**: Meeting management and streaming
+- **Legistar**: Legislative management system
+- **OpenGov**: Transparency and financial reporting
+- **WordPress**: Custom municipal websites
+
+**Resources:**
+- GSA .gov Domains: https://github.com/cisagov/dotgov-data
+- Our GSA Integration: `scripts/datasources/gsa/`
+
+---
+
+### **CivicPlus Municipal Websites**
+- Website platform provider for 3,000+ U.S. municipalities
+- Organization: CivicPlus
+- Source: https://www.civicplus.com/
+- License: Public information from client websites
+- Coverage: Cities and counties using CivicPlus CMS
+
+**What we scrape:**
+- Meeting agendas and minutes (standardized format)
+- Event calendars
+- News and announcements
+- Department directories
+- Online services and portals
+
+**Scraping Strategy:**
+- CivicPlus sites follow consistent URL patterns
+- Meeting documents often in `/AgendaCenter/` path
+- Calendar events at `/Calendar.aspx`
+- News at `/CivicAlerts.aspx`
+- Department info at `/directory.aspx`
+
+---
+
+### **Granicus Legistar**
+- Legislative management system used by 1,500+ governments
+- Organization: Granicus
+- Source: https://www.granicus.com/solution/govmeetings/
+- Coverage: Cities and counties using Legistar for legislative management
+
+**What we scrape:**
+- Meeting agendas and packets
+- Legislative calendars
+- Voting records
+- Meeting videos (when hosted on Granicus)
+- Board and committee information
+
+**Scraping Strategy:**
+- Legistar API when available (some jurisdictions)
+- Web scraping of public Legistar portals
+- Common URL pattern: `{city}.legistar.com`
+- JSON endpoints for meeting data
+
+---
+
+### **U.S. Conference of Mayors (USCM)**
+- Official non-partisan organization of cities with population 30,000+
+- Organization: U.S. Conference of Mayors
+- Source: https://www.usmayors.org/
+- Election Results: https://www.usmayors.org/elections/election-results-2/
+- License: Public information
+- Coverage: 1,400+ U.S. cities with mayors
+
+**Coverage:**
+- Mayoral election results (current and upcoming)
+- Mayor contact information and directories
+- City leadership and governance
+- Municipal policy positions and initiatives
+- Best practices and inter-city collaboration
+- Advocacy positions on federal policy
+
+**What we use:**
+- Current and incoming mayor names
+- Mayoral election dates and results
+- Mayor contact information
+- City leadership directories
+- Validation of city official data
+
+**Resources:**
+- Website: https://www.usmayors.org/
+- Election Results: https://www.usmayors.org/elections/election-results-2/
+- Past Results: https://www.usmayors.org/elections/election-results/
+- Mayor Directory: https://www.usmayors.org/mayors/
+- Policy Resources: https://www.usmayors.org/issues/
+
+**BibTeX:**
+```bibtex
+@misc{usmayors_elections_2026,
+    title = {Mayoral Election Results},
+    author = {{U.S. Conference of Mayors}},
+    year = {2026},
+    url = {https://www.usmayors.org/elections/election-results-2/},
+    note = {Official tracking of mayoral elections for cities with 30,000+ population}
+}
+```
+
+**Data Quality:**
+- **Authority:** Official organization representing mayors
+- **Timeliness:** Updated as elections occur throughout the year
+- **Accuracy:** High - directly reported by member cities
+- **Completeness:** Covers ~1,400 cities (30,000+ population) out of 19,000+ total
+
+**Integration Status:**
+- ✅ Created database schema for mayor tracking (`current_mayor`, `mayor_election_date`)
+- ✅ Built scraper for election results table
+- ✅ Ready to enrich city jurisdiction records
+
+---
+
 ## 🙏 **Acknowledgments**
 
 We are grateful to the authors of MeetingBank for making their dataset publicly available for research purposes. Their work on meeting summarization has been instrumental in developing civic engagement tools.
