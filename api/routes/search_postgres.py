@@ -20,6 +20,51 @@ DATABASE_URL = NEON_DATABASE_URL_DEV or NEON_DATABASE_URL
 # Connection pool (created on first request)
 _db_pool = None
 
+# State name to code mapping for input normalization
+STATE_NAME_TO_CODE = {
+    'Alabama': 'AL', 'Alaska': 'AK', 'Arizona': 'AZ', 'Arkansas': 'AR', 'California': 'CA',
+    'Colorado': 'CO', 'Connecticut': 'CT', 'Delaware': 'DE', 'Florida': 'FL', 'Georgia': 'GA',
+    'Hawaii': 'HI', 'Idaho': 'ID', 'Illinois': 'IL', 'Indiana': 'IN', 'Iowa': 'IA',
+    'Kansas': 'KS', 'Kentucky': 'KY', 'Louisiana': 'LA', 'Maine': 'ME', 'Maryland': 'MD',
+    'Massachusetts': 'MA', 'Michigan': 'MI', 'Minnesota': 'MN', 'Mississippi': 'MS', 'Missouri': 'MO',
+    'Montana': 'MT', 'Nebraska': 'NE', 'Nevada': 'NV', 'New Hampshire': 'NH', 'New Jersey': 'NJ',
+    'New Mexico': 'NM', 'New York': 'NY', 'North Carolina': 'NC', 'North Dakota': 'ND', 'Ohio': 'OH',
+    'Oklahoma': 'OK', 'Oregon': 'OR', 'Pennsylvania': 'PA', 'Rhode Island': 'RI', 'South Carolina': 'SC',
+    'South Dakota': 'SD', 'Tennessee': 'TN', 'Texas': 'TX', 'Utah': 'UT', 'Vermont': 'VT',
+    'Virginia': 'VA', 'Washington': 'WA', 'West Virginia': 'WV', 'Wisconsin': 'WI', 'Wyoming': 'WY',
+    'District of Columbia': 'DC', 'Puerto Rico': 'PR', 'Guam': 'GU', 'Virgin Islands': 'VI'
+}
+
+
+def normalize_state_input(state: Optional[str]) -> Optional[str]:
+    """
+    Normalize state input to 2-letter code.
+    
+    Accepts:
+    - 2-letter codes: 'MA', 'ma' -> 'MA'
+    - Full names: 'Massachusetts', 'massachusetts' -> 'MA'
+    - Already uppercase codes: 'MA' -> 'MA'
+    
+    Returns:
+        2-letter uppercase state code or None
+    """
+    if not state:
+        return None
+    
+    state_stripped = state.strip()
+    
+    # If already a 2-letter code, return uppercase
+    if len(state_stripped) == 2:
+        return state_stripped.upper()
+    
+    # Check if it's a full state name (case-insensitive)
+    for name, code in STATE_NAME_TO_CODE.items():
+        if name.lower() == state_stripped.lower():
+            return code
+    
+    # If not found, return uppercase version of input (might be invalid but let DB handle it)
+    return state_stripped.upper()
+
 
 @dataclass
 class SearchResult:
@@ -60,7 +105,7 @@ async def search_jurisdictions_pg(
     
     Args:
         query: Search text (jurisdiction name)
-        state: Filter by state code (e.g., 'MA')
+        state: Filter by state code (e.g., 'MA') or full name (e.g., 'Massachusetts')
         city: Filter by city name  
         jurisdiction_levels: Filter by types (city, county, town, school_district, etc.)
         limit: Max results
@@ -69,6 +114,9 @@ async def search_jurisdictions_pg(
     Returns:
         List of SearchResult objects
     """
+    # Normalize state input to 2-letter code
+    state = normalize_state_input(state)
+    
     try:
         pool = await get_db_pool()
         
@@ -134,6 +182,7 @@ async def search_jurisdictions_pg(
             SELECT 
                 name,
                 type,
+                state_code,
                 state,
                 county,
                 geoid,
@@ -166,6 +215,7 @@ async def search_jurisdictions_pg(
                     score=float(row.get('score', 1.0)) if query else 1.0,
                     metadata={
                         'state': row['state'],
+                        'state_code': row['state_code'],
                         'geoid': row['geoid'],
                         'type': row['type'],
                         'county': row['county'],
@@ -191,12 +241,15 @@ async def search_contacts_pg(
     
     Args:
         query: Search text (name, title, organization)
-        state: Filter by state code
+        state: Filter by state code (e.g., 'MA') or full name (e.g., 'Massachusetts')
         limit: Max results
     
     Returns:
         List of SearchResult objects
     """
+    # Normalize state input to 2-letter code
+    state = normalize_state_input(state)
+    
     try:
         pool = await get_db_pool()
         
@@ -244,6 +297,7 @@ async def search_contacts_pg(
                 email,
                 phone,
                 city,
+                state_code,
                 state,
                 role_type,
                 compensation,
@@ -276,6 +330,7 @@ async def search_contacts_pg(
                         'organization': org_display,
                         'organization_ein': row['organization_ein'],
                         'state': row['state'],
+                        'state_code': row['state_code'],
                         'city': row['city'],
                         'role_type': row['role_type'],
                         'compensation': row['compensation'],
@@ -307,7 +362,7 @@ async def search_organizations_pg(
     
     Args:
         query: Search text (organization name)
-        state: Filter by state code
+        state: Filter by state code (e.g., 'MA') or full name (e.g., 'Massachusetts')
         ntee_code: Filter by NTEE code prefix
         ein: Exact EIN match
         limit: Max results
@@ -317,6 +372,9 @@ async def search_organizations_pg(
     Returns:
         List of SearchResult objects
     """
+    # Normalize state input to 2-letter code
+    state = normalize_state_input(state)
+    
     try:
         pool = await get_db_pool()
         
@@ -451,12 +509,15 @@ async def search_events_pg(
     
     Args:
         query: Search text (title, jurisdiction, description)
-        state: Filter by state code
+        state: Filter by state code (e.g., 'MA') or full name (e.g., 'Massachusetts')
         limit: Max results
     
     Returns:
         List of SearchResult objects
     """
+    # Normalize state input to 2-letter code
+    state = normalize_state_input(state)
+    
     try:
         pool = await get_db_pool()
         
@@ -494,6 +555,7 @@ async def search_events_pg(
                 event_date,
                 jurisdiction_name,
                 jurisdiction_type,
+                state_code,
                 state,
                 city,
                 video_url,
@@ -528,6 +590,7 @@ async def search_events_pg(
                         'jurisdiction': row['jurisdiction_name'],
                         'jurisdiction_type': row['jurisdiction_type'],
                         'state': row['state'],
+                        'state_code': row['state_code'],
                         'city': row['city'],
                         'date': date_str,
                         'meeting_id': row['id'],
@@ -555,13 +618,16 @@ async def search_bills_pg(
     
     Args:
         query: Search text (title, bill number, abstract)
-        state: Filter by state code  
+        state: Filter by state code (e.g., 'MA') or full name (e.g., 'Massachusetts')
         session: Filter by legislative session
         limit: Max results
     
     Returns:
         List of SearchResult objects
     """
+    # Normalize state input to 2-letter code
+    state = normalize_state_input(state)
+    
     try:
         pool = await get_db_pool()
         
@@ -611,6 +677,7 @@ async def search_bills_pg(
                 session,
                 session_name,
                 jurisdiction_name,
+                state_code,
                 state,
                 latest_action_date,
                 latest_action_description,
@@ -651,12 +718,13 @@ async def search_bills_pg(
                     title=title,
                     subtitle=subtitle,
                     description=description,
-                    url=row['source_url'] or f"/bills/{row['state']}/{row['bill_number']}",
+                    url=row['source_url'] or f"/bills/{row['state_code']}/{row['bill_number']}",
                     score=1.0,
                     metadata={
                         'bill_id': row['bill_id'],
                         'bill_number': row['bill_number'],
                         'state': row['state'],
+                        'state_code': row['state_code'],
                         'session': row['session'],
                         'classification': row['classification'],
                         'latest_action_date': row['latest_action_date'].isoformat() if row['latest_action_date'] else None
