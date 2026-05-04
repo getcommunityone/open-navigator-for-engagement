@@ -63,7 +63,7 @@ All existing database tables migrated using `scripts/migrate_all_state_naming.py
 - ✅ `bills_versions.parquet`
 - ✅ `contacts_local_officials.parquet`
 - ✅ `contacts_officials.parquet`
-- ✅ `event_documents.parquet`
+- ✅ `events_documents.parquet`
 - ✅ `event_participants.parquet`
 - ✅ `jurisdictions_cities.parquet` (was using 'USPS')
 - ✅ `jurisdictions_counties.parquet` (was using 'USPS')

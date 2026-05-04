@@ -45,7 +45,7 @@ def get_dataset_name(file_stem: str) -> str:
     Examples:
         bills_bills -> bills
         nonprofits_organizations -> nonprofits-organizations
-        event_documents -> event-documents
+        events_documents -> event-documents
     """
     # Special cases - simplify some names
     simplifications = {
@@ -54,8 +54,8 @@ def get_dataset_name(file_stem: str) -> str:
         'bills_bill_sponsorships': 'bill-sponsorships',
         'contacts_officials': 'officials',
         'contacts_local_officials': 'local-officials',
-        'event_participants': 'event-participants',
-        'event_documents': 'event-documents',
+        'events_participants': 'event-participants',
+        'events_documents': 'event-documents',
     }
     
     if file_stem in simplifications:

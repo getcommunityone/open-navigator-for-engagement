@@ -30,13 +30,13 @@ The script automatically renames:
 |----------|----------|
 | `meetings.parquet` | `events.parquet` |
 | `meetings_calendar.parquet` | `events.parquet` |
-| `meetings_transcripts.parquet` | `event_documents.parquet` |
+| `meetings_transcripts.parquet` | `events_documents.parquet` |
 | `meetings_topics.parquet` | `event_agenda_items.parquet` |
 | `meetings_demographics.parquet` | `event_participants.parquet` |
 | `meetings_decisions.parquet` | `event_bills.parquet` |
 | `contacts_meeting_attendance.parquet` | `event_participants.parquet` |
 | `events_events.parquet` | `events.parquet` |
-| `events_event_documents.parquet` | `event_documents.parquet` |
+| `events_event_documents.parquet` | `events_documents.parquet` |
 | `events_event_participants.parquet` | `event_participants.parquet` |
 | `events_event_agenda_items.parquet` | `event_agenda_items.parquet` |
 | `events_event_bills.parquet` | `event_bills.parquet` |

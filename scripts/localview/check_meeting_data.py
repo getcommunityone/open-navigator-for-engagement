@@ -40,7 +40,7 @@ def check_openstates_events(states: List[str]) -> Dict[str, Dict]:
     for state in states:
         state_dir = gold_dir / state
         events_file = state_dir / "events_events.parquet"
-        participants_file = state_dir / "events_event_participants.parquet"
+        participants_file = state_dir / "events_participants.parquet"
         
         state_data = {
             "has_events": events_file.exists(),

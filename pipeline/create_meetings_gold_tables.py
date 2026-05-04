@@ -8,7 +8,7 @@ Gold Tables Created:
 1. events_events - Event dates, locations, jurisdictions (data/gold/national/)
 2. events_event_documents - Full searchable meeting text and documents (data/gold/national/)
 3. events_event_agenda_items - Extracted topics and agenda items
-4. events_event_participants - Link events to jurisdiction demographics and attendees
+4. events_participants - Link events to jurisdiction demographics and attendees
 5. events_event_bills - Identified policy decisions and votes
 
 Input: data/cache/localview/meetings.YYYY.parquet (2006-2023)
@@ -147,13 +147,13 @@ class EventGoldTableCreator:
         
         return transcript_df
     
-    def create_events_event_participants(self, df: pd.DataFrame) -> pd.DataFrame:
+    def create_events_participants(self, df: pd.DataFrame) -> pd.DataFrame:
         """
-        Create events_event_participants gold table
+        Create events_participants gold table
         
         Links event data with demographic context from census data
         """
-        logger.info("Creating events_event_participants gold table...")
+        logger.info("Creating events_participants gold table...")
         
         demo_data = []
         
@@ -185,7 +185,7 @@ class EventGoldTableCreator:
         # Save to parquet in national directory
         national_dir = self.gold_dir / "national"
         national_dir.mkdir(parents=True, exist_ok=True)
-        output_path = national_dir / "events_event_participants.parquet"
+        output_path = national_dir / "events_participants.parquet"
         demo_df.to_parquet(output_path, index=False)
         logger.success(f"Created {output_path} with {len(demo_df):,} records")
         
@@ -334,7 +334,7 @@ class EventGoldTableCreator:
         # Create each gold table
         self.create_events_events(df)
         self.create_events_event_documents(df)
-        self.create_events_event_participants(df)
+        self.create_events_participants(df)
         self.create_events_event_agenda_items(df)
         self.create_events_event_bills(df)
         

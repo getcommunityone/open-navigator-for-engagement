@@ -50,7 +50,7 @@ data/gold/
 ├── contacts_local_officials.parquet    (15 KB)
 ├── contacts_officials.parquet          (461 KB)
 ├── domains_gsa_domains.parquet         (596 KB)
-├── event_documents.parquet             (366 MB)
+├── events_documents.parquet             (366 MB)
 ├── event_participants.parquet          (808 KB)
 ├── events.parquet                      (1.8 MB)
 ├── jurisdictions_cities.parquet        (2.0 MB)
@@ -103,7 +103,7 @@ if state:
 ### 3. File Size Compliance
 
 All files are under HuggingFace's 500MB recommended limit:
-- Largest file: `event_documents.parquet` at 366 MB
+- Largest file: `events_documents.parquet` at 366 MB
 - Total data size: ~840 MB
 
 ## Benefits

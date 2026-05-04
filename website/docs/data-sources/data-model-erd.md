@@ -57,7 +57,7 @@ open-navigator-data/
 │   ├── events             # Government meetings, public hearings, community forums, town halls
 │   ├── event_participants # Officials and organizations participating in events
 │   ├── event_agenda_items # Individual agenda topics discussed
-│   ├── event_documents    # Agendas, minutes, presentations, handouts
+│   ├── events_documents    # Agendas, minutes, presentations, handouts
 │   ├── event_media        # Video recordings, livestreams, audio files
 │   └── event_bills        # Bills discussed or considered at meetings
 │
@@ -279,7 +279,7 @@ bills_individual_votes.parquet
 events.parquet
 event_participants.parquet
 event_agenda_items.parquet
-event_documents.parquet
+events_documents.parquet
 event_media.parquet
 event_bills.parquet
 budgets_city_budgets.parquet
@@ -561,7 +561,7 @@ erDiagram
     %% EVENTS & MEETINGS
     %% ========================================
     %% Schema.org types: Event, GovernmentEvent, VideoObject, DigitalDocument
-    %% Parquet files: events.parquet, event_documents.parquet, event_participants.parquet, etc.
+    %% Parquet files: events.parquet, events_documents.parquet, event_participants.parquet, etc.
     
     %% EVENT - Parent entity for all public events
     JURISDICTION ||--o{ EVENT : hosts

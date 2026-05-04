@@ -736,13 +736,6 @@ export default function Home() {
                     <span className="font-medium">Explore</span>
                   </Link>
                   <Link
-                    to="/search"
-                    className="flex items-center gap-3 px-4 py-3 rounded-lg text-gray-700 hover:bg-[#354F52] hover:text-white transition-all group"
-                  >
-                    <MagnifyingGlassIcon className="h-5 w-5 group-hover:scale-110 transition-transform" />
-                    <span className="font-medium">Search</span>
-                  </Link>
-                  <Link
                     to="/policy-map"
                     className="flex items-center gap-3 px-4 py-3 rounded-lg text-gray-700 hover:bg-[#354F52] hover:text-white transition-all group"
                   >
@@ -754,7 +747,7 @@ export default function Home() {
                     className="flex items-center gap-3 px-4 py-3 rounded-lg text-gray-700 hover:bg-[#354F52] hover:text-white transition-all group"
                   >
                     <BuildingLibraryIcon className="h-5 w-5 group-hover:scale-110 transition-transform" />
-                    <span className="font-medium">Nonprofits</span>
+                    <span className="font-medium">Charity Search</span>
                   </Link>
                 </nav>
                 

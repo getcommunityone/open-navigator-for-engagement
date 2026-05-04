@@ -8,7 +8,7 @@ Exports data for dev states (WA, MA, AL, GA, WI) with new naming conventions:
 - bills_bill_actions
 - bills_bill_sponsorships
 - events_events
-- events_event_participants
+- events_participants
 
 Files are saved to: data/gold/states/{STATE}/
 
@@ -419,9 +419,9 @@ def export_events_events(conn, state: str, jurisdiction_id: str, state_dir: Path
     return df
 
 
-def export_events_event_participants(conn, state: str, jurisdiction_id: str, state_dir: Path):
+def export_events_participants(conn, state: str, jurisdiction_id: str, state_dir: Path):
     """Export event participants from opencivicdata_eventparticipant table."""
-    logger.info(f"  Exporting events_event_participants for {state}...")
+    logger.info(f"  Exporting events_participants for {state}...")
     
     if not jurisdiction_id:
         logger.warning(f"  No jurisdiction ID for {state}, skipping event participants export")
@@ -451,7 +451,7 @@ def export_events_event_participants(conn, state: str, jurisdiction_id: str, sta
         logger.warning(f"  No event participants found for {state}")
         return None
     
-    output_path = state_dir / "events_event_participants.parquet"
+    output_path = state_dir / "events_participants.parquet"
     df.to_parquet(output_path, index=False, engine='pyarrow', compression='snappy')
     
     logger.info(f"  ✅ Exported {len(df):,} event participants")
@@ -497,7 +497,7 @@ def main():
             export_bills_bill_actions(conn, state, jurisdiction_id, state_dir)
             export_bills_bill_sponsorships(conn, state, jurisdiction_id, state_dir)
             export_events_events(conn, state, jurisdiction_id, state_dir)
-            export_events_event_participants(conn, state, jurisdiction_id, state_dir)
+            export_events_participants(conn, state, jurisdiction_id, state_dir)
             
             # Show summary for this state
             logger.info(f"\n  State {state} files:")
