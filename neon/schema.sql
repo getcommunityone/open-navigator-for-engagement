@@ -190,6 +190,7 @@ CREATE TABLE events_search (
     event_time TIME,
     
     -- Organization
+    jurisdiction_id VARCHAR(50),
     jurisdiction_name VARCHAR(200),
     jurisdiction_type VARCHAR(50),
     state_code VARCHAR(2),        -- Two-letter state code (e.g., 'AL', 'MA')
@@ -204,7 +205,7 @@ CREATE TABLE events_search (
     -- Documents/links
     agenda_url TEXT,
     minutes_url TEXT,
-    video_url TEXT,
+    video_url TEXT UNIQUE,        -- Unique constraint prevents duplicate videos
     
     -- Metadata
     source VARCHAR(50) DEFAULT 'legistar',
@@ -216,7 +217,25 @@ CREATE INDEX idx_events_date ON events_search(event_date DESC);
 CREATE INDEX idx_events_state_code ON events_search(state_code);
 CREATE INDEX idx_events_state ON events_search(state);
 CREATE INDEX idx_events_jurisdiction ON events_search(jurisdiction_name);
+CREATE INDEX idx_events_jurisdiction_id ON events_search(jurisdiction_id);
 CREATE INDEX idx_events_date_state ON events_search(event_date, state_code);
+
+
+-- Events text search table (video transcripts)
+CREATE TABLE events_text_search (
+    id SERIAL PRIMARY KEY,
+    event_id INTEGER REFERENCES events_search(id) ON DELETE CASCADE,
+    video_id VARCHAR(20) NOT NULL UNIQUE,
+    raw_text TEXT,
+    language VARCHAR(10),
+    is_auto_generated BOOLEAN DEFAULT FALSE,
+    transcript_source VARCHAR(50),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX idx_events_text_event_id ON events_text_search(event_id);
+CREATE INDEX idx_events_text_video_id ON events_text_search(video_id);
+CREATE INDEX idx_events_text_search_gin ON events_text_search USING GIN (to_tsvector('english', COALESCE(raw_text, '')));
 
 
 -- Bills search table (legislative bills from all states)
