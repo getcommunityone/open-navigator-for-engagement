@@ -116,7 +116,7 @@ class WikidataQuery:
         logger.info(f"Executing SPARQL query...")
         logger.debug(f"Query: {query}")
         
-        async with httpx.AsyncClient(timeout=60.0) as client:
+        async with httpx.AsyncClient(timeout=180.0) as client:  # Increased timeout for complex queries
             try:
                 response = await client.get(
                     self.SPARQL_ENDPOINT,

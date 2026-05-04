@@ -520,10 +520,11 @@ def load_jurisdictions_search(conn):
         df = pd.read_parquet(cities_file)
         records = [
             (row.get('NAME', ''), 'city', 
-             row.get('USPS', ''),  # state_code (2-letter)
-             STATE_NAMES.get(row.get('USPS', ''), ''),  # state (full name)
+             row.get('state_code', ''),  # state_code (2-letter)
+             row.get('state', ''),  # state (full name)
              None,  # county
-             row.get('GEOID'), None,  # geoid, fips_code
+             str(row.get('GEOID', '')).zfill(7) if row.get('GEOID') else None,  # geoid (7 digits)
+             None,  # fips_code
              None, clean_numeric(row.get('ALAND_SQMI')),  # population, area_sq_miles
              'census', datetime.now())
             for _, row in df.iterrows()
@@ -548,10 +549,11 @@ def load_jurisdictions_search(conn):
         df = pd.read_parquet(counties_file)
         records = [
             (row.get('NAME', ''), 'county', 
-             row.get('USPS', ''),  # state_code (2-letter)
-             STATE_NAMES.get(row.get('USPS', ''), ''),  # state (full name)
+             row.get('state_code', ''),  # state_code (2-letter)
+             row.get('state', ''),  # state (full name)
              None,
-             row.get('GEOID'), None,
+             str(row.get('GEOID', '')).zfill(5) if row.get('GEOID') else None,  # geoid (5 digits)
+             str(row.get('GEOID', '')).zfill(5) if row.get('GEOID') else None,  # fips_code (same as geoid)
              None, clean_numeric(row.get('ALAND_SQMI')),
              'census', datetime.now())
             for _, row in df.iterrows()
@@ -563,6 +565,7 @@ def load_jurisdictions_search(conn):
             VALUES %s
             ON CONFLICT (name, type, state_code, county) DO UPDATE SET
                 geoid = EXCLUDED.geoid,
+                fips_code = EXCLUDED.fips_code,
                 area_sq_miles = EXCLUDED.area_sq_miles,
                 state = EXCLUDED.state
         """, records)
@@ -576,10 +579,11 @@ def load_jurisdictions_search(conn):
         df = pd.read_parquet(townships_file)
         records = [
             (row.get('NAME', ''), 'township', 
-             row.get('USPS', ''),  # state_code (2-letter)
-             STATE_NAMES.get(row.get('USPS', ''), ''),  # state (full name)
+             row.get('state_code', ''),  # state_code (2-letter)
+             row.get('state', ''),  # state (full name)
              None,
-             row.get('GEOID'), None,
+             str(row.get('GEOID', '')).zfill(10) if row.get('GEOID') else None,  # geoid (10 digits)
+             None,  # fips_code
              None, clean_numeric(row.get('ALAND_SQMI')),
              'census', datetime.now())
             for _, row in df.iterrows()
@@ -604,10 +608,11 @@ def load_jurisdictions_search(conn):
         df = pd.read_parquet(districts_file)
         records = [
             (row.get('NAME', ''), 'school_district', 
-             row.get('STATE', ''),  # state_code (2-letter)
-             STATE_NAMES.get(row.get('STATE', ''), ''),  # state (full name)
+             row.get('state_code', ''),  # state_code (2-letter)
+             row.get('state', ''),  # state (full name)
              None,
-             row.get('GEOID'), None,
+             str(row.get('GEOID', '')).zfill(7) if row.get('GEOID') else None,  # geoid (7 digits)
+             None,  # fips_code
              None, clean_numeric(row.get('ALAND_SQMI')),
              'census', datetime.now())
             for _, row in df.iterrows()
