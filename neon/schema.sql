@@ -191,6 +191,7 @@ CREATE TABLE events_search (
     
     -- Organization
     jurisdiction_id VARCHAR(50),
+    channel_id VARCHAR(50),          -- YouTube channel ID for per-channel tracking
     jurisdiction_name VARCHAR(200),
     jurisdiction_type VARCHAR(50),
     state_code VARCHAR(2),        -- Two-letter state code (e.g., 'AL', 'MA')
@@ -218,6 +219,7 @@ CREATE INDEX idx_events_state_code ON events_search(state_code);
 CREATE INDEX idx_events_state ON events_search(state);
 CREATE INDEX idx_events_jurisdiction ON events_search(jurisdiction_name);
 CREATE INDEX idx_events_jurisdiction_id ON events_search(jurisdiction_id);
+CREATE INDEX idx_events_channel_id ON events_search(channel_id);
 CREATE INDEX idx_events_date_state ON events_search(event_date, state_code);
 
 
@@ -227,6 +229,7 @@ CREATE TABLE events_text_search (
     event_id INTEGER REFERENCES events_search(id) ON DELETE CASCADE,
     video_id VARCHAR(20) NOT NULL UNIQUE,
     raw_text TEXT,
+    segments JSONB,  -- Structured transcript with timestamps: [{"text": "...", "start": 0.0, "duration": 2.5}, ...]
     language VARCHAR(10),
     is_auto_generated BOOLEAN DEFAULT FALSE,
     transcript_source VARCHAR(50),

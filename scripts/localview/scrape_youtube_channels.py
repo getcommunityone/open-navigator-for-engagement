@@ -277,7 +277,13 @@ class MunicipalYouTubeScraper:
             return []
         
         videos = []
-        channel_url = f"https://www.youtube.com/channel/{channel_id}/videos"
+        
+        # Try multiple URL patterns for channels that may not have a videos tab
+        url_patterns = [
+            f"https://www.youtube.com/channel/{channel_id}/videos",  # Standard videos tab
+            f"https://www.youtube.com/channel/{channel_id}/streams",  # Live streams tab
+            f"https://www.youtube.com/channel/{channel_id}",  # Channel homepage (all content)
+        ]
         
         ydl_opts = {
             'quiet': True,
@@ -286,15 +292,27 @@ class MunicipalYouTubeScraper:
             'playlistend': max_results,
         }
         
+        info = None
+        successful_url = None
+        
         try:
             logger.info(f"Using yt-dlp fallback for channel {channel_id}")
             
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-                # Extract channel info
-                info = ydl.extract_info(channel_url, download=False)
+                # Try each URL pattern until one works
+                for channel_url in url_patterns:
+                    try:
+                        info = ydl.extract_info(channel_url, download=False)
+                        if info and 'entries' in info:
+                            successful_url = channel_url
+                            logger.debug(f"Successfully extracted from: {channel_url}")
+                            break
+                    except Exception as url_error:
+                        logger.debug(f"Failed {channel_url}: {str(url_error)[:100]}")
+                        continue
                 
                 if not info or 'entries' not in info:
-                    logger.warning(f"No videos found for channel {channel_id}")
+                    logger.warning(f"No videos found for channel {channel_id} after trying all URL patterns")
                     return []
                 
                 for entry in info['entries']:
@@ -342,7 +360,9 @@ class MunicipalYouTubeScraper:
                     if len(videos) >= max_results:
                         break
             
-            logger.success(f"yt-dlp: Found {len(videos)} videos from channel {channel_id}")
+            if videos:
+                url_type = "videos tab" if "/videos" in successful_url else "streams tab" if "/streams" in successful_url else "channel homepage"
+                logger.success(f"yt-dlp: Found {len(videos)} videos from channel {channel_id} ({url_type})")
             
         except Exception as e:
             logger.error(f"yt-dlp error for channel {channel_id}: {e}")

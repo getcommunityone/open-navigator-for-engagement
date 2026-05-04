@@ -49,6 +49,7 @@ from youtube_transcript_api._errors import (
     NoTranscriptFound, 
     VideoUnavailable
 )
+import yt_dlp
 
 # Import YouTube scraper (handles API and yt-dlp fallback)
 sys.path.insert(0, str(Path(__file__).parent.parent.parent / 'localview'))
@@ -92,19 +93,32 @@ class YouTubeEventsLoader:
         self._create_events_text_search_table()
     
     def _add_jurisdiction_id_column(self):
-        """Add jurisdiction_id column to events_search if it doesn't exist."""
+        """Add jurisdiction_id and channel_id columns to events_search if they don't exist."""
         cursor = self.conn.cursor()
         
         try:
+            # Add jurisdiction_id column
             cursor.execute("""
                 ALTER TABLE events_search 
                 ADD COLUMN IF NOT EXISTS jurisdiction_id VARCHAR(50);
+            """)
+            
+            # Add channel_id column for per-channel tracking
+            cursor.execute("""
+                ALTER TABLE events_search 
+                ADD COLUMN IF NOT EXISTS channel_id VARCHAR(50);
             """)
             
             # Create index for jurisdiction_id
             cursor.execute("""
                 CREATE INDEX IF NOT EXISTS idx_events_jurisdiction_id 
                 ON events_search(jurisdiction_id);
+            """)
+            
+            # Create index for channel_id
+            cursor.execute("""
+                CREATE INDEX IF NOT EXISTS idx_events_channel_id 
+                ON events_search(channel_id);
             """)
             
             # Add unique constraint on video_url to prevent duplicates
@@ -134,7 +148,7 @@ class YouTubeEventsLoader:
             """)
             
             self.conn.commit()
-            logger.success("✓ Ensured jurisdiction_id column and unique constraint exist")
+            logger.success("✓ Ensured jurisdiction_id, channel_id columns and unique constraint exist")
             
         except Exception as e:
             self.conn.rollback()
@@ -153,12 +167,24 @@ class YouTubeEventsLoader:
                     event_id INTEGER,
                     video_id VARCHAR(20) NOT NULL,
                     raw_text TEXT,
+                    segments JSONB,
                     language VARCHAR(10),
                     is_auto_generated BOOLEAN DEFAULT FALSE,
                     transcript_source VARCHAR(50),
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     UNIQUE(video_id)
                 );
+            """)
+            
+            # Add segments column if it doesn't exist (for existing tables)
+            cursor.execute("""
+                DO $$ 
+                BEGIN
+                    ALTER TABLE events_text_search 
+                    ADD COLUMN IF NOT EXISTS segments JSONB;
+                EXCEPTION
+                    WHEN duplicate_column THEN NULL;
+                END $$;
             """)
             
             # Create indexes
@@ -270,7 +296,8 @@ class YouTubeEventsLoader:
         jurisdiction_name: str,
         jurisdiction_type: str,
         state_code: str,
-        state: str
+        state: str,
+        channel_id: str
     ) -> Dict[str, Any]:
         """Convert YouTube video metadata to events_search record format."""
         
@@ -303,6 +330,7 @@ class YouTubeEventsLoader:
         
         return {
             'jurisdiction_id': jurisdiction_id,
+            'channel_id': channel_id,
             'title': video.get('title', 'Meeting Video')[:500],  # Limit length
             'description': description,
             'event_date': event_date,
@@ -323,44 +351,197 @@ class YouTubeEventsLoader:
             'video_id': video.get('video_id')  # Store video_id for transcript linking
         }
     
+    def fetch_transcript_ytdlp(self, video_id: str) -> Optional[Dict[str, Any]]:
+        """Fetch transcript using yt-dlp as fallback."""
+        try:
+            url = f'https://www.youtube.com/watch?v={video_id}'
+            
+            ydl_opts = {
+                'skip_download': True,
+                'writesubtitles': True,
+                'writeautomaticsub': True,
+                'subtitleslangs': ['en'],
+                'quiet': True,
+                'no_warnings': True
+            }
+            
+            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                info = ydl.extract_info(url, download=False)
+                
+                # Try manual subtitles first, then auto-generated
+                subtitles = info.get('subtitles', {})
+                auto_captions = info.get('automatic_captions', {})
+                
+                transcript_data = None
+                is_auto = False
+                language = 'en'
+                
+                if 'en' in subtitles:
+                    # Use manual English subtitles
+                    transcript_data = subtitles['en']
+                    is_auto = False
+                elif 'en' in auto_captions:
+                    # Fall back to auto-generated English captions
+                    transcript_data = auto_captions['en']
+                    is_auto = True
+                else:
+                    # Try first available language
+                    if subtitles:
+                        lang = list(subtitles.keys())[0]
+                        transcript_data = subtitles[lang]
+                        language = lang
+                        is_auto = False
+                    elif auto_captions:
+                        lang = list(auto_captions.keys())[0]
+                        transcript_data = auto_captions[lang]
+                        language = lang
+                        is_auto = True
+                
+                if not transcript_data:
+                    return None
+                
+                # Download the subtitle file content
+                # yt-dlp returns a list of subtitle formats, prefer 'vtt' or 'srv3'
+                subtitle_url = None
+                for fmt in transcript_data:
+                    if fmt.get('ext') in ['vtt', 'srv3', 'json3']:
+                        subtitle_url = fmt.get('url')
+                        break
+                
+                if not subtitle_url and transcript_data:
+                    subtitle_url = transcript_data[0].get('url')
+                
+                if not subtitle_url:
+                    return None
+                
+                # Fetch subtitle content
+                import requests
+                import re
+                response = requests.get(subtitle_url, timeout=10)
+                response.raise_for_status()
+                
+                # Parse VTT/SRT format to extract text AND timing
+                raw_content = response.text
+                
+                # Parse VTT format with timestamps
+                segments = []
+                lines = raw_content.split('\n')
+                i = 0
+                
+                while i < len(lines):
+                    line = lines[i].strip()
+                    
+                    # Look for timestamp lines (format: 00:00:00.000 --> 00:00:02.500)
+                    if '-->' in line:
+                        timestamp_match = re.match(
+                            r'(\d{2}:\d{2}:\d{2}\.\d{3})\s*-->\s*(\d{2}:\d{2}:\d{2}\.\d{3})',
+                            line
+                        )
+                        
+                        if timestamp_match:
+                            start_str = timestamp_match.group(1)
+                            end_str = timestamp_match.group(2)
+                            
+                            # Convert timestamp to seconds
+                            def timestamp_to_seconds(ts):
+                                h, m, s = ts.split(':')
+                                return int(h) * 3600 + int(m) * 60 + float(s)
+                            
+                            start = timestamp_to_seconds(start_str)
+                            end = timestamp_to_seconds(end_str)
+                            duration = end - start
+                            
+                            # Get the text lines (next non-empty lines until we hit another timestamp or end)
+                            i += 1
+                            text_lines = []
+                            while i < len(lines):
+                                text_line = lines[i].strip()
+                                # Stop at empty line, next timestamp, or WEBVTT header
+                                if not text_line or '-->' in text_line or text_line.startswith('WEBVTT'):
+                                    break
+                                # Skip numeric IDs
+                                if not text_line.isdigit():
+                                    # Remove HTML tags
+                                    clean_text = re.sub(r'<[^>]+>', '', text_line)
+                                    if clean_text:
+                                        text_lines.append(clean_text)
+                                i += 1
+                            
+                            if text_lines:
+                                segments.append({
+                                    'text': ' '.join(text_lines),
+                                    'start': start,
+                                    'duration': duration
+                                })
+                    
+                    i += 1
+                
+                # Combine all text for raw_text field
+                raw_text = ' '.join([seg['text'] for seg in segments])
+                
+                if not raw_text:
+                    return None
+                
+                return {
+                    'video_id': video_id,
+                    'raw_text': raw_text,
+                    'segments': segments,
+                    'language': language,
+                    'is_auto_generated': is_auto,
+                    'transcript_source': 'yt-dlp'
+                }
+                
+        except Exception as e:
+            logger.debug(f"    yt-dlp transcript error for {video_id}: {e}")
+            return None
+    
     def fetch_transcript(self, video_id: str) -> Optional[Dict[str, Any]]:
         """Fetch transcript/captions for a YouTube video."""
         if not video_id:
             return None
         
+        # Try youtube_transcript_api first (faster and cleaner)
         try:
-            # Get list of available transcripts
-            transcript_list = YouTubeTranscriptApi.list_transcripts(video_id)
+            # Create API instance and fetch transcript
+            api = YouTubeTranscriptApi()
             
-            # Try to get English transcript first (auto-generated or manual)
+            # Try to get English transcript first
             try:
-                transcript = transcript_list.find_transcript(['en'])
-                is_auto = transcript.is_generated
+                fetched_transcript = api.fetch(video_id, languages=['en'])
                 language = 'en'
+                is_auto = fetched_transcript.is_generated
             except NoTranscriptFound:
-                # Fall back to any available transcript
+                # Try any available language
                 try:
-                    transcript = transcript_list.find_generated_transcript(['en'])
-                    is_auto = True
-                    language = 'en'
-                except:
+                    transcript_list = api.list(video_id)
                     # Get first available transcript
                     available = list(transcript_list)
                     if not available:
-                        return None
-                    transcript = available[0]
-                    is_auto = transcript.is_generated
-                    language = transcript.language_code
+                        raise NoTranscriptFound(video_id)
+                    first_transcript = available[0]
+                    fetched_transcript = first_transcript.fetch()
+                    language = first_transcript.language_code
+                    is_auto = first_transcript.is_generated
+                except:
+                    raise NoTranscriptFound(video_id)
             
-            # Fetch the actual transcript data
-            transcript_data = transcript.fetch()
+            # Extract both raw text and structured segments with timing
+            raw_text = ' '.join([snippet.text for snippet in fetched_transcript.snippets])
             
-            # Combine all text segments
-            raw_text = ' '.join([entry['text'] for entry in transcript_data])
+            # Preserve timing data in structured format
+            segments = [
+                {
+                    'text': snippet.text,
+                    'start': snippet.start,
+                    'duration': snippet.duration
+                }
+                for snippet in fetched_transcript.snippets
+            ]
             
             return {
                 'video_id': video_id,
                 'raw_text': raw_text,
+                'segments': segments,
                 'language': language,
                 'is_auto_generated': is_auto,
                 'transcript_source': 'youtube_api'
@@ -368,16 +549,15 @@ class YouTubeEventsLoader:
             
         except TranscriptsDisabled:
             logger.debug(f"    Transcripts disabled for video {video_id}")
-            return None
-        except NoTranscriptFound:
-            logger.debug(f"    No transcript found for video {video_id}")
+            # Don't try yt-dlp fallback for disabled transcripts
             return None
         except VideoUnavailable:
             logger.debug(f"    Video {video_id} unavailable")
             return None
-        except Exception as e:
-            logger.debug(f"    Error fetching transcript for {video_id}: {e}")
-            return None
+        except (NoTranscriptFound, Exception) as e:
+            # Fall back to yt-dlp for other errors
+            logger.debug(f"    youtube_transcript_api failed for {video_id}, trying yt-dlp fallback...")
+            return self.fetch_transcript_ytdlp(video_id)
     
     def insert_events(self, events: List[Dict[str, Any]], batch_size: int = 500) -> int:
         """Insert events into events_search table."""
@@ -386,12 +566,12 @@ class YouTubeEventsLoader:
         
         insert_query = """
             INSERT INTO events_search (
-                jurisdiction_id, title, description, event_date, event_time,
+                jurisdiction_id, channel_id, title, description, event_date, event_time,
                 jurisdiction_name, jurisdiction_type, state_code, state, city,
                 location, meeting_type, status,
                 agenda_url, minutes_url, video_url, source, last_updated
             ) VALUES (
-                %(jurisdiction_id)s, %(title)s, %(description)s, %(event_date)s, %(event_time)s,
+                %(jurisdiction_id)s, %(channel_id)s, %(title)s, %(description)s, %(event_date)s, %(event_time)s,
                 %(jurisdiction_name)s, %(jurisdiction_type)s, %(state_code)s, %(state)s, %(city)s,
                 %(location)s, %(meeting_type)s, %(status)s,
                 %(agenda_url)s, %(minutes_url)s, %(video_url)s, %(source)s, %(last_updated)s
@@ -440,10 +620,10 @@ class YouTubeEventsLoader:
         
         insert_query = """
             INSERT INTO events_text_search (
-                event_id, video_id, raw_text, language, 
+                event_id, video_id, raw_text, segments, language, 
                 is_auto_generated, transcript_source
             ) VALUES (
-                %(event_id)s, %(video_id)s, %(raw_text)s, %(language)s,
+                %(event_id)s, %(video_id)s, %(raw_text)s, %(segments)s::jsonb, %(language)s,
                 %(is_auto_generated)s, %(transcript_source)s
             )
             ON CONFLICT (video_id) DO NOTHING
@@ -456,6 +636,14 @@ class YouTubeEventsLoader:
                 
                 if transcript_data:
                     transcript_data['event_id'] = event_id
+                    
+                    # Convert segments list to JSON string for PostgreSQL
+                    if 'segments' in transcript_data and transcript_data['segments']:
+                        import json
+                        transcript_data['segments'] = json.dumps(transcript_data['segments'])
+                    else:
+                        transcript_data['segments'] = None
+                    
                     cursor.execute(insert_query, transcript_data)
                     inserted += 1
                     
@@ -473,19 +661,20 @@ class YouTubeEventsLoader:
         finally:
             cursor.close()
     
-    def get_most_recent_video_date(self, jurisdiction_id: str) -> Optional[datetime]:
-        """Get the most recent video date for a jurisdiction from the database."""
+    def get_most_recent_video_date(self, jurisdiction_id: str, channel_id: str) -> Optional[datetime]:
+        """Get the most recent video date for a specific channel within a jurisdiction."""
         cursor = self.conn.cursor()
         
         try:
-            # Get the most recent video date for this specific jurisdiction
+            # Get the most recent video date for this specific channel
             cursor.execute("""
                 SELECT MAX(event_date) 
                 FROM events_search 
                 WHERE jurisdiction_id = %s
+                AND channel_id = %s
                 AND source = 'youtube'
                 AND video_url IS NOT NULL
-            """, (jurisdiction_id,))
+            """, (jurisdiction_id, channel_id))
             
             result = cursor.fetchone()
             if result and result[0]:
@@ -517,15 +706,6 @@ class YouTubeEventsLoader:
         
         logger.info(f"  Found {len(channels)} YouTube channel(s)")
         
-        # Get most recent video date for this jurisdiction to enable incremental fetching
-        most_recent_date = None
-        if not self.force_full_fetch:
-            most_recent_date = self.get_most_recent_video_date(jurisdiction_id)
-            if most_recent_date:
-                logger.info(f"  Most recent video in DB: {most_recent_date.date()}")
-        else:
-            logger.info(f"  Force mode: fetching all videos (ignoring existing data)")
-        
         # Collect all events from all channels
         all_events = []
         
@@ -535,14 +715,21 @@ class YouTubeEventsLoader:
             
             logger.info(f"  Fetching videos from: {channel_title} ({channel_id})")
             
+            # Get most recent video date for THIS SPECIFIC CHANNEL
+            most_recent_date = None
+            if not self.force_full_fetch:
+                most_recent_date = self.get_most_recent_video_date(jurisdiction_id, channel_id)
+                if most_recent_date:
+                    logger.info(f"    Most recent video for this channel: {most_recent_date.date()}")
+            
             try:
                 # Determine published_after date (use most recent date for incremental fetching)
                 published_after = None
                 if self.days_lookback:
-                    published_after = datetime.now() - timedelta(days=self.days_lookback)
+                    published_after = datetime.now(timezone.utc) - timedelta(days=self.days_lookback)
                     logger.info(f"    Filtering videos from last {self.days_lookback} days")
                 elif most_recent_date:
-                    # Incremental: only fetch videos newer than what we have
+                    # Incremental: only fetch videos newer than what we have for this channel
                     published_after = most_recent_date
                     logger.info(f"    Incremental: fetching videos newer than {most_recent_date.date()}")
                 
@@ -567,7 +754,8 @@ class YouTubeEventsLoader:
                         jurisdiction_name=jurisdiction_name,
                         jurisdiction_type=jurisdiction_type,
                         state_code=state_code,
-                        state=state
+                        state=state,
+                        channel_id=channel_id
                     )
                     all_events.append(event)
                 
