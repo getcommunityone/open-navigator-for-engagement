@@ -44,13 +44,14 @@ const navigation = [
       { name: 'Policy Decisions', href: '/documents', icon: DocumentTextIcon },
       { name: 'Budget Analysis', href: '/analytics', icon: ChartBarIcon },
       { name: 'Elected Officials', href: '/people', icon: UserGroupIcon },
+      { name: 'Public Policies', href: '/public-policies', icon: DocumentTextIcon },
       { name: 'Policy Map', href: '/policy-map', icon: MapIcon },
     ]
   },
   { 
     section: 'Community & Advocacy',
     items: [
-      { name: 'Nonprofits', href: '/nonprofits', icon: BuildingLibraryIcon },
+      { name: 'Charities', href: '/nonprofits', icon: BuildingLibraryIcon },
       { name: 'Advocacy Topics', href: '/advocacy-topics', icon: BellAlertIcon },
       { name: 'Fact-Checking', href: '/fact-checking', icon: AcademicCapIcon },
     ]
