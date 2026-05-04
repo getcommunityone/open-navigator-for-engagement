@@ -43,7 +43,7 @@ echo ""
 echo "2. Scrape Recent Meetings from YouTube (2024-2026)"
 echo "   - Get YouTube API key: https://console.cloud.google.com/apis/credentials"
 echo "   - Add to .env: YOUTUBE_API_KEY=your_key_here"
-echo "   - Run this script with --scrape flag"
+echo "   - Run this script with --scrape flag (scrapes last 850 days)"
 echo ""
 echo "3. Use Existing OpenStates Legislative Events"
 echo "   - Already loaded for all 6 states"
@@ -76,10 +76,10 @@ if [[ "$1" == "--scrape" ]]; then
     
     # Scrape YouTube channels
     echo "Scraping municipal YouTube channels..."
+    # --since-days 850 covers from Jan 1, 2024 to now (May 2026)
     python "$PROJECT_ROOT/scripts/localview/scrape_youtube_channels.py" \
         --states "$STATES" \
-        --since 2024-01-01 \
-        --max-videos 50
+        --since-days 850
     
     echo ""
     echo "✅ Scraping complete!"

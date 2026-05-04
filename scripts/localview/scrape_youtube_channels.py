@@ -5,6 +5,9 @@ Scrape Municipal YouTube Channels for Meeting Videos
 Downloads meeting videos and metadata from municipal government YouTube channels.
 Updates LocalView dataset with 2025/2026 data.
 
+FALLBACK METHOD: If YouTube API quota is exceeded, automatically switches to yt-dlp
+which scrapes the public site directly instead of using the restricted API key system.
+
 Usage:
     # Scrape all known channels
     python scripts/localview/scrape_youtube_channels.py --update
@@ -34,6 +37,14 @@ from youtube_transcript_api import YouTubeTranscriptApi
 import os
 from dotenv import load_dotenv
 
+# Try to import yt-dlp for fallback when API quota exceeded
+try:
+    import yt_dlp
+    YT_DLP_AVAILABLE = True
+except ImportError:
+    YT_DLP_AVAILABLE = False
+    logger.warning("yt-dlp not installed. Install with: pip install yt-dlp")
+
 # Load environment variables
 load_dotenv()
 
@@ -42,14 +53,28 @@ logger.add(sys.stderr, format="{time} {level} {message}", level="INFO")
 
 
 class MunicipalYouTubeScraper:
-    """Scrape municipal government YouTube channels for meeting videos"""
+    """
+    Scrape municipal government YouTube channels for meeting videos
+    
+    Uses YouTube Data API by default, falls back to yt-dlp if quota exceeded.
+    """
     
     def __init__(self, api_key: Optional[str] = None):
         self.api_key = api_key or os.getenv('YOUTUBE_API_KEY')
-        if not self.api_key:
-            raise ValueError("YOUTUBE_API_KEY environment variable required")
+        self.use_ytdlp_fallback = False  # Track if we should use fallback
         
-        self.youtube = build('youtube', 'v3', developerKey=self.api_key)
+        # Try to initialize YouTube API
+        if self.api_key:
+            try:
+                self.youtube = build('youtube', 'v3', developerKey=self.api_key)
+            except Exception as e:
+                logger.warning(f"YouTube API initialization failed: {e}")
+                self.youtube = None
+        else:
+            logger.warning("No YOUTUBE_API_KEY found, will use yt-dlp fallback")
+            self.youtube = None
+            self.use_ytdlp_fallback = True
+        
         self.cache_dir = Path("data/cache/localview")
         self.cache_dir.mkdir(parents=True, exist_ok=True)
         
@@ -142,7 +167,16 @@ class MunicipalYouTubeScraper:
                 time.sleep(0.5)
         
         except HttpError as e:
-            logger.error(f"YouTube API error for channel {channel_id}: {e}")
+            # Check if it's a quota error
+            if 'quotaExceeded' in str(e) or e.resp.status == 403:
+                logger.warning(f"YouTube API quota exceeded for channel {channel_id}")
+                logger.info("Switching to yt-dlp fallback method...")
+                self.use_ytdlp_fallback = True
+                
+                # Try yt-dlp fallback
+                return self.get_channel_videos_ytdlp(channel_id, max_results, published_after)
+            else:
+                logger.error(f"YouTube API error for channel {channel_id}: {e}")
         
         return videos
     
@@ -218,6 +252,103 @@ class MunicipalYouTubeScraper:
         else:
             return 'Other'
     
+    def get_channel_videos_ytdlp(
+        self,
+        channel_id: str,
+        max_results: int = 50,
+        published_after: Optional[datetime] = None
+    ) -> List[Dict]:
+        """
+        Fallback method using yt-dlp when YouTube API quota is exceeded.
+        
+        Why it works: yt-dlp scrapes the public YouTube site directly 
+        instead of using the restricted API key system.
+        
+        Args:
+            channel_id: YouTube channel ID
+            max_results: Maximum number of videos to return
+            published_after: Only get videos after this date
+        
+        Returns:
+            List of video dictionaries with metadata
+        """
+        if not YT_DLP_AVAILABLE:
+            logger.error("yt-dlp not available. Install with: pip install yt-dlp")
+            return []
+        
+        videos = []
+        channel_url = f"https://www.youtube.com/channel/{channel_id}/videos"
+        
+        ydl_opts = {
+            'quiet': True,
+            'no_warnings': True,
+            'extract_flat': True,  # Don't download, just get metadata
+            'playlistend': max_results,
+        }
+        
+        try:
+            logger.info(f"Using yt-dlp fallback for channel {channel_id}")
+            
+            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                # Extract channel info
+                info = ydl.extract_info(channel_url, download=False)
+                
+                if not info or 'entries' not in info:
+                    logger.warning(f"No videos found for channel {channel_id}")
+                    return []
+                
+                for entry in info['entries']:
+                    if not entry:
+                        continue
+                    
+                    # Parse published date
+                    published_at = None
+                    if 'upload_date' in entry:
+                        try:
+                            date_str = entry['upload_date']  # Format: YYYYMMDD
+                            published_at = datetime.strptime(date_str, '%Y%m%d')
+                        except:
+                            pass
+                    
+                    # Filter by date if specified
+                    if published_after and published_at and published_at < published_after:
+                        continue
+                    
+                    # Parse duration
+                    duration_minutes = 0
+                    if 'duration' in entry and entry['duration']:
+                        duration_minutes = entry['duration'] // 60
+                    
+                    # Detect meeting type
+                    title = entry.get('title', '')
+                    meeting_type = self.detect_meeting_type(title)
+                    
+                    video_data = {
+                        'video_id': entry.get('id', ''),
+                        'title': title,
+                        'description': entry.get('description', ''),
+                        'published_at': published_at.isoformat() if published_at else '',
+                        'channel_id': channel_id,
+                        'channel_title': entry.get('channel', ''),
+                        'duration_minutes': duration_minutes,
+                        'has_captions': False,  # yt-dlp doesn't provide this easily
+                        'view_count': entry.get('view_count', 0),
+                        'meeting_type': meeting_type,
+                        'video_url': entry.get('url', f"https://www.youtube.com/watch?v={entry.get('id')}")
+                    }
+                    
+                    videos.append(video_data)
+                    
+                    if len(videos) >= max_results:
+                        break
+            
+            logger.success(f"yt-dlp: Found {len(videos)} videos from channel {channel_id}")
+            
+        except Exception as e:
+            logger.error(f"yt-dlp error for channel {channel_id}: {e}")
+        
+        return videos
+    
     def scrape_channels(
         self,
         channel_ids: List[str],
@@ -226,6 +357,9 @@ class MunicipalYouTubeScraper:
     ) -> pl.DataFrame:
         """
         Scrape videos from multiple channels
+        
+        Uses YouTube Data API by default. If API quota is exceeded,
+        automatically falls back to yt-dlp which scrapes the public site directly.
         
         Args:
             channel_ids: List of YouTube channel IDs
@@ -251,11 +385,20 @@ class MunicipalYouTubeScraper:
             
             logger.info(f"Scraping {channel_info['municipality']} ({channel_id})")
             
-            videos = self.get_channel_videos(
-                channel_id,
-                max_results=100,
-                published_after=published_after
-            )
+            # Use yt-dlp if already in fallback mode or no API available
+            if self.use_ytdlp_fallback or not self.youtube:
+                videos = self.get_channel_videos_ytdlp(
+                    channel_id,
+                    max_results=100,
+                    published_after=published_after
+                )
+            else:
+                # Try API first, will fallback to yt-dlp if quota exceeded
+                videos = self.get_channel_videos(
+                    channel_id,
+                    max_results=100,
+                    published_after=published_after
+                )
             
             # Add municipality info
             for video in videos:
