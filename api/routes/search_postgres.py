@@ -210,12 +210,14 @@ async def search_contacts_pg(
             params.append(state.upper())
             param_idx += 1
         
-        # Text search across name and organization
+        # Text search across name, title, and organization
         if query and query.strip():
             where_clauses.append(f"""(
                 to_tsvector('english', name) @@ plainto_tsquery('english', ${param_idx})
                 OR to_tsvector('english', COALESCE(organization_name, '')) @@ plainto_tsquery('english', ${param_idx})
                 OR LOWER(title) LIKE LOWER(${param_idx + 1})
+                OR LOWER(organization_name) LIKE LOWER(${param_idx + 1})
+                OR LOWER(name) LIKE LOWER(${param_idx + 1})
             )""")
             params.append(query)
             params.append(f"%{query}%")

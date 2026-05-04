@@ -22,7 +22,8 @@ DROP TABLE IF EXISTS last_sync CASCADE;
 CREATE TABLE stats_aggregates (
     id SERIAL PRIMARY KEY,
     level VARCHAR(20) NOT NULL,  -- 'national', 'state', 'county', 'city'
-    state VARCHAR(2),             -- Two-letter state code (e.g., 'MA')
+    state_code VARCHAR(2),        -- Two-letter state code (e.g., 'AL', 'MA')
+    state VARCHAR(50),            -- Full state name (e.g., 'Alabama', 'Massachusetts')
     county VARCHAR(100),          -- County name
     city VARCHAR(100),            -- City name
     
@@ -42,14 +43,15 @@ CREATE TABLE stats_aggregates (
     last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     
     -- Unique constraint on geographic level
-    UNIQUE (level, state, county, city)
+    UNIQUE (level, state_code, county, city)
 );
 
 -- Indexes for fast lookups by geography
 CREATE INDEX idx_stats_level ON stats_aggregates(level);
+CREATE INDEX idx_stats_state_code ON stats_aggregates(state_code) WHERE state_code IS NOT NULL;
 CREATE INDEX idx_stats_state ON stats_aggregates(state) WHERE state IS NOT NULL;
-CREATE INDEX idx_stats_state_county ON stats_aggregates(state, county) WHERE county IS NOT NULL;
-CREATE INDEX idx_stats_state_city ON stats_aggregates(state, city) WHERE city IS NOT NULL;
+CREATE INDEX idx_stats_state_county ON stats_aggregates(state_code, county) WHERE county IS NOT NULL;
+CREATE INDEX idx_stats_state_city ON stats_aggregates(state_code, city) WHERE city IS NOT NULL;
 
 
 -- ============================================================================
@@ -63,7 +65,8 @@ CREATE TABLE nonprofits_search (
     name TEXT NOT NULL,
     street_address TEXT,
     city VARCHAR(100),
-    state VARCHAR(2),
+    state_code VARCHAR(2),        -- Two-letter state code (e.g., 'AL', 'MA')
+    state VARCHAR(50),            -- Full state name (e.g., 'Alabama', 'Massachusetts')
     zip_code VARCHAR(10),
     county VARCHAR(100),
     
@@ -100,8 +103,9 @@ CREATE TABLE nonprofits_search (
 
 -- Full-text search indexes
 CREATE INDEX idx_nonprofits_name_search ON nonprofits_search USING GIN (to_tsvector('english', name));
+CREATE INDEX idx_nonprofits_state_code ON nonprofits_search(state_code);
 CREATE INDEX idx_nonprofits_state ON nonprofits_search(state);
-CREATE INDEX idx_nonprofits_city_state ON nonprofits_search(city, state);
+CREATE INDEX idx_nonprofits_city_state ON nonprofits_search(city, state_code);
 CREATE INDEX idx_nonprofits_county ON nonprofits_search(county);
 CREATE INDEX idx_nonprofits_ntee ON nonprofits_search(ntee_code);
 CREATE INDEX idx_nonprofits_zip ON nonprofits_search(zip_code);
@@ -112,7 +116,8 @@ CREATE TABLE jurisdictions_search (
     id SERIAL PRIMARY KEY,
     name TEXT NOT NULL,
     type VARCHAR(50) NOT NULL,  -- 'city', 'county', 'township', 'school_district'
-    state VARCHAR(2) NOT NULL,
+    state_code VARCHAR(2) NOT NULL,  -- Two-letter state code (e.g., 'AL', 'MA')
+    state VARCHAR(50) NOT NULL,      -- Full state name (e.g., 'Alabama', 'Massachusetts')
     county VARCHAR(100),
     
     -- Geographic identifiers
@@ -128,13 +133,14 @@ CREATE TABLE jurisdictions_search (
     last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     
     -- Unique constraint
-    UNIQUE (name, type, state, county)
+    UNIQUE (name, type, state_code, county)
 );
 
 CREATE INDEX idx_jurisdictions_name_search ON jurisdictions_search USING GIN (to_tsvector('english', name));
+CREATE INDEX idx_jurisdictions_state_code ON jurisdictions_search(state_code);
 CREATE INDEX idx_jurisdictions_state ON jurisdictions_search(state);
 CREATE INDEX idx_jurisdictions_type ON jurisdictions_search(type);
-CREATE INDEX idx_jurisdictions_state_type ON jurisdictions_search(state, type);
+CREATE INDEX idx_jurisdictions_state_type ON jurisdictions_search(state_code, type);
 
 
 -- Contacts search table (nonprofit officers, legislators, etc.)
@@ -152,7 +158,8 @@ CREATE TABLE contacts_search (
     -- Address
     street_address TEXT,
     city VARCHAR(100),
-    state VARCHAR(2),
+    state_code VARCHAR(2),        -- Two-letter state code (e.g., 'AL', 'MA')
+    state VARCHAR(50),            -- Full state name (e.g., 'Alabama', 'Massachusetts')
     zip_code VARCHAR(10),
     
     -- Role/classification
@@ -168,6 +175,7 @@ CREATE TABLE contacts_search (
 
 CREATE INDEX idx_contacts_name_search ON contacts_search USING GIN (to_tsvector('english', name));
 CREATE INDEX idx_contacts_org_name_search ON contacts_search USING GIN (to_tsvector('english', organization_name));
+CREATE INDEX idx_contacts_state_code ON contacts_search(state_code);
 CREATE INDEX idx_contacts_state ON contacts_search(state);
 CREATE INDEX idx_contacts_ein ON contacts_search(organization_ein);
 CREATE INDEX idx_contacts_role ON contacts_search(role_type);
@@ -184,7 +192,8 @@ CREATE TABLE events_search (
     -- Organization
     jurisdiction_name VARCHAR(200),
     jurisdiction_type VARCHAR(50),
-    state VARCHAR(2),
+    state_code VARCHAR(2),        -- Two-letter state code (e.g., 'AL', 'MA')
+    state VARCHAR(50),            -- Full state name (e.g., 'Alabama', 'Massachusetts')
     city VARCHAR(100),
     
     -- Meeting details
@@ -204,9 +213,10 @@ CREATE TABLE events_search (
 
 CREATE INDEX idx_events_title_search ON events_search USING GIN (to_tsvector('english', title));
 CREATE INDEX idx_events_date ON events_search(event_date DESC);
+CREATE INDEX idx_events_state_code ON events_search(state_code);
 CREATE INDEX idx_events_state ON events_search(state);
 CREATE INDEX idx_events_jurisdiction ON events_search(jurisdiction_name);
-CREATE INDEX idx_events_date_state ON events_search(event_date, state);
+CREATE INDEX idx_events_date_state ON events_search(event_date, state_code);
 
 
 -- Bills search table (legislative bills from all states)
@@ -223,7 +233,8 @@ CREATE TABLE bills_search (
     session VARCHAR(50),
     session_name TEXT,
     jurisdiction_name VARCHAR(200),
-    state VARCHAR(2),
+    state_code VARCHAR(2),        -- Two-letter state code (e.g., 'AL', 'MA')
+    state VARCHAR(50),            -- Full state name (e.g., 'Alabama', 'Massachusetts'),
     
     -- Dates
     first_action_date DATE,
@@ -243,10 +254,11 @@ CREATE TABLE bills_search (
 CREATE INDEX idx_bills_title_search ON bills_search USING GIN (to_tsvector('english', title));
 CREATE INDEX idx_bills_abstract_search ON bills_search USING GIN (to_tsvector('english', COALESCE(abstract, '')));
 CREATE INDEX idx_bills_number ON bills_search(bill_number);
+CREATE INDEX idx_bills_state_code ON bills_search(state_code);
 CREATE INDEX idx_bills_state ON bills_search(state);
 CREATE INDEX idx_bills_session ON bills_search(session);
 CREATE INDEX idx_bills_latest_action_date ON bills_search(latest_action_date DESC);
-CREATE INDEX idx_bills_state_session ON bills_search(state, session);
+CREATE INDEX idx_bills_state_session ON bills_search(state_code, session);
 
 
 -- ============================================================================

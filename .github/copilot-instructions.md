@@ -205,6 +205,55 @@ When suggesting deployment or setup:
 - ❌ Connect to localhost:5432 for OpenStates data
 - ❌ Ask to "spin up" a PostgreSQL instance
 
+### Data Standards & Naming Conventions
+
+**⚠️ MANDATORY: State Field Naming**
+
+**ALL database tables, parquet files, and code MUST follow these standards:**
+
+✅ **DO THIS:**
+- Use `state_code` for 2-letter state abbreviations (e.g., 'AL', 'MA', 'WI')
+- Use `state` for full state names (e.g., 'Alabama', 'Massachusetts', 'Wisconsin')
+- Always include BOTH columns when state information is needed
+
+❌ **NEVER DO THIS:**
+- ❌ Use `state` for 2-letter codes
+- ❌ Use `state_abbr` or `state_abbreviation`
+- ❌ Use `state_name` (use `state` instead)
+- ❌ Mix conventions across tables/files
+
+**Examples:**
+
+```python
+# ✅ CORRECT - Parquet columns
+df = pd.DataFrame({
+    'jurisdiction_name': ['Mobile', 'Boston'],
+    'state_code': ['AL', 'MA'],
+    'state': ['Alabama', 'Massachusetts']
+})
+
+# ✅ CORRECT - SQL schema
+CREATE TABLE jurisdictions (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(200),
+    state_code VARCHAR(2) NOT NULL,  -- Two-letter code
+    state VARCHAR(50) NOT NULL        -- Full state name
+);
+
+# ❌ WRONG - Don't use these
+state VARCHAR(2)           -- Ambiguous: code or name?
+state_abbr VARCHAR(2)      -- Use state_code instead
+state_name VARCHAR(50)     -- Use state instead
+```
+
+**Migration Status:**
+
+⚠️ **Legacy tables/files may still use old conventions. When updating code:**
+1. Check if table uses `state` for 2-letter codes (legacy)
+2. If yes, migrate to `state_code` + `state` (full name)
+3. Update all dependent queries and code
+4. Document migration in `website/docs/development/`
+
 **✅ ALWAYS DO THIS:**
 - ✅ OpenStates database is at `postgresql://postgres:password@localhost:5433/openstates`
 - ✅ Check if database exists: `psql -h localhost -p 5433 -U postgres -d openstates -c "\dt"`

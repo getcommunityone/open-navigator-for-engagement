@@ -201,6 +201,9 @@ python main.py discovery-stats
 # Census data (90,000+ jurisdictions)
 python -m discovery.census_ingestion
 
+# Census shapefiles (geographic boundaries)
+python scripts/datasources/census/download_shapefiles.py --year 2023 --extract
+
 # NCES school districts (13,000+)
 python -m discovery.nces_ingestion
 

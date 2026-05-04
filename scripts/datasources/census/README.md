@@ -15,7 +15,8 @@ Scripts for working with [US Census Bureau](https://www.census.gov/) geographic 
 ### Core Scripts
 
 - **`census_ingestion.py`** - Download Census Gazetteer files (government jurisdictions)
-- **`acs_ingestion.py`** ⭐ **NEW** - Download American Community Survey demographic data
+- **`acs_ingestion.py`** ⭐ - Download American Community Survey demographic data
+- **`download_shapefiles.py`** ⭐ **NEW** - Download TIGER/Line shapefiles (states, counties, ZIP codes)
 - `download_county_mappings.py` - Download Census Geographic Relationship Files
 - `create_zip_county_mapping.py` - Create ZIP-to-county mapping table
 
@@ -65,12 +66,53 @@ insurance_df = await acs.download_acs_data_api("B27010", "county", "*")
 - **Education**: School enrollment, attainment
 - **Housing**: Occupancy, value, rent
 
+### TIGER/Line Shapefiles (download_shapefiles.py) ⭐ NEW
+- **States**: 50 states + DC + territories (56 total boundaries)
+- **Counties**: 3,143 county boundaries
+- **ZIP Codes**: 33,000+ ZIP Code Tabulation Areas (ZCTAs)
+- **Format**: Cartographic boundary files (optimized for mapping)
+- **Use Cases**: Choropleth maps, spatial joins, jurisdiction boundaries
+
 ### Geographic Relationship Files
 - ZIP Code Tabulation Area (ZCTA) to County mappings
 - County to State mappings
 - Place to County mappings
 
 ## Usage Examples
+
+### Download TIGER/Line Shapefiles ⭐ NEW
+
+```bash
+# Download all shapefiles (states, counties, ZIP codes) for 2023
+python scripts/datasources/census/download_shapefiles.py --year 2023
+
+# Download only states and counties
+python scripts/datasources/census/download_shapefiles.py --year 2023 --types states counties
+
+# Download and auto-extract ZIP files
+python scripts/datasources/census/download_shapefiles.py --year 2023 --extract
+
+# Download only ZIP codes (postal codes)
+python scripts/datasources/census/download_shapefiles.py --year 2023 --types zcta
+```
+
+**Output Location:** `data/cache/census/shapefiles/{year}/`
+
+**Next Steps:**
+```python
+import geopandas as gpd
+
+# Load shapefile (from ZIP, no extraction needed!)
+states = gpd.read_file("data/cache/census/shapefiles/2023/cb_2023_us_state_500k.zip")
+
+# Convert to GeoJSON for web mapping
+states.to_file("data/gold/boundaries/states.geojson", driver="GeoJSON")
+
+# Or save as GeoParquet (more efficient)
+states.to_parquet("data/gold/boundaries/states.parquet")
+```
+
+**See Full Guide:** `website/docs/data-sources/census-shapefiles.md`
 
 ### Download ACS Data to D Drive
 

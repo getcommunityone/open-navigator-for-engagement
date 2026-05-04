@@ -34,7 +34,8 @@ def create_table(conn):
         id SERIAL PRIMARY KEY,
         jurisdiction_id VARCHAR(50) UNIQUE NOT NULL,
         jurisdiction_name VARCHAR(200) NOT NULL,
-        state VARCHAR(2) NOT NULL,
+        state_code VARCHAR(2) NOT NULL,
+        state VARCHAR(50) NOT NULL,
         jurisdiction_type VARCHAR(50),
         population INTEGER,
         discovery_timestamp TIMESTAMP,
@@ -46,10 +47,12 @@ def create_table(conn):
         social_media JSONB,
         agenda_portal_count INTEGER DEFAULT 0,
         status VARCHAR(50),
+        in_localview BOOLEAN DEFAULT FALSE,
         last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     );
     
     -- Create indexes for common queries
+    CREATE INDEX IF NOT EXISTS idx_jurisdiction_details_state_code ON jurisdictions_details_search(state_code);
     CREATE INDEX IF NOT EXISTS idx_jurisdiction_details_state ON jurisdictions_details_search(state);
     CREATE INDEX IF NOT EXISTS idx_jurisdiction_details_name ON jurisdictions_details_search(jurisdiction_name);
     CREATE INDEX IF NOT EXISTS idx_jurisdiction_details_type ON jurisdictions_details_search(jurisdiction_type);
@@ -126,6 +129,7 @@ def load_data(conn, parquet_file: Path, batch_size: int = 1000):
         record = {
             'jurisdiction_id': row['jurisdiction_id'],
             'jurisdiction_name': row['jurisdiction_name'],
+            'state_code': row['state_code'],
             'state': row['state'],
             'jurisdiction_type': row['jurisdiction_type'],
             'population': int(row['population']) if pd.notna(row['population']) else 0,
@@ -137,28 +141,30 @@ def load_data(conn, parquet_file: Path, batch_size: int = 1000):
             'meeting_platforms': meeting_platforms,
             'social_media': social_media,
             'agenda_portal_count': int(row['agenda_portal_count']) if pd.notna(row['agenda_portal_count']) else 0,
-            'status': row['status'] if pd.notna(row['status']) else 'unknown'
+            'status': row['status'] if pd.notna(row['status']) else 'unknown',
+            'in_localview': bool(row['in_localview']) if pd.notna(row['in_localview']) else False
         }
         records.append(record)
     
     # Insert into database
     insert_query = """
         INSERT INTO jurisdictions_details_search (
-            jurisdiction_id, jurisdiction_name, state, jurisdiction_type,
+            jurisdiction_id, jurisdiction_name, state_code, state, jurisdiction_type,
             population, discovery_timestamp, website_url,
             youtube_channel_count, youtube_channels,
             meeting_platform_count, meeting_platforms,
-            social_media, agenda_portal_count, status
+            social_media, agenda_portal_count, status, in_localview
         ) VALUES (
-            %(jurisdiction_id)s, %(jurisdiction_name)s, %(state)s, %(jurisdiction_type)s,
+            %(jurisdiction_id)s, %(jurisdiction_name)s, %(state_code)s, %(state)s, %(jurisdiction_type)s,
             %(population)s, %(discovery_timestamp)s, %(website_url)s,
             %(youtube_channel_count)s, %(youtube_channels)s::jsonb,
             %(meeting_platform_count)s, %(meeting_platforms)s::jsonb,
-            %(social_media)s::jsonb, %(agenda_portal_count)s, %(status)s
+            %(social_media)s::jsonb, %(agenda_portal_count)s, %(status)s, %(in_localview)s
         )
         ON CONFLICT (jurisdiction_id) 
         DO UPDATE SET
             jurisdiction_name = EXCLUDED.jurisdiction_name,
+            state_code = EXCLUDED.state_code,
             state = EXCLUDED.state,
             jurisdiction_type = EXCLUDED.jurisdiction_type,
             population = EXCLUDED.population,
@@ -171,6 +177,7 @@ def load_data(conn, parquet_file: Path, batch_size: int = 1000):
             social_media = EXCLUDED.social_media,
             agenda_portal_count = EXCLUDED.agenda_portal_count,
             status = EXCLUDED.status,
+            in_localview = EXCLUDED.in_localview,
             last_updated = CURRENT_TIMESTAMP
     """
     

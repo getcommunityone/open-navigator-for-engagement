@@ -32,6 +32,21 @@ PROJECT_ROOT = SCRIPT_DIR.parent  # One level up from neon/ to project root
 GOLD_DIR = PROJECT_ROOT / "data" / "gold"
 SCHEMA_PATH = SCRIPT_DIR / "schema.sql"
 
+# State code to full name mapping (for search optimization)
+STATE_NAMES = {
+    'AL': 'Alabama', 'AK': 'Alaska', 'AZ': 'Arizona', 'AR': 'Arkansas', 'CA': 'California',
+    'CO': 'Colorado', 'CT': 'Connecticut', 'DE': 'Delaware', 'FL': 'Florida', 'GA': 'Georgia',
+    'HI': 'Hawaii', 'ID': 'Idaho', 'IL': 'Illinois', 'IN': 'Indiana', 'IA': 'Iowa',
+    'KS': 'Kansas', 'KY': 'Kentucky', 'LA': 'Louisiana', 'ME': 'Maine', 'MD': 'Maryland',
+    'MA': 'Massachusetts', 'MI': 'Michigan', 'MN': 'Minnesota', 'MS': 'Mississippi', 'MO': 'Missouri',
+    'MT': 'Montana', 'NE': 'Nebraska', 'NV': 'Nevada', 'NH': 'New Hampshire', 'NJ': 'New Jersey',
+    'NM': 'New Mexico', 'NY': 'New York', 'NC': 'North Carolina', 'ND': 'North Dakota', 'OH': 'Ohio',
+    'OK': 'Oklahoma', 'OR': 'Oregon', 'PA': 'Pennsylvania', 'RI': 'Rhode Island', 'SC': 'South Carolina',
+    'SD': 'South Dakota', 'TN': 'Tennessee', 'TX': 'Texas', 'UT': 'Utah', 'VT': 'Vermont',
+    'VA': 'Virginia', 'WA': 'Washington', 'WV': 'West Virginia', 'WI': 'Wisconsin', 'WY': 'Wyoming',
+    'DC': 'District of Columbia', 'PR': 'Puerto Rico'
+}
+
 
 def parse_yyyymm_date(yyyymm):
     """Convert YYYYMM format (e.g., '195504') to date object"""
@@ -499,7 +514,10 @@ def load_jurisdictions_search(conn):
     if cities_file.exists():
         df = pd.read_parquet(cities_file)
         records = [
-            (row.get('NAME', ''), 'city', row.get('USPS', ''), None,  # name, type, state, county
+            (row.get('NAME', ''), 'city', 
+             row.get('USPS', ''),  # state_code (2-letter)
+             STATE_NAMES.get(row.get('USPS', ''), ''),  # state (full name)
+             None,  # county
              row.get('GEOID'), None,  # geoid, fips_code
              None, clean_numeric(row.get('ALAND_SQMI')),  # population, area_sq_miles
              'census', datetime.now())
@@ -508,11 +526,12 @@ def load_jurisdictions_search(conn):
         
         execute_values(cursor, """
             INSERT INTO jurisdictions_search 
-            (name, type, state, county, geoid, fips_code, population, area_sq_miles, source, last_updated)
+            (name, type, state_code, state, county, geoid, fips_code, population, area_sq_miles, source, last_updated)
             VALUES %s
-            ON CONFLICT (name, type, state, county) DO UPDATE SET
+            ON CONFLICT (name, type, state_code, county) DO UPDATE SET
                 geoid = EXCLUDED.geoid,
-                area_sq_miles = EXCLUDED.area_sq_miles
+                area_sq_miles = EXCLUDED.area_sq_miles,
+                state = EXCLUDED.state
         """, records)
         
         total_loaded += len(records)
@@ -523,7 +542,10 @@ def load_jurisdictions_search(conn):
     if counties_file.exists():
         df = pd.read_parquet(counties_file)
         records = [
-            (row.get('NAME', ''), 'county', row.get('USPS', ''), None,
+            (row.get('NAME', ''), 'county', 
+             row.get('USPS', ''),  # state_code (2-letter)
+             STATE_NAMES.get(row.get('USPS', ''), ''),  # state (full name)
+             None,
              row.get('GEOID'), None,
              None, clean_numeric(row.get('ALAND_SQMI')),
              'census', datetime.now())
@@ -532,11 +554,12 @@ def load_jurisdictions_search(conn):
         
         execute_values(cursor, """
             INSERT INTO jurisdictions_search 
-            (name, type, state, county, geoid, fips_code, population, area_sq_miles, source, last_updated)
+            (name, type, state_code, state, county, geoid, fips_code, population, area_sq_miles, source, last_updated)
             VALUES %s
-            ON CONFLICT (name, type, state, county) DO UPDATE SET
+            ON CONFLICT (name, type, state_code, county) DO UPDATE SET
                 geoid = EXCLUDED.geoid,
-                area_sq_miles = EXCLUDED.area_sq_miles
+                area_sq_miles = EXCLUDED.area_sq_miles,
+                state = EXCLUDED.state
         """, records)
         
         total_loaded += len(records)
@@ -547,7 +570,10 @@ def load_jurisdictions_search(conn):
     if townships_file.exists():
         df = pd.read_parquet(townships_file)
         records = [
-            (row.get('NAME', ''), 'township', row.get('USPS', ''), None,
+            (row.get('NAME', ''), 'township', 
+             row.get('USPS', ''),  # state_code (2-letter)
+             STATE_NAMES.get(row.get('USPS', ''), ''),  # state (full name)
+             None,
              row.get('GEOID'), None,
              None, clean_numeric(row.get('ALAND_SQMI')),
              'census', datetime.now())
@@ -556,11 +582,12 @@ def load_jurisdictions_search(conn):
         
         execute_values(cursor, """
             INSERT INTO jurisdictions_search 
-            (name, type, state, county, geoid, fips_code, population, area_sq_miles, source, last_updated)
+            (name, type, state_code, state, county, geoid, fips_code, population, area_sq_miles, source, last_updated)
             VALUES %s
-            ON CONFLICT (name, type, state, county) DO UPDATE SET
+            ON CONFLICT (name, type, state_code, county) DO UPDATE SET
                 geoid = EXCLUDED.geoid,
-                area_sq_miles = EXCLUDED.area_sq_miles
+                area_sq_miles = EXCLUDED.area_sq_miles,
+                state = EXCLUDED.state
         """, records)
         
         total_loaded += len(records)
@@ -571,7 +598,10 @@ def load_jurisdictions_search(conn):
     if districts_file.exists():
         df = pd.read_parquet(districts_file)
         records = [
-            (row.get('NAME', ''), 'school_district', row.get('STATE', ''), None,
+            (row.get('NAME', ''), 'school_district', 
+             row.get('STATE', ''),  # state_code (2-letter)
+             STATE_NAMES.get(row.get('STATE', ''), ''),  # state (full name)
+             None,
              row.get('GEOID'), None,
              None, clean_numeric(row.get('ALAND_SQMI')),
              'census', datetime.now())
@@ -580,11 +610,12 @@ def load_jurisdictions_search(conn):
         
         execute_values(cursor, """
             INSERT INTO jurisdictions_search 
-            (name, type, state, county, geoid, fips_code, population, area_sq_miles, source, last_updated)
+            (name, type, state_code, state, county, geoid, fips_code, population, area_sq_miles, source, last_updated)
             VALUES %s
-            ON CONFLICT (name, type, state, county) DO UPDATE SET
+            ON CONFLICT (name, type, state_code, county) DO UPDATE SET
                 geoid = EXCLUDED.geoid,
-                area_sq_miles = EXCLUDED.area_sq_miles
+                area_sq_miles = EXCLUDED.area_sq_miles,
+                state = EXCLUDED.state
         """, records)
         
         total_loaded += len(records)
@@ -706,7 +737,7 @@ def load_contacts_search(conn, limit_states=None):
                 record = (
                     row.get('full_name', ''),
                     chamber_label,
-                    row.get('jurisdiction_name', state.upper()),  # organization_name
+                    STATE_NAMES.get(state.upper(), state.upper()),  # organization_name (use full state name for search)
                     None,  # organization_ein
                     row.get('email'),
                     row.get('phone'),
