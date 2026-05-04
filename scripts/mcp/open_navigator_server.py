@@ -432,20 +432,20 @@ async def call_tool(name: str, arguments: dict) -> list[TextContent]:
             if arguments.get("state"):
                 cur.execute("""
                     SELECT 
-                        state,
+                        state_code,
                         topic,
                         COUNT(*) as total_bills,
                         SUM(total_bills) as bill_count
                     FROM bills_map_aggregates
-                    WHERE state = %s
-                    GROUP BY state, topic
+                    WHERE state_code = %s
+                    GROUP BY state_code, topic
                     ORDER BY bill_count DESC
                     LIMIT 20
                 """, (arguments["state"],))
             else:
                 cur.execute("""
                     SELECT 
-                        state,
+                        state_code,
                         COUNT(DISTINCT topic) as topics,
                         SUM(total_bills) as total_bills
                     FROM bills_map_aggregates

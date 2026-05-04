@@ -766,7 +766,7 @@ async def get_bill_details(bill_id: str):
                     session_name,
                     jurisdiction_name
                 FROM read_parquet(?)
-                WHERE UPPER(state) = ? AND bill_number = ?
+                WHERE UPPER(state_code) = ? AND bill_number = ?
                 LIMIT 1
             """
             
@@ -779,7 +779,7 @@ async def get_bill_details(bill_id: str):
                 map_query = """
                     SELECT sample_bills
                     FROM read_parquet(?)
-                    WHERE UPPER(state) = ?
+                    WHERE UPPER(state_code) = ?
                     LIMIT 1
                 """
                 

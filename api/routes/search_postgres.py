@@ -99,7 +99,7 @@ async def search_jurisdictions_pg(
         
         # State filter
         if state:
-            where_clauses.append(f"state = ${param_idx}")
+            where_clauses.append(f"state_code = ${param_idx}")
             params.append(state.upper())
             param_idx += 1
         
@@ -206,7 +206,7 @@ async def search_contacts_pg(
         param_idx = 1
         
         if state:
-            where_clauses.append(f"state = ${param_idx}")
+            where_clauses.append(f"state_code = ${param_idx}")
             params.append(state.upper())
             param_idx += 1
         
@@ -333,7 +333,7 @@ async def search_organizations_pg(
         
         # State filter
         if state:
-            where_clauses.append(f"state = ${param_idx}")
+            where_clauses.append(f"state_code = ${param_idx}")
             params.append(state.upper())
             param_idx += 1
         
@@ -375,6 +375,7 @@ async def search_organizations_pg(
                 ein,
                 name,
                 city,
+                state_code,
                 state,
                 county,
                 ntee_code,
@@ -415,11 +416,12 @@ async def search_organizations_pg(
                     title=row['name'],
                     subtitle=location,
                     description=description,
-                    url=f"/search?types=organizations&state={row['state']}&ein={row['ein']}",
+                    url=f"/search?types=organizations&state={row['state_code']}&ein={row['ein']}",
                     score=1.0,
                     metadata={
                         'ein': row['ein'],
                         'state': row['state'],
+                        'state_code': row['state_code'],
                         'city': row['city'],
                         'county': row['county'],
                         'ntee_code': row['ntee_code'],
@@ -464,7 +466,7 @@ async def search_events_pg(
         param_idx = 1
         
         if state:
-            where_clauses.append(f"state = ${param_idx}")
+            where_clauses.append(f"state_code = ${param_idx}")
             params.append(state.upper())
             param_idx += 1
         
@@ -569,7 +571,7 @@ async def search_bills_pg(
         param_idx = 1
         
         if state:
-            where_clauses.append(f"state = ${param_idx}")
+            where_clauses.append(f"state_code = ${param_idx}")
             params.append(state.upper())
             param_idx += 1
         

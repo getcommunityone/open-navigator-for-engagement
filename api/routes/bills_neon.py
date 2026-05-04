@@ -111,8 +111,8 @@ async def fetch_bills_from_parquet(
         # Connect to DuckDB
         conn = duckdb.connect()
         
-        # Build SQL query - ALWAYS filter by state
-        where_clauses = ["state = ?"]
+        # Build SQL query - ALWAYS filter by state_code (2-letter codes)
+        where_clauses = ["state_code = ?"]
         params = [state]
         
         # Topic filter (keyword search in title)
@@ -301,8 +301,8 @@ async def fetch_sessions_from_parquet(
         # Connect to DuckDB
         conn = duckdb.connect()
         
-        # Build WHERE clause with all filters
-        where_conditions = ["state = ?"]
+        # Build WHERE clause with all filters - use state_code for 2-letter codes
+        where_conditions = ["state_code = ?"]
         params = [data_source, state]
         
         # Topic filter
@@ -732,8 +732,8 @@ async def get_filter_options(
         
         conn = duckdb.connect()
         
-        # Build WHERE clause
-        where_conditions = ["state = ?"]
+        # Build WHERE clause - use state_code for 2-letter codes
+        where_conditions = ["state_code = ?"]
         params = [data_source, state]
         
         # Topic filter

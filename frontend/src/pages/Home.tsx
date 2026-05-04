@@ -808,7 +808,7 @@ export default function Home() {
                         <div className="bg-white rounded-xl shadow-lg border-2 border-gray-200 p-4" ref={searchContainerRef}>
                           <form onSubmit={handleSearch}>
                             {/* Search Input and Scope Dropdown on Same Line */}
-                            <div className="flex gap-2 mb-3 relative">
+                            <div className="flex flex-col sm:flex-row gap-2 mb-3 relative">
                               <div className="flex-1 relative">
                                 <input
                                   type="text"
@@ -1026,12 +1026,12 @@ export default function Home() {
                                 <select
                                   value={searchScope}
                                   onChange={(e) => setSearchScope(e.target.value)}
-                                  className="px-4 py-2 text-sm border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#354F52] focus:border-transparent bg-white text-gray-900 whitespace-nowrap"
+                                  className="w-full sm:w-auto px-3 sm:px-4 py-2 text-sm border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#354F52] focus:border-transparent bg-white text-gray-900"
                                 >
-                                  <option value="city">My City ({location.city})</option>
-                                  <option value="county">My County ({location.county || 'County'})</option>
-                                  <option value="state">My State ({location.state})</option>
-                                  <option value="community">School Board ({location.city})</option>
+                                  <option value="city">City: {location.city}</option>
+                                  <option value="county">County: {location.county || 'County'}</option>
+                                  <option value="state">State: {location.state}</option>
+                                  <option value="community">School: {location.city}</option>
                                 </select>
                               ) : null}
                             </div>

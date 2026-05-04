@@ -241,18 +241,18 @@ def calculate_state_stats(state: str):
         file_path = GOLD_DIR / 'reference' / pattern
         if file_path.exists():
             df = pd.read_parquet(file_path)
-            state_col = 'state' if 'state' in df.columns else 'STATE'
-            if state_col in df.columns:
-                state_df = df[df[state_col].str.upper() == state.upper()]
+            # All files now use state_code (2-letter) + state (full name)
+            if 'state_code' in df.columns:
+                state_df = df[df['state_code'].str.upper() == state.upper()]
                 stats['jurisdictions_count'] += len(state_df)
     
     # Count school districts
     sd_file = GOLD_DIR / 'reference' / 'jurisdictions_school_districts.parquet'
     if sd_file.exists():
         df = pd.read_parquet(sd_file)
-        state_col = 'state' if 'state' in df.columns else 'STATE'
-        if state_col in df.columns:
-            state_df = df[df[state_col].str.upper() == state.upper()]
+        # File now uses state_code (2-letter) + state (full name)
+        if 'state_code' in df.columns:
+            state_df = df[df['state_code'].str.upper() == state.upper()]
             stats['school_districts_count'] = len(state_df)
     
     # State-specific data
@@ -347,7 +347,8 @@ def load_nonprofits_search(conn, limit_states: Optional[list] = None):
         
         # Filter by states if limit specified
         if limit_states:
-            df = df[df['state'].isin(limit_states)]
+            # File now uses state_code (2-letter) + state (full name)
+            df = df[df['state_code'].isin(limit_states)]
             logger.info(f"  Filtered to states: {limit_states}")
         
         total_loaded = load_nonprofits_from_df(conn, df)
@@ -389,8 +390,10 @@ def load_nonprofits_from_df(conn, df, state_override=None):
     
     records = []
     for _, row in df_valid.iterrows():
-        # Use state from data or override
-        state = state_override or row.get('state', '')
+        # Use state_code from data or override
+        # Parquet files now have state_code (2-letter) and state (full name)
+        state_code = state_override or row.get('state_code', '')
+        state_name = row.get('state', '')
         
         # Convert ruling date from YYYYMM to proper date
         ruling_date = parse_yyyymm_date(row.get('ruling_date'))
@@ -400,7 +403,8 @@ def load_nonprofits_from_df(conn, df, state_override=None):
             row.get('organization_name', ''),
             '',  # street_address - not in new format
             row.get('city', ''),
-            state,
+            state_code,  # state_code column
+            state_name,  # state column (full name)
             row.get('zip_code', ''),
             '',  # county - not in source data
             row.get('ntee_code', ''),
@@ -432,7 +436,7 @@ def load_nonprofits_from_df(conn, df, state_override=None):
     if records:
         execute_values(cursor, """
             INSERT INTO nonprofits_search 
-            (ein, name, street_address, city, state, zip_code, county,
+            (ein, name, street_address, city, state_code, state, zip_code, county,
              ntee_code, ntee_description, subsection_code, affiliation_code, classification_code,
              revenue, assets, income, ruling_date, foundation_code, pf_filing_requirement_code,
              accounting_period, asset_code, income_code, filing_requirement_code,
@@ -442,6 +446,7 @@ def load_nonprofits_from_df(conn, df, state_override=None):
             ON CONFLICT (ein) DO UPDATE SET
                 name = EXCLUDED.name,
                 city = EXCLUDED.city,
+                state_code = EXCLUDED.state_code,
                 state = EXCLUDED.state,
                 revenue = EXCLUDED.revenue,
                 assets = EXCLUDED.assets,
@@ -650,6 +655,9 @@ def load_events_search(conn, limit_states=None):
         logger.info(f"  Loading events from {state}...")
         df = pd.read_parquet(events_file)
         
+        state_code = state.upper()
+        state_name = STATE_NAMES.get(state_code, state_code)
+        
         records = []
         for _, row in df.iterrows():
             # Parse start_date to extract date and time
@@ -676,7 +684,8 @@ def load_events_search(conn, limit_states=None):
                 event_time,
                 row.get('jurisdiction_name', ''),
                 None,  # jurisdiction_type
-                state,
+                state_code,  # state_code
+                state_name,  # state (full name)
                 None,  # city
                 row.get('location_id'),  # location
                 row.get('classification', ''),  # meeting_type
@@ -693,7 +702,7 @@ def load_events_search(conn, limit_states=None):
             execute_values(cursor, """
                 INSERT INTO events_search 
                 (title, description, event_date, event_time, jurisdiction_name, jurisdiction_type,
-                 state, city, location, meeting_type, status, agenda_url, minutes_url, video_url,
+                 state_code, state, city, location, meeting_type, status, agenda_url, minutes_url, video_url,
                  source, last_updated)
                 VALUES %s
             """, records)
@@ -728,6 +737,10 @@ def load_contacts_search(conn, limit_states=None):
         if state_legislators_file.exists():
             df = pd.read_parquet(state_legislators_file)
             
+            # Get state info
+            state_code = state.upper()
+            state_name = STATE_NAMES.get(state_code, state_code)
+            
             records = []
             for _, row in df.iterrows():
                 chamber_label = "State Senator" if row.get('chamber') == 'upper' else "State Representative"
@@ -737,13 +750,14 @@ def load_contacts_search(conn, limit_states=None):
                 record = (
                     row.get('full_name', ''),
                     chamber_label,
-                    STATE_NAMES.get(state.upper(), state.upper()),  # organization_name (use full state name for search)
+                    state_name,  # organization_name (use full state name for search)
                     None,  # organization_ein
                     row.get('email'),
                     row.get('phone'),
                     row.get('address'),  # street_address
                     None,  # city
-                    state,
+                    state_code,  # state_code
+                    state_name,  # state (full name)
                     None,  # zip_code
                     'state_legislator',  # role_type
                     None,  # compensation
@@ -758,7 +772,7 @@ def load_contacts_search(conn, limit_states=None):
                 execute_values(cursor, """
                     INSERT INTO contacts_search 
                     (name, title, organization_name, organization_ein, email, phone,
-                     street_address, city, state, zip_code, role_type, compensation,
+                     street_address, city, state_code, state, zip_code, role_type, compensation,
                      hours_per_week, source, tax_year, last_updated)
                     VALUES %s
                 """, records)
@@ -771,6 +785,9 @@ def load_contacts_search(conn, limit_states=None):
         if officials_file.exists():
             df = pd.read_parquet(officials_file)
             
+            state_code = state.upper()
+            state_name = STATE_NAMES.get(state_code, state_code)
+            
             records = []
             for _, row in df.iterrows():
                 record = (
@@ -782,7 +799,8 @@ def load_contacts_search(conn, limit_states=None):
                     None,  # phone
                     None,  # street_address
                     None,  # city
-                    state,
+                    state_code,  # state_code
+                    state_name,  # state (full name)
                     None,  # zip_code
                     'government_official',  # role_type
                     None,  # compensation
@@ -797,7 +815,7 @@ def load_contacts_search(conn, limit_states=None):
                 execute_values(cursor, """
                     INSERT INTO contacts_search 
                     (name, title, organization_name, organization_ein, email, phone,
-                     street_address, city, state, zip_code, role_type, compensation,
+                     street_address, city, state_code, state, zip_code, role_type, compensation,
                      hours_per_week, source, tax_year, last_updated)
                     VALUES %s
                 """, records)
@@ -810,6 +828,9 @@ def load_contacts_search(conn, limit_states=None):
         if officers_file.exists():
             df = pd.read_parquet(officers_file)
             
+            state_code = state.upper()
+            state_name = STATE_NAMES.get(state_code, state_code)
+            
             records = []
             for _, row in df.iterrows():
                 record = (
@@ -821,7 +842,8 @@ def load_contacts_search(conn, limit_states=None):
                     None,  # phone
                     None,  # street_address
                     None,  # city
-                    state,
+                    state_code,  # state_code
+                    state_name,  # state (full name)
                     None,  # zip_code
                     'nonprofit_officer',  # role_type
                     clean_numeric(row.get('compensation')),
@@ -836,7 +858,7 @@ def load_contacts_search(conn, limit_states=None):
                 execute_values(cursor, """
                     INSERT INTO contacts_search 
                     (name, title, organization_name, organization_ein, email, phone,
-                     street_address, city, state, zip_code, role_type, compensation,
+                     street_address, city, state_code, state, zip_code, role_type, compensation,
                      hours_per_week, source, tax_year, last_updated)
                     VALUES %s
                 """, records)
@@ -870,12 +892,13 @@ def load_bills_search(conn, limit_states=None):
         if bills_file.exists():
             df = pd.read_parquet(bills_file)
             
+            # Extract state code from jurisdiction_ocd_id
+            # ocd-jurisdiction/country:us/state:ma/government -> MA
+            state_code = state.upper()
+            state_name = STATE_NAMES.get(state_code, state_code)
+            
             records = []
             for _, row in df.iterrows():
-                # Extract state code from jurisdiction_ocd_id
-                # ocd-jurisdiction/country:us/state:ma/government -> MA
-                state_code = state.upper()
-                
                 # Convert values to Python native types to avoid numpy array issues
                 def safe_str(val):
                     """Convert value to string, handling None and arrays"""
@@ -923,7 +946,8 @@ def load_bills_search(conn, limit_states=None):
                     safe_str(row.get('session', '')),
                     safe_str(row.get('session_name', '')),
                     safe_str(row.get('jurisdiction_name', '')),
-                    state_code,
+                    state_code,  # state_code
+                    state_name,  # state (full name)
                     safe_date(row.get('first_action_date')),
                     safe_date(row.get('latest_action_date')),
                     safe_str(row.get('latest_action_description', '')),
@@ -943,7 +967,7 @@ def load_bills_search(conn, limit_states=None):
                     execute_values(cursor, """
                         INSERT INTO bills_search 
                         (bill_id, bill_number, title, classification, session, session_name,
-                         jurisdiction_name, state, first_action_date, latest_action_date,
+                         jurisdiction_name, state_code, state, first_action_date, latest_action_date,
                          latest_action_description, abstract, source_url, created_at, updated_at,
                          last_synced)
                         VALUES %s

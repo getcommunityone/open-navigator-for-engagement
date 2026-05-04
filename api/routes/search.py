@@ -933,9 +933,9 @@ def search_organizations(query: str, state: Optional[str] = None, ntee_code: Opt
             where_clauses.append(f"LOWER({name_col}) LIKE LOWER(?)")
             params.append(f'%{query}%')
         
-        # State filter (if using national file)
+        # State filter (if using national file) - use state_code for 2-letter codes
         if state and not file_pattern.startswith(f"{GOLD_DIR}/states/"):
-            where_clauses.append("state = ?")
+            where_clauses.append("state_code = ?")
             params.append(state)
         
         # NTEE code filter
@@ -1371,12 +1371,12 @@ def search_jurisdictions(query: str, state: Optional[str] = None, city: Optional
                 continue
             
             try:
-                # Build SQL query - use state column (lowercase)
+                # Build SQL query - use state_code column (2-letter codes)
                 where_clauses = []
                 params = []
                 
                 if state:
-                    where_clauses.append("state = ?")
+                    where_clauses.append("state_code = ?")
                     params.append(state)
                 
                 if city and query:
