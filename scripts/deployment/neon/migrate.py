@@ -28,7 +28,7 @@ logger.info(f"Using: {'DEV' if NEON_DATABASE_URL_DEV else 'PROD'} database")
 
 # Paths - relative to this script's location
 SCRIPT_DIR = Path(__file__).parent
-PROJECT_ROOT = SCRIPT_DIR.parent  # One level up from neon/ to project root
+PROJECT_ROOT = SCRIPT_DIR.parent.parent.parent  # Up from neon/ → deployment/ → scripts/ → project root
 GOLD_DIR = PROJECT_ROOT / "data" / "gold"
 SCHEMA_PATH = SCRIPT_DIR / "schema.sql"
 

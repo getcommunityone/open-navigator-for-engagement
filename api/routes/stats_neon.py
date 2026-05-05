@@ -131,6 +131,7 @@ async def get_stats(
                 'contacts': stats.get('contacts_count', 0),
                 'total_revenue': stats.get('total_revenue', 0),
                 'total_assets': stats.get('total_assets', 0),
+                'trending_causes': stats.get('trending_causes'),  # Include trending causes from dbt
                 'last_updated': stats.get('last_updated'),
                 'source': 'neon'
             }
@@ -209,7 +210,7 @@ async def fetch_stats_from_neon(
                     result = await conn.fetchrow(query, state)
                 
             elif level == 'city':
-                # Try city-level stats first
+                # Try city-level stats first from stats_aggregates
                 query = """
                     SELECT * FROM stats_aggregates 
                     WHERE level = 'city' 
@@ -219,10 +220,62 @@ async def fetch_stats_from_neon(
                 """
                 result = await conn.fetchrow(query, state, f"%{city}%")
                 
-                # NEVER fall back to county stats for city requests
-                # If city stats not found, go straight to state-level
+                # If not in stats_aggregates, query jurisdictions_search directly
+                if not result:
+                    logger.info(f"City '{city}' not in stats_aggregates, querying jurisdictions_search directly")
+                    
+                    # Count jurisdictions for this city
+                    jurisdiction_query = """
+                        SELECT COUNT(DISTINCT id) as count
+                        FROM jurisdictions_search
+                        WHERE (state_code = $1 OR state ILIKE $2)
+                          AND name ILIKE $3
+                    """
+                    jur_result = await conn.fetchrow(jurisdiction_query, state.upper() if len(state) == 2 else state, f"%{state}%", f"%{city}%")
+                    jurisdictions = jur_result['count'] if jur_result else 0
+                    
+                    # Count school districts
+                    school_query = """
+                        SELECT COUNT(*) as count
+                        FROM jurisdictions_search
+                        WHERE type = 'school_district'
+                          AND (state_code = $1 OR state ILIKE $2)
+                          AND name ILIKE $3
+                    """
+                    school_result = await conn.fetchrow(school_query, state.upper() if len(state) == 2 else state, f"%{state}%", f"%{city}%")
+                    school_districts = school_result['count'] if school_result else 0
+                    
+                    # Count contacts
+                    contact_query = """
+                        SELECT COUNT(*) as count
+                        FROM contacts_search
+                        WHERE (state_code = $1 OR state ILIKE $2)
+                    """
+                    contact_result = await conn.fetchrow(contact_query, state.upper() if len(state) == 2 else state, f"%{state}%")
+                    contacts = contact_result['count'] if contact_result else 0
+                    
+                    # Return constructed stats
+                    if jurisdictions > 0 or contacts > 0:
+                        return {
+                            'level': 'city',
+                            'state': state,
+                            'county': None,
+                            'city': city,
+                            'jurisdictions_count': jurisdictions,
+                            'school_districts_count': school_districts,
+                            'nonprofits_count': 0,
+                            'events_count': 0,
+                            'bills_count': 0,
+                            'contacts_count': contacts,
+                            'total_revenue': 0,
+                            'total_assets': 0,
+                            'last_updated': datetime.now(),
+                            'source': 'database'  # Queried from database tables
+                        }
+                
+                # Still no data? Fall back to state-level
                 if not result and state:
-                    logger.info(f"City '{city}' not found in stats, falling back to state '{state}' (skipping county)")
+                    logger.info(f"City '{city}' not found in database, falling back to state '{state}'")
                     query = """
                         SELECT * FROM stats_aggregates 
                         WHERE level = 'state' AND UPPER(state) = UPPER($1)

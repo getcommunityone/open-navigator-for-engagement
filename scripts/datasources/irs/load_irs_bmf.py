@@ -1,7 +1,9 @@
 """
-IRS Business Master File (EO-BMF) Ingestion
+IRS Business Master File (EO-BMF) Ingestion → Bronze Table
 
-Downloads and processes the complete IRS Exempt Organizations Business Master File.
+Downloads and loads the complete IRS Exempt Organizations Business Master File
+into the bronze_organizations_nonprofits_irs table.
+
 This provides ALL 1.9M+ tax-exempt organizations in the United States.
 
 Data Source: https://www.irs.gov/charities-non-profits/exempt-organizations-business-master-file-extract-eo-bmf
@@ -25,6 +27,8 @@ from typing import List, Optional, Dict
 import time
 from io import StringIO
 from datetime import datetime
+import psycopg2
+from psycopg2.extras import execute_values
 
 class IRSBMFIngestion:
     """
@@ -333,9 +337,226 @@ def demo_download_all():
     print(standardized.head())
 
 
-if __name__ == "__main__":
-    # Run demo (single state is faster for testing)
-    demo_download_state()
+def create_bronze_table(cursor):
+    """Create bronze_organizations_nonprofits_irs table"""
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS bronze_organizations_nonprofits_irs (
+            id SERIAL PRIMARY KEY,
+            ein VARCHAR(20) NOT NULL,
+            name TEXT,
+            ico VARCHAR(100),  -- In care of name (increased from 10 to 100)
+            street VARCHAR(255),
+            city VARCHAR(100),
+            state_code VARCHAR(2),
+            zip_code VARCHAR(20),
+            group_exemption VARCHAR(20),
+            subsection VARCHAR(20),  -- Tax code subsection (03, 04, etc.)
+            affiliation VARCHAR(20),
+            classification VARCHAR(20),
+            ruling VARCHAR(20),  -- Ruling date (YYYYMM)
+            deductibility VARCHAR(50),
+            foundation VARCHAR(20),
+            activity VARCHAR(200),
+            organization VARCHAR(20),
+            status VARCHAR(20),
+            tax_period VARCHAR(20),  -- YYYYMM
+            asset_cd VARCHAR(20),  -- Asset code
+            income_cd VARCHAR(20),  -- Income code
+            filing_req_cd VARCHAR(20),
+            pf_filing_req_cd VARCHAR(20),
+            acct_pd VARCHAR(20),  -- Accounting period
+            asset_amt BIGINT,
+            income_amt BIGINT,
+            revenue_amt BIGINT,
+            ntee_cd VARCHAR(20),
+            sort_name VARCHAR(255),
+            country VARCHAR(20),
+            loaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            
+            UNIQUE(ein)
+        );
+        
+        CREATE INDEX IF NOT EXISTS idx_bronze_irs_state ON bronze_organizations_nonprofits_irs(state_code);
+        CREATE INDEX IF NOT EXISTS idx_bronze_irs_city ON bronze_organizations_nonprofits_irs(city, state_code);
+        CREATE INDEX IF NOT EXISTS idx_bronze_irs_ntee ON bronze_organizations_nonprofits_irs(ntee_cd);
+        CREATE INDEX IF NOT EXISTS idx_bronze_irs_name ON bronze_organizations_nonprofits_irs USING gin(to_tsvector('english', name));
+    """)
+    logger.success("✅ Created bronze_organizations_nonprofits_irs table")
+
+
+def load_to_bronze(df: pd.DataFrame, db_url: str = "postgresql://postgres:password@localhost:5433/open_navigator_bronze"):
+    """
+    Load IRS BMF data into bronze table
     
-    # Uncomment to download ALL 1.9M+ orgs (takes ~5-10 minutes)
-    # demo_download_all()
+    Args:
+        df: DataFrame with IRS BMF data
+        db_url: PostgreSQL connection string
+    """
+    logger.info(f"💾 Loading {len(df):,} organizations to bronze table...")
+    
+    conn = psycopg2.connect(db_url)
+    cursor = conn.cursor()
+    
+    try:
+        # Create table
+        create_bronze_table(cursor)
+        conn.commit()
+        
+        # Prepare data for insertion - FAST vectorized approach
+        logger.info("  Converting numeric columns...")
+        
+        # Convert numeric columns in place (much faster than row-by-row)
+        numeric_cols = ['asset_amt', 'income_amt', 'revenue_amt']
+        for col in numeric_cols:
+            if col in df.columns:
+                df[col] = pd.to_numeric(df[col], errors='coerce')
+                # Convert to Int64 (nullable integer) to handle NaN properly
+                df[col] = df[col].astype('Int64')
+        
+        # Fill NaN with None for proper NULL handling in PostgreSQL
+        df_clean = df.where(pd.notna(df), None)
+        
+        # Batch insert query
+        insert_query = """
+            INSERT INTO bronze_organizations_nonprofits_irs (
+                ein, name, ico, street, city, state_code, zip_code,
+                group_exemption, subsection, affiliation, classification,
+                ruling, deductibility, foundation, activity, organization,
+                status, tax_period, asset_cd, income_cd, filing_req_cd,
+                pf_filing_req_cd, acct_pd, asset_amt, income_amt, revenue_amt,
+                ntee_cd, sort_name, country
+            ) VALUES %s
+            ON CONFLICT (ein) DO UPDATE SET
+                name = EXCLUDED.name,
+                city = EXCLUDED.city,
+                state_code = EXCLUDED.state_code,
+                ntee_cd = EXCLUDED.ntee_cd,
+                asset_amt = EXCLUDED.asset_amt,
+                income_amt = EXCLUDED.income_amt,
+                revenue_amt = EXCLUDED.revenue_amt,
+                loaded_at = CURRENT_TIMESTAMP
+        """
+        
+        # Process in batches to avoid memory issues with large datasets
+        batch_size = 50000
+        total_rows = len(df_clean)
+        num_batches = (total_rows + batch_size - 1) // batch_size
+        
+        logger.info(f"  Inserting {total_rows:,} records in {num_batches} batches of {batch_size:,}...")
+        
+        for batch_num in range(num_batches):
+            start_idx = batch_num * batch_size
+            end_idx = min(start_idx + batch_size, total_rows)
+            
+            logger.info(f"  Batch {batch_num + 1}/{num_batches}: rows {start_idx:,} to {end_idx:,}")
+            
+            # Get batch slice
+            batch_df = df_clean.iloc[start_idx:end_idx]
+            logger.info(f"  Sliced {len(batch_df)} rows for batch")
+            
+            # Convert batch to records
+            logger.info(f"  Converting batch to records...")
+            records = []
+            for row in batch_df.to_dict('records'):
+                # Convert pandas NA to None
+                def safe_get(key):
+                    val = row.get(key)
+                    if pd.isna(val):
+                        return None
+                    return val
+                
+                records.append((
+                    safe_get('ein'),
+                    safe_get('name'),
+                    safe_get('ico'),
+                    safe_get('street'),
+                    safe_get('city'),
+                    safe_get('state'),
+                    safe_get('zip'),
+                    safe_get('group'),
+                    safe_get('subsection'),
+                    safe_get('affiliation'),
+                    safe_get('classification'),
+                    safe_get('ruling'),
+                    safe_get('deductibility'),
+                    safe_get('foundation'),
+                    safe_get('activity'),
+                    safe_get('organization'),
+                    safe_get('status'),
+                    safe_get('tax_period'),
+                    safe_get('asset_cd'),
+                    safe_get('income_cd'),
+                    safe_get('filing_req_cd'),
+                    safe_get('pf_filing_req_cd'),
+                    safe_get('acct_pd'),
+                    safe_get('asset_amt'),
+                    safe_get('income_amt'),
+                    safe_get('revenue_amt'),
+                    safe_get('ntee_cd'),
+                    safe_get('sort_name'),
+                    safe_get('country'),
+                ))
+            
+            logger.info(f"  Converted {len(records)} records, preparing to insert...")
+            
+            # Insert batch
+            try:
+                logger.info(f"  Executing INSERT for batch {batch_num + 1}...")
+                execute_values(cursor, insert_query, records, page_size=1000)
+                logger.info(f"  INSERT completed, committing...")
+                conn.commit()
+                logger.success(f"  ✅ Batch {batch_num + 1}/{num_batches} inserted ({len(records):,} records)")
+            except Exception as e:
+                logger.error(f"  ❌ Batch {batch_num + 1} failed: {e}")
+                logger.error(f"  Exception type: {type(e).__name__}")
+                logger.error(f"  Sample record from batch: {records[0] if records else 'None'}")
+                import traceback
+                logger.error(f"  Traceback:\n{traceback.format_exc()}")
+                conn.rollback()
+                raise
+        
+        logger.success(f"✅ All batches completed!")
+        
+        # Verify
+        cursor.execute("SELECT COUNT(*) FROM bronze_organizations_nonprofits_irs")
+        total = cursor.fetchone()[0]
+        logger.success(f"✅ Loaded successfully! Total in bronze: {total:,}")
+        
+        # Show sample stats
+        cursor.execute("""
+            SELECT state_code, COUNT(*) as count
+            FROM bronze_organizations_nonprofits_irs
+            GROUP BY state_code
+            ORDER BY count DESC
+            LIMIT 10
+        """)
+        logger.info("📊 Top 10 states by organization count:")
+        for state, count in cursor.fetchall():
+            logger.info(f"   {state}: {count:,}")
+        
+    finally:
+        cursor.close()
+        conn.close()
+
+
+if __name__ == "__main__":
+    logger.info("=" * 60)
+    logger.info("IRS Business Master File → Bronze Table Loader")
+    logger.info("=" * 60)
+    
+    # Initialize ingestion client
+    ingestion = IRSBMFIngestion()
+    
+    # Download all regions (fastest - 4 files instead of 50+ states)
+    logger.info("📥 Downloading all IRS regions (1.9M+ organizations)...")
+    df = ingestion.download_all_regions(force_refresh=False)
+    
+    logger.info(f"📋 Downloaded {len(df):,} organizations")
+    logger.info(f"📋 Columns: {list(df.columns)}")
+    
+    # Load to bronze table
+    load_to_bronze(df)
+    
+    logger.info("=" * 60)
+    logger.success("✅ IRS BMF data loaded to bronze!")
+    logger.info("=" * 60)

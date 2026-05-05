@@ -1,9 +1,12 @@
 #!/usr/bin/env python3
 """
-NCCS (National Center for Charitable Statistics) Bulk Data Downloader
+NCCS (National Center for Charitable Statistics) → Bronze Table Loader
 
-Downloads Unified BMF (Business Master File) data and data dictionaries from the
-National Center for Charitable Statistics at the Urban Institute.
+Downloads Unified BMF (Business Master File) data from the National Center for Charitable Statistics
+and loads it into the bronze_organizations_nonprofits_nccs table.
+
+This provides historical nonprofit data (1989-2025) with one row per organization,
+enriched with additional metadata not available in raw IRS files.
 
 Directory Structure:
     /mnt/d/nccs_data/  (or configurable base path)
@@ -15,43 +18,21 @@ Directory Structure:
     │   │       ├── AL.csv
     │   │       ├── CA.csv
     │   │       └── ...
-    │   └── data-dictionary/
-    │       └── harmonized_data_dictionary.xlsx
-    ├── transformed-bmf/
-    │   ├── 2026-01/
-    │   │   ├── bmf_2026_01_processed.csv
-    │   │   └── bmf_2026_01_data_dictionary.csv
-    │   └── ...
-    ├── raw-bmf/
-    │   ├── 2026-01-BMF.csv
-    │   └── ...
-    └── download_log.json
 
 Data Sources:
     - Unified BMF: Historical data (1989-2025) with one row per organization
-    - Transformed BMF: Monthly cleaned/validated IRS releases (June 2023-present)
-    - Raw BMF: Unmodified monthly IRS files (June 2023-present)
 
 Website: https://urbaninstitute.github.io/nccs/catalogs/catalog-bmf.html
 
 Usage:
-    # Download everything
-    python bulk_download_nccs.py
+    # Download and load to bronze
+    python load_nccs_bulk.py
 
     # Custom base directory
-    python bulk_download_nccs.py --base-dir /mnt/d/nccs_data
-
-    # Download only Unified BMF
-    python bulk_download_nccs.py --dataset unified
+    python load_nccs_bulk.py --base-dir /mnt/d/nccs_data
 
     # Download specific states only
-    python bulk_download_nccs.py --states CA,NY,TX
-
-    # Resume interrupted download
-    python bulk_download_nccs.py --resume
-
-    # Dry run
-    python bulk_download_nccs.py --dry-run
+    python load_nccs_bulk.py --states CA,NY,TX
 """
 
 import argparse
@@ -65,6 +46,9 @@ from loguru import logger
 import time
 from tqdm import tqdm
 from bs4 import BeautifulSoup
+import pandas as pd
+import psycopg2
+from psycopg2.extras import execute_values
 
 
 class NCCSBulkDownloader:
@@ -223,18 +207,10 @@ class NCCSBulkDownloader:
             return {}
     
     def _is_downloaded(self, url: str, dest_path: Path) -> bool:
-        """Check if file is already downloaded"""
-        if not self.resume:
-            return False
-        
-        if not dest_path.exists():
-            return False
-        
-        # Check if in completed log
-        if url in self.download_log['completed_files']:
-            file_info = self.download_log['completed_files'][url]
-            if dest_path.stat().st_size == file_info.get('size', 0):
-                return True
+        """Check if file is already downloaded (always checks, not just in resume mode)"""
+        # Always skip if file exists and has reasonable size (> 1KB)
+        if dest_path.exists() and dest_path.stat().st_size > 1024:
+            return True
         
         return False
     
@@ -604,6 +580,201 @@ class NCCSBulkDownloader:
         return successful, skipped, failed, not_available
 
 
+def create_bronze_table(cursor):
+    """Create bronze_organizations_nonprofits_nccs table with NCCS schema"""
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS bronze_organizations_nonprofits_nccs (
+            id SERIAL PRIMARY KEY,
+            ein2 VARCHAR(20),  -- Alternative EIN format
+            ein VARCHAR(20) NOT NULL,
+            ntee_irs VARCHAR(20),  -- IRS NTEE code
+            ntee_nccs VARCHAR(20),  -- NCCS NTEE code  
+            nteev2 VARCHAR(20),  -- NTEE version 2
+            nccs_level_1 VARCHAR(100),  -- Top-level category
+            nccs_level_2 VARCHAR(100),  -- Mid-level category
+            nccs_level_3 VARCHAR(100),  -- Detailed category
+            f990_org_addr_city VARCHAR(100),
+            f990_org_addr_state VARCHAR(2),
+            f990_org_addr_zip VARCHAR(20),
+            f990_org_addr_street VARCHAR(255),
+            census_cbsa_fips VARCHAR(20),  -- Core-Based Statistical Area FIPS
+            census_cbsa_name VARCHAR(200),  -- CBSA name (metro/micro area)
+            census_block_fips VARCHAR(20),  -- Census block FIPS
+            census_urban_area VARCHAR(200),  -- Urban area name
+            census_state_abbr VARCHAR(2),  -- Census state abbreviation
+            census_county_name VARCHAR(100),  -- County name
+            org_addr_full TEXT,  -- Full address string
+            org_addr_match VARCHAR(200),  -- Address match quality (can be full address)
+            latitude DOUBLE PRECISION,  -- Geocoded latitude
+            longitude DOUBLE PRECISION,  -- Geocoded longitude
+            geocoder_score DOUBLE PRECISION,  -- Geocoding confidence score
+            geocoder_match VARCHAR(100),  -- Geocoding match quality
+            bmf_subsection_code VARCHAR(20),
+            bmf_status_code VARCHAR(20),
+            bmf_pf_filing_req_code VARCHAR(20),
+            bmf_organization_code VARCHAR(20),
+            bmf_income_code VARCHAR(20),
+            bmf_group_exempt_num VARCHAR(20),
+            bmf_foundation_code VARCHAR(20),
+            bmf_filing_req_code VARCHAR(20),
+            bmf_deductibility_code VARCHAR(20),
+            bmf_classification_code VARCHAR(20),
+            bmf_asset_code VARCHAR(20),
+            bmf_affiliation_code VARCHAR(20),
+            org_ruling_date VARCHAR(20),  -- YYYYMMDD
+            org_fiscal_year INTEGER,
+            org_ruling_year INTEGER,
+            org_year_first INTEGER,  -- First year in BMF
+            org_year_last INTEGER,  -- Last year in BMF
+            org_year_count INTEGER,  -- Number of years in BMF
+            org_pers_ico TEXT,  -- In care of person
+            org_name_sec TEXT,  -- Secondary name
+            org_name_current TEXT,  -- Current organization name
+            org_fiscal_period VARCHAR(20),  -- YYYYMM
+            f990_total_revenue_recent BIGINT,
+            f990_total_income_recent BIGINT,
+            f990_total_assets_recent BIGINT,
+            f990_total_expenses_recent BIGINT,
+            loaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            
+            UNIQUE(ein)
+        );
+        
+        -- Indexes for common queries
+        CREATE INDEX IF NOT EXISTS idx_bronze_nccs_state ON bronze_organizations_nonprofits_nccs(f990_org_addr_state);
+        CREATE INDEX IF NOT EXISTS idx_bronze_nccs_city ON bronze_organizations_nonprofits_nccs(f990_org_addr_city, f990_org_addr_state);
+        CREATE INDEX IF NOT EXISTS idx_bronze_nccs_ntee ON bronze_organizations_nonprofits_nccs(ntee_nccs);
+        CREATE INDEX IF NOT EXISTS idx_bronze_nccs_ntee_irs ON bronze_organizations_nonprofits_nccs(ntee_irs);
+        CREATE INDEX IF NOT EXISTS idx_bronze_nccs_level1 ON bronze_organizations_nonprofits_nccs(nccs_level_1);
+        CREATE INDEX IF NOT EXISTS idx_bronze_nccs_county ON bronze_organizations_nonprofits_nccs(census_county_name, census_state_abbr);
+        CREATE INDEX IF NOT EXISTS idx_bronze_nccs_name ON bronze_organizations_nonprofits_nccs USING gin(to_tsvector('english', org_name_current));
+        CREATE INDEX IF NOT EXISTS idx_bronze_nccs_lat ON bronze_organizations_nonprofits_nccs(latitude) WHERE latitude IS NOT NULL;
+        CREATE INDEX IF NOT EXISTS idx_bronze_nccs_lon ON bronze_organizations_nonprofits_nccs(longitude) WHERE longitude IS NOT NULL;
+    """)
+    logger.success("✅ Created bronze_organizations_nonprofits_nccs table")
+
+
+def load_to_bronze(file_path: Path, db_url: str = "postgresql://postgres:password@localhost:5433/open_navigator_bronze"):
+    """
+    Load NCCS Unified BMF data into bronze table
+    
+    Args:
+        file_path: Path to NCCS CSV file
+        db_url: PostgreSQL connection string
+    """
+    logger.info(f"💾 Loading NCCS data from: {file_path}")
+    
+    # Read CSV in chunks to handle large file
+    chunk_size = 50000
+    logger.info(f"  Reading CSV in chunks of {chunk_size:,} rows...")
+    
+    conn = psycopg2.connect(db_url)
+    cursor = conn.cursor()
+    
+    try:
+        # Create table
+        create_bronze_table(cursor)
+        conn.commit()
+        
+        # Process file in chunks
+        chunks_processed = 0
+        total_rows = 0
+        
+        for chunk in pd.read_csv(file_path, chunksize=chunk_size, dtype=str, low_memory=False):
+            chunks_processed += 1
+            chunk_rows = len(chunk)
+            total_rows += chunk_rows
+            
+            logger.info(f"  Processing chunk {chunks_processed}: {chunk_rows:,} rows (total: {total_rows:,})")
+            
+            # Lowercase column names to match Python convention
+            chunk.columns = chunk.columns.str.lower()
+            
+            # Convert numeric columns
+            numeric_cols = ['org_fiscal_year', 'org_ruling_year', 'org_year_first', 'org_year_last', 'org_year_count',
+                          'f990_total_revenue_recent', 'f990_total_income_recent', 'f990_total_assets_recent', 'f990_total_expenses_recent']
+            for col in numeric_cols:
+                if col in chunk.columns:
+                    chunk[col] = pd.to_numeric(chunk[col], errors='coerce')
+            
+            # Convert float columns
+            float_cols = ['latitude', 'longitude', 'geocoder_score']
+            for col in float_cols:
+                if col in chunk.columns:
+                    chunk[col] = pd.to_numeric(chunk[col], errors='coerce')
+            
+            # Fill NaN with None for proper NULL handling
+            chunk_clean = chunk.where(pd.notna(chunk), None)
+            
+            # Batch insert
+            insert_query = """
+                INSERT INTO bronze_organizations_nonprofits_nccs (
+                    ein2, ein, ntee_irs, ntee_nccs, nteev2, nccs_level_1, nccs_level_2, nccs_level_3,
+                    f990_org_addr_city, f990_org_addr_state, f990_org_addr_zip, f990_org_addr_street,
+                    census_cbsa_fips, census_cbsa_name, census_block_fips, census_urban_area,
+                    census_state_abbr, census_county_name, org_addr_full, org_addr_match,
+                    latitude, longitude, geocoder_score, geocoder_match,
+                    bmf_subsection_code, bmf_status_code, bmf_pf_filing_req_code, bmf_organization_code,
+                    bmf_income_code, bmf_group_exempt_num, bmf_foundation_code, bmf_filing_req_code,
+                    bmf_deductibility_code, bmf_classification_code, bmf_asset_code, bmf_affiliation_code,
+                    org_ruling_date, org_fiscal_year, org_ruling_year, org_year_first, org_year_last,
+                    org_year_count, org_pers_ico, org_name_sec, org_name_current, org_fiscal_period,
+                    f990_total_revenue_recent, f990_total_income_recent, f990_total_assets_recent, f990_total_expenses_recent
+                ) VALUES %s
+                ON CONFLICT (ein) DO UPDATE SET
+                    org_name_current = EXCLUDED.org_name_current,
+                    f990_org_addr_city = EXCLUDED.f990_org_addr_city,
+                    f990_org_addr_state = EXCLUDED.f990_org_addr_state,
+                    ntee_nccs = EXCLUDED.ntee_nccs,
+                    latitude = EXCLUDED.latitude,
+                    longitude = EXCLUDED.longitude,
+                    f990_total_revenue_recent = EXCLUDED.f990_total_revenue_recent,
+                    f990_total_assets_recent = EXCLUDED.f990_total_assets_recent,
+                    org_year_last = EXCLUDED.org_year_last,
+                    loaded_at = CURRENT_TIMESTAMP
+            """
+            
+            # Convert to records
+            records = []
+            for row in chunk_clean.to_dict('records'):
+                def safe_get(key):
+                    val = row.get(key)
+                    if pd.isna(val):
+                        return None
+                    return val
+                
+                records.append((
+                    safe_get('ein2'), safe_get('ein'), safe_get('ntee_irs'), safe_get('ntee_nccs'), safe_get('nteev2'),
+                    safe_get('nccs_level_1'), safe_get('nccs_level_2'), safe_get('nccs_level_3'),
+                    safe_get('f990_org_addr_city'), safe_get('f990_org_addr_state'), safe_get('f990_org_addr_zip'), safe_get('f990_org_addr_street'),
+                    safe_get('census_cbsa_fips'), safe_get('census_cbsa_name'), safe_get('census_block_fips'), safe_get('census_urban_area'),
+                    safe_get('census_state_abbr'), safe_get('census_county_name'), safe_get('org_addr_full'), safe_get('org_addr_match'),
+                    safe_get('latitude'), safe_get('longitude'), safe_get('geocoder_score'), safe_get('geocoder_match'),
+                    safe_get('bmf_subsection_code'), safe_get('bmf_status_code'), safe_get('bmf_pf_filing_req_code'), safe_get('bmf_organization_code'),
+                    safe_get('bmf_income_code'), safe_get('bmf_group_exempt_num'), safe_get('bmf_foundation_code'), safe_get('bmf_filing_req_code'),
+                    safe_get('bmf_deductibility_code'), safe_get('bmf_classification_code'), safe_get('bmf_asset_code'), safe_get('bmf_affiliation_code'),
+                    safe_get('org_ruling_date'), safe_get('org_fiscal_year'), safe_get('org_ruling_year'), safe_get('org_year_first'), safe_get('org_year_last'),
+                    safe_get('org_year_count'), safe_get('org_pers_ico'), safe_get('org_name_sec'), safe_get('org_name_current'), safe_get('org_fiscal_period'),
+                    safe_get('f990_total_revenue_recent'), safe_get('f990_total_income_recent'), safe_get('f990_total_assets_recent'), safe_get('f990_total_expenses_recent'),
+                ))
+            
+            # Execute batch insert
+            execute_values(cursor, insert_query, records, page_size=1000)
+            conn.commit()
+            
+            logger.success(f"  ✅ Inserted chunk {chunks_processed}: {chunk_rows:,} rows")
+        
+        logger.success(f"🎉 Loaded {total_rows:,} total organizations to bronze_organizations_nonprofits_nccs")
+        
+    except Exception as e:
+        logger.error(f"❌ Error loading to bronze: {e}")
+        conn.rollback()
+        raise
+    finally:
+        cursor.close()
+        conn.close()
+
+
 def main():
     """Main entry point"""
     parser = argparse.ArgumentParser(
@@ -679,12 +850,22 @@ Examples:
         help='Show what would be downloaded without actually downloading'
     )
     
+    parser.add_argument(
+        '--skip-load',
+        action='store_true',
+        help='Download only, skip loading to database'
+    )
+    
+    parser.add_argument(
+        '--skip-download',
+        action='store_true',
+        help='Skip download phase, only load existing files to database'
+    )
+    
     args = parser.parse_args()
     
-    # Parse states and months
+    # Parse states
     states = args.states.split(',') if args.states else None
-    months_transformed = args.months.split(',') if args.months and args.dataset in ['all', 'transformed'] else None
-    months_raw = [m.replace('_', '-') for m in args.months.split(',')] if args.months and args.dataset in ['all', 'raw'] else None
     
     # Configure logging
     logger.remove()
@@ -694,74 +875,57 @@ Examples:
         level="INFO"
     )
     
+    logger.info("=" * 60)
+    logger.info("NCCS Unified BMF → Bronze Table Loader")
+    logger.info("=" * 60)
+    logger.info(f"📁 Base directory: {args.base_dir}")
+    logger.info("")
+    
     # Create downloader
     downloader = NCCSBulkDownloader(
         base_dir=Path(args.base_dir),
         resume=args.resume
     )
     
-    # Download datasets
-    total_successful = 0
-    total_skipped = 0
-    total_failed = 0
-    total_not_available = 0
-    
-    logger.info("📊 NCCS BMF Data Downloader")
-    logger.info(f"📁 Base directory: {args.base_dir}")
-    logger.info("")
-    
-    if args.dataset in ['all', 'unified']:
-        logger.info("=" * 60)
-        logger.info("📥 Downloading Unified BMF")
-        logger.info("=" * 60)
+    # Download Unified BMF (unless skip-download flag is set)
+    if args.skip_download:
+        logger.info("⏭️  Skipping download phase (--skip-download flag)")
+        s, sk, f, na = 0, 0, 0, 0
+    else:
+        logger.info("📥 Downloading Unified BMF data...")
         s, sk, f, na = downloader.download_unified_bmf(
             states=states,
-            download_full=not args.no_full,
-            dry_run=args.dry_run
+            download_full=(states is None),  # Only download full file if no states specified
+            dry_run=False
         )
-        total_successful += s
-        total_skipped += sk
-        total_failed += f
-        total_not_available += na
+        
+        logger.info(f"\n✅ Download complete: {s} successful, {sk} skipped, {f} failed")
     
-    if args.dataset in ['all', 'transformed']:
-        logger.info("\n" + "=" * 60)
-        logger.info("📥 Downloading Transformed BMF")
-        logger.info("=" * 60)
-        s, sk, f, na = downloader.download_transformed_bmf(
-            months=months_transformed,
-            dry_run=args.dry_run
-        )
-        total_successful += s
-        total_skipped += sk
-        total_failed += f
-        total_not_available += na
+    if args.skip_load:
+        logger.info("⏭️  Skipping database load (--skip-load flag)")
+        return
     
-    if args.dataset in ['all', 'raw']:
-        logger.info("\n" + "=" * 60)
-        logger.info("📥 Downloading Raw BMF")
-        logger.info("=" * 60)
-        s, sk, f, na = downloader.download_raw_bmf(
-            months=months_raw,
-            dry_run=args.dry_run
-        )
-        total_successful += s
-        total_skipped += sk
-        total_failed += f
-        total_not_available += na
+    # Load to bronze
+    if states:
+        # Load state files
+        logger.info(f"\n💾 Loading {len(states)} state file(s) to bronze...")
+        for state in states:
+            file_path = Path(args.base_dir) / "unified-bmf" / "v1.2" / "by-state" / f"{state}.csv"
+            if file_path.exists():
+                load_to_bronze(file_path)
+            else:
+                logger.warning(f"⚠️  File not found: {file_path}")
+    else:
+        # Load full file
+        file_path = Path(args.base_dir) / "unified-bmf" / "v1.2" / "full" / "UNIFIED_BMF_V1.2.csv"
+        if file_path.exists():
+            load_to_bronze(file_path)
+        else:
+            logger.error(f"❌ Full file not found: {file_path}")
     
-    # Summary
-    if not args.dry_run:
-        logger.info("\n" + "=" * 60)
-        logger.info("📊 Download Summary:")
-        logger.info(f"  ✅ Successful: {total_successful}")
-        logger.info(f"  ⏭️  Skipped: {total_skipped}")
-        if total_not_available > 0:
-            logger.info(f"  ⚠️  Not available on server: {total_not_available}")
-        if total_failed > 0:
-            logger.info(f"  ❌ Failed: {total_failed}")
-        logger.info(f"  📁 Base directory: {args.base_dir}")
-        logger.info("=" * 60)
+    logger.info("=" * 60)
+    logger.success("✅ NCCS data loaded to bronze!")
+    logger.info("=" * 60)
 
 
 if __name__ == '__main__':

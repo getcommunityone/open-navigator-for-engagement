@@ -118,11 +118,42 @@ jurisdiction_stats AS (
         
         CURRENT_TIMESTAMP as last_updated
     FROM trending_causes tc
+),
+
+-- City level stats (one row per city for API lookups)
+city_stats AS (
+    SELECT
+        'city' as level,
+        tc.state_code,
+        tc.state,
+        NULL::VARCHAR(100) as county,
+        tc.jurisdiction_name as city,
+        
+        -- Counts (placeholder)
+        0 as jurisdictions_count,
+        0 as school_districts_count,
+        0 as nonprofits_count,
+        0 as events_count,
+        0 as bills_count,
+        0 as contacts_count,
+        0::BIGINT as total_revenue,
+        0::BIGINT as total_assets,
+        
+        -- City trending causes
+        tc.trending_causes_json as trending_causes,
+        
+        CURRENT_TIMESTAMP as last_updated
+    FROM trending_causes tc
+    WHERE tc.jurisdiction_name IS NOT NULL 
+      AND tc.jurisdiction_name != 'Unknown'
+      AND tc.state_code IS NOT NULL
 )
 
 -- Combine all levels
 SELECT * FROM national_stats
 UNION ALL
 SELECT * FROM state_stats
+UNION ALL
+SELECT * FROM city_stats
 UNION ALL
 SELECT * FROM jurisdiction_stats

@@ -94,6 +94,7 @@ export default function UnifiedSearch() {
   const [showSuggestions, setShowSuggestions] = useState(false)
   const [sortBy, setSortBy] = useState(() => searchParams.get('sort') || 'relevance')
   const [nteeCategory, setNteeCategory] = useState(() => searchParams.get('ntee') || '')
+  const [includeFullText, setIncludeFullText] = useState(() => searchParams.get('full_text') === 'true')
   const [jurisdictionDetails, setJurisdictionDetails] = useState<any[]>(() => {
     const detailsParam = searchParams.get('jurisdiction_details')
     if (detailsParam) {
@@ -243,6 +244,11 @@ export default function UnifiedSearch() {
         params.state = effectiveState
       }
       
+      // Include full text if enabled
+      if (includeFullText) {
+        params.full_text = 'true'
+      }
+      
       const response = await api.get('/search/', { params })
       return response.data
     },
@@ -252,7 +258,7 @@ export default function UnifiedSearch() {
 
   // Main search results
   const { data: searchResults, isLoading: isSearching, error } = useQuery<SearchResponse>({
-    queryKey: ['unified-search', activeQuery, selectedTypes, selectedState, currentPage, sortBy, nteeCategory, selectedEin],
+    queryKey: ['unified-search', activeQuery, selectedTypes, selectedState, currentPage, sortBy, nteeCategory, selectedEin, includeFullText],
     queryFn: async () => {
       // Allow searching with query OR with filters (browse mode) OR with EIN
       if (!activeQuery && !selectedState && !selectedTypes.length && !selectedEin) {
@@ -288,6 +294,11 @@ export default function UnifiedSearch() {
         params.ntee_code = nteeCategory
       }
       
+      // Include full text if enabled
+      if (includeFullText) {
+        params.full_text = 'true'
+      }
+      
       const response = await api.get('/search/', { params })
       return response.data
     },
@@ -312,6 +323,7 @@ export default function UnifiedSearch() {
       }
       if (sortBy && sortBy !== 'relevance') params.sort = sortBy
       if (nteeCategory) params.ntee = nteeCategory
+      if (includeFullText) params.full_text = 'true'
       setSearchParams(params)
     }
   }
@@ -328,6 +340,7 @@ export default function UnifiedSearch() {
     }
     if (sortBy && sortBy !== 'relevance') params.sort = sortBy
     if (nteeCategory) params.ntee = nteeCategory
+    if (includeFullText) params.full_text = 'true'
     if (newPage > 1) params.page = newPage.toString()
     setSearchParams(params)
     
@@ -346,6 +359,7 @@ export default function UnifiedSearch() {
     params.types = category
     if (sortBy && sortBy !== 'relevance') params.sort = sortBy
     if (nteeCategory) params.ntee = nteeCategory
+    if (includeFullText) params.full_text = 'true'
     setSearchParams(params)
   }
 
@@ -951,46 +965,46 @@ export default function UnifiedSearch() {
           </form>
 
           {/* Filter Bar */}
-          <div className="mt-4 flex items-center gap-3 flex-wrap">
+          <div className="mt-4 flex items-center gap-2 sm:gap-3 flex-wrap">
             <button
               onClick={() => setShowFilters(!showFilters)}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg border-2 transition-colors ${
+              className={`flex items-center gap-2 px-3 sm:px-4 py-2 rounded-lg border-2 transition-colors text-sm ${
                 showFilters 
                   ? 'border-primary-500 bg-primary-50 text-primary-700'
                   : 'border-gray-300 text-gray-700 hover:border-gray-400 hover:bg-gray-50'
               }`}
             >
-              <AdjustmentsHorizontalIcon className="h-5 w-5" />
-              Filters
-              {(selectedState || sortBy !== 'relevance' || nteeCategory) && (
+              <AdjustmentsHorizontalIcon className="h-4 w-4 sm:h-5 sm:w-5" />
+              <span className="hidden xs:inline">Filters</span>
+              {(selectedState || sortBy !== 'relevance' || nteeCategory || includeFullText) && (
                 <span className="ml-1 px-2 py-0.5 bg-primary-600 text-white text-xs rounded-full">
-                  {[selectedState, sortBy !== 'relevance' ? 'sorted' : null, nteeCategory].filter(Boolean).length}
+                  {[selectedState, sortBy !== 'relevance' ? 'sorted' : null, nteeCategory, includeFullText ? 'full text' : null].filter(Boolean).length}
                 </span>
               )}
             </button>
 
-            {/* Quick Type Filters - Meetings pill on far right */}
+            {/* Quick Type Filters - Responsive sizing */}
             {(['contacts', 'organizations', 'causes', 'meetings'] as const).map((type) => (
               <button
                 key={type}
                 onClick={() => toggleType(type)}
-                className={`flex items-center gap-2 px-4 py-2 rounded-full border-2 transition-all ${
+                className={`flex items-center gap-1.5 px-3 sm:px-4 py-2 rounded-full border-2 transition-all text-sm ${
                   selectedTypes.includes(type)
                     ? `${getTypeColor(type)} border-current font-medium shadow-sm`
                     : 'border-gray-300 bg-white text-gray-600 hover:border-gray-400 hover:bg-gray-50'
                 }`}
               >
                 {selectedTypes.includes(type) && (
-                  <CheckIcon className="h-4 w-4 flex-shrink-0" />
+                  <CheckIcon className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" />
                 )}
                 {getTypeIcon(type)}
-                {type.charAt(0).toUpperCase() + type.slice(1)}
+                <span className="hidden xs:inline">{type.charAt(0).toUpperCase() + type.slice(1)}</span>
               </button>
             ))}
           </div>
 
           {/* Active Filters Display */}
-          {(selectedState || sortBy !== 'relevance' || nteeCategory || jurisdictionDetails.length > 0) && (
+          {(selectedState || sortBy !== 'relevance' || nteeCategory || jurisdictionDetails.length > 0 || includeFullText) && (
             <div className="mt-3 flex items-center gap-2 flex-wrap">
               <span className="text-sm text-gray-600">Active filters:</span>
               {selectedState && (
@@ -1059,13 +1073,28 @@ export default function UnifiedSearch() {
                   </button>
                 </span>
               )}
+              {includeFullText && (
+                <span className="inline-flex items-center gap-1 px-3 py-1 bg-amber-100 text-amber-800 rounded-full text-sm">
+                  <DocumentTextIcon className="h-3 w-3" />
+                  Full text
+                  <button
+                    onClick={() => {
+                      setIncludeFullText(false)
+                      setTimeout(() => handleSearch(), 0)
+                    }}
+                    className="hover:bg-amber-200 rounded-full p-0.5"
+                  >
+                    <XMarkIcon className="h-3 w-3" />
+                  </button>
+                </span>
+              )}
             </div>
           )}
 
           {/* Advanced Filters Panel */}
           {showFilters && (
             <div className="mt-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 {/* State Filter */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -1158,6 +1187,28 @@ export default function UnifiedSearch() {
                 </div>
               </div>
 
+              {/* Full Text Search Checkbox - Full width on mobile, compact on desktop */}
+              <div className="mt-4 pt-4 border-t border-gray-300">
+                <label className="flex items-center gap-2 cursor-pointer group">
+                  <input
+                    type="checkbox"
+                    checked={includeFullText}
+                    onChange={(e) => {
+                      setIncludeFullText(e.target.checked)
+                      setCurrentPage(1)
+                      setTimeout(() => handleSearch(), 0)
+                    }}
+                    className="h-4 w-4 text-primary-600 border-gray-300 rounded focus:ring-2 focus:ring-primary-500 cursor-pointer"
+                  />
+                  <span className="text-sm font-medium text-gray-700 group-hover:text-gray-900">
+                    Include full text
+                  </span>
+                  <span className="text-xs text-gray-500 hidden sm:inline">
+                    (bills, meeting transcripts & summaries)
+                  </span>
+                </label>
+              </div>
+
               {/* Clear All Button */}
               <div className="mt-4">
                 <button
@@ -1165,9 +1216,10 @@ export default function UnifiedSearch() {
                     setSelectedState('')
                     setSortBy('relevance')
                     setNteeCategory('')
+                    setIncludeFullText(false)
                     setTimeout(() => handleSearch(), 0)
                   }}
-                  className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors"
+                  className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors text-sm sm:text-base"
                 >
                   Clear All Filters
                 </button>

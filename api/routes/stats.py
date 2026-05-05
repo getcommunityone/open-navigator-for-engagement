@@ -1,5 +1,5 @@
 """
-Statistics endpoint with cached metrics from real data at multiple geographic levels
+Statistics endpoint with cached metrics from database tables
 """
 from fastapi import APIRouter, HTTPException, Query
 from pathlib import Path
@@ -7,8 +7,13 @@ import pandas as pd
 from datetime import datetime, timedelta
 from typing import Dict, Any, Optional
 from loguru import logger
+import psycopg2
+import os
 
 router = APIRouter()
+
+# Database connection URL for stats queries
+LOCAL_DB_URL = os.getenv("NEON_DATABASE_URL_DEV", "postgresql://postgres:password@localhost:5433/open_navigator")
 
 # Multi-level cache: {cache_key: {stats_data, timestamp}}
 # Cache key format: "national" or "state:MA" or "county:MA:Suffolk" or "city:MA:Boston"
@@ -35,6 +40,157 @@ def count_parquet_records(pattern: str, filter_func=None) -> int:
         except Exception as e:
             print(f"Warning: Could not read {file}: {e}")
     return total
+
+
+def calculate_stats_from_db(state: Optional[str] = None, 
+                            county: Optional[str] = None, 
+                            city: Optional[str] = None) -> Dict[str, Any]:
+    """
+    Calculate statistics from database tables (faster than parquet files)
+    
+    Queries:
+    - jurisdictions_search for jurisdiction counts
+    - contacts_search for official/legislator counts  
+    - organizations_nonprofit_search for nonprofit counts
+    - stats_aggregates for trending causes
+    
+    Args:
+        state: State name (e.g., 'Massachusetts') or code (e.g., 'MA')
+        county: County name (e.g., 'Suffolk County' or 'Suffolk')
+        city: City name (e.g., 'Boston')
+    """
+    try:
+        conn = psycopg2.connect(LOCAL_DB_URL)
+        cursor = conn.cursor()
+        
+        # Determine geographic level
+        if city and state:
+            level = 'city'
+            location_display = f"{city}, {state}"
+        elif county and state:
+            level = 'county'
+            location_display = f"{county}, {state}"
+        elif state:
+            level = 'state'
+            location_display = state
+        else:
+            level = 'national'
+            location_display = 'United States'
+        
+        # Build SQL filters
+        where_clauses = []
+        params = []
+        
+        if state:
+            # Support both state names and codes
+            where_clauses.append("(state_code = %s OR state ILIKE %s)")
+            params.append(state.upper() if len(state) == 2 else state)
+            params.append(f"%{state}%")
+        
+        if county:
+            # Normalize county name (remove 'County' suffix if present)
+            county_name = county.replace(' County', '').strip()
+            where_clauses.append("county ILIKE %s")
+            params.append(f"%{county_name}%")
+        
+        if city:
+            where_clauses.append("name ILIKE %s")
+            params.append(f"%{city}%")
+        
+        where_sql = " AND ".join(where_clauses) if where_clauses else "1=1"
+        
+        # Count jurisdictions
+        jurisdiction_query = f"""
+            SELECT COUNT(DISTINCT id) as count
+            FROM jurisdictions_search
+            WHERE {where_sql}
+        """
+        cursor.execute(jurisdiction_query, params)
+        jurisdictions = cursor.fetchone()[0] if cursor.rowcount > 0 else 0
+        
+        # Count school districts (separate query)
+        school_query = f"""
+            SELECT COUNT(*) as count
+            FROM jurisdictions_search
+            WHERE type = 'school_district' AND {where_sql}
+        """
+        cursor.execute(school_query, params)
+        school_districts = cursor.fetchone()[0] if cursor.rowcount > 0 else 0
+        
+        # Count contacts (officials, legislators)
+        contact_params = []
+        contact_where = []
+        if state:
+            contact_where.append("(state_code = %s OR state ILIKE %s)")
+            contact_params.append(state.upper() if len(state) == 2 else state)
+            contact_params.append(f"%{state}%")
+        
+        contact_where_sql = " AND ".join(contact_where) if contact_where else "1=1"
+        
+        contact_query = f"""
+            SELECT COUNT(*) as count
+            FROM contacts_search
+            WHERE {contact_where_sql}
+        """
+        cursor.execute(contact_query, contact_params)
+        contacts = cursor.fetchone()[0] if cursor.rowcount > 0 else 0
+        
+        # Count nonprofits
+        nonprofit_query = f"""
+            SELECT COUNT(*) as count
+            FROM organizations_nonprofit_search
+            WHERE {contact_where_sql}
+        """
+        try:
+            cursor.execute(nonprofit_query, contact_params)
+            nonprofits = cursor.fetchone()[0] if cursor.rowcount > 0 else 0
+        except Exception:
+            nonprofits = 0  # Table might not exist
+        
+        # Get trending causes from stats_aggregates
+        trending_causes = None
+        try:
+            trending_query = """
+                SELECT trending_causes
+                FROM stats_aggregates
+                WHERE level = %s AND trending_causes IS NOT NULL
+                LIMIT 1
+            """
+            cursor.execute(trending_query, [level])
+            result = cursor.fetchone()
+            if result and result[0]:
+                trending_causes = result[0]
+        except Exception as e:
+            logger.debug(f"Could not fetch trending causes: {e}")
+        
+        cursor.close()
+        conn.close()
+        
+        # Build response
+        return {
+            'level': level,
+            'location': location_display,
+            'state': state,
+            'county': county,
+            'city': city,
+            'jurisdictions': jurisdictions,
+            'school_districts': school_districts,
+            'nonprofits': nonprofits,
+            'events': 0,  # TODO: Add events_search table
+            'bills': 0,  # TODO: Add bills_search table
+            'contacts': contacts,
+            'total_revenue': 0,
+            'total_assets': 0,
+            'trending_causes': trending_causes,
+            'last_updated': datetime.now().isoformat(),
+            'source': 'database',
+            'note': 'Data from local PostgreSQL' if (jurisdictions > 0 or contacts > 0 or nonprofits > 0) else 'No data available for this location'
+        }
+        
+    except Exception as e:
+        logger.error(f"Database query failed: {e}")
+        # Fallback to parquet files
+        return calculate_stats(state=state, county=county, city=city)
 
 
 def calculate_stats(state: Optional[str] = None, 
@@ -288,7 +444,8 @@ def get_cached_stats(state: Optional[str] = None,
     
     # Calculate fresh stats
     try:
-        stats = calculate_stats(state=state, county=county, city=city)
+        # Use database version for faster queries
+        stats = calculate_stats_from_db(state=state, county=county, city=city)
         
         # Add to cache with timestamp
         cache_entry = stats.copy()

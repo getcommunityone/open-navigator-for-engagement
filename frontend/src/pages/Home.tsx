@@ -1,6 +1,6 @@
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import React, { useState, Fragment, useEffect, useRef } from 'react'
-import { Tab } from '@headlessui/react'
+import { Tab, Menu, Transition } from '@headlessui/react'
 import { useQuery } from '@tanstack/react-query'
 import api from '../lib/api'
 import { 
@@ -33,7 +33,9 @@ import {
   ChevronDownIcon,
   MapIcon,
   BellAlertIcon,
-  EnvelopeIcon
+  EnvelopeIcon,
+  Cog6ToothIcon,
+  ArrowRightOnRectangleIcon
 } from '@heroicons/react/24/outline'
 import { useAuth } from '../contexts/AuthContext'
 import AddressLookup from '../components/AddressLookup'
@@ -130,7 +132,7 @@ export default function Home() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [showLoginMenu, setShowLoginMenu] = useState(false)
   const { location, setLocation } = useLocationContext()
-  const { user, isAuthenticated, login, isLoading } = useAuth()
+  const { user, isAuthenticated, login, logout, isLoading } = useAuth()
   const searchContainerRef = useRef<HTMLDivElement>(null)
 
   const DOCS_URL = import.meta.env.PROD ? 'https://www.communityone.com/docs/intro' : 'http://localhost:3000/docs/intro'
@@ -621,22 +623,129 @@ export default function Home() {
                   <div className="animate-spin h-8 w-8 border-3 border-gray-300 border-t-primary-600 rounded-full"></div>
                 </div>
               ) : isAuthenticated && user ? (
-                <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-gray-100">
-                  {user.avatar_url ? (
-                    <img 
-                      src={user.avatar_url} 
-                      alt={user.full_name || user.email}
-                      className="h-8 w-8 rounded-full border-2 border-primary-500 object-cover"
-                    />
-                  ) : (
-                    <div className="h-8 w-8 rounded-full bg-gradient-to-br from-primary-500 to-primary-600 flex items-center justify-center text-white font-bold text-sm">
+                <Menu as="div" className="relative">
+                  <Menu.Button className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-gray-100 transition-colors">
+                    {user.avatar_url ? (
+                      <img 
+                        src={user.avatar_url} 
+                        alt={user.full_name || user.email}
+                        className="h-9 w-9 flex-shrink-0 rounded-full border-2 border-primary-500 shadow-sm object-cover"
+                        referrerPolicy="no-referrer"
+                        onError={(e) => {
+                          console.error('❌ Avatar failed to load:', user.avatar_url);
+                          e.currentTarget.style.display = 'none';
+                          const fallback = e.currentTarget.nextElementSibling as HTMLElement | null;
+                          if (fallback) fallback.style.display = 'flex';
+                        }}
+                        onLoad={() => {
+                          console.log('✅ Avatar loaded successfully:', user.avatar_url?.substring(0, 50));
+                        }}
+                      />
+                    ) : null}
+                    <div 
+                      className="h-9 w-9 rounded-full bg-gradient-to-br from-primary-500 to-primary-600 flex items-center justify-center text-white font-bold text-sm shadow-sm"
+                      style={{ display: user.avatar_url ? 'none' : 'flex' }}
+                    >
                       {(user.full_name || user.username || user.email).charAt(0).toUpperCase()}
                     </div>
-                  )}
-                  <span className="text-sm font-medium text-gray-700">
-                    {user.full_name || user.username || user.email.split('@')[0]}
-                  </span>
-                </div>
+                    <span className="hidden md:inline text-sm font-medium text-gray-700">
+                      {user.full_name || user.username || user.email.split('@')[0]}
+                    </span>
+                    <ChevronDownIcon className="hidden md:block h-4 w-4 text-gray-600" />
+                  </Menu.Button>
+                  
+                  <Transition
+                    as={Fragment}
+                    enter="transition ease-out duration-100"
+                    enterFrom="transform opacity-0 scale-95"
+                    enterTo="transform opacity-100 scale-100"
+                    leave="transition ease-in duration-75"
+                    leaveFrom="transform opacity-100 scale-100"
+                    leaveTo="transform opacity-0 scale-95"
+                  >
+                    <Menu.Items className="absolute right-0 mt-2 w-64 bg-white rounded-lg shadow-lg border border-gray-200 focus:outline-none z-50">
+                      <div className="px-4 py-3 border-b border-gray-200">
+                        <div className="flex items-center gap-3 mb-2">
+                          {user.avatar_url ? (
+                            <img 
+                              src={user.avatar_url} 
+                              alt={user.full_name || user.email}
+                              className="h-12 w-12 rounded-full border-2 border-primary-500"
+                              referrerPolicy="no-referrer"
+                              onError={(e) => {
+                                console.error('❌ Avatar (dropdown) failed to load:', user.avatar_url);
+                                e.currentTarget.style.display = 'none';
+                                const fallback = e.currentTarget.nextElementSibling as HTMLElement | null;
+                                if (fallback) fallback.style.display = 'flex';
+                              }}
+                            />
+                          ) : null}
+                          <div 
+                            className="h-12 w-12 rounded-full bg-gradient-to-br from-primary-500 to-primary-600 flex items-center justify-center text-white font-bold text-lg"
+                            style={{ display: user.avatar_url ? 'none' : 'flex' }}
+                          >
+                            {(user.full_name || user.username || user.email).charAt(0).toUpperCase()}
+                          </div>
+                          <div>
+                            <p className="text-sm font-semibold text-gray-900">
+                              {user.full_name || user.username || user.email.split('@')[0]}
+                            </p>
+                            <p className="text-xs text-gray-500 truncate">
+                              {user.email}
+                            </p>
+                          </div>
+                        </div>
+                        {user.oauth_provider && (
+                          <div className="flex items-center gap-1 text-xs text-gray-400">
+                            <span>Signed in via</span>
+                            <span className="font-medium capitalize">{user.oauth_provider}</span>
+                          </div>
+                        )}
+                      </div>
+                      <div className="py-1">
+                        <Menu.Item>
+                          {({ active }) => (
+                            <button
+                              onClick={() => navigate('/profile')}
+                              className={`${
+                                active ? 'bg-gray-50' : ''
+                              } flex items-center gap-3 w-full px-4 py-2.5 text-sm text-gray-700 hover:text-gray-900`}
+                            >
+                              <UserCircleIcon className="h-5 w-5" />
+                              <span>My Profile</span>
+                            </button>
+                          )}
+                        </Menu.Item>
+                        <Menu.Item>
+                          {({ active }) => (
+                            <button
+                              onClick={() => navigate('/settings')}
+                              className={`${
+                                active ? 'bg-gray-50' : ''
+                              } flex items-center gap-3 w-full px-4 py-2.5 text-sm text-gray-700 hover:text-gray-900`}
+                            >
+                              <Cog6ToothIcon className="h-5 w-5" />
+                              <span>Settings</span>
+                            </button>
+                          )}
+                        </Menu.Item>
+                        <Menu.Item>
+                          {({ active }) => (
+                            <button
+                              onClick={logout}
+                              className={`${
+                                active ? 'bg-red-50' : ''
+                              } flex items-center gap-3 w-full px-4 py-2.5 text-sm text-red-600 hover:text-red-700 border-t border-gray-100 mt-1`}
+                            >
+                              <ArrowRightOnRectangleIcon className="h-5 w-5" />
+                              <span className="font-medium">Sign out</span>
+                            </button>
+                          )}
+                        </Menu.Item>
+                      </div>
+                    </Menu.Items>
+                  </Transition>
+                </Menu>
               ) : (
                 <div className="relative">
                   <button
@@ -880,9 +989,40 @@ export default function Home() {
                       <p className="text-lg md:text-xl text-gray-600 mb-6">
                         {getDescription()}
                       </p>
-                      <p className="text-sm md:text-base text-gray-500 mb-8 font-medium">
-                        {statsText}
-                      </p>
+                      <div className="text-sm md:text-base text-gray-500 mb-8 font-medium flex flex-wrap items-center justify-center gap-2">
+                        {/* Parse statsText and make each part clickable */}
+                        {statsText.split('•').map((part, index, array) => {
+                          const trimmed = part.trim();
+                          let link = '';
+                          
+                          // Determine the appropriate link based on the content
+                          if (trimmed.includes('jurisdiction')) {
+                            link = '/jurisdictions';
+                          } else if (trimmed.includes('nonprofit')) {
+                            link = '/nonprofits';
+                          } else if (trimmed.includes('leader')) {
+                            link = '/people';
+                          } else if (trimmed.includes('cause')) {
+                            link = '/search';
+                          }
+                          
+                          return (
+                            <React.Fragment key={index}>
+                              {link ? (
+                                <Link
+                                  to={link}
+                                  className="hover:text-[#354F52] hover:underline transition-colors cursor-pointer"
+                                >
+                                  {trimmed}
+                                </Link>
+                              ) : (
+                                <span>{trimmed}</span>
+                              )}
+                              {index < array.length - 1 && <span className="text-gray-400">•</span>}
+                            </React.Fragment>
+                          );
+                        })}
+                      </div>
                       
                       {/* Search Box */}
                       <div className="max-w-3xl mx-auto mb-6">

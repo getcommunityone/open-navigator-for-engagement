@@ -17,18 +17,29 @@ WITH recent_decisions AS (
     WHERE is_recent = true
 ),
 
--- For now, we don't have junction info in bronze_decisions
--- We'll need to add jurisdiction data later or derive it from another source
--- Using topic/theme grouping instead
+-- Join with bronze_events to get jurisdiction information
+bronze_events_source AS (
+    SELECT
+        event_id,
+        jurisdiction_name,
+        jurisdiction_type,
+        city,
+        state_code,
+        state
+    FROM {{ source('bronze', 'bronze_events') }}
+),
+
+-- Join decisions with events to get jurisdiction data
 decisions_aggregated AS (
     SELECT 
         d.*,
-        -- TODO: Add jurisdiction lookup when bronze_events or equivalent is available
-        'Unknown' as jurisdiction_name,
-        NULL::VARCHAR(2) as state_code,
-        NULL::VARCHAR(50) as state,
-        'jurisdiction' as jurisdiction_type
+        COALESCE(e.jurisdiction_name, e.city, 'Unknown') as jurisdiction_name,
+        e.state_code,
+        e.state,
+        COALESCE(e.jurisdiction_type, 'city') as jurisdiction_type,
+        e.city
     FROM recent_decisions d
+    LEFT JOIN bronze_events_source e ON d.source_event_id = e.event_id
 ),
 
 -- Aggregate by cause and jurisdiction
@@ -54,8 +65,8 @@ cause_aggregates AS (
         -- Average age of decisions
         AVG(days_since_decision) as avg_days_old,
         
-        -- Sample headlines (for context)
-        ARRAY_AGG(headline ORDER BY decision_date DESC LIMIT 3) as sample_headlines
+        -- Sample headlines (PostgreSQL doesn't support LIMIT in ARRAY_AGG)
+        (ARRAY_AGG(headline ORDER BY decision_date DESC))[1:3] as sample_headlines
         
     FROM decisions_aggregated
     WHERE secondary_ntee_major_group IS NOT NULL  -- Only decisions with cause mapping

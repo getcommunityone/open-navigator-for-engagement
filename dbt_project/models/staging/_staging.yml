@@ -12,7 +12,7 @@ sources:
           - name: id
             description: "Primary key"
           - name: source_event_id
-            description: "Foreign key to events_text_ai"
+            description: "Foreign key to bronze_events"
           - name: source_ai_model
             description: "AI model used (e.g., gemini-1.5-flash)"
           - name: person_id
@@ -63,15 +63,19 @@ sources:
           - name: extracted_at
           
       - name: bronze_events
-        description: "Meeting events with transcripts"
+        description: "Meeting events with jurisdiction data (loaded from events_search)"
         columns:
           - name: id
+          - name: event_id
+            description: "Original event ID from events_search"
+          - name: event_date
           - name: jurisdiction_name
+          - name: jurisdiction_type
+          - name: city
           - name: state_code
           - name: state
-          - name: jurisdiction_type
-          - name: event_date
-          - name: extracted_at
+          - name: meeting_type
+          - name: loaded_at
           
       - name: bronze_financial_items
         description: "Financial items from meeting discussions"
