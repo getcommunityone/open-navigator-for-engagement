@@ -178,6 +178,7 @@ class BronzeExtractor:
             primary_theme_cofog VARCHAR(20),
             secondary_theme VARCHAR(100),
             secondary_theme_cofog VARCHAR(20),
+            primary_org_ids JSONB,
             outcome VARCHAR(50),
             vote_tally JSONB,
             timeline JSONB,
@@ -203,6 +204,10 @@ class BronzeExtractor:
             primary_theme_cofog VARCHAR(20),
             secondary_theme VARCHAR(100),
             secondary_theme_cofog VARCHAR(20),
+            ntee_code VARCHAR(10),
+            ntee_major_group VARCHAR(100),
+            ntee_category_label VARCHAR(255),
+            primary_org_ids JSONB,
             topic VARCHAR(255),
             headline TEXT,
             extracted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -393,6 +398,7 @@ class BronzeExtractor:
                     decision.get('primary_theme_cofog'),
                     decision.get('secondary_theme'),
                     decision.get('secondary_theme_cofog'),
+                    json.dumps(decision.get('primary_org_ids', [])),
                     decision.get('outcome'),
                     json.dumps(decision.get('vote_tally', {})),
                     json.dumps(decision.get('timeline', {})),
@@ -415,6 +421,10 @@ class BronzeExtractor:
                     decision.get('primary_theme_cofog'),
                     decision.get('secondary_theme'),
                     decision.get('secondary_theme_cofog'),
+                    decision.get('ntee_code'),
+                    decision.get('ntee_major_group'),
+                    decision.get('ntee_category_label'),
+                    json.dumps(decision.get('primary_org_ids', [])),
                     decision.get('topic'),
                     decision.get('headline')
                 ))
@@ -501,10 +511,10 @@ class BronzeExtractor:
                             timestamp_start, timestamp_end, decision_date, topic, headline,
                             decision_statement, decision_method, lineage_type, lineage_note,
                             primary_theme, primary_theme_cofog, secondary_theme, secondary_theme_cofog,
-                            outcome, vote_tally, timeline, arguments_for, arguments_against,
+                            primary_org_ids, outcome, vote_tally, timeline, arguments_for, arguments_against,
                             tradeoffs, underlying_causes, power_map, frame_analysis,
                             legislation_refs, financial_item_refs
-                        ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                        ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                         ON CONFLICT (source_event_id, decision_id) DO NOTHING
                     """, decisions_data)
                     logger.info(f"✅ Inserted {len(decisions_data)} decisions")
@@ -515,8 +525,9 @@ class BronzeExtractor:
                         INSERT INTO bronze_topics (
                             source_event_id, source_ai_model, decision_id, primary_theme,
                             primary_theme_cofog, secondary_theme, secondary_theme_cofog,
+                            ntee_code, ntee_major_group, ntee_category_label, primary_org_ids,
                             topic, headline
-                        ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+                        ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                     """, topics_data)
                     logger.info(f"✅ Inserted {len(topics_data)} topics")
                 

@@ -124,7 +124,7 @@ pip install asyncpg psycopg2-binary
 
 # Run migration script
 cd /home/developer/projects/open-navigator
-python neon/migrate.py
+python scripts/deployment/neon/migrate.py
 ```
 
 **Expected output:**
@@ -250,7 +250,7 @@ GET /api/search?q=boston    →    45ms  ✅ (180x faster!)
 
 **Current**: Manual migration when needed
 ```bash
-python neon/migrate.py
+python scripts/deployment/neon/migrate.py
 ```
 
 **Future**: Automated daily sync
@@ -279,7 +279,7 @@ python neon/migrate.py
 ```bash
 # Option 1: Drop and recreate
 psql "$NEON_DATABASE_URL" -c "DROP SCHEMA public CASCADE; CREATE SCHEMA public;"
-python neon/migrate.py
+python scripts/deployment/neon/migrate.py
 
 # Option 2: Modify schema.sql to use IF NOT EXISTS
 ```

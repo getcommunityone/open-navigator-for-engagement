@@ -462,48 +462,146 @@ def load_nonprofits_from_df(conn, df, state_override=None):
 
 
 def load_reference_data(conn):
-    """Load reference tables (causes, NTEE codes)"""
+    """Load reference tables (causes, NTEE codes)
+    
+    Note: For standalone loading, use:
+          python scripts/data/load_reference_data.py
+          python scripts/datasources/ntee/load_to_postgres.py
+    """
     logger.info("📚 Loading reference data...")
     
     cursor = conn.cursor()
     total = 0
     
-    # Load NTEE codes
-    ntee_file = GOLD_DIR / "reference" / "causes_ntee_codes.parquet"
+    # Load NTEE codes into causes_ntee table
+    ntee_file = GOLD_DIR / "causes_ntee_codes.parquet"
     if ntee_file.exists():
         df = pd.read_parquet(ntee_file)
-        # Use actual column names: ntee_code, description, parent_code
-        records = [(row['ntee_code'], row.get('description', ''), None, None, 'irs', datetime.now()) 
-                   for _, row in df.iterrows()]
+        
+        # Build lookup dictionary for breadcrumb creation
+        code_lookup = {row['ntee_code']: row['description'] for _, row in df.iterrows()}
+        
+        def build_ntee_breadcrumb(code, parent_code):
+            """Build hierarchical breadcrumb path for NTEE"""
+            if pd.isna(parent_code) or not parent_code:
+                return code_lookup.get(code, code)
+            
+            path = []
+            current = parent_code
+            
+            # Traverse up to 5 levels to avoid infinite loops
+            for _ in range(5):
+                if pd.isna(current) or not current:
+                    break
+                if current in code_lookup:
+                    path.insert(0, code_lookup[current])
+                # Find parent of current
+                parent_row = df[df['ntee_code'] == current]
+                if len(parent_row) > 0 and not pd.isna(parent_row.iloc[0].get('parent_code')):
+                    current = parent_row.iloc[0]['parent_code']
+                else:
+                    break
+            
+            path.append(code_lookup.get(code, code))
+            return ' > '.join(path)
+        
+        records = [
+            (
+                row['ntee_code'],
+                row.get('description', ''),
+                row.get('description', ''),
+                'ntee',
+                row.get('parent_code'),
+                row.get('ntee_type'),
+                None,
+                build_ntee_breadcrumb(row['ntee_code'], row.get('parent_code')),
+                'irs',
+                datetime.now()
+            ) 
+            for _, row in df.iterrows()
+        ]
         
         execute_values(cursor, """
-            INSERT INTO reference_ntee_codes (code, description, category, subcategory, source, last_updated)
+            INSERT INTO causes_ntee (code, name, description, cause_type, parent_code, category, subcategory, cause_breadcrumb, source, last_updated)
             VALUES %s
-            ON CONFLICT (code) DO UPDATE SET description = EXCLUDED.description
+            ON CONFLICT (code) DO UPDATE SET 
+                name = EXCLUDED.name,
+                description = EXCLUDED.description,
+                cause_breadcrumb = EXCLUDED.cause_breadcrumb,
+                last_updated = EXCLUDED.last_updated
         """, records)
         
         total += len(records)
         logger.info(f"  Loaded {len(records)} NTEE codes")
+    else:
+        logger.warning(f"  NTEE codes file not found: {ntee_file}")
+        logger.info(f"  To generate NTEE data, see: scripts/datasources/ntee/")
     
-    # Load causes
-    causes_file = GOLD_DIR / "reference" / "causes_everyorg_causes.parquet"
+    # Load EveryOrg causes into causes_ntee table
+    causes_file = GOLD_DIR / "causes_everyorg_causes.parquet"
     if causes_file.exists():
         df = pd.read_parquet(causes_file)
-        # Use actual column names: cause_id, cause_name, description
-        records = [(row['cause_id'], row['cause_name'], row.get('description'), None, 'everyorg', datetime.now())
-                   for _, row in df.iterrows()]
+        
+        # Build lookup dictionary for breadcrumb creation
+        cause_lookup = {row['cause_id']: row['cause_name'] for _, row in df.iterrows()}
+        
+        def build_everyorg_breadcrumb(cause_id, parent_id):
+            """Build hierarchical breadcrumb path for EveryOrg"""
+            if pd.isna(parent_id) or not parent_id:
+                return cause_lookup.get(cause_id, cause_id)
+            
+            path = []
+            current = parent_id
+            
+            # Traverse up to 5 levels to avoid infinite loops
+            for _ in range(5):
+                if pd.isna(current) or not current:
+                    break
+                if current in cause_lookup:
+                    path.insert(0, cause_lookup[current])
+                # Find parent of current
+                parent_row = df[df['cause_id'] == current]
+                if len(parent_row) > 0 and not pd.isna(parent_row.iloc[0].get('parent_id')):
+                    current = parent_row.iloc[0]['parent_id']
+                else:
+                    break
+            
+            path.append(cause_lookup.get(cause_id, cause_id))
+            return ' > '.join(path)
+        
+        records = [
+            (
+                row['cause_id'],
+                row['cause_name'],
+                row.get('description'),
+                'everyorg',
+                row.get('parent_id'),
+                row.get('category'),
+                None,
+                build_everyorg_breadcrumb(row['cause_id'], row.get('parent_id')),
+                'everyorg',
+                datetime.now()
+            )
+            for _, row in df.iterrows()
+        ]
         
         execute_values(cursor, """
-            INSERT INTO reference_causes (cause_slug, cause_name, description, parent_category, source, last_updated)
+            INSERT INTO causes_ntee (code, name, description, cause_type, parent_code, category, subcategory, cause_breadcrumb, source, last_updated)
             VALUES %s
-            ON CONFLICT (cause_slug) DO UPDATE SET cause_name = EXCLUDED.cause_name
+            ON CONFLICT (code) DO UPDATE SET 
+                name = EXCLUDED.name,
+                description = EXCLUDED.description,
+                cause_breadcrumb = EXCLUDED.cause_breadcrumb,
+                last_updated = EXCLUDED.last_updated
         """, records)
         
         total += len(records)
-        logger.info(f"  Loaded {len(records)} causes")
+        logger.info(f"  Loaded {len(records)} EveryOrg causes")
+    else:
+        logger.warning(f"  Causes file not found: {causes_file}")
     
     conn.commit()
-    logger.success(f"✅ Loaded {total} reference records")
+    logger.success(f"✅ Loaded {total} reference records into causes_ntee table")
     return True
 
 

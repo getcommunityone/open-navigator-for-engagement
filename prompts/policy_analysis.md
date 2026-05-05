@@ -72,7 +72,7 @@ Map each primary theme to its COFOG code:
 | Public Engagement and Communications | COFOG-01 |
 
 ## NTEE Major Group Codes
-Assign the most specific NTEE code determinable from context.
+Assign the most specific NTEE code determinable from context for organizations. NTEE codes will also be extracted to decision topics based on the primary organizations involved.
 
 | Code | Category |
 |---|---|
@@ -296,6 +296,10 @@ After the second break token output only a valid Mermaid timeline block. Do not 
       "primary_theme_cofog": "string",
       "secondary_theme": "string or null",
       "secondary_theme_cofog": "string or null",
+      "ntee_code": "string or null — extracted from primary organization involved",
+      "ntee_major_group": "string or null — extracted from primary organization involved",
+      "ntee_category_label": "string or null — extracted from primary organization involved",
+      "primary_org_ids": ["string — org_id values of main organizations this decision affects or involves"],
       "legislation_refs": [],
       "financial_item_refs": [],
       "outcome": "one of: APPROVED | DENIED | DEFERRED | TABLED | NO_ACTION | DISCUSSED_ONLY",
@@ -452,6 +456,20 @@ Assign `lineage_type` as:
 ### Lobbyist and Organization Classification
 - `is_lobbyist` in `arguments_for` and `arguments_against` must be true only if the person is registered as a lobbyist or appearing on behalf of a paying client — default to false otherwise
 - `org_type` must reflect the most specific classification context permits — do not default to Unknown if context permits a more specific classification
+
+### NTEE Classification Rules
+- For every organization in the `organizations` array, populate all three NTEE fields (`ntee_major_group`, `ntee_category_label`, `ntee_code`) when context permits — do not leave these null if the organization's cause area is determinable
+- For subcategories, use hierarchical notation with greater-than separator (e.g., "Health > Dental & Oral Health", "Food Agriculture and Nutrition > Food Banks, Food Pantries")
+- If only the major group is determinable, set `ntee_category_label` equal to `ntee_major_group`
+- **Extract NTEE to decisions:** For each decision, populate `primary_org_ids` with the main organizations affected or involved, then copy the NTEE fields (`ntee_code`, `ntee_major_group`, `ntee_category_label`) from the primary organization to the decision object
+- If a decision involves multiple organizations with different NTEE codes, use the organization most central to the decision's outcome
+- Set decision-level NTEE fields to null only when no organizations are involved or when organizations are Government Body, Public Agency, or other non-cause-specific types
+
+### Underlying Causes Rules
+- Make `underlying_causes` headlines specific and contextual — avoid generic abstractions like "Aging infrastructure" or "Statutory requirement"
+- Root causes must explain WHY the decision was necessary not merely describe the category — e.g., prefer "Fire station roof leaking after 40 years" over "Aging infrastructure" or "State audit found gaps in payment records" over "Statutory requirement"
+- Each underlying cause should be independently verifiable from the transcript — do not infer causes that were not discussed
+- Capture competing diagnoses of causality in `frame_analysis.causal_frames` when stakeholders disagree on root causes
 
 ### Frame Analysis Rules
 - Every decision must include a `frame_analysis` object — do not omit this field

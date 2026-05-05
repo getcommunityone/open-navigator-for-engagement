@@ -10,8 +10,9 @@ DROP TABLE IF EXISTS jurisdictions_search CASCADE;
 DROP TABLE IF EXISTS contacts_search CASCADE;
 DROP TABLE IF EXISTS events_search CASCADE;
 DROP TABLE IF EXISTS bills_search CASCADE;
-DROP TABLE IF EXISTS reference_causes CASCADE;
+DROP TABLE IF EXISTS causes_ntee CASCADE;
 DROP TABLE IF EXISTS reference_ntee_codes CASCADE;
+DROP TABLE IF EXISTS reference_causes CASCADE;
 DROP TABLE IF EXISTS last_sync CASCADE;
 
 -- ============================================================================
@@ -341,34 +342,31 @@ CREATE INDEX idx_bills_state_session ON bills_search(state_code, session);
 -- Lookup tables for causes, NTEE codes, etc.
 -- ============================================================================
 
-CREATE TABLE reference_causes (
-    id SERIAL PRIMARY KEY,
-    cause_slug VARCHAR(100) UNIQUE NOT NULL,
-    cause_name TEXT NOT NULL,
-    description TEXT,
-    parent_category VARCHAR(100),
+-- ============================================================================
+-- REFERENCE DATA: NTEE CODES & CAUSES
+-- Combined table for NTEE codes (IRS taxonomy) and EveryOrg causes
+-- ============================================================================
+
+CREATE TABLE causes_ntee (
+    code VARCHAR(100) PRIMARY KEY,              -- NTEE code (e.g., 'A', 'E20') or cause slug (e.g., 'animals', 'climate')
+    name TEXT NOT NULL,                         -- Human-readable name
+    description TEXT,                           -- Detailed description
+    cause_type VARCHAR(20) NOT NULL,            -- 'ntee' or 'everyorg'
+    parent_code VARCHAR(100),                   -- For hierarchical relationships
+    category VARCHAR(100),                      -- Additional categorization
+    subcategory VARCHAR(100),                   -- Additional subcategorization
+    cause_breadcrumb TEXT,                      -- Full hierarchy path (e.g., "Health > Primary Care > Hospitals")
     
     -- Metadata
-    source VARCHAR(50) DEFAULT 'everyorg',
+    source VARCHAR(50) NOT NULL,                -- 'irs' or 'everyorg'
     last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE INDEX idx_causes_slug ON reference_causes(cause_slug);
-CREATE INDEX idx_causes_name_search ON reference_causes USING GIN (to_tsvector('english', cause_name));
-
-
-CREATE TABLE reference_ntee_codes (
-    code VARCHAR(10) PRIMARY KEY,
-    description TEXT NOT NULL,
-    category VARCHAR(50),
-    subcategory VARCHAR(100),
-    
-    -- Metadata
-    source VARCHAR(50) DEFAULT 'irs',
-    last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
-CREATE INDEX idx_ntee_description_search ON reference_ntee_codes USING GIN (to_tsvector('english', description));
+-- Indexes for search and lookups
+CREATE INDEX idx_causes_ntee_type ON causes_ntee(cause_type);
+CREATE INDEX idx_causes_ntee_parent ON causes_ntee(parent_code);
+CREATE INDEX idx_causes_ntee_name_search ON causes_ntee USING GIN (to_tsvector('english', name));
+CREATE INDEX idx_causes_ntee_description_search ON causes_ntee USING GIN (to_tsvector('english', description));
 
 
 -- ============================================================================
