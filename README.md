@@ -320,9 +320,42 @@ open-navigator/
 ├── visualization/        # Heatmap and charts
 ├── config/               # Configuration
 ├── tests/                # Test suite
+├── dbt_project/          # dbt transformations (Bronze → Production)
+├── scripts/              # Data ingestion and processing
 ├── main.py              # CLI entry point
 └── requirements.txt     # Python dependencies
 ```
+
+---
+
+## Data Pipelines
+
+### Hybrid Python + dbt Architecture
+
+Open Navigator uses a **hybrid ETL approach**:
+- **Python scripts** (`scripts/datasources/*/load_*.py`) for data ingestion, API calls, and AI analysis
+- **dbt** (`dbt_project/`) for SQL-based transformations and data quality testing
+
+```bash
+# 1. Load data with Python
+python scripts/datasources/gemini/load_meeting_transcripts_bronze.py  # AI extraction
+python scripts/datasources/openstates/load_openstates_bulk.py        # State legislation
+python scripts/datasources/irs/load_irs_bmf.py                       # Nonprofit data
+
+# 2. Transform with dbt
+cd dbt_project
+dbt run      # Bronze → Production transformations
+dbt test     # Data quality checks
+dbt docs serve  # Interactive documentation
+
+# 3. Export (optional)
+python scripts/data/export_to_gold_parquet.py  # For HuggingFace distribution
+```
+
+**Learn more:**
+- [dbt ETL Strategy](website/docs/development/dbt-etl-strategy.md) - Full architecture
+- [Bronze to Production Merge](website/docs/development/bronze-to-production-merge.md) - Entity resolution strategy
+- [dbt Project README](dbt_project/README.md) - Quick start guide
 
 ---
 

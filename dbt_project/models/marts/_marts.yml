@@ -1,0 +1,64 @@
+version: 2
+
+models:
+  - name: contacts_search_ai
+    description: |
+      AI-extracted contacts from meeting transcripts.
+      
+      This model:
+      - Pulls from deduplicated bronze_contacts
+      - Avoids overriding authoritative sources (OpenStates, IRS)
+      - Assigns confidence_score of 0.60 for AI extractions
+      - Runs incrementally (only new records since last run)
+      
+      Data sources merged elsewhere:
+      - OpenStates legislators: loaded via Python script
+      - IRS 990 nonprofit officers: loaded via Python script
+      
+    config:
+      tags: ['daily', 'ai_extraction']
+      
+    columns:
+      - name: id
+        description: "Surrogate key (hash of name + org + datasource)"
+        tests:
+          - unique
+          - not_null
+          
+      - name: name
+        description: "Contact full name"
+        tests:
+          - not_null
+          - dbt_expectations.expect_column_value_lengths_to_be_between:
+              min_value: 3
+              max_value: 255
+          
+      - name: datasource
+        description: "Always 'gemini_ai_extraction' for this model"
+        tests:
+          - accepted_values:
+              values: ['gemini_ai_extraction']
+          
+      - name: confidence_score
+        description: "Data quality score (0.60 for AI extraction)"
+        tests:
+          - not_null
+          - dbt_expectations.expect_column_values_to_be_between:
+              min_value: 0.0
+              max_value: 1.0
+              
+      - name: role_type
+        description: "Contact role classification"
+        tests:
+          - accepted_values:
+              values: 
+                - 'lobbyist'
+                - 'government_official'
+                - 'other'
+                - 'nonprofit_officer'
+                - 'state_legislator'
+              
+      - name: last_updated
+        description: "When this record was created/updated"
+        tests:
+          - not_null

@@ -1,0 +1,31 @@
+# dbt build artifacts
+target/
+dbt_packages/
+logs/
+
+# OS files
+.DS_Store
+*.swp
+*.swo
+*~
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+*.egg-info/
+
+# IDE
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# Credentials (NEVER commit)
+profiles.yml
+
+# Local config
+.env
+.envrc

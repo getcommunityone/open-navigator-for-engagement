@@ -1,0 +1,76 @@
+
+# Name your project! Project names should contain only lowercase characters
+# and underscores. A good package name should reflect your organization's
+# name or the intended use of these models
+name: 'open_navigator_dbt'
+version: '1.0.0'
+config-version: 2
+
+# This setting configures which "profile" dbt uses for this project.
+profile: 'open_navigator'
+
+# These configurations specify where dbt should look for different types of files.
+# The `model-paths` config, for example, states that models in this project can be
+# found in the "models/" directory. You probably won't need to change these!
+model-paths: ["models"]
+analysis-paths: ["analyses"]
+test-paths: ["tests"]
+seed-paths: ["seeds"]
+macro-paths: ["macros"]
+snapshot-paths: ["snapshots"]
+
+target-path: "target"  # directory which will store compiled SQL files
+clean-targets:         # directories to be removed by `dbt clean`
+  - "target"
+  - "dbt_packages"
+
+# Configuring models
+# Full documentation: https://docs.getdbt.com/docs/configuring-models
+
+models:
+  open_navigator_dbt:
+    # Staging models - bronze data cleaning
+    staging:
+      +materialized: view
+      +schema: staging
+      
+    # Intermediate models - deduplication and matching  
+    intermediate:
+      +materialized: table
+      +schema: intermediate
+      
+    # Marts - production-ready tables
+    marts:
+      +materialized: incremental
+      +schema: public  # Write directly to public schema
+      +on_schema_change: sync_all_columns
+      +unique_key: id
+
+# Seeds configuration
+seeds:
+  open_navigator_dbt:
+    +schema: seeds
+
+# Snapshots configuration
+snapshots:
+  open_navigator_dbt:
+    +target_schema: snapshots
+    +unique_key: id
+    +strategy: timestamp
+    +updated_at: last_updated
+
+# Variables
+vars:
+  # Confidence score thresholds
+  confidence_authoritative: 1.0
+  confidence_high: 0.90
+  confidence_medium: 0.70
+  confidence_ai: 0.60
+  confidence_low: 0.50
+  
+  # Fuzzy matching threshold
+  fuzzy_match_threshold: 0.85
+  
+  # Datasources
+  authoritative_sources: ['openstates_api', 'irs_bmf', 'irs_990']
+  ai_sources: ['gemini_ai_extraction']

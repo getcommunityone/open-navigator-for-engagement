@@ -1,0 +1,38 @@
+# dbt Profile Configuration
+# This file should be placed in ~/.dbt/profiles.yml (NOT in version control)
+# Or set DBT_PROFILES_DIR environment variable
+
+open_navigator:
+  target: dev
+  outputs:
+    dev:
+      type: postgres
+      host: localhost
+      port: 5433
+      user: postgres
+      password: "{{ env_var('POSTGRES_PASSWORD', 'password') }}"
+      dbname: open_navigator
+      schema: public
+      threads: 4
+      keepalives_idle: 0
+      
+    prod:
+      type: postgres
+      host: "{{ env_var('NEON_HOST') }}"
+      port: 5432
+      user: "{{ env_var('NEON_USER') }}"
+      password: "{{ env_var('NEON_PASSWORD') }}"
+      dbname: "{{ env_var('NEON_DATABASE', 'open_navigator') }}"
+      schema: public
+      threads: 4
+      sslmode: require
+      
+    bronze:
+      type: postgres
+      host: localhost
+      port: 5433
+      user: postgres
+      password: "{{ env_var('POSTGRES_PASSWORD', 'password') }}"
+      dbname: open_navigator_bronze
+      schema: public
+      threads: 2

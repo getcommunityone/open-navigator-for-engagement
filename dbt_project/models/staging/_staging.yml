@@ -1,0 +1,105 @@
+version: 2
+
+sources:
+  - name: bronze
+    description: "Bronze tables from AI extraction and raw data ingestion"
+    database: open_navigator_bronze
+    schema: public
+    tables:
+      - name: bronze_contacts
+        description: "People extracted from meeting transcripts via AI"
+        columns:
+          - name: id
+            description: "Primary key"
+          - name: source_event_id
+            description: "Foreign key to events_text_ai"
+          - name: source_ai_model
+            description: "AI model used (e.g., gemini-1.5-flash)"
+          - name: person_id
+            description: "Wikidata QID or OpenStates person ID if matched"
+          - name: full_name
+            description: "Person's full name"
+          - name: role
+            description: "Role/title (e.g., Mayor, Council Member)"
+          - name: org_id
+            description: "Organization identifier"
+          - name: wikidata_qid
+            description: "Wikidata entity ID (if matched)"
+          - name: extracted_at
+            description: "Timestamp of extraction"
+            
+      - name: bronze_organizations
+        description: "Organizations mentioned in meetings"
+        columns:
+          - name: id
+          - name: source_event_id
+          - name: org_id
+          - name: org_name
+          - name: ein
+          - name: ntee_code
+          - name: extracted_at
+          
+      - name: bronze_bills
+        description: "Legislation discussed in meetings"
+        columns:
+          - name: id
+          - name: source_event_id
+          - name: leg_id
+          - name: official_number
+          - name: title
+          - name: jurisdiction
+          - name: year
+          - name: extracted_at
+          
+      - name: bronze_decisions
+        description: "Policy decisions from meeting analysis"
+        columns:
+          - name: id
+          - name: source_event_id
+          - name: decision_id
+          - name: headline
+          - name: decision_statement
+          - name: outcome
+          - name: extracted_at
+          
+      - name: bronze_financial_items
+        description: "Financial items from meeting discussions"
+        columns:
+          - name: id
+          - name: source_event_id
+          - name: financial_item_id
+          - name: amount
+          - name: item_description
+          - name: extracted_at
+
+models:
+  - name: stg_bronze_contacts
+    description: "Staged and cleaned bronze contacts with normalized names"
+    columns:
+      - name: bronze_contact_id
+        description: "Original bronze table ID"
+        tests:
+          - unique
+          - not_null
+      - name: full_name
+        description: "Original full name"
+        tests:
+          - not_null
+      - name: full_name_normalized
+        description: "Lowercase, trimmed name for matching"
+        tests:
+          - not_null
+      - name: source_event_id
+        description: "Link to source meeting/event"
+      - name: wikidata_qid
+        description: "Wikidata entity ID if available"
+      - name: extracted_at
+        description: "When this was extracted"
+        tests:
+          - not_null
+          
+  - name: stg_bronze_organizations
+    description: "Staged bronze organizations"
+    
+  - name: stg_bronze_bills
+    description: "Staged bronze bills"
