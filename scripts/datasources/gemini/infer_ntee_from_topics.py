@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Use LLM to infer NTEE codes for topics without organization links.
+Use Google Gemini to infer NTEE codes for topics without organization links.
 
 For topics where we couldn't extract NTEE from organizations, use the LLM
 to infer the most appropriate NTEE code based on the topic and theme.
@@ -9,7 +9,7 @@ to infer the most appropriate NTEE code based on the topic and theme.
 import psycopg2
 import os
 import logging
-import anthropic
+import google.generativeai as genai
 from typing import Optional, Dict
 import json
 
@@ -22,7 +22,7 @@ except ImportError:
 # Database and API configuration
 POSTGRES_PASSWORD = os.getenv('POSTGRES_PASSWORD', 'password')
 DATABASE_URL = os.getenv('LOCAL_BRONZE_DATABASE_URL', f'postgresql://postgres:{POSTGRES_PASSWORD}@localhost:5433/open_navigator_bronze')
-ANTHROPIC_API_KEY = os.getenv('ANTHROPIC_API_KEY')
+GEMINI_API_KEY = os.getenv('GEMINI_API_KEY')
 
 # Configure logging
 logging.basicConfig(
@@ -74,8 +74,8 @@ If this is a general governance/administrative topic with no specific cause area
 """
 
 
-def infer_ntee(topic: str, theme: str, headline: str, client) -> Optional[Dict]:
-    """Use Claude to infer NTEE code from topic text."""
+def infer_ntee(topic: str, theme: str, headline: str, model) -> Optional[Dict]:
+    """Use Gemini to infer NTEE code from topic text."""
     
     prompt = NTEE_PROMPT.format(
         topic=topic,
@@ -84,16 +84,8 @@ def infer_ntee(topic: str, theme: str, headline: str, client) -> Optional[Dict]:
     )
     
     try:
-        response = client.messages.create(
-            model="claude-3-haiku-20240307",
-            max_tokens=200,
-            messages=[{
-                "role": "user",
-                "content": prompt
-            }]
-        )
-        
-        text = response.content[0].text.strip()
+        response = model.generate_content(prompt)
+        text = response.text.strip()
         
         # Remove markdown code fences if present
         if text.startswith('```'):
@@ -113,12 +105,14 @@ def infer_ntee(topic: str, theme: str, headline: str, client) -> Optional[Dict]:
 def infer_missing_ntee():
     """Infer NTEE codes for topics without organization links."""
     
-    if not ANTHROPIC_API_KEY:
-        logger.error("❌ ANTHROPIC_API_KEY not found in environment")
+    if not GEMINI_API_KEY:
+        logger.error("❌ GEMINI_API_KEY not found in environment")
+        logger.info("Get a free key at: https://aistudio.google.com/apikey")
         return
     
-    # Configure Anthropic client
-    client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
+    # Configure Gemini
+    genai.configure(api_key=GEMINI_API_KEY)
+    model = genai.GenerativeModel('gemini-3.1-flash-lite-preview')  # 1,500/day free tier
     
     logger.info("Connecting to database...")
     conn = psycopg2.connect(DATABASE_URL)
@@ -144,7 +138,7 @@ def infer_missing_ntee():
             for topic_id, decision_id, topic, theme, headline in topics_to_process:
                 logger.info(f"Processing topic {topic_id}: {topic}")
                 
-                result = infer_ntee(topic, theme, headline or "", client)
+                result = infer_ntee(topic, theme, headline or "", model)
                 
                 if result:
                     cur.execute("""

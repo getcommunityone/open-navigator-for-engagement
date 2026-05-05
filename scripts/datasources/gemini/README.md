@@ -16,7 +16,9 @@ This directory contains scripts that use Google's Gemini AI (FREE TIER) to perfo
 
 ## Scripts
 
-### `analyze_meeting_transcripts.py`
+### Core Analysis
+
+#### `analyze_meeting_transcripts.py`
 
 Main script for analyzing meeting transcripts with Gemini AI.
 
@@ -59,6 +61,103 @@ python scripts/datasources/gemini/analyze_meeting_transcripts.py --dry-run
 python scripts/datasources/gemini/analyze_meeting_transcripts.py --states "MA,WI,GA"
 ```
 
+#### `extract_to_bronze.py`
+
+Extract structured AI analysis to Bronze tables for multi-model comparison.
+
+**What it does:**
+1. Reads `events_text_ai.structured_analysis` JSON column
+2. Extracts entities: people, organizations, decisions, bills, topics, causes
+3. Loads into normalized Bronze tables in separate database
+4. Supports multiple AI models extracting the same decision
+
+**Usage:**
+
+```bash
+# Create bronze database and tables, load all data
+python scripts/datasources/gemini/extract_to_bronze.py
+
+# Just create tables (no data load)
+python scripts/datasources/gemini/extract_to_bronze.py --create-tables-only
+
+# Load data without recreating tables
+python scripts/datasources/gemini/extract_to_bronze.py --skip-create-tables
+```
+
+#### `compare_model_extractions.py`
+
+Compare how different AI models extracted the same meeting decision.
+
+**Usage:**
+
+```bash
+# Summary of all multi-model extractions
+python scripts/datasources/gemini/compare_model_extractions.py --summary
+
+# Compare specific event
+python scripts/datasources/gemini/compare_model_extractions.py --event-id 192614
+
+# Compare specific models
+python scripts/datasources/gemini/compare_model_extractions.py --event-id 192614 --models gemini-1.5-flash gpt-4
+```
+
+#### `moa_synthesize.py` ⭐
+
+**NEW** - Mixture-of-Agents synthesis to merge multiple model extractions into consensus.
+
+**What it does:**
+1. Gets all model extractions of the same decision from bronze
+2. Uses powerful "aggregator" model (GPT-4o or Gemini Pro) to synthesize
+3. Identifies consensus facts, contradictions, and best parts from each model
+4. Stores synthesis back to bronze with model name `moa-{aggregator}`
+
+**Usage:**
+
+```bash
+# Synthesize specific decision with GPT-4o
+python scripts/datasources/gemini/moa_synthesize.py --event-id 192614 --decision-id D001
+
+# Use Gemini Pro as aggregator
+python scripts/datasources/gemini/moa_synthesize.py --event-id 192614 --decision-id D001 --aggregator gemini-pro
+
+# Synthesize all decisions for an event
+python scripts/datasources/gemini/moa_synthesize.py --event-id 192614 --all
+
+# Dry run (see prompt without calling API)
+python scripts/datasources/gemini/moa_synthesize.py --event-id 192614 --decision-id D001 --dry-run
+```
+
+**Why use MoA?**
+- Combines strengths of multiple models (better than any single model)
+- Identifies high vs low confidence facts
+- Resolves contradictions systematically
+- Industry best practice for AI evaluation in 2026
+
+### Supporting Scripts
+
+#### `migrate_multimodel_support.py`
+
+Database migration to enable storing multiple AI model extractions of the same decision.
+
+```bash
+# Dry run (preview changes)
+python scripts/datasources/gemini/migrate_multimodel_support.py --dry-run
+
+# Apply migration
+python scripts/datasources/gemini/migrate_multimodel_support.py
+
+# Verify migration
+python scripts/datasources/gemini/migrate_multimodel_support.py --verify-only
+```
+
+#### `repopulate_ntee_codes.py`
+
+Backfill NTEE codes and organization IDs in bronze tables from arguments.
+
+```bash
+python scripts/datasources/gemini/repopulate_ntee_codes.py
+```
+
 ## Database Schema
 
 ### `events_text_ai` Table
@@ -85,6 +184,41 @@ CREATE TABLE events_text_ai (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 ```
+
+### Bronze Tables (Multi-Model Extraction)
+
+Bronze layer stores normalized extractions for comparison across AI models:
+
+```sql
+-- Bronze Decisions (multi-model support)
+CREATE TABLE bronze_decisions (
+    id SERIAL PRIMARY KEY,
+    source_event_id INTEGER,
+    source_ai_model VARCHAR(100),  -- e.g., 'gemini-1.5-flash', 'gpt-4', 'moa-gpt-4o'
+    decision_id VARCHAR(255),
+    headline TEXT,
+    decision_statement TEXT,
+    outcome VARCHAR(50),
+    primary_theme VARCHAR(100),
+    ntee_code VARCHAR(10),
+    arguments_for JSONB,
+    arguments_against JSONB,
+    vote_tally JSONB,
+    extracted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    
+    -- Multi-model support: same decision can be extracted by multiple models
+    UNIQUE(source_event_id, decision_id, source_ai_model)
+);
+
+-- Bronze Contacts, Organizations, Bills, Topics, Causes (similar pattern)
+-- All support multiple model extractions with source_ai_model column
+```
+
+**Key feature:** The `source_ai_model` column + UNIQUE constraint allows storing:
+- Same decision extracted by Gemini 1.5 Flash
+- Same decision extracted by GPT-4
+- Same decision extracted by Claude 3
+- Synthesized version from MoA (`moa-gpt-4o`)
 
 ## Query Results
 
@@ -123,6 +257,58 @@ FROM events_text_ai ai
 JOIN events_search e ON ai.event_id = e.id,
 LATERAL jsonb_array_elements(ai.structured_analysis->'decisions') as decision
 WHERE ai.error_message IS NULL;
+```
+
+### Multi-Model Comparison Queries
+
+```sql
+-- Find decisions extracted by multiple models
+SELECT 
+    source_event_id,
+    decision_id,
+    COUNT(DISTINCT source_ai_model) as num_models,
+    array_agg(DISTINCT source_ai_model) as models
+FROM bronze_decisions
+GROUP BY source_event_id, decision_id
+HAVING COUNT(DISTINCT source_ai_model) > 1
+ORDER BY num_models DESC;
+
+-- Compare specific decision across models
+SELECT 
+    source_ai_model,
+    headline,
+    outcome,
+    primary_theme,
+    ntee_code,
+    json_array_length(arguments_for) as num_args_for,
+    json_array_length(arguments_against) as num_args_against
+FROM bronze_decisions
+WHERE source_event_id = 192614 
+  AND decision_id = 'D001'
+ORDER BY source_ai_model;
+
+-- Get MoA synthesis for comparison
+SELECT 
+    headline,
+    decision_statement,
+    outcome,
+    primary_theme
+FROM bronze_decisions
+WHERE source_event_id = 192614 
+  AND decision_id = 'D001'
+  AND source_ai_model = 'moa-gpt-4o';
+
+-- Model performance stats
+SELECT 
+    source_ai_model,
+    COUNT(*) as total_decisions,
+    COUNT(DISTINCT source_event_id) as total_events,
+    AVG(json_array_length(arguments_for)) as avg_arguments_for,
+    AVG(json_array_length(arguments_against)) as avg_arguments_against,
+    COUNT(*) FILTER (WHERE outcome IS NOT NULL) as decisions_with_outcome
+FROM bronze_decisions
+GROUP BY source_ai_model
+ORDER BY total_decisions DESC;
 ```
 
 ## Prompt Template
@@ -180,7 +366,9 @@ python scripts/datasources/gemini/analyze_meeting_transcripts.py --delay 10.0
 
 ## Workflow
 
-### 1. Load Meeting Videos
+### Standard Analysis Pipeline
+
+#### 1. Load Meeting Videos
 ```bash
 # First, get meeting videos with transcripts
 python scripts/datasources/youtube/load_youtube_events_to_postgres.py \
@@ -189,7 +377,7 @@ python scripts/datasources/youtube/load_youtube_events_to_postgres.py \
   --max-videos 100
 ```
 
-### 2. Get Transcripts (later, when needed)
+#### 2. Get Transcripts (later, when needed)
 ```bash
 # Fetch transcripts for stored videos
 python scripts/datasources/youtube/load_youtube_events_to_postgres.py \
@@ -197,18 +385,70 @@ python scripts/datasources/youtube/load_youtube_events_to_postgres.py \
   --max-videos 10  # Just most recent ones
 ```
 
-### 3. Analyze with Gemini
+#### 3. Analyze with Gemini
 ```bash
 # Run AI analysis on meetings with transcripts
 python scripts/datasources/gemini/analyze_meeting_transcripts.py
 ```
 
-### 4. Query Results
+#### 4. Extract to Bronze
+```bash
+# Extract structured data to bronze tables
+python scripts/datasources/gemini/extract_to_bronze.py
+```
+
+#### 5. Query Results
 ```bash
 # Check results
 PGPASSWORD=password psql -h localhost -p 5433 -U postgres -d open_navigator -c \
   "SELECT COUNT(*) FROM events_text_ai WHERE error_message IS NULL;"
 ```
+
+### Multi-Model Comparison Pipeline (Advanced) ⭐
+
+For highest quality extractions, analyze the same meeting with multiple models and synthesize results:
+
+#### 1. Analyze with Multiple Models
+```bash
+# Model 1: Gemini 1.5 Flash (free, fast)
+python scripts/datasources/gemini/analyze_meeting_transcripts.py --states MA
+
+# TODO: Add support for additional models (GPT-4, Claude 3, etc.)
+```
+
+#### 2. Extract All Models to Bronze
+```bash
+python scripts/datasources/gemini/extract_to_bronze.py
+```
+
+#### 3. Compare Extractions
+```bash
+# See summary of multi-model coverage
+python scripts/datasources/gemini/compare_model_extractions.py --summary
+
+# Compare specific event
+python scripts/datasources/gemini/compare_model_extractions.py --event-id 192614
+```
+
+#### 4. Run MoA Synthesis (Mixture-of-Agents)
+```bash
+# Synthesize all decisions using GPT-4o as aggregator
+python scripts/datasources/gemini/moa_synthesize.py --event-id 192614 --all
+
+# Or use Gemini Pro as aggregator (cheaper)
+python scripts/datasources/gemini/moa_synthesize.py --event-id 192614 --all --aggregator gemini-pro
+```
+
+#### 5. Query Synthesis Results
+```bash
+psql -d open_navigator_bronze -c "
+  SELECT decision_id, headline, outcome FROM bronze_decisions
+  WHERE source_event_id = 192614 AND source_ai_model = 'moa-gpt-4o'
+  ORDER BY decision_id;
+"
+```
+
+**Benefits:** Higher accuracy, identifies biases, builds confidence through consensus
 
 ## Troubleshooting
 
@@ -241,8 +481,24 @@ python scripts/datasources/gemini/analyze_meeting_transcripts.py --delay 5.0
 
 ## Next Steps
 
-1. **Aggregate insights** - Build summary views of frame analysis across meetings
-2. **Trend detection** - Track how frames evolve over time
-3. **Export to frontend** - Display analysis results in UI
+### Analysis Improvements
+1. **Multi-model analysis** - Implement GPT-4 and Claude 3 support in `analyze_meeting_transcripts.py`
+2. **Aggregate insights** - Build summary views of frame analysis across meetings
+3. **Trend detection** - Track how frames evolve over time
 4. **Fine-tune prompts** - Adjust policy_analysis.md based on results
 5. **Batch processing** - Analyze historical meetings en masse
+
+### AI Evaluation & Merging 🆕
+6. **Implement DeepEval** - Add automated quality metrics (Faithfulness, Relevancy, Coherence)
+7. **Build consensus dashboard** - Visualize model agreements and contradictions
+8. **Optimize MoA** - Fine-tune aggregator prompts for better synthesis
+9. **Track model performance** - Store evaluation scores in bronze tables
+10. **Export to frontend** - Display MoA synthesized decisions in UI
+
+## Resources
+
+- **[AI Model Evaluation Guide](../../website/docs/development/ai-model-evaluation.md)** - LLM-as-a-Judge, N-Way Consensus, metrics
+- **[AI Model Merging Guide](../../website/docs/development/ai-model-merging.md)** - MoA, ensemble strategies, SLERP
+- **[Gemini AI Documentation](https://ai.google.dev/docs)** - Official API docs
+- **[DeepEval Framework](https://github.com/confident-ai/deepeval)** - Evaluation metrics library
+- **[Together MoA](https://github.com/togethercomputer/MoA)** - Mixture-of-Agents reference implementation

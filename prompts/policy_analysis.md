@@ -296,9 +296,12 @@ After the second break token output only a valid Mermaid timeline block. Do not 
       "primary_theme_cofog": "string",
       "secondary_theme": "string or null",
       "secondary_theme_cofog": "string or null",
-      "ntee_code": "string or null — extracted from primary organization involved",
-      "ntee_major_group": "string or null — extracted from primary organization involved",
-      "ntee_category_label": "string or null — extracted from primary organization involved",
+      "ntee_code": "string or null — primary cause area based on topic content analysis",
+      "ntee_major_group": "string or null — primary cause area category",
+      "ntee_category_label": "string or null — primary cause area with subcategory",
+      "secondary_ntee_code": "string or null — secondary cause area if topic spans multiple domains",
+      "secondary_ntee_major_group": "string or null — secondary cause category",
+      "secondary_ntee_category_label": "string or null — secondary cause with subcategory",
       "primary_org_ids": ["string — org_id values of main organizations this decision affects or involves"],
       "legislation_refs": [],
       "financial_item_refs": [],
@@ -463,22 +466,25 @@ Assign `lineage_type` as:
 - If only the major group is determinable, set `ntee_category_label` equal to `ntee_major_group`
 - **Extract NTEE to decisions — CRITICAL HIERARCHY:**
   1. **First priority: Topic content analysis** — Analyze the decision topic, headline, and primary theme to determine if it relates to a specific cause area (health, education, environment, human services, youth, arts, etc.)
-  2. **Second priority: Organization classification** — If the topic is truly general administrative/governance (approving minutes, routine procedures), then use the primary organization's NTEE code
-  3. **Last resort: Public Policy (W)** — Only use "W - Public Policy" for purely procedural/administrative topics with no substantive cause area
+  2. **Secondary NTEE codes** — If a topic spans multiple cause areas, assign a secondary NTEE code. For example: "School dental screening program" → Primary: E (Health Care > Dental & Oral Health), Secondary: B (Education)
+  3. **Organization classification fallback** — If the topic is truly general administrative/governance (approving minutes, routine procedures), then use the primary organization's NTEE code
+  4. **Last resort: Public Policy (W)** — Only use "W - Public Policy" for purely procedural/administrative topics with no substantive cause area
 - **Examples of topic-based NTEE assignment (override organization's W code):**
-  - "Youth program funding" → O (Youth Development), NOT W
-  - "School lunch program" → K (Food Agriculture and Nutrition) or B (Education), NOT W
-  - "Recycling standards" → C (Environment), NOT W
-  - "Senior center renovation" → P (Human Services), NOT W
-  - "Public health emergency" → E (Health Care) or M (Public Safety), NOT W
-  - "Arts festival approval" → A (Arts Culture and Humanities), NOT W
-  - "Disability awareness proclamation" → P (Human Services) or R (Civil Rights), NOT W
-- **Examples of truly Public Policy (W) topics:**
-  - "Approve meeting minutes" → W (administrative)
-  - "Adopt council rules" → W (procedural)
-  - "Budget process timeline" → W (governance)
-- When a decision involves multiple organizations with different NTEE codes, use the organization most central to the decision's outcome
+  - "Youth program funding" → Primary: O (Youth Development), Secondary: null
+  - "School lunch program" → Primary: K (Food Agriculture and Nutrition), Secondary: B (Education)
+  - "Recycling education campaign" → Primary: C (Environment), Secondary: B (Education)
+  - "Senior center renovation" → Primary: P (Human Services), Secondary: null
+  - "Public health emergency" → Primary: E (Health Care), Secondary: M (Public Safety and Disaster Relief)
+  - "Arts festival approval" → Primary: A (Arts Culture and Humanities), Secondary: null
+  - "Disability awareness proclamation" → Primary: R (Civil Rights and Advocacy), Secondary: P (Human Services)
+  - "Youth sports facility" → Primary: O (Youth Development), Secondary: N (Recreation and Sports)
+- **Examples of truly Public Policy (W) topics (no secondary needed):**
+  - "Approve meeting minutes" → Primary: W (administrative), Secondary: null
+  - "Adopt council rules" → Primary: W (procedural), Secondary: null
+  - "Budget process timeline" → Primary: W (governance), Secondary: null
+- When a decision involves multiple organizations with different NTEE codes, select the primary NTEE based on the most central organization and optionally assign secondary from other involved organizations
 - Set decision-level NTEE fields to null only when the cause area is genuinely indeterminate from context
+- **Always prioritize substantive cause areas (A-V, X-Y) over Public Policy (W)** — W should be the exception, not the default
 
 ### Underlying Causes Rules
 - Make `underlying_causes` headlines specific and contextual — avoid generic abstractions like "Aging infrastructure" or "Statutory requirement"

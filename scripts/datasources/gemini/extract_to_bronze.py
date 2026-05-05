@@ -179,6 +179,12 @@ class BronzeExtractor:
             secondary_theme VARCHAR(100),
             secondary_theme_cofog VARCHAR(20),
             primary_org_ids JSONB,
+            ntee_code VARCHAR(10),
+            ntee_major_group VARCHAR(100),
+            ntee_category_label VARCHAR(255),
+            secondary_ntee_code VARCHAR(10),
+            secondary_ntee_major_group VARCHAR(100),
+            secondary_ntee_category_label VARCHAR(255),
             outcome VARCHAR(50),
             vote_tally JSONB,
             timeline JSONB,
@@ -207,6 +213,9 @@ class BronzeExtractor:
             ntee_code VARCHAR(10),
             ntee_major_group VARCHAR(100),
             ntee_category_label VARCHAR(255),
+            secondary_ntee_code VARCHAR(10),
+            secondary_ntee_major_group VARCHAR(100),
+            secondary_ntee_category_label VARCHAR(255),
             primary_org_ids JSONB,
             topic VARCHAR(255),
             headline TEXT,
@@ -399,6 +408,12 @@ class BronzeExtractor:
                     decision.get('secondary_theme'),
                     decision.get('secondary_theme_cofog'),
                     json.dumps(decision.get('primary_org_ids', [])),
+                    decision.get('ntee_code'),
+                    decision.get('ntee_major_group'),
+                    decision.get('ntee_category_label'),
+                    decision.get('secondary_ntee_code'),
+                    decision.get('secondary_ntee_major_group'),
+                    decision.get('secondary_ntee_category_label'),
                     decision.get('outcome'),
                     json.dumps(decision.get('vote_tally', {})),
                     json.dumps(decision.get('timeline', {})),
@@ -424,6 +439,9 @@ class BronzeExtractor:
                     decision.get('ntee_code'),
                     decision.get('ntee_major_group'),
                     decision.get('ntee_category_label'),
+                    decision.get('secondary_ntee_code'),
+                    decision.get('secondary_ntee_major_group'),
+                    decision.get('secondary_ntee_category_label'),
                     json.dumps(decision.get('primary_org_ids', [])),
                     decision.get('topic'),
                     decision.get('headline')
@@ -475,9 +493,20 @@ class BronzeExtractor:
                             org_id, party_affiliation, is_lobbyist, lobbyist_registration_number,
                             lobbyist_clients, wikidata_qid, appeared_as
                         ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-                        ON CONFLICT (source_event_id, person_id) DO NOTHING
+                        ON CONFLICT (source_event_id, person_id, source_ai_model) 
+                        DO UPDATE SET
+                            full_name = EXCLUDED.full_name,
+                            role = EXCLUDED.role,
+                            org_id = EXCLUDED.org_id,
+                            party_affiliation = EXCLUDED.party_affiliation,
+                            is_lobbyist = EXCLUDED.is_lobbyist,
+                            lobbyist_registration_number = EXCLUDED.lobbyist_registration_number,
+                            lobbyist_clients = EXCLUDED.lobbyist_clients,
+                            wikidata_qid = EXCLUDED.wikidata_qid,
+                            appeared_as = EXCLUDED.appeared_as,
+                            extracted_at = CURRENT_TIMESTAMP
                     """, contacts_data)
-                    logger.info(f"✅ Inserted {len(contacts_data)} contacts")
+                    logger.info(f"✅ Inserted/updated {len(contacts_data)} contacts")
                 
                 # Insert organizations
                 if orgs_data:
@@ -488,9 +517,24 @@ class BronzeExtractor:
                             ein, wikidata_qid, ntee_major_group, ntee_category_label,
                             ntee_code, role_in_meeting, financial_interest
                         ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-                        ON CONFLICT (source_event_id, org_id) DO NOTHING
+                        ON CONFLICT (source_event_id, org_id, source_ai_model) 
+                        DO UPDATE SET
+                            org_name = EXCLUDED.org_name,
+                            org_type = EXCLUDED.org_type,
+                            org_subtype = EXCLUDED.org_subtype,
+                            is_lobbyist_entity = EXCLUDED.is_lobbyist_entity,
+                            lobbying_clients = EXCLUDED.lobbying_clients,
+                            party_affiliation = EXCLUDED.party_affiliation,
+                            ein = EXCLUDED.ein,
+                            wikidata_qid = EXCLUDED.wikidata_qid,
+                            ntee_major_group = EXCLUDED.ntee_major_group,
+                            ntee_category_label = EXCLUDED.ntee_category_label,
+                            ntee_code = EXCLUDED.ntee_code,
+                            role_in_meeting = EXCLUDED.role_in_meeting,
+                            financial_interest = EXCLUDED.financial_interest,
+                            extracted_at = CURRENT_TIMESTAMP
                     """, orgs_data)
-                    logger.info(f"✅ Inserted {len(orgs_data)} organizations")
+                    logger.info(f"✅ Inserted/updated {len(orgs_data)} organizations")
                 
                 # Insert bills
                 if bills_data:
@@ -499,9 +543,19 @@ class BronzeExtractor:
                             source_event_id, source_ai_model, leg_id, leg_type, official_number,
                             title, jurisdiction, year, status, relevance, url
                         ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-                        ON CONFLICT (source_event_id, leg_id) DO NOTHING
+                        ON CONFLICT (source_event_id, leg_id, source_ai_model) 
+                        DO UPDATE SET
+                            leg_type = EXCLUDED.leg_type,
+                            official_number = EXCLUDED.official_number,
+                            title = EXCLUDED.title,
+                            jurisdiction = EXCLUDED.jurisdiction,
+                            year = EXCLUDED.year,
+                            status = EXCLUDED.status,
+                            relevance = EXCLUDED.relevance,
+                            url = EXCLUDED.url,
+                            extracted_at = CURRENT_TIMESTAMP
                     """, bills_data)
-                    logger.info(f"✅ Inserted {len(bills_data)} bills/legislation")
+                    logger.info(f"✅ Inserted/updated {len(bills_data)} bills/legislation")
                 
                 # Insert decisions
                 if decisions_data:
@@ -511,13 +565,50 @@ class BronzeExtractor:
                             timestamp_start, timestamp_end, decision_date, topic, headline,
                             decision_statement, decision_method, lineage_type, lineage_note,
                             primary_theme, primary_theme_cofog, secondary_theme, secondary_theme_cofog,
-                            primary_org_ids, outcome, vote_tally, timeline, arguments_for, arguments_against,
+                            primary_org_ids, ntee_code, ntee_major_group, ntee_category_label,
+                            secondary_ntee_code, secondary_ntee_major_group, secondary_ntee_category_label,
+                            outcome, vote_tally, timeline, arguments_for, arguments_against,
                             tradeoffs, underlying_causes, power_map, frame_analysis,
                             legislation_refs, financial_item_refs
-                        ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-                        ON CONFLICT (source_event_id, decision_id) DO NOTHING
+                        ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                        ON CONFLICT (source_event_id, decision_id, source_ai_model) 
+                        DO UPDATE SET
+                            subject_id = EXCLUDED.subject_id,
+                            agenda_item = EXCLUDED.agenda_item,
+                            timestamp_start = EXCLUDED.timestamp_start,
+                            timestamp_end = EXCLUDED.timestamp_end,
+                            decision_date = EXCLUDED.decision_date,
+                            topic = EXCLUDED.topic,
+                            headline = EXCLUDED.headline,
+                            decision_statement = EXCLUDED.decision_statement,
+                            decision_method = EXCLUDED.decision_method,
+                            lineage_type = EXCLUDED.lineage_type,
+                            lineage_note = EXCLUDED.lineage_note,
+                            primary_theme = EXCLUDED.primary_theme,
+                            primary_theme_cofog = EXCLUDED.primary_theme_cofog,
+                            secondary_theme = EXCLUDED.secondary_theme,
+                            secondary_theme_cofog = EXCLUDED.secondary_theme_cofog,
+                            primary_org_ids = EXCLUDED.primary_org_ids,
+                            ntee_code = EXCLUDED.ntee_code,
+                            ntee_major_group = EXCLUDED.ntee_major_group,
+                            ntee_category_label = EXCLUDED.ntee_category_label,
+                            secondary_ntee_code = EXCLUDED.secondary_ntee_code,
+                            secondary_ntee_major_group = EXCLUDED.secondary_ntee_major_group,
+                            secondary_ntee_category_label = EXCLUDED.secondary_ntee_category_label,
+                            outcome = EXCLUDED.outcome,
+                            vote_tally = EXCLUDED.vote_tally,
+                            timeline = EXCLUDED.timeline,
+                            arguments_for = EXCLUDED.arguments_for,
+                            arguments_against = EXCLUDED.arguments_against,
+                            tradeoffs = EXCLUDED.tradeoffs,
+                            underlying_causes = EXCLUDED.underlying_causes,
+                            power_map = EXCLUDED.power_map,
+                            frame_analysis = EXCLUDED.frame_analysis,
+                            legislation_refs = EXCLUDED.legislation_refs,
+                            financial_item_refs = EXCLUDED.financial_item_refs,
+                            extracted_at = CURRENT_TIMESTAMP
                     """, decisions_data)
-                    logger.info(f"✅ Inserted {len(decisions_data)} decisions")
+                    logger.info(f"✅ Inserted/updated {len(decisions_data)} decisions")
                 
                 # Insert topics
                 if topics_data:
@@ -525,11 +616,28 @@ class BronzeExtractor:
                         INSERT INTO bronze_topics (
                             source_event_id, source_ai_model, decision_id, primary_theme,
                             primary_theme_cofog, secondary_theme, secondary_theme_cofog,
-                            ntee_code, ntee_major_group, ntee_category_label, primary_org_ids,
-                            topic, headline
-                        ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                            ntee_code, ntee_major_group, ntee_category_label,
+                            secondary_ntee_code, secondary_ntee_major_group, secondary_ntee_category_label,
+                            primary_org_ids, topic, headline
+                        ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                        ON CONFLICT (source_event_id, decision_id, source_ai_model)
+                        DO UPDATE SET
+                            primary_theme = EXCLUDED.primary_theme,
+                            primary_theme_cofog = EXCLUDED.primary_theme_cofog,
+                            secondary_theme = EXCLUDED.secondary_theme,
+                            secondary_theme_cofog = EXCLUDED.secondary_theme_cofog,
+                            ntee_code = EXCLUDED.ntee_code,
+                            ntee_major_group = EXCLUDED.ntee_major_group,
+                            ntee_category_label = EXCLUDED.ntee_category_label,
+                            secondary_ntee_code = EXCLUDED.secondary_ntee_code,
+                            secondary_ntee_major_group = EXCLUDED.secondary_ntee_major_group,
+                            secondary_ntee_category_label = EXCLUDED.secondary_ntee_category_label,
+                            primary_org_ids = EXCLUDED.primary_org_ids,
+                            topic = EXCLUDED.topic,
+                            headline = EXCLUDED.headline,
+                            extracted_at = CURRENT_TIMESTAMP
                     """, topics_data)
-                    logger.info(f"✅ Inserted {len(topics_data)} topics")
+                    logger.info(f"✅ Inserted/updated {len(topics_data)} topics")
                 
                 # Insert causes
                 if causes_data:
@@ -538,8 +646,12 @@ class BronzeExtractor:
                             source_event_id, source_ai_model, decision_id,
                             cause_headline, cause_detail
                         ) VALUES (%s, %s, %s, %s, %s)
+                        ON CONFLICT (source_event_id, decision_id, cause_headline, source_ai_model)
+                        DO UPDATE SET
+                            cause_detail = EXCLUDED.cause_detail,
+                            extracted_at = CURRENT_TIMESTAMP
                     """, causes_data)
-                    logger.info(f"✅ Inserted {len(causes_data)} underlying causes")
+                    logger.info(f"✅ Inserted/updated {len(causes_data)} underlying causes")
                 
                 # Insert financial items
                 if financial_data:
@@ -550,9 +662,26 @@ class BronzeExtractor:
                             amount_qualifier, currency, item_date, item_date_type, org_id,
                             org_role, authorized_by_person_id, funding_source, notes
                         ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-                        ON CONFLICT (source_event_id, financial_item_id) DO NOTHING
+                        ON CONFLICT (source_event_id, financial_item_id, source_ai_model) 
+                        DO UPDATE SET
+                            decision_id = EXCLUDED.decision_id,
+                            subject_id = EXCLUDED.subject_id,
+                            event_description = EXCLUDED.event_description,
+                            item_description = EXCLUDED.item_description,
+                            amount = EXCLUDED.amount,
+                            amount_type = EXCLUDED.amount_type,
+                            amount_qualifier = EXCLUDED.amount_qualifier,
+                            currency = EXCLUDED.currency,
+                            item_date = EXCLUDED.item_date,
+                            item_date_type = EXCLUDED.item_date_type,
+                            org_id = EXCLUDED.org_id,
+                            org_role = EXCLUDED.org_role,
+                            authorized_by_person_id = EXCLUDED.authorized_by_person_id,
+                            funding_source = EXCLUDED.funding_source,
+                            notes = EXCLUDED.notes,
+                            extracted_at = CURRENT_TIMESTAMP
                     """, financial_data)
-                    logger.info(f"✅ Inserted {len(financial_data)} financial items")
+                    logger.info(f"✅ Inserted/updated {len(financial_data)} financial items")
             
             conn.commit()
         
