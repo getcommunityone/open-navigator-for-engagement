@@ -461,9 +461,23 @@ Assign `lineage_type` as:
 - For every organization in the `organizations` array, populate all three NTEE fields (`ntee_major_group`, `ntee_category_label`, `ntee_code`) when context permits — do not leave these null if the organization's cause area is determinable
 - For subcategories, use hierarchical notation with greater-than separator (e.g., "Health > Dental & Oral Health", "Food Agriculture and Nutrition > Food Banks, Food Pantries")
 - If only the major group is determinable, set `ntee_category_label` equal to `ntee_major_group`
-- **Extract NTEE to decisions:** For each decision, populate `primary_org_ids` with the main organizations affected or involved, then copy the NTEE fields (`ntee_code`, `ntee_major_group`, `ntee_category_label`) from the primary organization to the decision object
-- If a decision involves multiple organizations with different NTEE codes, use the organization most central to the decision's outcome
-- **When no organizations are involved:** If a decision has no organization references but the topic clearly relates to a specific cause area (health, education, environment, etc.), infer the most appropriate NTEE code from the topic and theme. For general governance/administrative topics with no specific cause area, use W (Public Policy)
+- **Extract NTEE to decisions — CRITICAL HIERARCHY:**
+  1. **First priority: Topic content analysis** — Analyze the decision topic, headline, and primary theme to determine if it relates to a specific cause area (health, education, environment, human services, youth, arts, etc.)
+  2. **Second priority: Organization classification** — If the topic is truly general administrative/governance (approving minutes, routine procedures), then use the primary organization's NTEE code
+  3. **Last resort: Public Policy (W)** — Only use "W - Public Policy" for purely procedural/administrative topics with no substantive cause area
+- **Examples of topic-based NTEE assignment (override organization's W code):**
+  - "Youth program funding" → O (Youth Development), NOT W
+  - "School lunch program" → K (Food Agriculture and Nutrition) or B (Education), NOT W
+  - "Recycling standards" → C (Environment), NOT W
+  - "Senior center renovation" → P (Human Services), NOT W
+  - "Public health emergency" → E (Health Care) or M (Public Safety), NOT W
+  - "Arts festival approval" → A (Arts Culture and Humanities), NOT W
+  - "Disability awareness proclamation" → P (Human Services) or R (Civil Rights), NOT W
+- **Examples of truly Public Policy (W) topics:**
+  - "Approve meeting minutes" → W (administrative)
+  - "Adopt council rules" → W (procedural)
+  - "Budget process timeline" → W (governance)
+- When a decision involves multiple organizations with different NTEE codes, use the organization most central to the decision's outcome
 - Set decision-level NTEE fields to null only when the cause area is genuinely indeterminate from context
 
 ### Underlying Causes Rules
