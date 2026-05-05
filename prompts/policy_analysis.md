@@ -117,12 +117,73 @@ Formal votes may not exist in all meeting types — if a decision is made by con
 
 ---
 
+## Mermaid Diagram Generation Rules
+
+### Decision Timeline (diagram_timeline)
+For each decision, generate a Mermaid timeline showing the chronological progression of that specific decision across meetings. Format as a valid Mermaid timeline string:
+- Include `timeline` keyword at start
+- Use timeline sections if the decision spans multiple meetings
+- Quote all timestamps: `"09:00"`, `"14:30"`
+- Use exactly one colon per entry
+- Show: prior context → this meeting's action → next steps
+- Keep entries concise (10 words or fewer per entry)
+- Example format:
+```
+timeline
+    title Budget Proposal FY2012
+    section Prior Meetings
+        "2011-09-15" : Initial budget draft presented
+        "2011-10-05" : Public hearing held
+    section This Meeting
+        "09:00" : Final budget vote
+        "09:45" : Amendments approved
+    section Next Steps
+        "2011-11-01" : Implementation begins
+```
+
+### Decision Mindmap (diagram_mindmap)
+For each decision, generate a Mermaid mindmap showing the decision structure, stakeholders, and key relationships. Format as a valid Mermaid mindmap string:
+- Include `mindmap` keyword at start
+- Root node: decision topic
+- Branch 1: Outcome and vote
+- Branch 2: Key arguments (for/against)
+- Branch 3: Stakeholders (decision makers, advocates, affected parties)
+- Branch 4: Financial impacts if present
+- Use indentation to show hierarchy (2 spaces per level)
+- Keep node text concise (5-7 words max)
+- Example format:
+```
+mindmap
+  root((FY2012 Budget))
+    Outcome
+      APPROVED 4-1
+      $2.1M total
+    Arguments
+      For
+        Addresses critical needs
+        Stays within levy cap
+      Against
+        Too high for recession
+    Stakeholders
+      Decision Makers
+        Board voted 4-1
+      Advocates
+        Fire Chief supported
+      Public
+        3 residents opposed
+    Financial
+      $2.1M appropriation
+      $50K contingency
+```
+
 ## Output Instructions
 
-Produce three documents in sequence. Follow the step instructions exactly.
+Produce two documents in sequence. Follow the step instructions exactly.
 
 ### STEP 1 — JSON
-Output the JSON object below and nothing else until you have closed the final curly brace of the root object. Do not include any text, labels, comments, or markdown outside the JSON structure itself. The JSON must be parseable by `JSON.parse()` with no modification. After the closing curly brace output exactly this token on its own line with no surrounding text:
+Output the JSON object below and nothing else until you have closed the final curly brace of the root object. Do not include any text, labels, comments, or markdown outside the JSON structure itself. The JSON must be parseable by `JSON.parse()` with no modification. 
+
+**CRITICAL:** For each decision in the `decisions` array, populate both `diagram_timeline` and `diagram_mindmap` fields with valid Mermaid syntax strings following the rules above. These strings must be escaped for JSON (use `\n` for newlines, escape quotes). After the closing curly brace output exactly this token on its own line with no surrounding text:
 
 `---DOCUMENT_BREAK---`
 
@@ -161,12 +222,9 @@ Bullet list of key actors grouped by role with party affiliation and lobbyist st
 **Themes**
 Summary of primary themes addressed with COFOG codes
 
-Format all dollar amounts with commas and currency symbols. Use bold for section headers and key terms. Keep each section concise — front-load the most important information. After the final section output exactly this token on its own line with no surrounding text:
+Format all dollar amounts with commas and currency symbols. Use bold for section headers and key terms. Keep each section concise — front-load the most important information. 
 
-`---DOCUMENT_BREAK---`
-
-### STEP 3 — Mermaid Timeline
-After the second break token output only a valid Mermaid timeline block. Do not include any text before or after the timeline block. Do not wrap it in markdown fences. Begin directly with the word `timeline` on its own line. Represent each decision and significant event in the order it occurred. Always quote clock times e.g. `"09:00"` or `"14:30"`. Use exactly one colon per entry. Where no timestamp exists use the decision_id sequence to order entries and label entries with the `topic` field from the decision. Group entries under Mermaid timeline section headers by primary theme where three or more decisions share a theme. Output nothing after the final line of the timeline.
+This is the final output — no additional document breaks or timeline sections follow.
 
 ---
 
@@ -369,6 +427,8 @@ After the second break token output only a valid Mermaid timeline block. Do not 
           "quote": "string"
         }
       ],
+      "diagram_timeline": "string — valid Mermaid timeline syntax showing decision chronology across meetings, newlines escaped as \\n for JSON",
+      "diagram_mindmap": "string — valid Mermaid mindmap syntax showing decision structure and relationships, newlines escaped as \\n for JSON",
       "frame_analysis": {
         "dominant_frame": {
           "frame_label": "string — 4-6 words identifying the frame",
@@ -505,12 +565,14 @@ Assign `lineage_type` as:
 ### URL and External References
 - Where an official legislation or municipal code URL is determinable from context include it in the `url` field
 
-### Timeline Requirements (Document 3)
-- Represent each decision and significant event in the order it occurred
-- Always quote clock times e.g. `"09:00"` or `"14:30"`
-- Use exactly one colon per entry
-- Where no timestamp exists use the `decision_id` sequence to order entries and label entries with the `topic` field from the decision
-- Group entries under Mermaid timeline section headers by primary theme where three or more decisions share a theme
+### Diagram Requirements
+- Every decision must include both `diagram_timeline` and `diagram_mindmap` fields
+- Timeline must show decision chronology: prior context → this meeting → next steps
+- Mindmap must show decision structure: outcome, arguments, stakeholders, financial impacts
+- Both diagrams must use valid Mermaid syntax escaped for JSON (newlines as `\n`, quotes escaped)
+- Always quote timestamps in timeline diagrams: `"09:00"`, `"14:30"`
+- Keep diagram node text concise: 10 words or fewer per entry
+- Test that diagram strings are valid JSON by ensuring proper escaping
 
 ### Output Format Requirements
 - **Document 1 (JSON)** must be parseable by `JSON.parse()` with no modification

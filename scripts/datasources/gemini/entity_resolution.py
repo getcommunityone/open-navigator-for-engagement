@@ -153,11 +153,11 @@ class ContactMatcher:
             threshold: Minimum similarity score (default 0.95 = 95%)
         """
         bronze_name = NameNormalizer.normalize(bronze_contact.get('full_name', ''))
-        bronze_jurisdiction = bronze_contact.get('jurisdiction', '').lower()
+        bronze_jurisdiction = (bronze_contact.get('jurisdiction', '') or '').lower()
         
         for prod_contact in production_contacts:
             prod_name = NameNormalizer.normalize(prod_contact.get('name', ''))
-            prod_org = prod_contact.get('organization_name', '').lower()
+            prod_org = (prod_contact.get('organization_name', '') or '').lower()
             
             # Name similarity check
             name_sim = ContactMatcher.similarity_score(bronze_name, prod_name)
@@ -266,17 +266,17 @@ class BillMatcher:
         """
         Match by jurisdiction + session + bill number
         """
-        bronze_jurisdiction = bronze_bill.get('jurisdiction', '').lower()
+        bronze_jurisdiction = (bronze_bill.get('jurisdiction', '') or '').lower()
         bronze_year = bronze_bill.get('year')
         bronze_number = BillMatcher.normalize_bill_number(
-            bronze_bill.get('official_number', '')
+            bronze_bill.get('official_number', '') or ''
         )
         
         if not bronze_number:
             return None
         
         for prod_bill in production_bills:
-            prod_jurisdiction = prod_bill.get('state', '').lower()
+            prod_jurisdiction = (prod_bill.get('state', '') or '').lower()
             prod_session = prod_bill.get('session', '')
             prod_number = BillMatcher.normalize_bill_number(
                 prod_bill.get('bill_number', '')
@@ -308,8 +308,8 @@ class BillMatcher:
         """
         Match by title similarity (for bills without clear identifiers)
         """
-        bronze_title = bronze_bill.get('title', '').lower()
-        bronze_jurisdiction = bronze_bill.get('jurisdiction', '').lower()
+        bronze_title = (bronze_bill.get('title', '') or '').lower()
+        bronze_jurisdiction = (bronze_bill.get('jurisdiction', '') or '').lower()
         
         if not bronze_title:
             return []
@@ -317,8 +317,8 @@ class BillMatcher:
         candidates = []
         
         for prod_bill in production_bills:
-            prod_title = prod_bill.get('title', '').lower()
-            prod_jurisdiction = prod_bill.get('state', '').lower()
+            prod_title = (prod_bill.get('title', '') or '').lower()
+            prod_jurisdiction = (prod_bill.get('state', '') or '').lower()
             
             # Must be same jurisdiction
             if bronze_jurisdiction not in prod_jurisdiction:
@@ -372,13 +372,13 @@ class OrganizationMatcher:
     @staticmethod
     def match_by_ein(bronze_org: Dict, production_orgs: List[Dict]) -> Optional[Dict]:
         """Match by EIN (Employer Identification Number)"""
-        ein = bronze_org.get('ein', '').replace('-', '')
+        ein = (bronze_org.get('ein', '') or '').replace('-', '')
         
         if not ein:
             return None
         
         for prod_org in production_orgs:
-            prod_ein = prod_org.get('ein', '').replace('-', '')
+            prod_ein = (prod_org.get('ein', '') or '').replace('-', '')
             if ein == prod_ein:
                 return prod_org
         

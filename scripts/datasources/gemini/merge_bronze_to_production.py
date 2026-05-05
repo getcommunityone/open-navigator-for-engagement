@@ -352,7 +352,7 @@ class BronzeToProductionMerger:
                         %s, %s, %s, %s, %s, %s, %s, %s, %s
                     )
                 """, (
-                    self.merge_run_id,
+                    str(self.merge_run_id),
                     entity_type,
                     f'bronze_{entity_type}s',
                     bronze_id,
@@ -363,6 +363,326 @@ class BronzeToProductionMerger:
                     action
                 ))
             conn.commit()
+    
+    def merge_organizations(self):
+        """Merge bronze_organizations → organizations_nonprofit_search"""
+        logger.info("=" * 70)
+        logger.info("MERGING ORGANIZATIONS")
+        logger.info("=" * 70)
+        
+        # Fetch bronze organizations
+        with psycopg2.connect(self.bronze_db_url) as bronze_conn:
+            with bronze_conn.cursor(cursor_factory=RealDictCursor) as cur:
+                cur.execute("""
+                    SELECT * FROM bronze_organizations
+                    WHERE extracted_at > NOW() - INTERVAL '7 days'
+                    ORDER BY extracted_at DESC
+                """)
+                bronze_orgs = cur.fetchall()
+        
+        logger.info(f"Found {len(bronze_orgs):,} bronze organizations to process")
+        
+        if not bronze_orgs:
+            logger.warning("No bronze organizations found")
+            return
+        
+        # Process each bronze organization
+        with psycopg2.connect(self.production_db_url) as prod_conn:
+            for bronze_org in bronze_orgs:
+                self._merge_single_organization(bronze_org, prod_conn)
+            
+            if not self.dry_run:
+                prod_conn.commit()
+                logger.success(f"✅ Committed {sum(self.stats['organizations'].values())} organization operations")
+        
+        # Show stats
+        logger.info("")
+        logger.info("📊 ORGANIZATION MERGE STATS:")
+        for action, count in self.stats['organizations'].items():
+            logger.info(f"  {action:15} {count:>6,}")
+    
+    def _merge_single_organization(self, bronze_org: Dict, prod_conn):
+        """Merge one organization with entity resolution"""
+        
+        # Step 1: Try exact EIN match
+        if bronze_org.get('ein'):
+            with prod_conn.cursor(cursor_factory=RealDictCursor) as cur:
+                cur.execute("""
+                    SELECT * FROM organizations_nonprofit_search
+                    WHERE ein = %s
+                    LIMIT 1
+                """, (bronze_org['ein'].replace('-', ''),))
+                exact_match = cur.fetchone()
+            
+            if exact_match:
+                # Organization already exists from IRS BMF - enhance with meeting context
+                self._add_organization_meeting_context(
+                    prod_conn,
+                    exact_match['ein'],
+                    bronze_org
+                )
+                self.stats['organizations']['skipped'] += 1
+                self._log_merge('organization', bronze_org['id'], None, 'exact_ein', 1.0, 'enhanced')
+                return
+        
+        # Step 2: Try Wikidata QID match
+        if bronze_org.get('wikidata_qid'):
+            with prod_conn.cursor(cursor_factory=RealDictCursor) as cur:
+                cur.execute("""
+                    SELECT * FROM organizations_nonprofit_search
+                    WHERE datasource_id = %s
+                    LIMIT 1
+                """, (bronze_org['wikidata_qid'],))
+                wikidata_match = cur.fetchone()
+            
+            if wikidata_match:
+                self._add_organization_meeting_context(
+                    prod_conn,
+                    wikidata_match['ein'],
+                    bronze_org
+                )
+                self.stats['organizations']['skipped'] += 1
+                self._log_merge('organization', bronze_org['id'], None, 'wikidata_qid', 1.0, 'enhanced')
+                return
+        
+        # Step 3: Try fuzzy name match (limited candidates)
+        with prod_conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute("""
+                SELECT * FROM organizations_nonprofit_search
+                WHERE name ILIKE %s
+                LIMIT 50
+            """, (f"%{bronze_org['org_name']}%",))
+            prod_candidates = cur.fetchall()
+        
+        fuzzy_matches = OrganizationMatcher.fuzzy_match_name(
+            dict(bronze_org),
+            [dict(c) for c in prod_candidates],
+            threshold=0.85
+        )
+        
+        if fuzzy_matches:
+            best_match, score = fuzzy_matches[0]
+            logger.warning(f"⚠️  Fuzzy match: '{bronze_org['org_name']}' → '{best_match['name']}' (score: {score:.2f})")
+            
+            # Add meeting context but flag for review
+            self._add_organization_meeting_context(
+                prod_conn,
+                best_match['ein'],
+                bronze_org,
+                needs_review=True
+            )
+            self.stats['organizations']['needs_review'] += 1
+            self._log_merge('organization', bronze_org['id'], None, 'fuzzy', score, 'needs_review')
+            return
+        
+        # Step 4: No match - this is likely a local organization not in IRS BMF
+        # Just record the meeting context without creating a new org record
+        logger.info(f"📝 No match for '{bronze_org['org_name']}' - local organization (no EIN)")
+        self.stats['organizations']['skipped'] += 1
+    
+    def _add_organization_meeting_context(self, prod_conn, org_ein: str, bronze_org: Dict, needs_review: bool = False):
+        """Add entry to organizations_meetings junction table"""
+        
+        if self.dry_run:
+            logger.info(f"[DRY RUN] Would link org {org_ein} to event {bronze_org['source_event_id']}")
+            return
+        
+        with prod_conn.cursor() as cur:
+            cur.execute("""
+                INSERT INTO organizations_meetings (
+                    organization_ein, event_id, role_in_meeting, financial_interest,
+                    is_lobbyist_entity, datasource, confidence_score
+                ) VALUES (
+                    %s, %s, %s, %s, %s, %s, %s
+                )
+                ON CONFLICT (organization_ein, event_id) DO UPDATE SET
+                    role_in_meeting = EXCLUDED.role_in_meeting,
+                    financial_interest = EXCLUDED.financial_interest,
+                    is_lobbyist_entity = EXCLUDED.is_lobbyist_entity
+            """, (
+                org_ein,
+                bronze_org['source_event_id'],
+                bronze_org.get('role_in_meeting'),
+                bronze_org.get('financial_interest'),
+                bronze_org.get('is_lobbyist_entity', False),
+                'gemini_ai_extraction',
+                0.60 if not needs_review else 0.50
+            ))
+    
+    def merge_bills(self):
+        """Merge bronze_bills → bills_search"""
+        logger.info("=" * 70)
+        logger.info("MERGING BILLS")
+        logger.info("=" * 70)
+        
+        # Fetch bronze bills
+        with psycopg2.connect(self.bronze_db_url) as bronze_conn:
+            with bronze_conn.cursor(cursor_factory=RealDictCursor) as cur:
+                cur.execute("""
+                    SELECT * FROM bronze_bills
+                    WHERE extracted_at > NOW() - INTERVAL '7 days'
+                    ORDER BY extracted_at DESC
+                """)
+                bronze_bills = cur.fetchall()
+        
+        logger.info(f"Found {len(bronze_bills):,} bronze bills to process")
+        
+        if not bronze_bills:
+            logger.warning("No bronze bills found")
+            return
+        
+        # Process each bronze bill
+        with psycopg2.connect(self.production_db_url) as prod_conn:
+            for bronze_bill in bronze_bills:
+                self._merge_single_bill(bronze_bill, prod_conn)
+            
+            if not self.dry_run:
+                prod_conn.commit()
+                logger.success(f"✅ Committed {sum(self.stats['bills'].values())} bill operations")
+        
+        # Show stats
+        logger.info("")
+        logger.info("📊 BILL MERGE STATS:")
+        for action, count in self.stats['bills'].items():
+            logger.info(f"  {action:15} {count:>6,}")
+    
+    def _merge_single_bill(self, bronze_bill: Dict, prod_conn):
+        """Merge one bill with entity resolution"""
+        
+        # Step 1: Try exact OpenStates ID match
+        if bronze_bill.get('leg_id') and bronze_bill['leg_id'].startswith('ocd-bill/'):
+            with prod_conn.cursor(cursor_factory=RealDictCursor) as cur:
+                cur.execute("""
+                    SELECT * FROM bills_search
+                    WHERE bill_id = %s
+                    LIMIT 1
+                """, (bronze_bill['leg_id'],))
+                exact_match = cur.fetchone()
+            
+            if exact_match:
+                # Bill already in DB from OpenStates - add meeting context
+                self._add_bill_meeting_context(
+                    prod_conn,
+                    exact_match['id'],
+                    bronze_bill
+                )
+                self.stats['bills']['skipped'] += 1
+                self._log_merge('bill', bronze_bill['id'], exact_match['id'], 'exact_id', 1.0, 'enhanced')
+                return
+        
+        # Step 2: Try jurisdiction + session + bill number match
+        with prod_conn.cursor(cursor_factory=RealDictCursor) as cur:
+            # Try to match on state and session
+            cur.execute("""
+                SELECT * FROM bills_search
+                WHERE state_code = %s
+                  AND session = %s
+                  AND bill_number ILIKE %s
+                LIMIT 10
+            """, (
+                bronze_bill.get('jurisdiction', '')[:2].upper(),  # First 2 chars as state code
+                str(bronze_bill.get('year', '')) + 'rs',  # Guess session format
+                f"%{bronze_bill.get('official_number', '')}%"
+            ))
+            prod_candidates = cur.fetchall()
+        
+        if prod_candidates:
+            # Try bill number matching
+            for candidate in prod_candidates:
+                if BillMatcher.normalize_bill_number(bronze_bill.get('official_number', '')) == \
+                   BillMatcher.normalize_bill_number(candidate.get('bill_number', '')):
+                    # Found match - add meeting context
+                    self._add_bill_meeting_context(
+                        prod_conn,
+                        candidate['id'],
+                        bronze_bill
+                    )
+                    self.stats['bills']['updated'] += 1
+                    self._log_merge('bill', bronze_bill['id'], candidate['id'], 'number_match', 0.95, 'enhanced')
+                    return
+        
+        # Step 3: No match - this is a LOCAL ordinance/resolution not in OpenStates
+        action = self._insert_local_bill(prod_conn, bronze_bill)
+        self.stats['bills'][action] += 1
+        self._log_merge('bill', bronze_bill['id'], None, 'none', 0.0, action)
+    
+    def _add_bill_meeting_context(self, prod_conn, bill_id: int, bronze_bill: Dict):
+        """Add entry to bills_meetings junction table"""
+        
+        if self.dry_run:
+            logger.info(f"[DRY RUN] Would link bill {bill_id} to event {bronze_bill['source_event_id']}")
+            return
+        
+        with prod_conn.cursor() as cur:
+            cur.execute("""
+                INSERT INTO bills_meetings (
+                    bill_id, event_id, relevance, action_taken,
+                    datasource, confidence_score
+                ) VALUES (
+                    %s, %s, %s, %s, %s, %s
+                )
+                ON CONFLICT (bill_id, event_id) DO UPDATE SET
+                    relevance = EXCLUDED.relevance,
+                    action_taken = EXCLUDED.action_taken
+            """, (
+                bill_id,
+                bronze_bill['source_event_id'],
+                bronze_bill.get('relevance'),
+                'discussed',  # Default action
+                'gemini_ai_extraction',
+                0.60
+            ))
+    
+    def _insert_local_bill(self, prod_conn, bronze_bill: Dict) -> str:
+        """Insert local ordinance/resolution not tracked by OpenStates"""
+        
+        if self.dry_run:
+            logger.info(f"[DRY RUN] Would insert local bill: {bronze_bill['title']}")
+            return 'inserted'
+        
+        # Generate a bill number for local ordinances
+        # Use official_number if available, otherwise generate from ID
+        bill_number = bronze_bill.get('official_number')
+        if not bill_number or bill_number.strip() == '':
+            bill_number = f"LOCAL-ORD-{bronze_bill['id']}"
+        
+        with prod_conn.cursor() as cur:
+            cur.execute("""
+                INSERT INTO bills_search (
+                    bill_id, bill_number, title, classification,
+                    session, jurisdiction_name, state_code, state,
+                    latest_action_description,
+                    datasource, datasource_id, confidence_score,
+                    is_local_ordinance, verified, last_synced
+                ) VALUES (
+                    %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s
+                )
+                RETURNING id
+            """, (
+                f"local-{bronze_bill['id']}",  # Generate local ID
+                bill_number,
+                bronze_bill.get('title'),
+                bronze_bill.get('leg_type', 'ordinance'),
+                str(bronze_bill.get('year', '')) + 'rs',
+                bronze_bill.get('jurisdiction'),
+                bronze_bill.get('jurisdiction', '')[:2].upper(),  # State code guess
+                None,  # State full name
+                f"Discussed in meeting (event {bronze_bill['source_event_id']})",
+                'gemini_ai_extraction',
+                None,
+                0.60,
+                True,  # Mark as local ordinance
+                False,
+                datetime.now()
+            ))
+            
+            new_bill_id = cur.fetchone()[0]
+            
+            # Add meeting context
+            self._add_bill_meeting_context(prod_conn, new_bill_id, bronze_bill)
+        
+        logger.info(f"📝 Inserted local ordinance: {bronze_bill['title'][:50]}...")
+        return 'inserted'
     
     def generate_duplicate_report(self):
         """Generate report of potential duplicates for manual review"""
@@ -465,10 +785,10 @@ def main():
             merger.merge_contacts()
         
         if args.entity in ['organizations', 'all']:
-            logger.info("\n⏳ Organizations merge not yet implemented")
+            merger.merge_organizations()
         
         if args.entity in ['bills', 'all']:
-            logger.info("\n⏳ Bills merge not yet implemented")
+            merger.merge_bills()
         
         logger.info("")
         logger.info("=" * 70)
