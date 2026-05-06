@@ -65,6 +65,7 @@ This page documents all data sources, standards, and research contributions used
 **In this section:**
 - [MeetingBank Dataset](#meetingbank-dataset)
 - [LocalView Dataset (Harvard Dataverse)](#localview-dataset-harvard-dataverse)
+- [Measuring Conflict in Local Politics](#measuring-conflict-in-local-politics)
 - [Council Data Project (CDP)](#council-data-project-cdp)
 - [City Scrapers / Documenters.org](#city-scrapers--documentersorg)
 - [Roper Center for Public Opinion Research](#roper-center-for-public-opinion-research)
@@ -127,6 +128,54 @@ This page documents all data sources, standards, and research contributions used
   url = {https://www.localview.net/}
 }
 ```
+
+---
+
+### Measuring Conflict in Local Politics
+
+**Authors:** Tyler Simko, Mirya Holman, and Rebecca Johnson  
+**What we use:** Methodologies and frameworks for analyzing political conflict, deliberation quality, and civic engagement in local government meetings.
+
+**Citation (Original Version):**
+> Simko, T., Holman, M., & Johnson, R. (2024). Measuring Conflict in Local Politics. EdWorkingPapers.com. https://edworkingpapers.com/sites/default/files/ai24-1102.pdf
+
+**Citation (Version 2):**
+> Simko, T., Holman, M., & Johnson, R. (2025). Measuring Conflict in Local Politics (Version 2). EdWorkingPapers.com. https://edworkingpapers.com/sites/default/files/ai25-1102_v2.pdf
+
+**Resources:**
+- [📄 Paper (2024)](https://edworkingpapers.com/sites/default/files/ai24-1102.pdf)
+- [📄 Paper (Version 2, 2025)](https://edworkingpapers.com/sites/default/files/ai25-1102_v2.pdf)
+- [🔗 EdWorkingPapers.com](https://edworkingpapers.com/)
+
+**BibTeX:**
+```bibtex
+@techreport{simko2024measuring,
+  author = {Simko, Tyler and Holman, Mirya and Johnson, Rebecca},
+  title = {Measuring Conflict in Local Politics},
+  year = {2024},
+  institution = {EdWorkingPapers.com},
+  number = {ai24-1102},
+  url = {https://edworkingpapers.com/sites/default/files/ai24-1102.pdf}
+}
+
+@techreport{simko2025measuring,
+  author = {Simko, Tyler and Holman, Mirya and Johnson, Rebecca},
+  title = {Measuring Conflict in Local Politics},
+  year = {2025},
+  institution = {EdWorkingPapers.com},
+  number = {ai25-1102},
+  version = {2},
+  url = {https://edworkingpapers.com/sites/default/files/ai25-1102_v2.pdf}
+}
+```
+
+**Research Contributions:**
+- Frameworks for measuring political conflict in municipal governments
+- Methods for analyzing deliberation quality in public meetings
+- Quantitative approaches to civic engagement assessment
+- Applications for local government transparency and accountability
+
+**License:** Academic research publication
 
 ---
 

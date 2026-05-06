@@ -1,3 +1,7 @@
+---
+sidebar_position: 10
+---
+
 # Search Update Summary - Topics, Bills & Decisions
 
 ## ✅ What Was Updated
@@ -267,8 +271,8 @@ Results: Mixed results from all education-related entities
 ## 📚 Documentation
 
 For more details, see:
-- [Bronze to Production Merge](website/docs/development/bronze-to-production-merge.md)
-- [Policy Analysis Prompt](prompts/policy_analysis.md)
+- [Bronze to Production Merge](bronze-to-production-merge.md)
+- [Policy Analysis Prompt](../../prompts/policy_analysis.md)
 - [Search API Documentation](http://localhost:8000/docs)
 
 ---
