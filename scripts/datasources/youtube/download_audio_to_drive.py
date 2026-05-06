@@ -106,6 +106,17 @@ class YouTubeAudioDownloader:
         self.reorganize = reorganize
         self.cookies_file = cookies_file
         
+        # Validate cookies file if provided
+        if self.cookies_file:
+            cookie_path = Path(self.cookies_file)
+            if cookie_path.exists():
+                logger.info(f"🍪 Cookies enabled: Using authentication file ({cookie_path.stat().st_size} bytes)")
+            else:
+                logger.warning(f"⚠️  Cookies file not found - downloads may fail due to bot detection")
+                logger.warning(f"   Provided: [REDACTED] (file does not exist)")
+        else:
+            logger.info("🔓 Cookies disabled: Downloads may be rate-limited or blocked")
+        
         # Create output directory
         self.output_dir.mkdir(parents=True, exist_ok=True)
         
@@ -290,6 +301,7 @@ class YouTubeAudioDownloader:
             # Add cookies if provided (to avoid YouTube bot detection)
             if self.cookies_file:
                 ydl_opts['cookiefile'] = self.cookies_file
+                logger.debug(f"  🍪 Using cookies for authentication (bot detection bypass)")
             
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                 ydl.download([video['video_url']])
