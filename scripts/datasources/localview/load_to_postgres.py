@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """
-Load LocalView Meeting Data into PostgreSQL events_search table
+Load LocalView Meeting Data into bronze.bronze_events_localview table
 
 This script reads all LocalView parquet files and inserts meeting data
-into the events_search table in the open_navigator database.
+into the bronze.bronze_events_localview table following the medallion architecture.
 """
 import os
 import sys
@@ -54,8 +54,17 @@ def construct_youtube_url(vid_id: str) -> str:
     return f"https://www.youtube.com/watch?v={vid_id}"
 
 
-def row_to_event(row: pd.Series) -> Dict[str, Any]:
-    """Convert LocalView row to events_search format."""
+def extract_channel_id_from_url(video_url: str) -> str:
+    """Extract YouTube channel ID from video URL."""
+    if pd.isna(video_url):
+        return None
+    # We'll need to query YouTube API or lookup from existing data
+    # For now, return None - will be enriched later
+    return None
+
+
+def row_to_event(row: pd.Series, row_index: int) -> Dict[str, Any]:
+    """Convert LocalView row to bronze_events_localview format."""
     # Parse meeting date
     event_date = None
     if pd.notna(row.get('meeting_date')):
@@ -64,16 +73,8 @@ def row_to_event(row: pd.Series) -> Dict[str, Any]:
         except:
             pass
     
-    # Build description from video description and place info
-    description_parts = []
-    if pd.notna(row.get('vid_desc')):
-        description_parts.append(row['vid_desc'])
-    if pd.notna(row.get('place_govt')):
-        description_parts.append(f"Government body: {row['place_govt']}")
-    if pd.notna(row.get('acs_18_pop')):
-        description_parts.append(f"Population: {int(row['acs_18_pop']):,}")
-    
-    description = '\n\n'.join(description_parts) if description_parts else None
+    # Get video URL
+    video_url = construct_youtube_url(row.get('vid_id'))
     
     # Extract title - use video title or create from place + date
     title = row.get('vid_title')
@@ -82,22 +83,33 @@ def row_to_event(row: pd.Series) -> Dict[str, Any]:
         date_str = event_date.strftime('%B %d, %Y') if event_date else ''
         title = f"{place} Meeting - {date_str}" if date_str else f"{place} Meeting"
     
+    # Get state info
+    state_name = row.get('state_name')
+    state_code = get_state_abbrev(state_name)
+    
+    # Generate event_id from video_id
+    vid_id = row.get('vid_id')
+    event_id = hash(f"localview_{vid_id}") % 2147483647 if pd.notna(vid_id) else None
+    
+    # Get jurisdiction info
+    jurisdiction_name = row.get('place_name')
+    
     return {
-        'title': title[:500] if title else 'City Council Meeting',  # Limit length
-        'description': description,
+        'event_id': event_id,
         'event_date': event_date,
-        'event_time': None,  # LocalView doesn't have specific times
-        'jurisdiction_name': row.get('place_name'),
+        'jurisdiction_name': jurisdiction_name,
         'jurisdiction_type': 'city',  # LocalView is municipal data
-        'state': get_state_abbrev(row.get('state_name')),
+        'jurisdiction_id': None,  # Will be enriched later
         'city': row.get('place_name'),
-        'location': None,  # Not provided in LocalView
+        'state_code': state_code,
+        'state': state_name,
         'meeting_type': row.get('place_govt', 'City Council'),
-        'status': 'completed',  # All historical meetings
-        'agenda_url': None,
-        'minutes_url': None,  # Caption text is in description
-        'video_url': construct_youtube_url(row.get('vid_id')),
-        'source': 'localview'
+        'title': title[:500] if title else 'City Council Meeting',  # Limit length
+        'video_url': video_url,
+        'channel_id': extract_channel_id_from_url(video_url),  # Will be enriched later
+        'datasource': 'localview',
+        'datasource_id': vid_id,  # YouTube video ID
+        'loaded_at': datetime.now()
     }
 
 
@@ -117,22 +129,20 @@ def load_parquet_file(filepath: Path, conn, batch_size: int = 1000) -> int:
         return 0
     
     # Convert to events
-    events = [row_to_event(row) for _, row in df_valid.iterrows()]
+    events = [row_to_event(row, idx) for idx, row in df_valid.iterrows()]
     
-    # Insert into database in batches
+    # Insert into bronze table in batches
     insert_query = """
-        INSERT INTO events_search (
-            title, description, event_date, event_time,
-            jurisdiction_name, jurisdiction_type, state, city,
-            location, meeting_type, status,
-            agenda_url, minutes_url, video_url, source
+        INSERT INTO bronze.bronze_events_localview (
+            event_id, event_date, jurisdiction_name, jurisdiction_type,
+            jurisdiction_id, city, state_code, state, meeting_type,
+            title, video_url, channel_id, datasource, datasource_id, loaded_at
         ) VALUES (
-            %(title)s, %(description)s, %(event_date)s, %(event_time)s,
-            %(jurisdiction_name)s, %(jurisdiction_type)s, %(state)s, %(city)s,
-            %(location)s, %(meeting_type)s, %(status)s,
-            %(agenda_url)s, %(minutes_url)s, %(video_url)s, %(source)s
+            %(event_id)s, %(event_date)s, %(jurisdiction_name)s, %(jurisdiction_type)s,
+            %(jurisdiction_id)s, %(city)s, %(state_code)s, %(state)s, %(meeting_type)s,
+            %(title)s, %(video_url)s, %(channel_id)s, %(datasource)s, %(datasource_id)s, %(loaded_at)s
         )
-        ON CONFLICT DO NOTHING
+        ON CONFLICT (event_id) DO NOTHING
     """
     
     cursor = conn.cursor()
@@ -197,7 +207,7 @@ def main():
         
         # Get final count
         cursor = conn.cursor()
-        cursor.execute("SELECT COUNT(*) FROM events_search WHERE source = 'localview'")
+        cursor.execute("SELECT COUNT(*) FROM bronze.bronze_events_localview WHERE datasource = 'localview'")
         final_count = cursor.fetchone()[0]
         cursor.close()
         

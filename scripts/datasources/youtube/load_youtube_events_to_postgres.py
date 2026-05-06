@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
 """
-Load YouTube Events from jurisdictions_details_search to events_search
+Load YouTube Events to bronze.bronze_events_youtube
 
 This script:
 1. Reads YouTube channels from jurisdictions_details_search.youtube_channels (JSONB)
 2. For each channel, fetches videos using YouTube API or yt-dlp fallback
 3. Fetches video transcripts (captions/subtitles) from YouTube
-4. Incrementally adds/updates events in events_search table
-5. Stores video transcripts in bronze.bronze_events_text_ai table (bronze layer)
+4. Incrementally adds/updates events in bronze.bronze_events_youtube table (bronze layer)
+5. Stores video transcripts in bronze.bronze_transcripts_raw table (bronze layer)
 6. Links events to jurisdictions via jurisdiction_id
 
 Usage:
@@ -68,13 +68,13 @@ YOUTUBE_API_KEY = os.getenv('YOUTUBE_API_KEY')
 
 
 class YouTubeEventsLoader:
-    """Load YouTube videos from jurisdictions into events_search table."""
+    """Load YouTube videos from jurisdictions into bronze.bronze_events_youtube table."""
     
     def __init__(
         self,
         database_url: str,
         youtube_api_key: Optional[str] = None,
-        max_videos_per_channel: int = 100,
+        max_videos_per_channel: int = 200,
         days_lookback: Optional[int] = None,
         fetch_transcripts: bool = True,
         force_full_fetch: bool = False,
@@ -630,16 +630,18 @@ class YouTubeEventsLoader:
         channel_id: str,
         channel_type: str = 'unknown'
     ) -> Dict[str, Any]:
-        """Convert YouTube video metadata to events_search record format."""
+        """Convert YouTube video metadata to bronze_events_youtube record format."""
         
         # Parse published date
         event_date = None
         event_time = None
+        published_at = None
         if video.get('published_at'):
             try:
                 dt = pd.to_datetime(video['published_at'])
                 event_date = dt.date()
                 event_time = dt.time()
+                published_at = dt  # Keep full timestamp for bronze layer
             except:
                 pass
         
@@ -655,7 +657,13 @@ class YouTubeEventsLoader:
         # Construct channel URL
         channel_url = f"https://www.youtube.com/channel/{channel_id}" if channel_id else None
         
+        # Generate event_id from video_id hash
+        video_id = video.get('video_id')
+        event_id = hash(f"youtube_{video_id}") % 2147483647 if video_id else None
+        
         return {
+            'event_id': event_id,
+            'video_id': video_id,
             'jurisdiction_id': jurisdiction_id,
             'channel_id': channel_id,
             'channel_url': channel_url,
@@ -663,6 +671,7 @@ class YouTubeEventsLoader:
             'description': description,
             'event_date': event_date,
             'event_time': event_time,
+            'published_at': published_at,
             'jurisdiction_name': jurisdiction_name,
             'jurisdiction_type': jurisdiction_type,
             'state_code': state_code,
@@ -671,18 +680,15 @@ class YouTubeEventsLoader:
             'location': None,
             'location_description': video.get('location_description'),
             'meeting_type': video.get('meeting_type', 'YouTube Video'),
-            'status': 'completed',
-            'agenda_url': None,
-            'minutes_url': None,
             'video_url': video.get('video_url'),
             'view_count': video.get('view_count'),
             'duration_minutes': video.get('duration_minutes'),
             'like_count': video.get('like_count'),
             'language': video.get('language', 'en'),
             'channel_type': channel_type,
-            'source': 'youtube',
-            'last_updated': datetime.now(),
-            'video_id': video.get('video_id')  # Store video_id for transcript linking
+            'datasource': 'youtube',
+            'datasource_id': video_id,  # YouTube video ID
+            'last_updated': datetime.now()
         }
     
     def fetch_transcript_ytdlp(self, video_id: str) -> Optional[Dict[str, Any]]:
@@ -923,30 +929,31 @@ class YouTubeEventsLoader:
                 return None
     
     def insert_events(self, events: List[Dict[str, Any]], batch_size: int = 500) -> int:
-        """Insert events into events_search table."""
+        """Insert events into bronze.bronze_events_youtube table."""
         if not events:
             return 0
         
         insert_query = """
-            INSERT INTO events_search (
-                jurisdiction_id, channel_id, channel_url, title, description, event_date, event_time,
+            INSERT INTO bronze.bronze_events_youtube (
+                event_id, video_id, jurisdiction_id, channel_id, channel_url, 
+                title, description, event_date, event_time, published_at,
                 jurisdiction_name, jurisdiction_type, state_code, state, city,
-                location, location_description, meeting_type, status,
-                agenda_url, minutes_url, video_url,
-                view_count, duration_minutes, like_count,
-                language, channel_type,
-                source, last_updated
+                location, location_description, meeting_type,
+                video_url, view_count, duration_minutes, like_count,
+                language, channel_type, datasource, datasource_id, last_updated
             ) VALUES (
-                %(jurisdiction_id)s, %(channel_id)s, %(channel_url)s, %(title)s, %(description)s, %(event_date)s, %(event_time)s,
+                %(event_id)s, %(video_id)s, %(jurisdiction_id)s, %(channel_id)s, %(channel_url)s,
+                %(title)s, %(description)s, %(event_date)s, %(event_time)s, %(published_at)s,
                 %(jurisdiction_name)s, %(jurisdiction_type)s, %(state_code)s, %(state)s, %(city)s,
-                %(location)s, %(location_description)s, %(meeting_type)s, %(status)s,
-                %(agenda_url)s, %(minutes_url)s, %(video_url)s,
-                %(view_count)s, %(duration_minutes)s, %(like_count)s,
-                %(language)s, %(channel_type)s,
-                %(source)s, %(last_updated)s
+                %(location)s, %(location_description)s, %(meeting_type)s,
+                %(video_url)s, %(view_count)s, %(duration_minutes)s, %(like_count)s,
+                %(language)s, %(channel_type)s, %(datasource)s, %(datasource_id)s, %(last_updated)s
             )
-            ON CONFLICT DO NOTHING
-            RETURNING id
+            ON CONFLICT (video_id) DO UPDATE SET
+                view_count = EXCLUDED.view_count,
+                like_count = EXCLUDED.like_count,
+                last_updated = EXCLUDED.last_updated
+            RETURNING id, event_id, video_id
         """
         
         cursor = self.conn.cursor()
@@ -959,8 +966,7 @@ class YouTubeEventsLoader:
                 cursor.execute(insert_query, event)
                 result = cursor.fetchone()
                 if result:
-                    event_id = result[0]
-                    video_id = event.get('video_id')
+                    db_id, event_id, video_id = result
                     if video_id:
                         event_ids[video_id] = event_id
                     inserted += 1
@@ -1097,10 +1103,10 @@ class YouTubeEventsLoader:
             # Get the most recent last_updated timestamp for this specific channel
             cursor.execute("""
                 SELECT MAX(last_updated) 
-                FROM events_search 
+                FROM bronze.bronze_events_youtube 
                 WHERE jurisdiction_id = %s
                 AND channel_id = %s
-                AND source = 'youtube'
+                AND datasource = 'youtube'
                 AND video_url IS NOT NULL
             """, (jurisdiction_id, channel_id))
             
