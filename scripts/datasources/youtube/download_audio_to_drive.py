@@ -321,7 +321,9 @@ class YouTubeAudioDownloader:
             # Add cookies if provided (to avoid YouTube bot detection)
             if self.cookies_file:
                 ydl_opts['cookiefile'] = self.cookies_file
-                logger.debug(f"  🍪 Using cookies for authentication (bot detection bypass)")                logger.debug(f"   Cookie file passed to yt-dlp: {self.cookies_file}")            
+                logger.debug(f"  🍪 Using cookies for authentication (bot detection bypass)")
+                logger.debug(f"   Cookie file passed to yt-dlp: {self.cookies_file}")
+            
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                 ydl.download([video['video_url']])
             
