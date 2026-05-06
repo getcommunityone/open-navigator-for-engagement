@@ -3,11 +3,11 @@
 Load YouTube Events to bronze.bronze_events_youtube
 
 This script:
-1. Reads YouTube channels from jurisdictions_details_search.youtube_channels (JSONB)
-2. For each channel, fetches videos using YouTube API or yt-dlp fallback
+1. Reads YouTube channels from bronze.bronze_events_youtube (existing videos with channel data)
+2. For each channel, fetches new videos using YouTube API or yt-dlp fallback
 3. Fetches video transcripts (captions/subtitles) from YouTube
 4. Incrementally adds/updates events in bronze.bronze_events_youtube table (bronze layer)
-5. Stores video transcripts in bronze.bronze_transcripts_raw table (bronze layer)
+5. Stores video transcripts in bronze.bronze_events_text_ai table (bronze layer)
 6. Links events to jurisdictions via jurisdiction_id
 
 Usage:
@@ -313,12 +313,12 @@ class YouTubeEventsLoader:
             cursor.close()
     
     def _create_events_channels_search_table(self):
-        """Create events_channels_search table if it doesn't exist."""
+        """Create bronze.bronze_events_channels table if it doesn't exist."""
         cursor = self.conn.cursor()
         
         try:
             cursor.execute("""
-                CREATE TABLE IF NOT EXISTS events_channels_search (
+                CREATE TABLE IF NOT EXISTS bronze.bronze_events_channels (
                     id SERIAL PRIMARY KEY,
                     channel_id VARCHAR(50) UNIQUE NOT NULL,
                     channel_url TEXT NOT NULL,
@@ -357,26 +357,26 @@ class YouTubeEventsLoader:
             # Create indexes
             cursor.execute("""
                 CREATE INDEX IF NOT EXISTS idx_channels_channel_id 
-                ON events_channels_search(channel_id);
+                ON bronze.bronze_events_channels(channel_id);
             """)
             
             cursor.execute("""
                 CREATE INDEX IF NOT EXISTS idx_channels_in_localview 
-                ON events_channels_search(in_localview);
+                ON bronze.bronze_events_channels(in_localview);
             """)
             
             cursor.execute("""
                 CREATE INDEX IF NOT EXISTS idx_channels_is_government 
-                ON events_channels_search(is_government);
+                ON bronze.bronze_events_channels(is_government);
             """)
             
             cursor.execute("""
                 CREATE INDEX IF NOT EXISTS idx_channels_flagged 
-                ON events_channels_search(flagged_as_junk);
+                ON bronze.bronze_events_channels(flagged_as_junk);
             """)
             
             self.conn.commit()
-            logger.success("✓ Ensured events_channels_search table exists")
+            logger.success("✓ Ensured bronze.bronze_events_channels table exists")
             
         except Exception as e:
             self.conn.rollback()
@@ -403,8 +403,8 @@ class YouTubeEventsLoader:
             # Check if channel exists in LocalView (events with same channel_id from localview source)
             cursor.execute("""
                 SELECT EXISTS(
-                    SELECT 1 FROM events_search 
-                    WHERE channel_id = %s AND source = 'localview'
+                    SELECT 1 FROM bronze.bronze_events_localview 
+                    WHERE channel_id = %s AND datasource = 'localview'
                 )
             """, (channel_id,))
             in_localview = cursor.fetchone()[0]
@@ -417,7 +417,7 @@ class YouTubeEventsLoader:
             }
             
             cursor.execute("""
-                INSERT INTO events_channels_search (
+                INSERT INTO bronze.bronze_events_channels (
                     channel_id, channel_url, channel_title, channel_type,
                     in_localview, in_jurisdictions_details,
                     discovery_method, discovery_date, confidence_score,
@@ -429,16 +429,16 @@ class YouTubeEventsLoader:
                     %s::jsonb, CURRENT_TIMESTAMP
                 )
                 ON CONFLICT (channel_id) DO UPDATE SET
-                    channel_title = COALESCE(EXCLUDED.channel_title, events_channels_search.channel_title),
-                    channel_type = COALESCE(EXCLUDED.channel_type, events_channels_search.channel_type),
-                    in_localview = EXCLUDED.in_localview OR events_channels_search.in_localview,
+                    channel_title = COALESCE(EXCLUDED.channel_title, bronze.bronze_events_channels.channel_title),
+                    channel_type = COALESCE(EXCLUDED.channel_type, bronze.bronze_events_channels.channel_type),
+                    in_localview = EXCLUDED.in_localview OR bronze.bronze_events_channels.in_localview,
                     in_jurisdictions_details = TRUE,
-                    confidence_score = COALESCE(EXCLUDED.confidence_score, events_channels_search.confidence_score),
+                    confidence_score = COALESCE(EXCLUDED.confidence_score, bronze.bronze_events_channels.confidence_score),
                     jurisdictions = CASE
-                        WHEN events_channels_search.jurisdictions IS NULL THEN %s::jsonb
-                        WHEN NOT events_channels_search.jurisdictions @> %s::jsonb 
-                        THEN events_channels_search.jurisdictions || %s::jsonb
-                        ELSE events_channels_search.jurisdictions
+                        WHEN bronze.bronze_events_channels.jurisdictions IS NULL THEN %s::jsonb
+                        WHEN NOT bronze.bronze_events_channels.jurisdictions @> %s::jsonb 
+                        THEN bronze.bronze_events_channels.jurisdictions || %s::jsonb
+                        ELSE bronze.bronze_events_channels.jurisdictions
                     END,
                     last_updated = CURRENT_TIMESTAMP
             """, (
@@ -460,21 +460,30 @@ class YouTubeEventsLoader:
             cursor.close()
     
     def get_jurisdictions_with_youtube(self, states_filter: Optional[List[str]] = None) -> List[Dict]:
-        """Get all jurisdictions that have YouTube channels."""
+        """Get all jurisdictions that have YouTube channels from bronze.bronze_events_youtube."""
         cursor = self.conn.cursor(cursor_factory=RealDictCursor)
         
+        # Aggregate YouTube channels from existing bronze_events_youtube table
+        # This gives us all jurisdictions that have YouTube videos
         query = """
             SELECT 
-                jurisdiction_id,
+                COALESCE(jurisdiction_id, 'unknown') as jurisdiction_id,
                 jurisdiction_name,
                 state_code,
                 state,
                 jurisdiction_type,
-                youtube_channels,
-                youtube_channel_count
-            FROM jurisdictions_details_search
-            WHERE youtube_channel_count > 0
-                AND youtube_channels IS NOT NULL
+                -- Aggregate channel data as JSONB array (mimics youtube_channels field)
+                jsonb_agg(
+                    DISTINCT jsonb_build_object(
+                        'channel_id', channel_id,
+                        'channel_url', channel_url,
+                        'channel_title', jurisdiction_name
+                    )
+                ) as youtube_channels,
+                COUNT(DISTINCT channel_id) as youtube_channel_count
+            FROM bronze.bronze_events_youtube
+            WHERE channel_id IS NOT NULL
+                AND jurisdiction_name IS NOT NULL
         """
         
         params = []
@@ -482,7 +491,11 @@ class YouTubeEventsLoader:
             query += " AND state_code = ANY(%s)"
             params.append(states_filter)
         
-        query += " ORDER BY youtube_channel_count DESC, jurisdiction_name"
+        query += """
+            GROUP BY jurisdiction_id, jurisdiction_name, state_code, state, jurisdiction_type
+            HAVING COUNT(DISTINCT channel_id) > 0
+            ORDER BY youtube_channel_count DESC, jurisdiction_name
+        """
         
         cursor.execute(query, params)
         jurisdictions = cursor.fetchall()
@@ -492,13 +505,13 @@ class YouTubeEventsLoader:
         return jurisdictions
     
     def is_channel_flagged(self, channel_id: str) -> tuple[bool, str]:
-        """Check if channel is flagged as junk in events_channels_search."""
+        """Check if channel is flagged as junk in bronze.bronze_events_channels."""
         cursor = self.conn.cursor()
         
         try:
             cursor.execute("""
                 SELECT flagged_as_junk, flag_reason, is_government
-                FROM events_channels_search
+                FROM bronze.bronze_events_channels
                 WHERE channel_id = %s
             """, (channel_id,))
             
@@ -1181,7 +1194,7 @@ class YouTubeEventsLoader:
             channel_url = channel.get('channel_url', f"https://www.youtube.com/channel/{channel_id}")
             channel_type = channel.get('channel_type', 'unknown')
             
-            # Track this channel in events_channels_search
+            # Track this channel in bronze.bronze_events_channels
             self.upsert_channel(
                 channel_id=channel_id,
                 channel_url=channel_url,
@@ -1308,8 +1321,7 @@ class YouTubeEventsLoader:
                 COUNT(DISTINCT state_code) as states,
                 MIN(event_date) as earliest_date,
                 MAX(event_date) as latest_date
-            FROM events_search 
-            WHERE source = 'youtube'
+            FROM bronze.bronze_events_youtube
         """)
         stats = cursor.fetchone()
         
@@ -1357,7 +1369,7 @@ class YouTubeEventsLoader:
         
         logger.info("")
         logger.info("Query examples:")
-        logger.info("  SELECT jurisdiction_name, COUNT(*) FROM events_search WHERE source='youtube' GROUP BY jurisdiction_name ORDER BY COUNT(*) DESC LIMIT 10")
+        logger.info("  SELECT jurisdiction_name, COUNT(*) FROM bronze.bronze_events_youtube GROUP BY jurisdiction_name ORDER BY COUNT(*) DESC LIMIT 10")
         logger.info("  SELECT COUNT(*) FROM bronze.bronze_events_text_ai")
         logger.info("")
         logger.info("View in app: http://localhost:5173/meetings")
