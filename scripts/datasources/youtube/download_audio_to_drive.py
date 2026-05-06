@@ -243,7 +243,37 @@ class YouTubeAudioDownloader:
         if video['event_date']:
             date_str = video['event_date'].strftime('%Y-%m-%d')
         else:
+            # Try to extract date from title as fallback
+            title = video['title']
+            # Match patterns like "5-23-2023", "05-23-2023", "5/23/2023", "2023-05-23"
+            date_patterns = [
+                r'(\d{4})-(\d{1,2})-(\d{1,2})',  # 2023-05-23 or 2023-5-23
+                r'(\d{1,2})-(\d{1,2})-(\d{4})',  # 5-23-2023 or 05-23-2023
+                r'(\d{1,2})/(\d{1,2})/(\d{4})',  # 5/23/2023 or 05/23/2023
+            ]
+            
             date_str = 'unknown-date'
+            for pattern in date_patterns:
+                match = re.search(pattern, title)
+                if match:
+                    groups = match.groups()
+                    try:
+                        # Determine if year is first or last
+                        if len(groups[0]) == 4:  # YYYY-MM-DD format
+                            year, month, day = int(groups[0]), int(groups[1]), int(groups[2])
+                        else:  # MM-DD-YYYY or MM/DD/YYYY format
+                            month, day, year = int(groups[0]), int(groups[1]), int(groups[2])
+                        
+                        # Validate date
+                        parsed_date = datetime(year, month, day)
+                        date_str = parsed_date.strftime('%Y-%m-%d')
+                        logger.debug(f"   📅 Extracted date from title: {date_str}")
+                        break
+                    except (ValueError, IndexError):
+                        continue
+            
+            if date_str == 'unknown-date':
+                logger.warning(f"   ⚠️  No valid date found in database or title: {title[:50]}...")
         
         # Sanitize title
         safe_title = self.sanitize_filename(video['title'], max_length=80)
@@ -320,6 +350,18 @@ class YouTubeAudioDownloader:
                 'quiet': True,
                 'no_warnings': True,
                 'extract_flat': False,
+                # Anti-bot detection measures
+                'user_agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                'referer': 'https://www.youtube.com/',
+                'http_headers': {
+                    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+                    'Accept-Language': 'en-us,en;q=0.5',
+                    'Sec-Fetch-Mode': 'navigate',
+                },
+                # Retry on failures
+                'retries': 3,
+                'fragment_retries': 3,
+                'skip_unavailable_fragments': False,
             }
             
             # Add cookies if provided (to avoid YouTube bot detection)
