@@ -12,7 +12,7 @@ sources:
           - name: id
             description: "Primary key"
           - name: source_event_id
-            description: "Foreign key to bronze_events"
+            description: "Foreign key to bronze_events_localview"
           - name: source_ai_model
             description: "AI model used (e.g., gemini-1.5-flash)"
           - name: person_id
@@ -66,8 +66,24 @@ sources:
           - name: outcome
           - name: extracted_at
           
-      - name: bronze_events
-        description: "Meeting events with jurisdiction data (loaded from events_search)"
+      - name: bronze_topics
+        description: "Topics extracted from meeting transcripts and agendas"
+        columns:
+          - name: id
+          - name: topic_id
+          - name: topic_name
+          - name: category
+          
+      - name: bronze_causes
+        description: "Policy causes and advocacy categories"
+        columns:
+          - name: id
+          - name: cause_id
+          - name: cause_name
+          - name: description
+          
+      - name: bronze_events_localview
+        description: "Meeting events with jurisdiction data (primarily from LocalView and YouTube)"
         columns:
           - name: id
           - name: event_id
@@ -139,6 +155,22 @@ sources:
           - name: item_description
           - name: extracted_at
           
+      - name: bronze_organizations_nonprofits
+        description: "Consolidated nonprofit organization data from multiple sources"
+        columns:
+          - name: ein
+            description: "Employer Identification Number (primary key)"
+          - name: irs_id
+          - name: org_name
+          - name: city
+          - name: state_code
+          - name: zip_code
+          - name: ntee_cd
+            description: "NTEE classification code"
+          - name: irs_asset_amt
+          - name: irs_income_amt
+          - name: irs_revenue_amt
+          
       - name: bronze_organizations_nonprofits_irs
         description: "IRS Business Master File (BMF) nonprofit data - 1.95M organizations"
         columns:
@@ -170,6 +202,25 @@ sources:
             description: "Census Core Based Statistical Area"
           - name: f990_total_revenue_recent
           - name: f990_total_assets_recent
+      
+      - name: bronze_organizations_nonprofits_nccs_history
+        description: "Historical NCCS nonprofit data for time-series analysis"
+        columns:
+          - name: ein
+          - name: year
+          - name: total_revenue
+          - name: total_assets
+      
+      - name: bronze_jurisdictions
+        description: "Master list of jurisdictions (cities, counties, states)"
+        columns:
+          - name: jurisdiction_id
+            description: "Primary key"
+          - name: jurisdiction_name
+          - name: jurisdiction_type
+          - name: state_code
+          - name: county_fips
+          - name: website_url
       
       - name: bronze_jurisdictions_postal_codes
         description: "Census ZIP Code Tabulation Areas (ZCTAs) - 33,791 geographic areas"
@@ -219,8 +270,8 @@ sources:
           - name: areawater_part
             description: "Water area of ZCTA part in this county (sq meters)"
       
-      - name: bronze_events_search
-        description: "Meeting events from LocalView, YouTube, Legistar - raw data before deduplication. CDP-compatible schema: https://councildataproject.org/"
+      - name: bronze_events_cdp
+        description: "Meeting events from Council Data Project - CDP-compatible schema: https://councildataproject.org/"
         columns:
           - name: id
             description: "Primary key"
@@ -366,12 +417,12 @@ models:
   - name: stg_bronze_bills
     description: "Staged bronze bills"
   
-  - name: stg_bronze_events_search
+  - name: stg_bronze_events_cdp
     description: |
-      Staged and cleaned meeting events from multiple sources.
+      Staged and cleaned Council Data Project (CDP) events.
       Applies basic quality filters and normalization before deduplication in marts layer.
       
-      Sources: LocalView, YouTube, Legistar, Granicus
+      Source: Council Data Project instances (Seattle, Portland, Boston, etc.)
     columns:
       - name: bronze_event_id
         description: "Original bronze table ID"

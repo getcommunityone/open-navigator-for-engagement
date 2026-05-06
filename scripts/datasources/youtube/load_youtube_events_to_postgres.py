@@ -7,7 +7,7 @@ This script:
 2. For each channel, fetches videos using YouTube API or yt-dlp fallback
 3. Fetches video transcripts (captions/subtitles) from YouTube
 4. Incrementally adds/updates events in events_search table
-5. Stores video transcripts in events_text_search table
+5. Stores video transcripts in bronze.bronze_events_text_ai table (bronze layer)
 6. Links events to jurisdictions via jurisdiction_id
 
 Usage:
@@ -106,7 +106,7 @@ class YouTubeEventsLoader:
         
         # Ensure tables and columns exist
         self._add_jurisdiction_id_column()
-        self._create_events_text_search_table()
+        self._create_bronze_events_text_ai_table()
         self._create_events_channels_search_table()
     
     def _add_jurisdiction_id_column(self):
@@ -213,13 +213,17 @@ class YouTubeEventsLoader:
         finally:
             cursor.close()
     
-    def _create_events_text_search_table(self):
-        """Create events_text_search table if it doesn't exist."""
+    def _create_bronze_events_text_ai_table(self):
+        """Create bronze.bronze_events_text_ai table if it doesn't exist."""
         cursor = self.conn.cursor()
         
         try:
+            # Create bronze schema if it doesn't exist
+            cursor.execute("CREATE SCHEMA IF NOT EXISTS bronze;")
+            
+            # Create table matching migration 004 schema
             cursor.execute("""
-                CREATE TABLE IF NOT EXISTS events_text_search (
+                CREATE TABLE IF NOT EXISTS bronze.bronze_events_text_ai (
                     id SERIAL PRIMARY KEY,
                     event_id INTEGER,
                     video_id VARCHAR(20) NOT NULL,
@@ -228,55 +232,49 @@ class YouTubeEventsLoader:
                     language VARCHAR(10),
                     is_auto_generated BOOLEAN DEFAULT FALSE,
                     transcript_source VARCHAR(50),
+                    ai_model VARCHAR(100),
+                    ai_extraction_version VARCHAR(20),
+                    has_transcript BOOLEAN DEFAULT FALSE,
+                    transcript_quality VARCHAR(20),
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    UNIQUE(video_id)
+                    last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 );
-            """)
-            
-            # Add segments column if it doesn't exist (for existing tables)
-            cursor.execute("""
-                DO $$ 
-                BEGIN
-                    ALTER TABLE events_text_search 
-                    ADD COLUMN IF NOT EXISTS segments JSONB;
-                EXCEPTION
-                    WHEN duplicate_column THEN NULL;
-                END $$;
             """)
             
             # Create indexes
             cursor.execute("""
-                CREATE INDEX IF NOT EXISTS idx_events_text_event_id 
-                ON events_text_search(event_id);
+                CREATE INDEX IF NOT EXISTS idx_bronze_events_text_ai_event_id 
+                ON bronze.bronze_events_text_ai(event_id);
             """)
             
             cursor.execute("""
-                CREATE INDEX IF NOT EXISTS idx_events_text_video_id 
-                ON events_text_search(video_id);
+                CREATE INDEX IF NOT EXISTS idx_bronze_events_text_ai_video_id 
+                ON bronze.bronze_events_text_ai(video_id);
+            """)
+            
+            cursor.execute("""
+                CREATE UNIQUE INDEX IF NOT EXISTS idx_bronze_events_text_video_id_unique 
+                ON bronze.bronze_events_text_ai(video_id);
+            """)
+            
+            cursor.execute("""
+                CREATE INDEX IF NOT EXISTS idx_bronze_events_text_source 
+                ON bronze.bronze_events_text_ai(transcript_source);
+            """)
+            
+            cursor.execute("""
+                CREATE INDEX IF NOT EXISTS idx_bronze_events_text_quality 
+                ON bronze.bronze_events_text_ai(has_transcript, transcript_quality);
             """)
             
             # Full-text search index on raw_text
             cursor.execute("""
-                CREATE INDEX IF NOT EXISTS idx_events_text_search_gin 
-                ON events_text_search USING GIN (to_tsvector('english', COALESCE(raw_text, '')));
-            """)
-            
-            # Add foreign key constraint (optional - helps data integrity)
-            cursor.execute("""
-                DO $$ 
-                BEGIN
-                    ALTER TABLE events_text_search 
-                    ADD CONSTRAINT fk_events_text_event
-                    FOREIGN KEY (event_id) 
-                    REFERENCES events_search(id)
-                    ON DELETE CASCADE;
-                EXCEPTION
-                    WHEN duplicate_object THEN NULL;
-                END $$;
+                CREATE INDEX IF NOT EXISTS idx_bronze_events_text_search_gin 
+                ON bronze.bronze_events_text_ai USING GIN (to_tsvector('english', COALESCE(raw_text, '')));
             """)
             
             self.conn.commit()
-            logger.success("✓ Ensured events_text_search table exists")
+            logger.success("✓ Ensured bronze.bronze_events_text_ai table exists")
             
         except Exception as e:
             self.conn.rollback()
@@ -996,14 +994,22 @@ class YouTubeEventsLoader:
         max_backoff = 60  # Maximum 60 seconds backoff
         
         insert_query = """
-            INSERT INTO events_text_search (
+            INSERT INTO bronze.bronze_events_text_ai (
                 event_id, video_id, raw_text, segments, language, 
-                is_auto_generated, transcript_source
+                is_auto_generated, transcript_source, has_transcript, transcript_quality
             ) VALUES (
                 %(event_id)s, %(video_id)s, %(raw_text)s, %(segments)s::jsonb, %(language)s,
-                %(is_auto_generated)s, %(transcript_source)s
+                %(is_auto_generated)s, %(transcript_source)s, %(has_transcript)s, %(transcript_quality)s
             )
-            ON CONFLICT (video_id) DO NOTHING
+            ON CONFLICT (video_id) DO UPDATE SET
+                raw_text = EXCLUDED.raw_text,
+                segments = EXCLUDED.segments,
+                language = EXCLUDED.language,
+                is_auto_generated = EXCLUDED.is_auto_generated,
+                transcript_source = EXCLUDED.transcript_source,
+                has_transcript = EXCLUDED.has_transcript,
+                transcript_quality = EXCLUDED.transcript_quality,
+                last_updated = CURRENT_TIMESTAMP
         """
         
         try:
@@ -1046,6 +1052,14 @@ class YouTubeEventsLoader:
                         transcript_data['segments'] = json.dumps(transcript_data['segments'])
                     else:
                         transcript_data['segments'] = None
+                    
+                    # Add bronze schema fields
+                    transcript_data['has_transcript'] = bool(transcript_data.get('raw_text'))
+                    # Quality based on whether auto-generated or manual
+                    if transcript_data.get('is_auto_generated'):
+                        transcript_data['transcript_quality'] = 'medium'
+                    else:
+                        transcript_data['transcript_quality'] = 'high'
                     
                     cursor.execute(insert_query, transcript_data)
                     inserted += 1
@@ -1265,7 +1279,7 @@ class YouTubeEventsLoader:
         
         # Get transcript stats
         cursor.execute("""
-            SELECT COUNT(*) FROM events_text_search
+            SELECT COUNT(*) FROM bronze.bronze_events_text_ai
         """)
         transcript_count = cursor.fetchone()[0]
         cursor.close()
@@ -1308,7 +1322,7 @@ class YouTubeEventsLoader:
         logger.info("")
         logger.info("Query examples:")
         logger.info("  SELECT jurisdiction_name, COUNT(*) FROM events_search WHERE source='youtube' GROUP BY jurisdiction_name ORDER BY COUNT(*) DESC LIMIT 10")
-        logger.info("  SELECT COUNT(*) FROM events_text_search")
+        logger.info("  SELECT COUNT(*) FROM bronze.bronze_events_text_ai")
         logger.info("")
         logger.info("View in app: http://localhost:5173/meetings")
     

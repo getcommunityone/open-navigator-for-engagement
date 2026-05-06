@@ -3,7 +3,7 @@
 Load Council Data Project (CDP) Events to Bronze
 
 Fetches meeting events, sessions, and transcripts from CDP instances
-and loads them into bronze_events_search and bronze_events_text_ai tables.
+and loads them into bronze_events_cdp and bronze_events_text_ai tables.
 
 CDP Documentation: https://councildataproject.github.io/cdp-data/
 
@@ -119,14 +119,14 @@ def load_sessions_from_cdp(instance_slug: str, start_datetime: str, store_transc
 
 def transform_to_bronze_events(sessions_df: pd.DataFrame, instance_slug: str) -> pd.DataFrame:
     """
-    Transform CDP session data to bronze_events_search schema.
+    Transform CDP session data to bronze_events_cdp schema.
     
     Args:
         sessions_df: DataFrame from CDP get_session_dataset()
         instance_slug: CDP instance name for jurisdiction mapping
     
     Returns:
-        DataFrame matching bronze_events_search schema
+        DataFrame matching bronze_events_cdp schema
     """
     jurisdiction = JURISDICTION_MAPPING[instance_slug]
     
@@ -288,13 +288,13 @@ def main():
     # Load to database (unless dry run)
     if args.dry_run:
         logger.info("🔍 DRY RUN - Would load:")
-        logger.info(f"   {len(bronze_events)} events to bronze.bronze_events_search")
+        logger.info(f"   {len(bronze_events)} events to bronze.bronze_events_cdp")
         if args.store_transcripts:
             logger.info(f"   {len(bronze_transcripts)} transcripts to bronze.bronze_events_text_ai")
         logger.info("\nSample event data:")
         print(bronze_events.head())
     else:
-        load_to_database(bronze_events, 'bronze_events_search', 'bronze')
+        load_to_database(bronze_events, 'bronze_events_cdp', 'bronze')
         
         if args.store_transcripts and not bronze_transcripts.empty:
             load_to_database(bronze_transcripts, 'bronze_events_text_ai', 'bronze')

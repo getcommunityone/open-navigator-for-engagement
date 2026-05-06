@@ -6,15 +6,15 @@
 }}
 
 /*
-Staging view for bronze_events_search
+Staging view for bronze_events_cdp (Council Data Project events)
 
-Applies basic cleaning and type casting to raw event data.
+Applies basic cleaning and type casting to raw CDP event data.
 Does NOT deduplicate - that happens in intermediate layer.
 
 CDP Compatibility: Maps to Council Data Project Event and Session models
 See: https://councildataproject.org/
 
-Source: bronze_events_search (from open_navigator_bronze via FDW)
+Source: bronze_events_cdp (Council Data Project data)
 Target: Intermediate models for deduplication and enrichment
 */
 
@@ -92,7 +92,7 @@ SELECT
     loaded_at,
     last_updated
 
-FROM {{ source('bronze', 'bronze_events_search') }}
+FROM {{ source('bronze', 'bronze_events_cdp') }}
 
 -- Basic quality filter: must have title and non-null date
 WHERE 

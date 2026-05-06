@@ -17,7 +17,7 @@ WITH recent_decisions AS (
     WHERE is_recent = true
 ),
 
--- Join with bronze_events to get jurisdiction information
+-- Join with bronze_events_localview to get jurisdiction information
 bronze_events_source AS (
     SELECT
         event_id,
@@ -26,7 +26,7 @@ bronze_events_source AS (
         city,
         state_code,
         state
-    FROM {{ source('bronze', 'bronze_events') }}
+    FROM {{ source('bronze', 'bronze_events_localview') }}
 ),
 
 -- Join decisions with events to get jurisdiction data

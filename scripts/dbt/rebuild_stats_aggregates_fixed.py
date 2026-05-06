@@ -59,7 +59,7 @@ def rebuild_stats():
                 'national',
                 NULL, NULL, NULL, NULL,
                 COUNT(*)::INTEGER,
-                (SELECT COUNT(*) FROM bronze_events)::INTEGER,
+                (SELECT COUNT(*) FROM bronze_events_localview)::INTEGER,
                 COALESCE(SUM(irs_revenue_amt), 0),
                 COALESCE(SUM(irs_asset_amt), 0)
             FROM bronze_organizations_nonprofits
@@ -81,7 +81,7 @@ def rebuild_stats():
                 NULL,
                 NULL,
                 COUNT(*)::INTEGER,
-                COALESCE((SELECT COUNT(*) FROM bronze_events WHERE bronze_events.state_code = np.state_code), 0)::INTEGER,
+                COALESCE((SELECT COUNT(*) FROM bronze_events_localview WHERE bronze_events_localview.state_code = np.state_code), 0)::INTEGER,
                 COALESCE(SUM(irs_revenue_amt), 0),
                 COALESCE(SUM(irs_asset_amt), 0)
             FROM bronze_organizations_nonprofits np
@@ -107,7 +107,7 @@ def rebuild_stats():
                 COUNT(*)::INTEGER as nonprofits_count,
                 COALESCE((
                     SELECT COUNT(*)
-                    FROM bronze_events e
+                    FROM bronze_events_localview e
                     JOIN (
                         SELECT DISTINCT ON (state_code, city)
                             state_code, city, census_county_name

@@ -82,7 +82,7 @@ event_stats AS (
         state_code,
         city,
         COUNT(*) as events_count
-    FROM {{ source('bronze', 'bronze_events') }}
+    FROM {{ source('bronze', 'bronze_events_localview') }}
     WHERE state_code IS NOT NULL
     GROUP BY state_code, city
 ),
@@ -105,7 +105,7 @@ contact_stats AS (
         e.state_code,
         COUNT(DISTINCT c.id) as contacts_count
     FROM {{ source('bronze', 'bronze_contacts') }} c
-    JOIN {{ source('bronze', 'bronze_events') }} e ON c.source_event_id = e.id
+    JOIN {{ source('bronze', 'bronze_events_localview') }} e ON c.source_event_id = e.id
     WHERE e.state_code IS NOT NULL
     GROUP BY e.state_code
 ),
@@ -127,7 +127,7 @@ decision_stats AS (
         e.city,
         COUNT(DISTINCT d.id) as decisions_count
     FROM {{ source('bronze', 'bronze_decisions') }} d
-    JOIN {{ source('bronze', 'bronze_events') }} e ON d.source_event_id = e.event_id
+    JOIN {{ source('bronze', 'bronze_events_localview') }} e ON d.source_event_id = e.event_id
     WHERE e.state_code IS NOT NULL
     GROUP BY e.state_code, e.city
 ),

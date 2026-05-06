@@ -1,18 +1,21 @@
--- Migration: Create bronze_events_search table
--- Description: Bronze layer for meeting events from LocalView, YouTube, and other sources
+-- Migration: Create bronze_events_cdp table
+-- Description: Bronze layer for Council Data Project (CDP) meeting events
 --              Compatible with Council Data Project (CDP) backend schema
 --              See: https://councildataproject.org/
--- Target Database: open_navigator_bronze
+-- Target Database: open_navigator (bronze schema)
 -- Date: 2026-05-06
 
 -- Run with:
--- psql -h localhost -p 5433 -U postgres -d open_navigator_bronze -f 003_create_bronze_events_search.sql
+-- psql -h localhost -p 5433 -U postgres -d open_navigator -f 003_create_bronze_events_search.sql
+
+-- NOTE: Table has been renamed from bronze_events_search to bronze_events_cdp
+--       to better reflect its purpose (CDP data only, not general events search)
 
 -- ============================================================================
--- Create bronze_events_search table
+-- Create bronze_events_cdp table
 -- ============================================================================
 
-CREATE TABLE IF NOT EXISTS bronze.bronze_events_search (
+CREATE TABLE IF NOT EXISTS bronze.bronze_events_cdp (
     id SERIAL PRIMARY KEY,
     
     -- Event basics (CDP-compatible)

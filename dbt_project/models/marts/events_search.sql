@@ -31,7 +31,7 @@ This model:
 Used by: api/routes/search_postgres.py, frontend event search
 
 Data Flow:
-bronze_events_search → stg_bronze_events_search → events_search (this model)
+bronze_events_cdp → stg_bronze_events_cdp → events_search (this model)
 */
 
 WITH deduplicated_events AS (
@@ -46,7 +46,7 @@ WITH deduplicated_events AS (
                 END
             ORDER BY loaded_at DESC, bronze_event_id DESC
         ) AS row_num
-    FROM {{ ref('stg_bronze_events_search') }}
+    FROM {{ ref('stg_bronze_events_cdp') }}
 ),
 
 quality_filtered AS (

@@ -23,7 +23,7 @@ WITH channel_event_stats AS (
         COUNT(DISTINCT jurisdiction_name) as jurisdiction_count,
         MIN(event_date) as first_video_date,
         MAX(event_date) as latest_video_date
-    FROM {{ source('bronze', 'bronze_events') }}
+    FROM {{ source('bronze', 'bronze_events_localview') }}
     WHERE channel_id IS NOT NULL
     GROUP BY channel_id
 ),

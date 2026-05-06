@@ -310,7 +310,7 @@ models:
       
       Used by: api/routes/search_postgres.py, frontend event search
       
-      Data Flow: bronze_events_search → stg_bronze_events_search → events_search
+      Data Flow: bronze_events_cdp → stg_bronze_events_cdp → events_search
     config:
       tags: ['marts', 'events', 'production']
       unique_key: 'id'

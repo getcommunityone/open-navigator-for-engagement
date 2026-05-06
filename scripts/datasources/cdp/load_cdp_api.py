@@ -149,7 +149,7 @@ def fetch_cdp_events(instance_slug: str, limit: int = 100, start_date: str = Non
 
 
 def transform_to_bronze(events: list, instance_slug: str):
-    """Transform CDP events to bronze_events_search schema."""
+    """Transform CDP events to bronze_events_cdp schema."""
     if not HAS_DEPS:
         logger.warning("⚠️  Cannot transform without pandas - showing raw data instead")
         return events
@@ -230,7 +230,7 @@ def show_sample_data(data, title="Sample Data"):
         print(data.dtypes)
 
 
-def load_to_database(df, table_name='bronze_events_search', schema='bronze'):
+def load_to_database(df, table_name='bronze_events_cdp', schema='bronze'):
     """Load DataFrame to PostgreSQL."""
     if not HAS_DEPS:
         logger.error("❌ Cannot load to database without pandas/sqlalchemy")

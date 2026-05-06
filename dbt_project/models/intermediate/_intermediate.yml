@@ -82,6 +82,7 @@ models:
         description: "Date of first video"
       - name: latest_video_date
         description: "Date of most recent video"
+        tests:
           - not_null
       - name: full_name_normalized
         description: "Normalized name for matching"
