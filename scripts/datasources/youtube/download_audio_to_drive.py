@@ -94,7 +94,8 @@ class YouTubeAudioDownloader:
         skip_existing: bool = True,
         reorganize: bool = False
     ):
-        self.database_url = database_url
+        # Sanitize database URL (fix common issues with Neon/cloud connections)
+        self.database_url = self._sanitize_database_url(database_url)
         self.output_dir = Path(output_dir)
         self.limit = limit
         self.channels_filter = channels_filter
@@ -112,6 +113,49 @@ class YouTubeAudioDownloader:
         self.failed = 0
         self.reorganized = 0
         self.synced = 0
+    
+    def _sanitize_database_url(self, url: str) -> str:
+        """Sanitize database URL to fix common connection issues."""
+        # Fix channel_binding parameter (common issue with Neon/cloud PostgreSQL)
+        # Replace channel_binding=require with channel_binding=prefer
+        # or remove channel_binding if it has quotes
+        if 'channel_binding=' in url:
+            # Remove any quotes around parameter values
+            url = re.sub(r'channel_binding=["\']?require["\']?', 'channel_binding=prefer', url)
+            url = re.sub(r'channel_binding=["\']([^"\'\&]+)["\']', r'channel_binding=\1', url)
+        
+        # Also fix sslmode if it has quotes
+        if 'sslmode=' in url:
+            url = re.sub(r'sslmode=["\']([^"\'\&]+)["\']', r'sslmode=\1', url)
+        
+        return url
+    
+    def _connect_to_database(self):
+        """Connect to database with helpful error handling."""
+        try:
+            return psycopg2.connect(self.database_url)
+        except psycopg2.OperationalError as e:
+            error_msg = str(e)
+            
+            # Provide helpful error messages for common issues
+            if 'channel_binding' in error_msg:
+                logger.error("❌ Database connection failed: channel_binding error")
+                logger.error("This is a common issue with Neon/cloud PostgreSQL connections.")
+                logger.error("")
+                logger.error("🔧 Fix: Update your connection string to use channel_binding=prefer")
+                logger.error("   Or remove the channel_binding parameter entirely.")
+                logger.error("")
+                logger.error("Example:")
+                logger.error("  Before: postgresql://user:pass@host/db?sslmode=require&channel_binding=require")
+                logger.error("  After:  postgresql://user:pass@host/db?sslmode=require")
+                logger.error("")
+            elif 'sslmode' in error_msg:
+                logger.error("❌ Database connection failed: SSL error")
+                logger.error("Try using sslmode=require or sslmode=prefer")
+            else:
+                logger.error(f"❌ Database connection failed: {error_msg}")
+            
+            raise
     
     def sanitize_filename(self, text: str, max_length: int = 100) -> str:
         """Sanitize text for use in filename."""
@@ -168,7 +212,7 @@ class YouTubeAudioDownloader:
     
     def get_videos_to_download(self) -> List[Dict]:
         """Query database for videos to download."""
-        conn = psycopg2.connect(self.database_url)
+        conn = self._connect_to_database()
         cursor = conn.cursor(cursor_factory=RealDictCursor)
         
         # Build WHERE conditions
@@ -247,7 +291,7 @@ class YouTubeAudioDownloader:
     def update_database_download_info(self, video_id: str, file_path: str, file_size_mb: float):
         """Update database with download timestamp and file location."""
         try:
-            conn = psycopg2.connect(self.database_url)
+            conn = self._connect_to_database()
             cursor = conn.cursor()
             
             # Update the bronze table with download info
@@ -299,7 +343,7 @@ class YouTubeAudioDownloader:
         logger.info("")
         
         # Get channel to state mapping from database
-        conn = psycopg2.connect(self.database_url)
+        conn = self._connect_to_database()
         cursor = conn.cursor(cursor_factory=RealDictCursor)
         
         cursor.execute("""
@@ -369,7 +413,7 @@ class YouTubeAudioDownloader:
                 file_size_mb = new_path.stat().st_size / (1024 * 1024)
                 
                 # Extract video_id from filename (need to query DB)
-                conn = psycopg2.connect(self.database_url)
+                conn = self._connect_to_database()
                 cursor = conn.cursor(cursor_factory=RealDictCursor)
                 
                 cursor.execute("""
@@ -439,7 +483,7 @@ class YouTubeAudioDownloader:
         logger.info("")
         
         # Connect to database
-        conn = psycopg2.connect(self.database_url)
+        conn = self._connect_to_database()
         cursor = conn.cursor(cursor_factory=RealDictCursor)
         
         # Get all videos from database
