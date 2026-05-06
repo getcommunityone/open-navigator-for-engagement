@@ -621,6 +621,10 @@ class YouTubeAudioDownloader:
         logger.info(f"Output directory: {self.output_dir}")
         logger.info(f"Database: {self.database_url.split('@')[1] if '@' in self.database_url else 'localhost'}")
         
+        # Security: Indicate if cookies are being used (but don't log the path)
+        if self.cookies_file:
+            logger.info("🍪 Using browser cookies for authentication")
+        
         if self.limit:
             logger.info(f"Limit: {self.limit} videos")
         if self.channels_filter:

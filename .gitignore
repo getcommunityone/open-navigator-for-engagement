@@ -100,4 +100,9 @@ Thumbs.db
 website/static/img/communityone_card.png
 data/gold_old/
 data/gold_backup_*/
+
+# Security: Cookie files (browser exports for YouTube auth)
 youtube_cookies.txt
+*_cookies.txt
+cookies.txt
+*.cookies
