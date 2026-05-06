@@ -1,0 +1,400 @@
+#!/usr/bin/env python3
+"""
+Download YouTube Audio from bronze_events_youtube to Google Drive
+
+This script downloads audio-only files from YouTube videos in the bronze_events_youtube table
+and saves them to Google Drive organized by channel and date.
+
+Features:
+- Downloads audio in opus format (best quality, smallest size)
+- Organizes files by channel → YYYY-MM-DD_title.opus
+- Skips already downloaded files
+- Works in Google Colab with mounted Drive
+- Progress tracking and resumable
+
+Usage (VS Code Extension):
+    1. Open this file in VS Code
+    2. Press F1 → "Python: Run Python File in Terminal"
+       OR right-click → "Run Python File in Terminal"
+    3. Or use integrated terminal:
+       cd /home/developer/projects/open-navigator
+       source .venv/bin/activate
+       python scripts/datasources/youtube/download_audio_to_drive.py \
+           --output-dir ~/youtube_audio \
+           --limit 50 \
+           --days 30
+
+    4. To run with arguments from VS Code tasks (Ctrl+Shift+P → "Tasks: Run Task"):
+       Add to .vscode/tasks.json:
+       {
+           "label": "Download YouTube Audio",
+           "type": "shell",
+           "command": "${workspaceFolder}/.venv/bin/python",
+           "args": [
+               "${workspaceFolder}/scripts/datasources/youtube/download_audio_to_drive.py",
+               "--output-dir", "${workspaceFolder}/data/youtube_audio",
+               "--limit", "50",
+               "--days", "30"
+           ],
+           "problemMatcher": []
+       }
+
+Usage (Google Colab):
+    # Mount Google Drive first
+    from google.colab import drive
+    drive.mount('/content/drive')
+    
+    # Navigate to project
+    %cd /content/drive/MyDrive/CommunityOne/open-navigator
+    
+    # Run script
+    !python scripts/datasources/youtube/download_audio_to_drive.py \
+        --output-dir /content/drive/MyDrive/CommunityOne/youtube_audio \
+        --limit 100 \
+        --channels "City of Seattle,City of Portland"
+
+Usage (Local Terminal):
+    python scripts/datasources/youtube/download_audio_to_drive.py \
+        --output-dir ~/youtube_audio \
+        --limit 50
+"""
+
+import os
+import sys
+import argparse
+import re
+from pathlib import Path
+from typing import List, Dict, Optional
+from datetime import datetime
+import psycopg2
+from psycopg2.extras import RealDictCursor
+from loguru import logger
+from dotenv import load_dotenv
+import yt_dlp
+
+# Add project root to path
+project_root = Path(__file__).parent.parent.parent.parent
+sys.path.insert(0, str(project_root))
+
+# Load environment variables
+load_dotenv()
+
+
+class YouTubeAudioDownloader:
+    """Download YouTube audio files organized by channel and date."""
+    
+    def __init__(
+        self,
+        database_url: str,
+        output_dir: str,
+        limit: Optional[int] = None,
+        channels_filter: Optional[List[str]] = None,
+        states_filter: Optional[List[str]] = None,
+        days_recent: Optional[int] = None,
+        skip_existing: bool = True
+    ):
+        self.database_url = database_url
+        self.output_dir = Path(output_dir)
+        self.limit = limit
+        self.channels_filter = channels_filter
+        self.states_filter = states_filter
+        self.days_recent = days_recent
+        self.skip_existing = skip_existing
+        
+        # Create output directory
+        self.output_dir.mkdir(parents=True, exist_ok=True)
+        
+        # Stats
+        self.downloaded = 0
+        self.skipped = 0
+        self.failed = 0
+    
+    def sanitize_filename(self, text: str, max_length: int = 100) -> str:
+        """Sanitize text for use in filename."""
+        if not text:
+            return "untitled"
+        
+        # Remove special characters
+        text = re.sub(r'[<>:"/\\|?*]', '', text)
+        
+        # Replace multiple spaces with single space
+        text = re.sub(r'\s+', ' ', text)
+        
+        # Trim and limit length
+        text = text.strip()[:max_length]
+        
+        return text
+    
+    def get_channel_dir(self, channel_title: str, channel_id: str) -> Path:
+        """Get or create directory for channel."""
+        # Sanitize channel title
+        safe_title = self.sanitize_filename(channel_title, max_length=50)
+        
+        # Create directory: ChannelName_ChannelID
+        dir_name = f"{safe_title}_{channel_id[:8]}"
+        channel_dir = self.output_dir / dir_name
+        channel_dir.mkdir(parents=True, exist_ok=True)
+        
+        return channel_dir
+    
+    def get_output_filename(self, video: Dict, channel_dir: Path) -> Path:
+        """Generate output filename: YYYY-MM-DD_title.opus"""
+        # Get date prefix
+        if video['event_date']:
+            date_str = video['event_date'].strftime('%Y-%m-%d')
+        else:
+            date_str = 'unknown-date'
+        
+        # Sanitize title
+        safe_title = self.sanitize_filename(video['title'], max_length=80)
+        
+        # Combine: YYYY-MM-DD_title.opus
+        filename = f"{date_str}_{safe_title}.opus"
+        
+        return channel_dir / filename
+    
+    def get_videos_to_download(self) -> List[Dict]:
+        """Query database for videos to download."""
+        conn = psycopg2.connect(self.database_url)
+        cursor = conn.cursor(cursor_factory=RealDictCursor)
+        
+        # Build WHERE conditions
+        conditions = ["video_url IS NOT NULL"]
+        
+        if self.channels_filter:
+            # Match channel titles (case-insensitive partial match)
+            channel_conditions = " OR ".join([
+                f"LOWER(channel_id) LIKE LOWER('%{ch}%')" 
+                for ch in self.channels_filter
+            ])
+            conditions.append(f"({channel_conditions})")
+        
+        if self.states_filter:
+            states_list = "','".join(self.states_filter)
+            conditions.append(f"state_code IN ('{states_list}')")
+        
+        if self.days_recent:
+            conditions.append(f"event_date >= CURRENT_DATE - INTERVAL '{self.days_recent} days'")
+        
+        where_clause = " AND ".join(conditions)
+        
+        # Query
+        query = f"""
+            SELECT 
+                id,
+                video_id,
+                video_url,
+                title,
+                event_date,
+                channel_id,
+                jurisdiction_name,
+                state_code
+            FROM bronze.bronze_events_youtube
+            WHERE {where_clause}
+            ORDER BY event_date DESC, channel_id
+        """
+        
+        if self.limit:
+            query += f" LIMIT {self.limit}"
+        
+        cursor.execute(query)
+        videos = cursor.fetchall()
+        
+        cursor.close()
+        conn.close()
+        
+        return videos
+    
+    def download_audio(self, video: Dict, output_path: Path) -> bool:
+        """Download audio from YouTube video."""
+        try:
+            # yt-dlp options for audio-only opus
+            ydl_opts = {
+                'format': 'bestaudio/best',
+                'outtmpl': str(output_path.with_suffix('')),  # Remove extension, yt-dlp will add it
+                'postprocessors': [{
+                    'key': 'FFmpegExtractAudio',
+                    'preferredcodec': 'opus',
+                    'preferredquality': '128',
+                }],
+                'quiet': True,
+                'no_warnings': True,
+                'extract_flat': False,
+            }
+            
+            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                ydl.download([video['video_url']])
+            
+            return True
+            
+        except Exception as e:
+            logger.error(f"  ✗ Download failed: {e}")
+            return False
+    
+    def run(self):
+        """Run the download process."""
+        logger.info("=" * 80)
+        logger.info("YOUTUBE AUDIO DOWNLOADER")
+        logger.info("=" * 80)
+        logger.info(f"Output directory: {self.output_dir}")
+        logger.info(f"Database: {self.database_url.split('@')[1] if '@' in self.database_url else 'localhost'}")
+        
+        if self.limit:
+            logger.info(f"Limit: {self.limit} videos")
+        if self.channels_filter:
+            logger.info(f"Channels filter: {', '.join(self.channels_filter)}")
+        if self.states_filter:
+            logger.info(f"States filter: {', '.join(self.states_filter)}")
+        
+        logger.info("")
+        
+        # Get videos to download
+        logger.info("📊 Querying database for videos...")
+        videos = self.get_videos_to_download()
+        logger.info(f"Found {len(videos):,} videos to process")
+        logger.info("")
+        
+        if not videos:
+            logger.warning("No videos found matching criteria")
+            return
+        
+        # Group by channel for organization
+        videos_by_channel = {}
+        for video in videos:
+            channel_id = video['channel_id']
+            if channel_id not in videos_by_channel:
+                videos_by_channel[channel_id] = {
+                    'videos': [],
+                    'channel_title': video['jurisdiction_name']  # Use jurisdiction as channel name
+                }
+            videos_by_channel[channel_id]['videos'].append(video)
+        
+        logger.info(f"📁 Organized into {len(videos_by_channel)} channels")
+        logger.info("")
+        
+        # Download videos
+        for channel_id, channel_data in videos_by_channel.items():
+            channel_title = channel_data['channel_title']
+            channel_videos = channel_data['videos']
+            
+            logger.info(f"📺 Channel: {channel_title} ({len(channel_videos)} videos)")
+            
+            # Create channel directory
+            channel_dir = self.get_channel_dir(channel_title, channel_id)
+            logger.info(f"   Directory: {channel_dir}")
+            
+            # Download each video
+            for i, video in enumerate(channel_videos, 1):
+                output_path = self.get_output_filename(video, channel_dir)
+                
+                # Check if already exists
+                if self.skip_existing and output_path.exists():
+                    logger.info(f"   [{i}/{len(channel_videos)}] ⏭️  Skipped (exists): {output_path.name}")
+                    self.skipped += 1
+                    continue
+                
+                logger.info(f"   [{i}/{len(channel_videos)}] ⬇️  Downloading: {video['title'][:60]}...")
+                
+                # Download
+                success = self.download_audio(video, output_path)
+                
+                if success:
+                    file_size = output_path.stat().st_size / (1024 * 1024)  # MB
+                    logger.success(f"   ✓ Downloaded: {output_path.name} ({file_size:.1f} MB)")
+                    self.downloaded += 1
+                else:
+                    logger.error(f"   ✗ Failed: {video['title'][:60]}")
+                    self.failed += 1
+            
+            logger.info("")
+        
+        # Summary
+        logger.success("=" * 80)
+        logger.success("DOWNLOAD COMPLETE")
+        logger.success("=" * 80)
+        logger.success(f"✓ Downloaded: {self.downloaded:,}")
+        logger.success(f"⏭️  Skipped (existing): {self.skipped:,}")
+        logger.success(f"✗ Failed: {self.failed:,}")
+        logger.success(f"📁 Output: {self.output_dir}")
+        logger.info("")
+        
+        # List directories created
+        dirs = sorted([d for d in self.output_dir.iterdir() if d.is_dir()])
+        if dirs:
+            logger.info(f"📂 Created {len(dirs)} channel directories:")
+            for d in dirs[:10]:  # Show first 10
+                file_count = len(list(d.glob('*.opus')))
+                logger.info(f"   • {d.name} ({file_count} files)")
+            if len(dirs) > 10:
+                logger.info(f"   ... and {len(dirs) - 10} more")
+
+
+def main():
+    """Main entry point."""
+    parser = argparse.ArgumentParser(
+        description="Download YouTube audio from bronze_events_youtube to Google Drive"
+    )
+    
+    parser.add_argument(
+        '--output-dir',
+        default='/content/drive/MyDrive/CommunityOne/youtube_audio',
+        help='Output directory for audio files (default: Google Drive path for Colab)'
+    )
+    
+    parser.add_argument(
+        '--limit',
+        type=int,
+        help='Maximum number of videos to download'
+    )
+    
+    parser.add_argument(
+        '--channels',
+        help='Comma-separated list of channel names to filter (partial match)'
+    )
+    
+    parser.add_argument(
+        '--states',
+        help='Comma-separated list of state codes (e.g., AL,MA,WI)'
+    )
+    
+    parser.add_argument(
+        '--days',
+        type=int,
+        help='Only download videos from last N days'
+    )
+    
+    parser.add_argument(
+        '--no-skip-existing',
+        action='store_true',
+        help='Re-download files even if they already exist'
+    )
+    
+    parser.add_argument(
+        '--database-url',
+        default=os.getenv('NEON_DATABASE_URL_DEV', 'postgresql://postgres:password@localhost:5433/open_navigator'),
+        help='Database connection URL'
+    )
+    
+    args = parser.parse_args()
+    
+    # Parse filters
+    channels_filter = args.channels.split(',') if args.channels else None
+    states_filter = args.states.split(',') if args.states else None
+    
+    # Create downloader
+    downloader = YouTubeAudioDownloader(
+        database_url=args.database_url,
+        output_dir=args.output_dir,
+        limit=args.limit,
+        channels_filter=channels_filter,
+        states_filter=states_filter,
+        days_recent=args.days,
+        skip_existing=not args.no_skip_existing
+    )
+    
+    # Run
+    downloader.run()
+
+
+if __name__ == '__main__':
+    main()
