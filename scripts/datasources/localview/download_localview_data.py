@@ -14,6 +14,7 @@ USAGE OPTIONS:
 See docs/LOCALVIEW_INTEGRATION_GUIDE.md for detailed instructions.
 """
 import sys
+import argparse
 from pathlib import Path
 import csv
 import asyncio
@@ -23,7 +24,7 @@ from loguru import logger
 import re
 
 # Add project root to path for imports
-project_root = Path(__file__).parent.parent
+project_root = Path(__file__).parent.parent.parent.parent
 if str(project_root) not in sys.path:
     sys.path.insert(0, str(project_root))
 
@@ -60,24 +61,22 @@ class LocalViewIngestion:
         "videos": ["videos.csv", "videos.tab", "recordings.csv"],
     }
     
-    def __init__(self, spark: Optional[SparkSession] = None):
-        """Initialize ingestion with Spark session."""
-        if not PYSPARK_AVAILABLE:
-            raise ImportError("PySpark required. Install with: pip install pyspark delta-spark")
-        
-        # Configure Spark with Delta Lake
-        if spark is None:
-            builder = SparkSession.builder \
-                .appName("LocalViewIngestion") \
-                .config("spark.sql.extensions", "io.delta.sql.DeltaSparkSessionExtension") \
-                .config("spark.sql.catalog.spark_catalog", "org.apache.spark.sql.delta.catalog.DeltaCatalog")
-            self.spark = delta.configure_spark_with_delta_pip(builder).getOrCreate()
-        else:
-            self.spark = spark
-        
-        self.cache_dir = Path("data/cache/localview")
+    def __init__(self, spark: Optional[SparkSession] = None, cache_dir: Optional[Path] = None):
+        """Initialize ingestion with optional Spark session."""
+        self.spark = None
+        if PYSPARK_AVAILABLE:
+            if spark is None:
+                builder = SparkSession.builder \
+                    .appName("LocalViewIngestion") \
+                    .config("spark.sql.extensions", "io.delta.sql.DeltaSparkSessionExtension") \
+                    .config("spark.sql.catalog.spark_catalog", "org.apache.spark.sql.delta.catalog.DeltaCatalog")
+                self.spark = delta.configure_spark_with_delta_pip(builder).getOrCreate()
+            else:
+                self.spark = spark
+
+        self.cache_dir = cache_dir or Path("data/cache/localview")
         self.cache_dir.mkdir(parents=True, exist_ok=True)
-        
+
         self.bronze_path = Path(settings.BRONZE_LAYER_PATH) / "localview"
     
     def find_file(self, file_type: str) -> Optional[Path]:
@@ -329,31 +328,35 @@ class LocalViewIngestion:
             'platforms': {}
         }
         
+        if not self.spark:
+            logger.warning("PySpark not available — skipping Delta Lake write. Files are saved in the output directory.")
+            return stats
+
         # Write municipalities
         if municipalities:
             munis_df = self.spark.createDataFrame(municipalities)
             munis_path = str(self.bronze_path / "municipalities")
-            
+
             munis_df.write.format("delta").mode("overwrite").save(munis_path)
             stats['municipalities_written'] = len(municipalities)
             logger.success(f"✓ Written {len(municipalities)} municipalities to {munis_path}")
-        
+
         # Write videos
         if videos:
             videos_df = self.spark.createDataFrame(videos)
             videos_path = str(self.bronze_path / "videos")
-            
+
             videos_df.write.format("delta").mode("overwrite").save(videos_path)
             stats['videos_written'] = len(videos)
-            
+
             # Count platforms
             platforms = {}
             for video in videos:
                 platform = video['platform']
                 platforms[platform] = platforms.get(platform, 0) + 1
-            
+
             stats['platforms'] = platforms
-            
+
             logger.success(f"✓ Written {len(videos)} videos to {videos_path}")
             logger.info("Platform distribution:")
             for platform, count in sorted(platforms.items(), key=lambda x: x[1], reverse=True):
@@ -362,39 +365,40 @@ class LocalViewIngestion:
         return stats
 
 
-async def try_api_download() -> bool:
+async def try_api_download(output_dir: Path) -> bool:
     """
     Try to download dataset using Dataverse API.
-    
+
     Returns:
         True if successful, False otherwise
     """
     if not DATAVERSE_CLIENT_AVAILABLE:
         logger.info("Dataverse API client not available - skipping API download")
         return False
-    
+
     # Check if API key is available
     api_key = settings.dataverse_api_key
-    
+
     if api_key and api_key != "your_dataverse_api_key":
         logger.info("🔑 Dataverse API key found - attempting API download")
+        logger.info(f"Downloading to: {output_dir}")
         logger.info("This may take 5-10 minutes for large datasets...")
-        
+
         try:
             client = DataverseClient(api_key=api_key)
             result = await client.download_dataset(
                 persistent_id="doi:10.7910/DVN/NJTBEM",
-                output_dir=Path("data/cache/localview"),
+                output_dir=output_dir,
                 file_types=[".parquet", ".csv", ".tab", ".tsv"]  # Data files (parquet is primary format)
             )
-            
+
             if result["status"] == "success" or result["status"] == "partial":
                 logger.success("✓ API download completed!")
                 return True
             else:
                 logger.warning("⚠ API download failed - falling back to manual download")
                 return False
-        
+
         except Exception as e:
             logger.warning(f"⚠ API download failed: {e}")
             logger.info("Falling back to manual download method")
@@ -406,23 +410,36 @@ async def try_api_download() -> bool:
         return False
 
 
+DEFAULT_OUTPUT_DIR = Path("/mnt/g/My Drive/CommunityOne/localview_data")
+
+
 def main():
     """Main execution function."""
+    parser = argparse.ArgumentParser(description="LocalView Dataset Ingestion")
+    parser.add_argument(
+        "--output-dir",
+        type=Path,
+        default=DEFAULT_OUTPUT_DIR,
+        help=f"Directory to download files into (default: {DEFAULT_OUTPUT_DIR})",
+    )
+    args = parser.parse_args()
+    cache_dir: Path = args.output_dir
+
     logger.info("=" * 60)
     logger.info("LocalView Dataset Ingestion")
     logger.info("=" * 60)
-    
+    logger.info(f"Output directory: {cache_dir}")
+
     # Try API download first
     logger.info("\n[Step 1/2] Checking for API download option...")
-    api_success = asyncio.run(try_api_download())
-    
+    api_success = asyncio.run(try_api_download(cache_dir))
+
     # Check if files exist (either from API or manual download)
-    cache_dir = Path("data/cache/localview")
     if not cache_dir.exists() or not list(cache_dir.glob("*.*")):
         if not api_success:
             logger.error("")
             logger.error("=" * 60)
-            logger.error("❌ No files found in data/cache/localview/")
+            logger.error(f"❌ No files found in {cache_dir}")
             logger.error("=" * 60)
             logger.error("")
             logger.error("OPTION 1 - API Download (Recommended):")
@@ -433,29 +450,29 @@ def main():
             logger.error("OPTION 2 - Manual Download:")
             logger.error("  1. Visit: https://dataverse.harvard.edu/dataset.xhtml?persistentId=doi:10.7910/DVN/NJTBEM")
             logger.error("  2. Download CSV/TAB files")
-            logger.error("  3. Save to: data/cache/localview/")
+            logger.error(f"  3. Save to: {cache_dir}")
             logger.error("  4. Re-run this script")
             logger.error("")
             logger.error("See docs/LOCALVIEW_INTEGRATION_GUIDE.md for detailed instructions.")
             logger.error("")
             return 1
-    
+
     # Initialize ingestion
     logger.info("\n[Step 2/2] Processing downloaded files...")
-    ingestion = LocalViewIngestion()
-    
+    ingestion = LocalViewIngestion(cache_dir=cache_dir)
+
     # Load data
     municipalities = ingestion.load_municipalities()
     videos = ingestion.load_videos()
-    
+
     if not municipalities and not videos:
         logger.error("❌ No data could be loaded!")
         logger.error("Check that CSV files are in the correct format.")
         return 1
-    
+
     # Write to Bronze layer
     stats = ingestion.write_to_bronze_layer(municipalities, videos)
-    
+
     # Summary
     logger.info("")
     logger.info("=" * 60)
@@ -468,7 +485,7 @@ def main():
         for platform, count in sorted(stats['platforms'].items(), key=lambda x: x[1], reverse=True)[:5]:
             logger.info(f"  {platform}: {count} videos")
     logger.info("")
-    
+
     return 0
 
 
