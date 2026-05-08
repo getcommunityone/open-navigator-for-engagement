@@ -9,21 +9,20 @@ bronze table should store raw event metadata; derived YouTube attributes live in
 intermediate.
 
 How it works:
-- Reads LocalView video IDs from bronze.bronze_events_localview.datasource_id
-- Calls YouTube videos API (part=snippet) in batches of 50
+- Reads LocalView parquet files (which contain vid_id + channel_id directly)
 - Upserts channel_id/channel_title into intermediate.int_localview_youtube_video_channels
 
 Requirements:
-- Run inside the repo venv (so google-api-python-client is available)
-- Set YOUTUBE_API_KEY in environment (.env is fine)
+- Parquet cache present under data/cache/localview (created by LocalView download step)
 """
 
 import os
 import sys
 from datetime import datetime
 from pathlib import Path
-from typing import Iterable, List, Dict, Optional
+from typing import Iterable, List, Dict, Optional, Tuple
 
+import pandas as pd
 import psycopg2
 from psycopg2.extras import execute_values
 from dotenv import load_dotenv
@@ -45,7 +44,7 @@ DATABASE_URL = os.getenv(
     "NEON_DATABASE_URL_DEV",
     "postgresql://postgres:password@localhost:5433/open_navigator",
 )
-YOUTUBE_API_KEY = os.getenv("YOUTUBE_API_KEY")
+LOCALVIEW_DIR = Path("data/cache/localview")
 
 
 CREATE_TABLE_SQL = """
@@ -85,50 +84,41 @@ def chunked(xs: List[str], n: int) -> Iterable[List[str]]:
         yield xs[i : i + n]
 
 
-def get_missing_video_ids(conn, limit: int) -> List[str]:
-    cur = conn.cursor()
-    cur.execute(
-        """
-        SELECT DISTINCT e.datasource_id
-        FROM bronze.bronze_events_localview e
-        LEFT JOIN intermediate.int_localview_youtube_video_channels m
-          ON e.datasource_id = m.video_id
-        WHERE e.datasource = 'localview'
-          AND e.datasource_id IS NOT NULL
-          AND e.datasource_id != ''
-          AND m.video_id IS NULL
-        LIMIT %s
-        """,
-        (limit,),
-    )
-    rows = cur.fetchall()
-    cur.close()
-    return [r[0] for r in rows]
+def extract_parquet_mappings(limit: int) -> List[Dict[str, Optional[str]]]:
+    parquet_files = sorted(LOCALVIEW_DIR.glob("meetings.*.parquet"))
+    if not parquet_files:
+        raise FileNotFoundError(f"No parquet files found in {LOCALVIEW_DIR}")
 
+    mappings: Dict[str, Tuple[Optional[str], Optional[str]]] = {}
+    for pf in parquet_files:
+        df = pd.read_parquet(pf, columns=["vid_id", "channel_id", "channel_title"])
+        df = df[df["vid_id"].notna() & df["channel_id"].notna()].copy()
+        if df.empty:
+            continue
 
-def fetch_video_snippets(video_ids: List[str]) -> Dict[str, Dict[str, Optional[str]]]:
-    if not YOUTUBE_API_KEY:
-        raise RuntimeError("Missing YOUTUBE_API_KEY in environment")
+        for vid, ch_id, ch_title in zip(df["vid_id"], df["channel_id"], df["channel_title"]):
+            if vid is None or ch_id is None:
+                continue
+            vid_s = str(vid).strip()
+            ch_s = str(ch_id).strip()
+            if not vid_s or not ch_s:
+                continue
+            if vid_s not in mappings:
+                mappings[vid_s] = (ch_s, str(ch_title).strip() if ch_title is not None else None)
 
-    from googleapiclient.discovery import build  # imported lazily
+        if len(mappings) >= limit:
+            break
 
-    youtube = build("youtube", "v3", developerKey=YOUTUBE_API_KEY)
-
-    out: Dict[str, Dict[str, Optional[str]]] = {}
-    for batch in chunked(video_ids, 50):
-        resp = (
-            youtube.videos()
-            .list(part="snippet", id=",".join(batch), maxResults=len(batch))
-            .execute()
-        )
-        for item in resp.get("items", []):
-            vid = item.get("id")
-            snippet = item.get("snippet", {}) or {}
-            out[vid] = {
-                "channel_id": snippet.get("channelId"),
-                "channel_title": snippet.get("channelTitle"),
+    out: List[Dict[str, Optional[str]]] = []
+    for vid, (ch_id, ch_title) in list(mappings.items())[:limit]:
+        out.append(
+            {
+                "video_id": vid,
+                "youtube_url": f"https://www.youtube.com/watch?v={vid}",
+                "channel_id": ch_id,
+                "channel_title": ch_title,
             }
-
+        )
     return out
 
 
@@ -197,30 +187,12 @@ def main() -> int:
             conn.commit()
             cur.close()
 
-        missing = get_missing_video_ids(conn, limit=args.limit)
-        logger.info(f"Missing mappings to fetch: {len(missing):,}")
-        if not missing:
+        logger.info("Extracting vid_id→channel_id mappings from LocalView parquet cache…")
+        mappings = extract_parquet_mappings(limit=args.limit)
+        logger.info(f"Mappings extracted: {len(mappings):,}")
+        if not mappings:
+            logger.warning("No mappings extracted (check parquet columns: vid_id/channel_id/channel_title).")
             return 0
-
-        logger.info("Calling YouTube videos API…")
-        snippets = fetch_video_snippets(missing)
-
-        mappings: List[Dict[str, Optional[str]]] = []
-        for vid in missing:
-            s = snippets.get(vid)
-            if not s:
-                continue
-            channel_id = s.get("channel_id")
-            if not channel_id:
-                continue
-            mappings.append(
-                {
-                    "video_id": vid,
-                    "youtube_url": f"https://www.youtube.com/watch?v={vid}",
-                    "channel_id": channel_id,
-                    "channel_title": s.get("channel_title"),
-                }
-            )
 
         n = upsert_mappings(conn, mappings)
         logger.success(f"✓ Upserted {n:,} video→channel mappings")

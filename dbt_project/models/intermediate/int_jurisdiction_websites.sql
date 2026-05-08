@@ -55,6 +55,22 @@ cleaned AS (
         TRIM(city)                                      AS city,
         UPPER(TRIM(state))                              AS state_code,
 
+        -- Normalized city text for matching (strip common prefixes/suffixes and punctuation)
+        NULLIF(
+          REGEXP_REPLACE(
+            REGEXP_REPLACE(
+              REGEXP_REPLACE(LOWER(TRIM(city)), '^(city|town|village|borough|county|township) of\\s+', '', 'g'),
+              '\\s+(city|town|village|borough|county|township)$',
+              '',
+              'g'
+            ),
+            '[^a-z0-9]+',
+            ' ',
+            'g'
+          ),
+          ''
+        )                                               AS city_normalized,
+
         -- Standardize domain_type to jurisdiction category
         CASE UPPER(TRIM(domain_type))
             WHEN 'CITY'           THEN 'municipality'
@@ -89,8 +105,42 @@ jurisdiction_match AS (
     JOIN {{ ref('int_jurisdictions') }} j
         ON j.jurisdiction_type = dtm.jur_type
        AND j.state_code         = c.state_code
-       AND LOWER(TRIM(j.name))  = LOWER(TRIM(c.city))
-    WHERE c.city IS NOT NULL
+       AND (
+           REGEXP_REPLACE(
+             REGEXP_REPLACE(
+               REGEXP_REPLACE(LOWER(TRIM(j.name)), '^(city|town|village|borough|county|township) of\\s+', '', 'g'),
+               '\\s+(city|town|village|borough|county|township)$',
+               '',
+               'g'
+             ),
+             '[^a-z0-9]+',
+             ' ',
+             'g'
+           ) = c.city_normalized
+           OR REGEXP_REPLACE(
+                REGEXP_REPLACE(
+                  REGEXP_REPLACE(LOWER(TRIM(j.name)), '^(city|town|village|borough|county|township) of\\s+', '', 'g'),
+                  '\\s+(city|town|village|borough|county|township)$',
+                  '',
+                  'g'
+                ),
+                '[^a-z0-9]+',
+                ' ',
+                'g'
+              ) LIKE c.city_normalized || ' %'
+           OR c.city_normalized LIKE REGEXP_REPLACE(
+                REGEXP_REPLACE(
+                  REGEXP_REPLACE(LOWER(TRIM(j.name)), '^(city|town|village|borough|county|township) of\\s+', '', 'g'),
+                  '\\s+(city|town|village|borough|county|township)$',
+                  '',
+                  'g'
+                ),
+                '[^a-z0-9]+',
+                ' ',
+                'g'
+              ) || ' %'
+       )
+    WHERE c.city_normalized IS NOT NULL
 )
 
 SELECT

@@ -171,14 +171,14 @@ class JurisdictionsWikiDataLoader:
 
         if task == "county":
             table = "bronze.bronze_jurisdictions_counties_wikidata"
-            key_field = "fips_code"
+            key_field = "geoid"
             extra_cols = {
                 "wikidata_fips_code": "fips_code",
                 "wikidata_geoid": "geoid",
             }
         elif task == "city":
             table = "bronze.bronze_jurisdictions_municipalities_wikidata"
-            key_field = "fips_code"
+            key_field = "geoid"
             extra_cols = {
                 "wikidata_fips_code": "fips_code",
                 "wikidata_gnis_id": "gnis_id",
@@ -186,14 +186,14 @@ class JurisdictionsWikiDataLoader:
             }
         elif task == "school_district":
             table = "bronze.bronze_jurisdictions_school_districts_wikidata"
-            key_field = "nces_id"
+            key_field = "geoid"
             extra_cols = {
                 "wikidata_nces_id": "nces_id",
                 "wikidata_geoid": "geoid",
             }
         elif task == "state":
             table = "bronze.bronze_jurisdictions_states_wikidata"
-            key_field = "fips_code"
+            key_field = "geoid"
             extra_cols = {
                 "wikidata_fips_code": "fips_code",
                 "wikidata_geoid": "geoid",
@@ -374,13 +374,12 @@ class JurisdictionsWikiDataLoader:
         """
         query = f"""
         SELECT DISTINCT 
-            ?item ?itemLabel ?website ?population ?area
-            ?facebook ?twitter ?youtube ?fips ?gnis ?nces ?image ?banner ?locatorMap
-            ?dialingCode ?googleMapsCustomerId ?households ?medianAge ?languageLabel
+            ?item ?itemLabel
+            ?website ?population ?area
+            ?facebook ?twitter ?youtube
+            ?fips ?gnis
+            ?image ?banner ?locatorMap
             ?lat ?lon
-            ?postalCode ?perCapitaIncome ?timeZone ?timeZoneLabel
-            ?ballotpediaId ?tripadvisorId ?subreddit
-            ?geonamesId
         WHERE {{
           # Enumerate types explicitly; direct wdt:P31 is much faster than
           # wdt:P31/wdt:P279* (full subclass traversal).
@@ -410,46 +409,20 @@ class JurisdictionsWikiDataLoader:
           OPTIONAL {{ ?item wdt:P2013 ?facebook . }}
           OPTIONAL {{ ?item wdt:P2002 ?twitter . }}
           OPTIONAL {{ ?item wdt:P2397 ?youtube . }}
-          OPTIONAL {{ ?item wdt:P882 ?fips . }}
+          # For US places, use FIPS 55-3 (Wikidata P774). P882 is not reliably
+          # populated for municipalities/places.
+          OPTIONAL {{ ?item wdt:P774 ?fips . }}
           OPTIONAL {{ ?item wdt:P590 ?gnis . }}
-          OPTIONAL {{ ?item wdt:P6545 ?nces . }}
           OPTIONAL {{ ?item wdt:P18 ?image . }}
           OPTIONAL {{ ?item wdt:P242 ?locatorMap . }}
           OPTIONAL {{ ?item wdt:P948 ?banner . }}
-          OPTIONAL {{ ?item wdt:P1566 ?geonamesId . }}
           OPTIONAL {{ ?item p:P625/psv:P625/wikibase:geoLatitude ?lat . }}
           OPTIONAL {{ ?item p:P625/psv:P625/wikibase:geoLongitude ?lon . }}
-          OPTIONAL {{ ?item wdt:P473 ?dialingCode . }}
-          OPTIONAL {{ ?item wdt:P3749 ?googleMapsCustomerId . }}
-          OPTIONAL {{ ?item wdt:P1538 ?households . }}
-          OPTIONAL {{ ?item wdt:P1310 ?medianAge . }}
-          OPTIONAL {{ ?item wdt:P407 ?language . }}
 
-          # Require at least one joinable identifier
-          FILTER(BOUND(?fips) || BOUND(?gnis))
-          
-          # Head of government
-          OPTIONAL {{ 
-            {{
-              SELECT ?headOfGov ?headStart WHERE {{
-                ?item p:P6 ?headStmt .
-                ?headStmt ps:P6 ?headOfGov .
-                OPTIONAL {{ ?headStmt pq:P580 ?headStart . }}
-                FILTER(BOUND(?headStart))
-              }}
-              ORDER BY DESC(?headStart)
-              LIMIT 1
-            }}
-            OPTIONAL {{ ?headOfGov wdt:P39 ?position . }}
-          }}
-          
-          # Additional metadata
-          OPTIONAL {{ ?item wdt:P281 ?postalCode . }}
-          OPTIONAL {{ ?item wdt:P3529 ?perCapitaIncome . }}
-          OPTIONAL {{ ?item wdt:P421 ?timeZone . }}
-          OPTIONAL {{ ?item wdt:P2390 ?ballotpediaId . }}
-          OPTIONAL {{ ?item wdt:P3134 ?tripadvisorId . }}
-          OPTIONAL {{ ?item wdt:P3984 ?subreddit . }}
+          # Require a joinable identifier.
+          # Our bronze municipalities table is keyed by 7-digit Census place GEOID
+          # (state_fips + place_fips), so we must have a FIPS place code to update rows.
+          FILTER(BOUND(?fips))
           
           SERVICE wikibase:label {{ bd:serviceParam wikibase:language "en". }}
         }}
@@ -638,6 +611,8 @@ class JurisdictionsWikiDataLoader:
             
             # Extract US government IDs
             fips_code = result.get("fips")
+            if isinstance(fips_code, str):
+                fips_code = fips_code.replace("-", "")
             gnis_id = result.get("gnis")
             nces_id = result.get("nces")
             geonames_id = result.get("geonamesId")
@@ -665,8 +640,14 @@ class JurisdictionsWikiDataLoader:
                 # GEOID for school districts is the NCES ID
                 geoid = nces_id
             elif fips_code:
-                # City with FIPS place code
-                geoid = fips_code
+                # City/municipality with FIPS place code.
+                # Wikidata P882 for places is often a 5-digit *place* FIPS; our bronze GEOID
+                # is 7 digits (state_fips + place_fips). Normalize so updates can join.
+                state_fips = STATE_MAP.get(state_code, {}).get("fips")
+                if state_fips and len(fips_code) == 5:
+                    geoid = f"{state_fips}{fips_code}"
+                else:
+                    geoid = fips_code
             
             if gnis_id and not jurisdiction_id:
                 # Format: {GNIS_ID} (e.g., 173056)

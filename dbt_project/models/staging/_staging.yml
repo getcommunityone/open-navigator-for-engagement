@@ -95,8 +95,6 @@ sources:
           - name: state_code
           - name: state
           - name: meeting_type
-          - name: channel_id
-            description: "YouTube channel ID (if event is from YouTube)"
           - name: loaded_at
       
       - name: bronze_events_youtube
