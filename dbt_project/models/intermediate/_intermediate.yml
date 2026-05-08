@@ -6,14 +6,7 @@ models:
       Unified silver jurisdictions table — union of Census Gazetteer counties,
       municipalities, school districts, and townships. Each row is one jurisdiction
       with standardized identifiers (GEOID, FIPS), state code, full state name,
-      and county FIPS codes.
-
-      County FIPS derivation strategy:
-        - counties:         county_fips_code = geoid (county IS the FIPS code)
-        - townships:        county_fips_code = LEFT(geoid, 5) (embedded in 10-digit GEOID)
-        - municipalities:   county_fips_code = primary county by ZCTA-area overlap;
-                            county_fips_codes = all counties (multi-county places)
-        - school_districts: county_fips_code = NULL (no county embedded; enrich separately)
+      and location metadata.
 
     columns:
       - name: jurisdiction_id
@@ -29,12 +22,6 @@ models:
         description: "2-digit state FIPS code (LEFT(geoid, 2))"
         tests:
           - not_null
-      - name: county_fips_code
-        description: "Primary 5-digit county FIPS code. NULL for school_districts."
-      - name: county_fips_codes
-        description: "All county FIPS codes as TEXT array. Populated for municipalities spanning multiple counties."
-      - name: county
-        description: "County name resolved from county_fips_code (when available)"
       - name: state_code
         description: "2-letter state abbreviation (USPS)"
         tests:
@@ -157,6 +144,12 @@ models:
         tests:
           - unique
   
+  - name: int_events_channels
+    description: >
+      Cleaned and standardized YouTube channel registry sourced from
+      bronze `bronze_events_channels`. Provides canonical channel metadata and
+      validation flags for downstream enrichment.
+
   - name: int_events_channels_enriched
     description: |
       Enriched YouTube channels with event statistics and quality scoring.

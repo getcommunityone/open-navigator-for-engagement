@@ -14,6 +14,7 @@ __pycache__/
 *.py[cod]
 *$py.class
 .venv/
+.venv_dbt/
 venv/
 *.egg-info/
 
@@ -28,4 +29,5 @@ profiles.yml
 
 # Local config
 .env
+.env.*
 .envrc

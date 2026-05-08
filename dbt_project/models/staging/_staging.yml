@@ -390,6 +390,18 @@ sources:
           - name: ingestion_date
             description: "When record was loaded"
 
+      - name: bronze_jurisdictions_place_county
+        description: "Place (city/town) to county crosswalk derived from spatial overlay of Census place+county shapefiles"
+        columns:
+          - name: place_geoid
+            description: "7-digit place GEOID (state FIPS + place FIPS)"
+          - name: county_geoid
+            description: "5-digit county GEOID (state FIPS + county FIPS)"
+          - name: is_primary
+            description: "TRUE if county has largest overlap with place"
+          - name: overlap_pct
+            description: "Percent of place land area in county (0-100)"
+
       - name: bronze_jurisdictions_postal_codes
         description: "Census ZIP Code Tabulation Areas (ZCTAs) - 33,791 geographic areas"
         columns:

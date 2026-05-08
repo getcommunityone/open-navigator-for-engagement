@@ -19,11 +19,11 @@ WITH channel_event_stats AS (
     -- Calculate event statistics per channel
     SELECT
         channel_id,
-        COUNT(DISTINCT id) as event_count,
+        COUNT(DISTINCT event_id) as event_count,
         COUNT(DISTINCT jurisdiction_name) as jurisdiction_count,
         MIN(event_date) as first_video_date,
         MAX(event_date) as latest_video_date
-    FROM {{ source('bronze', 'bronze_events_localview') }}
+    FROM {{ ref('int_events_localview') }}
     WHERE channel_id IS NOT NULL
     GROUP BY channel_id
 ),
@@ -60,7 +60,7 @@ channels_with_quality AS (
             ELSE 0
         END as jurisdiction_association_count
         
-    FROM {{ ref('stg_bronze_events_channels') }} c
+    FROM {{ ref('int_events_channels') }} c
 )
 
 -- Join with event statistics
