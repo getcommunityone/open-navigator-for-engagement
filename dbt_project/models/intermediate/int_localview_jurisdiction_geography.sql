@@ -30,8 +30,24 @@ normalized AS (
         place_name_raw,
         LOWER(
             REGEXP_REPLACE(
-                REGEXP_REPLACE(TRIM(place_name_raw), '\\s+(city|town|township|village|borough|cdp|county)$', '', 1, 0, 'i'),
-                '\\s+(?:town|city)\\s*', ' ', 1, 0, 'i'
+                REGEXP_REPLACE(
+                    REGEXP_REPLACE(
+                        -- Normalize whitespace (incl. NBSP) and trim
+                        TRIM(REPLACE(place_name_raw, CHR(160), ' ')),
+                        -- Remove trailing government-type phrases that often follow county/city names
+                        '\s+(county\s+(commission|commissioners|board|council)|board\s+of\s+[^,]+|city\s+council|town\s+council)\s*$',
+                        '',
+                        1, 0, 'i'
+                    ),
+                    -- Remove trailing jurisdiction suffixes
+                    '\s+(city|town|township|village|borough|cdp|county|census\s+area)\s*$',
+                    '',
+                    1, 0, 'i'
+                ),
+                -- Remove any remaining "Town"/"City" tokens inside the name
+                '\s+(?:town|city)\s*',
+                ' ',
+                1, 0, 'i'
             )
         ) AS place_name_clean
     FROM localview_places
@@ -43,8 +59,8 @@ muni_norm AS (
         m.usps  AS state_code,
         LOWER(
             REGEXP_REPLACE(
-                REGEXP_REPLACE(TRIM(m.name), '\\s+(city|town|township|village|borough|cdp|county)$', '', 1, 0, 'i'),
-                '\\s+(?:town|city)\\s*', ' ', 1, 0, 'i'
+                REGEXP_REPLACE(TRIM(m.name), '\s+(city|town|township|village|borough|cdp|county)$', '', 1, 0, 'i'),
+                '\s+(?:town|city)\s*', ' ', 1, 0, 'i'
             )
         ) AS muni_name_clean,
         m.aland_sqmi
@@ -64,7 +80,7 @@ county_norm AS (
         c.geoid AS county_geoid,
         c.usps  AS state_code,
         LOWER(
-            REGEXP_REPLACE(TRIM(c.name), '\\s+county$', '', 1, 0, 'i')
+            REGEXP_REPLACE(TRIM(REPLACE(c.name, CHR(160), ' ')), '\s+county\s*$', '', 1, 0, 'i')
         ) AS county_name_clean
     FROM {{ source('bronze', 'bronze_jurisdictions_counties') }} c
 ),
@@ -74,7 +90,7 @@ township_norm AS (
         t.geoid AS township_geoid,
         t.usps  AS state_code,
         LOWER(
-            REGEXP_REPLACE(TRIM(t.name), '\\s+township$', '', 1, 0, 'i')
+            REGEXP_REPLACE(TRIM(t.name), '\s+township$', '', 1, 0, 'i')
         ) AS township_name_clean
     FROM {{ source('bronze', 'bronze_jurisdictions_townships') }} t
 ),
@@ -164,7 +180,7 @@ best_township AS (
 ),
 
 resolved AS (
-    -- Tier 1: municipality (all normalized rows; NULLs for unmatched)
+    -- Tier 1: municipality (only matched rows)
     SELECT
         n.state_code,
         n.place_name_raw,
@@ -175,7 +191,7 @@ resolved AS (
         NULL::VARCHAR(5)  AS county_geoid_direct,
         bm.matched_type
     FROM normalized n
-    LEFT JOIN best_muni bm
+    JOIN best_muni bm
       ON bm.state_code = n.state_code
      AND bm.place_name_clean = n.place_name_clean
 
@@ -254,6 +270,36 @@ resolved AS (
     WHERE bm.place_geoid IS NULL
       AND bs.school_district_geoid IS NULL
       AND bc.county_geoid IS NULL
+
+    UNION ALL
+
+    -- Fallback: no match in any tier (emit exactly one row per place)
+    SELECT
+        n.state_code,
+        n.place_name_raw,
+        n.place_name_clean,
+        NULL::VARCHAR(7)  AS place_geoid,
+        NULL::VARCHAR(7)  AS school_district_geoid,
+        NULL::VARCHAR(10) AS township_geoid,
+        NULL::VARCHAR(5)  AS county_geoid_direct,
+        NULL::TEXT        AS matched_type
+    FROM normalized n
+    LEFT JOIN best_muni bm
+      ON bm.state_code = n.state_code
+     AND bm.place_name_clean = n.place_name_clean
+    LEFT JOIN best_sd bs
+      ON bs.state_code = n.state_code
+     AND bs.place_name_clean = n.place_name_clean
+    LEFT JOIN best_county bc
+      ON bc.state_code = n.state_code
+     AND bc.place_name_clean = n.place_name_clean
+    LEFT JOIN best_township bt
+      ON bt.state_code = n.state_code
+     AND bt.place_name_clean = n.place_name_clean
+    WHERE bm.place_geoid IS NULL
+      AND bs.school_district_geoid IS NULL
+      AND bc.county_geoid IS NULL
+      AND bt.township_geoid IS NULL
 ),
 
 place_counties AS (

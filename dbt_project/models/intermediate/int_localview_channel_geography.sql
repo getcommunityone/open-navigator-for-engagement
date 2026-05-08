@@ -7,8 +7,7 @@
 Connect LocalView-derived channels to jurisdiction geography.
 
 Inputs:
-- bronze.bronze_events_localview: LocalView events containing jurisdiction_name/state_code + datasource_id (video id)
-- intermediate.int_localview_youtube_video_channels: video_id -> channel_id mapping (YouTube API backfill)
+- int_events_localview: LocalView events with derived channel_id (via intermediate mapping + fallback)
 - intermediate.int_localview_jurisdiction_geography: jurisdiction_name/state -> place_geoid + county_geoids
 
 Output grain:
@@ -19,15 +18,13 @@ WITH localview_event_channels AS (
     SELECT DISTINCT
         e.state_code,
         e.jurisdiction_name AS place_name_raw,
-        m.channel_id
-    FROM {{ source('bronze', 'bronze_events_localview') }} e
-    JOIN intermediate.int_localview_youtube_video_channels m
-      ON e.datasource_id = m.video_id
+        e.channel_id
+    FROM {{ ref('int_events_localview') }} e
     WHERE e.datasource = 'localview'
       AND e.state_code IS NOT NULL
       AND e.jurisdiction_name IS NOT NULL
-      AND m.channel_id IS NOT NULL
-      AND m.channel_id != ''
+      AND e.channel_id IS NOT NULL
+      AND e.channel_id != ''
 ),
 
 juris_geo AS (

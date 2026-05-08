@@ -21,7 +21,7 @@ from datetime import datetime
 from typing import Dict, Any, Optional
 import pandas as pd
 import psycopg2
-from psycopg2.extras import execute_batch
+from psycopg2.extras import execute_batch, execute_values
 from loguru import logger
 from dotenv import load_dotenv
 
@@ -29,6 +29,19 @@ load_dotenv()
 
 DATABASE_URL = os.getenv('NEON_DATABASE_URL_DEV', 'postgresql://postgres:password@localhost:5433/open_navigator')
 LOCALVIEW_DIR = Path('data/cache/localview')
+
+CREATE_MAPPING_TABLE_SQL = """
+    CREATE SCHEMA IF NOT EXISTS intermediate;
+    CREATE TABLE IF NOT EXISTS intermediate.int_localview_youtube_video_channels (
+        video_id       VARCHAR(255) PRIMARY KEY,
+        youtube_url    TEXT,
+        channel_id     VARCHAR(255) NOT NULL,
+        channel_title  VARCHAR(500),
+        fetched_at     TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+    );
+    CREATE INDEX IF NOT EXISTS idx_ilvyvc_channel_id
+      ON intermediate.int_localview_youtube_video_channels(channel_id);
+"""
 
 CREATE_TABLE_SQL = """
     CREATE SCHEMA IF NOT EXISTS bronze;
@@ -269,11 +282,79 @@ INSERT_SQL = """
         loaded_at         = NOW()
 """
 
+UPSERT_VIDEO_CHANNELS_SQL = """
+    INSERT INTO intermediate.int_localview_youtube_video_channels
+      (video_id, youtube_url, channel_id, channel_title, fetched_at)
+    VALUES %s
+    ON CONFLICT (video_id) DO UPDATE SET
+      youtube_url = COALESCE(EXCLUDED.youtube_url, intermediate.int_localview_youtube_video_channels.youtube_url),
+      channel_id = EXCLUDED.channel_id,
+      channel_title = COALESCE(EXCLUDED.channel_title, intermediate.int_localview_youtube_video_channels.channel_title),
+      fetched_at = EXCLUDED.fetched_at
+"""
+
+
+def upsert_video_channel_mappings(df: pd.DataFrame, conn, batch_size: int = 2000) -> int:
+    if df.empty:
+        return 0
+
+    if "vid_id" not in df.columns or "channel_id" not in df.columns:
+        return 0
+
+    d = df[["vid_id", "channel_id", "channel_title"]].copy()
+    d = d[d["vid_id"].notna() & d["channel_id"].notna()]
+    if d.empty:
+        return 0
+
+    d["vid_id"] = d["vid_id"].astype(str).str.strip()
+    d["channel_id"] = d["channel_id"].astype(str).str.strip()
+    if "channel_title" in d.columns:
+        d["channel_title"] = d["channel_title"].where(d["channel_title"].notna(), None)
+
+    d = d[(d["vid_id"] != "") & (d["channel_id"] != "")]
+    if d.empty:
+        return 0
+
+    d = d.drop_duplicates(subset=["vid_id"], keep="first")
+
+    rows = [
+        (
+            r["vid_id"],
+            f"https://www.youtube.com/watch?v={r['vid_id']}",
+            r["channel_id"],
+            (str(r["channel_title"])[:500] if r.get("channel_title") is not None else None),
+            datetime.now(),
+        )
+        for _, r in d.iterrows()
+    ]
+
+    cur = conn.cursor()
+    inserted = 0
+    try:
+        for i in range(0, len(rows), batch_size):
+            execute_values(cur, UPSERT_VIDEO_CHANNELS_SQL, rows[i : i + batch_size], page_size=batch_size)
+            inserted += min(batch_size, len(rows) - i)
+        conn.commit()
+        return inserted
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        cur.close()
+
 
 def load_parquet_file(filepath: Path, conn, batch_size: int = 1000) -> int:
     logger.info(f"Loading {filepath.name}...")
     df = pd.read_parquet(filepath)
     logger.info(f"  Rows in file: {len(df):,}")
+
+    # Keep the video→channel mapping in intermediate (source parquet already has it).
+    try:
+        n_map = upsert_video_channel_mappings(df, conn)
+        if n_map:
+            logger.info(f"  Upserted {n_map:,} video→channel mappings from parquet")
+    except Exception as e:
+        logger.warning(f"  Mapping upsert failed (continuing with event load): {e}")
 
     df_valid = df[df['meeting_date'].notna() & df['vid_id'].notna()].copy()
     logger.info(f"  Valid rows (have date + video ID): {len(df_valid):,}")
@@ -333,6 +414,7 @@ def main():
             conn.commit()
             logger.info("Table dropped.")
 
+        cur.execute(CREATE_MAPPING_TABLE_SQL)
         cur.execute(CREATE_TABLE_SQL)
         conn.commit()
         cur.close()
