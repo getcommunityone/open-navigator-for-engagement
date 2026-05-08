@@ -8,6 +8,7 @@ beautifulsoup4==4.12.2
 selenium==4.16.0
 playwright==1.40.0
 httpx>=0.25.0
+socksio>=1.0.0  # needed for httpx SOCKS proxies (socks5://...)
 aiohttp==3.9.1
 youtube-transcript-api>=0.6.2
 google-api-python-client>=2.100.0  # YouTube Data API v3

@@ -23,13 +23,16 @@ This serves as a validation source for channel quality and provides
 authoritative jurisdiction metadata.
 
 Usage:
-    # Load all dev states
-    python scripts/datasources/wikidata/load_jurisdictions_wikidata.py --states AL,GA,IN,MA,WA,WI
-    
-    # Load specific state
-    python scripts/datasources/wikidata/load_jurisdictions_wikidata.py --states AL
-    
-    # Load all jurisdiction types
+    # Load priority development states (AL, GA, IN, MA, WA, WI)
+    python scripts/datasources/wikidata/load_jurisdictions_wikidata.py --priority-states
+
+    # All 50 states + DC (requires rows in bronze base tables per state where applicable)
+    python scripts/datasources/wikidata/load_jurisdictions_wikidata.py --all-us-states --types county
+
+    # Explicit list
+    python scripts/datasources/wikidata/load_jurisdictions_wikidata.py --states TX,NY,OH
+
+    # Load all jurisdiction types for one state
     python scripts/datasources/wikidata/load_jurisdictions_wikidata.py --states AL --types city,county,school_district,state
 """
 import os
@@ -54,15 +57,85 @@ load_dotenv()
 
 DATABASE_URL = os.getenv('NEON_DATABASE_URL_DEV', 'postgresql://postgres:password@localhost:5433/open_navigator')
 
-# State mapping - includes WikiData Q-codes, FIPS codes, and county types
+# State mapping: USPS → display name, Wikidata state item, 2-digit state FIPS.
+# county_type is optional: state-specific subtype of US county on Wikidata. When omitted,
+# the SPARQL query uses only wd:Q47168 ("county of the United States"), which covers most cases.
+# county_instance_types: optional explicit list when county-equivalents are not all Q47168
+# (e.g. Alaska boroughs/census areas: Q13410522, Q56064719 — see Wikidata).
 STATE_MAP = {
     "AL": {"name": "Alabama", "q_code": "Q173", "fips": "01", "county_type": "Q13410400"},
+    "AK": {
+        "name": "Alaska",
+        "q_code": "Q797",
+        "fips": "02",
+        "county_instance_types": ["Q47168", "Q13410522", "Q56064719"],
+    },
+    "AZ": {"name": "Arizona", "q_code": "Q816", "fips": "04"},
+    "AR": {"name": "Arkansas", "q_code": "Q1612", "fips": "05"},
+    "CA": {"name": "California", "q_code": "Q99", "fips": "06"},
+    "CO": {"name": "Colorado", "q_code": "Q1261", "fips": "08"},
+    "CT": {"name": "Connecticut", "q_code": "Q779", "fips": "09"},
+    "DE": {"name": "Delaware", "q_code": "Q1393", "fips": "10"},
+    "DC": {"name": "District of Columbia", "q_code": "Q61", "fips": "11"},
+    "FL": {"name": "Florida", "q_code": "Q812", "fips": "12"},
     "GA": {"name": "Georgia", "q_code": "Q1428", "fips": "13", "county_type": "Q13410428"},
+    "HI": {"name": "Hawaii", "q_code": "Q782", "fips": "15"},
+    "ID": {"name": "Idaho", "q_code": "Q1221", "fips": "16"},
+    "IL": {"name": "Illinois", "q_code": "Q1204", "fips": "17"},
     "IN": {"name": "Indiana", "q_code": "Q1415", "fips": "18", "county_type": "Q13414760"},
+    "IA": {"name": "Iowa", "q_code": "Q1546", "fips": "19"},
+    "KS": {"name": "Kansas", "q_code": "Q1558", "fips": "20"},
+    "KY": {"name": "Kentucky", "q_code": "Q1603", "fips": "21"},
+    "LA": {"name": "Louisiana", "q_code": "Q1588", "fips": "22"},
+    "ME": {"name": "Maine", "q_code": "Q724", "fips": "23"},
+    "MD": {"name": "Maryland", "q_code": "Q1391", "fips": "24"},
     "MA": {"name": "Massachusetts", "q_code": "Q771", "fips": "25", "county_type": "Q13410485"},
-    "WA": {"name": "Washington", "q_code": "Q1223", "fips": "53", "county_type": "Q13415369"},  # Fixed: was Q13414759
-    "WI": {"name": "Wisconsin", "q_code": "Q1537", "fips": "55", "county_type": "Q13414761"}
+    "MI": {"name": "Michigan", "q_code": "Q1166", "fips": "26"},
+    "MN": {"name": "Minnesota", "q_code": "Q1527", "fips": "27"},
+    "MS": {"name": "Mississippi", "q_code": "Q1494", "fips": "28"},
+    "MO": {"name": "Missouri", "q_code": "Q1581", "fips": "29"},
+    "MT": {"name": "Montana", "q_code": "Q1212", "fips": "30"},
+    "NE": {"name": "Nebraska", "q_code": "Q1553", "fips": "31"},
+    "NV": {"name": "Nevada", "q_code": "Q1227", "fips": "32"},
+    "NH": {"name": "New Hampshire", "q_code": "Q759", "fips": "33"},
+    "NJ": {"name": "New Jersey", "q_code": "Q1408", "fips": "34"},
+    "NM": {"name": "New Mexico", "q_code": "Q1522", "fips": "35"},
+    "NY": {"name": "New York", "q_code": "Q1384", "fips": "36"},
+    "NC": {"name": "North Carolina", "q_code": "Q1454", "fips": "37"},
+    "ND": {"name": "North Dakota", "q_code": "Q1207", "fips": "38"},
+    "OH": {"name": "Ohio", "q_code": "Q1397", "fips": "39"},
+    "OK": {"name": "Oklahoma", "q_code": "Q1649", "fips": "40"},
+    "OR": {"name": "Oregon", "q_code": "Q824", "fips": "41"},
+    "PA": {"name": "Pennsylvania", "q_code": "Q1400", "fips": "42"},
+    "RI": {"name": "Rhode Island", "q_code": "Q1387", "fips": "44"},
+    "SC": {"name": "South Carolina", "q_code": "Q1456", "fips": "45"},
+    "SD": {"name": "South Dakota", "q_code": "Q1211", "fips": "46"},
+    "TN": {"name": "Tennessee", "q_code": "Q1509", "fips": "47"},
+    "TX": {"name": "Texas", "q_code": "Q1439", "fips": "48"},
+    "UT": {"name": "Utah", "q_code": "Q829", "fips": "49"},
+    "VT": {"name": "Vermont", "q_code": "Q16551", "fips": "50"},
+    "VA": {"name": "Virginia", "q_code": "Q1370", "fips": "51"},
+    "WA": {"name": "Washington", "q_code": "Q1223", "fips": "53", "county_type": "Q13415369"},
+    "WV": {"name": "West Virginia", "q_code": "Q1371", "fips": "54"},
+    "WI": {"name": "Wisconsin", "q_code": "Q1537", "fips": "55", "county_type": "Q13414761"},
+    "WY": {"name": "Wyoming", "q_code": "Q1214", "fips": "56"},
 }
+
+# Priority development states (subset of STATE_MAP).
+PRIORITY_STATES = ["AL", "GA", "IN", "MA", "WA", "WI"]
+
+
+def _county_type_values_clause(state_code: str) -> str:
+    """Build WDQS VALUES clause for county/county-equivalent instance-of types."""
+    info = STATE_MAP.get(state_code) or {}
+    instances = info.get("county_instance_types")
+    if instances:
+        return " ".join(f"wd:{q}" for q in instances)
+    county_type_q = info.get("county_type")
+    if county_type_q:
+        return f"wd:{county_type_q} wd:Q47168"
+    return "wd:Q47168"
+
 
 # WikiData Q-codes for jurisdiction types
 JURISDICTION_TYPES = {
@@ -108,9 +181,9 @@ class CheckpointManager:
 class JurisdictionsWikiDataLoader:
     """Load jurisdiction data from WikiData into PostgreSQL."""
     
-    def __init__(self, database_url: str):
+    def __init__(self, database_url: str, proxy_url: Optional[str] = None):
         self.conn = psycopg2.connect(database_url)
-        self.wikidata = WikidataQuery()
+        self.wikidata = WikidataQuery(proxy_url=proxy_url)
         
         # Create table
         self._create_table()
@@ -441,26 +514,19 @@ class JurisdictionsWikiDataLoader:
         return jurisdictions
     
     async def _query_counties_in_state(self, state_code: str, state_q_code: str, state_name: str) -> List[Dict]:
-        """Query counties using state-specific AND generic county types to catch all counties."""
-        state_info = STATE_MAP.get(state_code)
-        if not state_info or not state_info.get("county_type"):
-            logger.warning(f"No county type defined for {state_name}")
-            return []
-        
-        county_type_q = state_info["county_type"]
-        
+        """Query counties using state-specific subtype (when present) and/or Q47168 US county."""
+        county_type_values = _county_type_values_clause(state_code)
+
+        # Lighter query than city/school loaders: no head-of-government subselect or extra
+        # demographics (WDQS often returns 500/504 on heavy county patterns).
         query = f"""
         SELECT DISTINCT 
             ?item ?itemLabel ?website ?population ?area
             ?facebook ?twitter ?youtube ?fips ?gnis ?nces ?image ?banner ?locatorMap
-            ?dialingCode ?googleMapsCustomerId ?households ?medianAge ?languageLabel
             ?lat ?lon
-            ?postalCode ?perCapitaIncome ?timeZone ?timeZoneLabel
-            ?ballotpediaId ?tripadvisorId ?subreddit
             ?geonamesId
         WHERE {{
-          # County must be instance of generic or state-specific county type
-          VALUES ?countyType {{ wd:{county_type_q} wd:Q47168 }}
+          VALUES ?countyType {{ {county_type_values} }}
           ?item wdt:P31 ?countyType .
           
           # Must be located in this state
@@ -481,35 +547,7 @@ class JurisdictionsWikiDataLoader:
           OPTIONAL {{ ?item wdt:P1566 ?geonamesId . }}
           OPTIONAL {{ ?item p:P625/psv:P625/wikibase:geoLatitude ?lat . }}
           OPTIONAL {{ ?item p:P625/psv:P625/wikibase:geoLongitude ?lon . }}
-          OPTIONAL {{ ?item wdt:P473 ?dialingCode . }}
-          OPTIONAL {{ ?item wdt:P3749 ?googleMapsCustomerId . }}
-          OPTIONAL {{ ?item wdt:P1538 ?households . }}
-          OPTIONAL {{ ?item wdt:P1310 ?medianAge . }}
-          OPTIONAL {{ ?item wdt:P407 ?language . }}
-          
-          # Head of government
-          OPTIONAL {{ 
-            {{
-              SELECT ?headOfGov ?headStart WHERE {{
-                ?item p:P6 ?headStmt .
-                ?headStmt ps:P6 ?headOfGov .
-                OPTIONAL {{ ?headStmt pq:P580 ?headStart . }}
-                FILTER(BOUND(?headStart))
-              }}
-              ORDER BY DESC(?headStart)
-              LIMIT 1
-            }}
-            OPTIONAL {{ ?headOfGov wdt:P39 ?position . }}
-          }}
-          
-          # Additional metadata
-          OPTIONAL {{ ?item wdt:P281 ?postalCode . }}
-          OPTIONAL {{ ?item wdt:P3529 ?perCapitaIncome . }}
-          OPTIONAL {{ ?item wdt:P421 ?timeZone . }}
-          OPTIONAL {{ ?item wdt:P2390 ?ballotpediaId . }}
-          OPTIONAL {{ ?item wdt:P3134 ?tripadvisorId . }}
-          OPTIONAL {{ ?item wdt:P3984 ?subreddit . }}
-          
+
           SERVICE wikibase:label {{ bd:serviceParam wikibase:language "[AUTO_LANGUAGE],en". }}
         }}
         LIMIT 500
@@ -628,11 +666,23 @@ class JurisdictionsWikiDataLoader:
             geoid = None
             
             if jurisdiction_type == 'county' and fips_code:
-                # Format: county_{FIPS} (e.g., county_01001)
-                jurisdiction_id = f"county_{fips_code}"
-                jurisdiction_id_type = 'county_fips'
-                # GEOID for counties is the 5-digit FIPS code (state + county)
-                geoid = fips_code
+                # Census / bronze use 5-digit county GEOID (state FIPS + county FIPS).
+                # Wikidata P882 is sometimes the full 5-digit code, sometimes county-only (e.g. "001").
+                fc = str(fips_code).strip().replace("-", "")
+                state_fips = STATE_MAP.get(state_code, {}).get("fips")
+                geoid = None
+                if fc.isdigit():
+                    if len(fc) == 5:
+                        geoid = fc
+                    elif state_fips and len(fc) <= 3:
+                        geoid = f"{state_fips}{fc.zfill(3)}"
+                    else:
+                        geoid = fc
+                else:
+                    geoid = fc
+                fips_code = geoid
+                jurisdiction_id = f"county_{geoid}" if geoid else None
+                jurisdiction_id_type = 'county_fips' if geoid else None
             elif jurisdiction_type == 'school_district' and nces_id:
                 # Format: school_{NCES} (e.g., school_0100001)
                 jurisdiction_id = f"school_{nces_id}"
@@ -1066,6 +1116,11 @@ class JurisdictionsWikiDataLoader:
                 self.insert_jurisdictions(results)
             if checkpoint:
                 checkpoint.mark_done(state_code, task)
+            # Avoid tripping WDQS/Cloudflare protections; this is distinct from per-request throttling
+            # because some tasks run large SPARQL queries back-to-back.
+            task_sleep_s = float(os.getenv("WIKIDATA_TASK_SLEEP_SECONDS", "2") or "2")
+            if task_sleep_s > 0:
+                await asyncio.sleep(task_sleep_s)
 
         with_youtube = sum(1 for j in all_jurisdictions if j.get('youtube_channel_id'))
         with_website = sum(1 for j in all_jurisdictions if j.get('official_website'))
@@ -1088,8 +1143,20 @@ async def main():
     parser.add_argument(
         '--states',
         type=str,
-        required=True,
-        help='Comma-separated list of state codes (e.g., AL,MA,WI)'
+        default=",".join(PRIORITY_STATES),
+        help=f'Comma-separated list of state codes (default: {",".join(PRIORITY_STATES)})'
+    )
+
+    parser.add_argument(
+        '--priority-states',
+        action='store_true',
+        help=f'Convenience flag: load all priority states ({", ".join(PRIORITY_STATES)})'
+    )
+
+    parser.add_argument(
+        '--all-us-states',
+        action='store_true',
+        help='Load every USPS code in STATE_MAP (50 states plus DC)'
     )
     
     parser.add_argument(
@@ -1097,6 +1164,20 @@ async def main():
         type=str,
         default='city,county,state',
         help='Comma-separated jurisdiction types (default: city,county,state)'
+    )
+
+    parser.add_argument(
+        '--proxy',
+        type=str,
+        default=os.getenv('CLOUDFLARE_PROXY_URL'),
+        help='Proxy URL for Wikidata requests (ignored if WIKIDATA_PROXY_URLS is set; else default env CLOUDFLARE_PROXY_URL)'
+    )
+
+    parser.add_argument(
+        '--task-sleep-seconds',
+        type=float,
+        default=float(os.getenv("WIKIDATA_TASK_SLEEP_SECONDS", "2") or "2"),
+        help='Sleep between jurisdiction-type queries within a state (default: env WIKIDATA_TASK_SLEEP_SECONDS or 2.0)'
     )
 
     parser.add_argument(
@@ -1115,17 +1196,34 @@ async def main():
     args = parser.parse_args()
 
     # Parse states and types
-    states = [s.strip().upper() for s in args.states.split(',')]
+    if args.priority_states:
+        states = PRIORITY_STATES
+    elif args.all_us_states:
+        states = sorted(STATE_MAP.keys())
+    else:
+        states = [s.strip().upper() for s in args.states.split(',') if s.strip()]
+
+    # Validate early so we don't partially write tables.
+    unknown_states = [s for s in states if s not in STATE_MAP]
+    if unknown_states:
+        known_sample = ",".join(sorted(STATE_MAP.keys())[:12]) + ",…"
+        raise SystemExit(
+            f"Unknown state code(s): {', '.join(unknown_states)}. Known codes (sample): {known_sample}"
+        )
+
     types = [t.strip().lower() for t in args.types.split(',')]
 
     checkpoint = None if args.force else CheckpointManager(args.checkpoint_file)
 
     # Load data
-    loader = JurisdictionsWikiDataLoader(DATABASE_URL)
+    loader = JurisdictionsWikiDataLoader(DATABASE_URL, proxy_url=args.proxy)
     
     try:
         for state in states:
             await loader.load_state(state, types, checkpoint)
+            # Be kind to WDQS / Cloudflare; pause between states as well.
+            if args.task_sleep_seconds and args.task_sleep_seconds > 0:
+                await asyncio.sleep(args.task_sleep_seconds)
         
         # Final summary (bronze *_wikidata tables)
         cursor = loader.conn.cursor()
