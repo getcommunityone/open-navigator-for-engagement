@@ -258,6 +258,10 @@ def _apply_wikidata_happy_path_env_defaults() -> None:
         "WIKIDATA_SCHOOL_BULK_SUPPLEMENT_SPARQL": "0",
         "WIKIDATA_COUNTY_BULK_FALLBACK_ENTITY_SEARCH": "0",
         "WIKIDATA_COUNTY_CHUNK_SLEEP_SECONDS": "3",
+        "WIKIDATA_MUNICIPALITY_POST_BULK_WDQS_GAP_SECONDS": "12",
+        "WIKIDATA_MUNICIPALITY_FILTER_WDQS_GAP_SECONDS": "8",
+        "WIKIDATA_SCHOOL_POST_BULK_WDQS_GAP_SECONDS": "12",
+        "WIKIDATA_SCHOOL_FILTER_WDQS_GAP_SECONDS": "8",
     }
     applied = []
     for key, val in defaults.items():
@@ -462,6 +466,41 @@ def _chunk_sleep_seconds(default: float = 1.0) -> float:
         )
     except ValueError:
         return default
+
+
+def _municipality_post_bulk_wdqs_gap_seconds() -> float:
+    """
+    Sleep after the one state-wide bulk WDQS query before the first per-chunk FILTER IN
+    (``WIKIDATA_MUNICIPALITY_BULK_SUPPLEMENT_SPARQL=1``). Reduces back-to-back WDQS bursts → 429.
+    """
+    try:
+        return max(0.0, float(os.getenv("WIKIDATA_MUNICIPALITY_POST_BULK_WDQS_GAP_SECONDS", "10") or "10"))
+    except ValueError:
+        return 10.0
+
+
+def _municipality_filter_wdqs_gap_seconds() -> float:
+    """Sleep immediately before each municipality FILTER IN WDQS request (same env family as POST_BULK)."""
+    try:
+        return max(0.0, float(os.getenv("WIKIDATA_MUNICIPALITY_FILTER_WDQS_GAP_SECONDS", "6") or "6"))
+    except ValueError:
+        return 6.0
+
+
+def _school_post_bulk_wdqs_gap_seconds() -> float:
+    """After bulk school WDQS, pause before first FILTER supplement (when supplement=1)."""
+    try:
+        return max(0.0, float(os.getenv("WIKIDATA_SCHOOL_POST_BULK_WDQS_GAP_SECONDS", "10") or "10"))
+    except ValueError:
+        return 10.0
+
+
+def _school_filter_wdqs_gap_seconds() -> float:
+    """Sleep before each school FILTER IN WDQS request."""
+    try:
+        return max(0.0, float(os.getenv("WIKIDATA_SCHOOL_FILTER_WDQS_GAP_SECONDS", "6") or "6"))
+    except ValueError:
+        return 6.0
 
 
 # Bronze municipality rows join Wikidata largely via P774 (FIPS place code); P590 is GNIS (often = ansicode).
@@ -1127,6 +1166,19 @@ class JurisdictionsWikiDataLoader:
                 "bulk_state returned no data — municipality mapping uses FILTER batches per chunk"
             )
 
+        if (
+            use_bulk
+            and map_mode == "bulk_state"
+            and _wikidata_municipality_bulk_supplement_sparql()
+        ):
+            gap_pb = _municipality_post_bulk_wdqs_gap_seconds()
+            if gap_pb > 0:
+                logger.info(
+                    f"  Waiting {gap_pb:.0f}s after bulk WDQS before FILTER supplements "
+                    f"(WIKIDATA_MUNICIPALITY_POST_BULK_WDQS_GAP_SECONDS; eases WDQS 429)…"
+                )
+                await asyncio.sleep(gap_pb)
+
         for ix in range(0, len(pairs), chunk_size):
             chunk = pairs[ix : ix + chunk_size]
             chi = ix // chunk_size + 1
@@ -1203,6 +1255,9 @@ class JurisdictionsWikiDataLoader:
                     f"unmapped={n_miss_p1}/{len(chunk)} → running 2nd WDQS query (FILTER IN: {n_lit_f} FIPS + "
                     f"{n_lit_g} GNIS literal variants)…"
                 )
+                gapf = _municipality_filter_wdqs_gap_seconds()
+                if gapf > 0:
+                    await asyncio.sleep(gapf)
                 try:
                     mapping_rows = await self.wikidata.execute_sparql(qtext)
                 except Exception as e:
@@ -1643,6 +1698,15 @@ class JurisdictionsWikiDataLoader:
                 "bulk_state returned no data — school id→Q mapping uses FILTER batches per chunk"
             )
 
+        if use_bulk and map_mode == "bulk_state" and _wikidata_school_bulk_supplement_sparql():
+            gap_pb = _school_post_bulk_wdqs_gap_seconds()
+            if gap_pb > 0:
+                logger.info(
+                    f"  Waiting {gap_pb:.0f}s after bulk WDQS before FILTER supplements "
+                    f"(WIKIDATA_SCHOOL_POST_BULK_WDQS_GAP_SECONDS; eases WDQS 429)…"
+                )
+                await asyncio.sleep(gap_pb)
+
         for ix in range(0, len(geoids), chunk_size):
             chunk = geoids[ix : ix + chunk_size]
             chi = ix // chunk_size + 1
@@ -1678,6 +1742,9 @@ class JurisdictionsWikiDataLoader:
                 id_in = ", ".join(sorted(_sparql_quote_string_literal(x) for x in literals))
                 lim = min(2500, max(520, len(chunk) * 28))
                 mq = _wikidata_hybrid_sql.school_mapping_sparql(id_in, lim)
+                gapf = _school_filter_wdqs_gap_seconds()
+                if gapf > 0:
+                    await asyncio.sleep(gapf)
                 try:
                     mapping_rows = await self.wikidata.execute_sparql(mq)
                 except Exception as e:

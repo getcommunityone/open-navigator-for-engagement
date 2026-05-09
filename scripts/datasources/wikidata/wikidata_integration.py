@@ -151,7 +151,7 @@ class WikidataQuery:
         # After 429 / overload, temporarily add extra spacing (seconds, decays per successful request).
         self._burst_throttle_s = 0.0
         # WDQS often sends Retry-After: 120–1000+; cap keeps bulk loads moving. ``0`` = honor full Retry-After (can stall ~17m).
-        self._retry_after_cap_s = float(os.getenv("WIKIDATA_RETRY_AFTER_MAX_SECONDS", "45") or "45")
+        self._retry_after_cap_s = float(os.getenv("WIKIDATA_RETRY_AFTER_MAX_SECONDS", "120") or "120")
         if self._retry_after_cap_s <= 0:
             logger.warning(
                 "WIKIDATA_RETRY_AFTER_MAX_SECONDS<=0 — 429 Retry-After is NOT capped (WDQS often sends ~1000s). "
