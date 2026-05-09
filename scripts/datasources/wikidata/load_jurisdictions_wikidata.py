@@ -1458,7 +1458,7 @@ class JurisdictionsWikiDataLoader:
                     if matched_q:
                         geo_to_q[g] = matched_q
                         continue
-                if inner_mode == "sparql":
+                if inner_mode == "sparql" or use_bulk:
                     literals |= lits
 
             mapping_rows: List[Dict] = []
