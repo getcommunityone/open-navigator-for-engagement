@@ -12,6 +12,10 @@ When persistence is enabled (default), each successful HTTP response is written 
 Disable crawling with env ``SCRAPED_MEETINGS_SITEMAP=false``.
 Disable writing artifacts (still enqueues meeting candidates) with
 ``SCRAPED_MEETINGS_SITEMAP_PERSIST=false``.
+
+When ``httpx`` returns ``403``/``401``/``429``/``202`` or hits TLS verification errors on a
+sitemap URL, the same URL is retried with **Playwright** (Chromium), using the navigation response
+body so XML stays valid (see ``fetch_resource_bytes_via_playwright``).
 """
 
 from __future__ import annotations
@@ -36,6 +40,11 @@ from scripts.discovery.meetings_platform_heuristics import (
     is_same_site,
     is_trusted_offsite,
     is_vendor_meeting_page_url,
+)
+from scripts.discovery.meetings_playwright_fetch import (
+    fetch_resource_bytes_via_playwright,
+    httpx_status_should_try_playwright,
+    playwright_fallback_enabled,
 )
 
 MEETING_URL_HINT = re.compile(
@@ -257,22 +266,58 @@ async def _http_get_content(
     url: str,
     *,
     max_bytes: int,
+    playwright_timeout_ms: int,
+    playwright_user_agent: str,
 ) -> tuple[Optional[int], str, Optional[bytes], Optional[str]]:
     """
     Returns ``(status_code, final_url, body_bytes, error)``.
     ``body_bytes`` is set only for OK responses within ``max_bytes``.
+
+    On bot-ish HTTP statuses or TLS failures from ``httpx``, may retry the same URL with Playwright
+    (raw ``Response.body``) so sitemaps work when only browsers get ``200``.
     """
     try:
         r = await client.get(url, follow_redirects=True)
         final = str(r.url)
         status = r.status_code
         if status != 200:
+            if playwright_fallback_enabled() and httpx_status_should_try_playwright(status):
+                pw_st, pw_final, pw_raw, _pw_err = await fetch_resource_bytes_via_playwright(
+                    url,
+                    timeout_ms=playwright_timeout_ms,
+                    user_agent=playwright_user_agent,
+                    max_bytes=max_bytes,
+                )
+                if pw_raw is not None and pw_st == 200:
+                    logger.info(
+                        f"meetings_sitemap_playwright_fetch_ok url={url!r} httpx_status={status} "
+                        f"playwright_status={pw_st} bytes={len(pw_raw)}",
+                    )
+                    return pw_st, pw_final, pw_raw, None
             return status, final, None, None
         raw = r.content
         if len(raw) > max_bytes:
             return status, final, None, f"oversize_{len(raw)}_bytes"
         return status, final, raw, None
     except Exception as exc:
+        if playwright_fallback_enabled():
+            from scripts.discovery.comprehensive_discovery_pipeline_meetings import (
+                _httpx_error_suggests_tls_or_cert_failure,
+            )
+
+            if _httpx_error_suggests_tls_or_cert_failure(exc):
+                pw_st, pw_final, pw_raw, _pw_err = await fetch_resource_bytes_via_playwright(
+                    url,
+                    timeout_ms=playwright_timeout_ms,
+                    user_agent=playwright_user_agent,
+                    max_bytes=max_bytes,
+                )
+                if pw_raw is not None and pw_st == 200:
+                    logger.info(
+                        f"meetings_sitemap_playwright_fetch_ok_after_httpx_tls_error url={url!r} "
+                        f"bytes={len(pw_raw)} httpx_exc={exc!r}",
+                    )
+                    return pw_st, pw_final, pw_raw, None
         return None, url, None, repr(exc)
 
 
@@ -291,11 +336,19 @@ def _write_raw_file(raw_dir: Path, doc_id: str, content_kind: str, body: bytes) 
     return rel, _sha256_hex(body)
 
 
+_DEFAULT_PLAYWRIGHT_UA = (
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) "
+    "Chrome/120.0.0.0 Safari/537.36 OpenNavigatorMeetings/1.0"
+)
+
+
 async def discover_meeting_candidate_urls_from_sitemaps(
     client: httpx.AsyncClient,
     homepage: str,
     *,
     persist: Optional[SitemapPersistConfig] = None,
+    playwright_timeout_ms: int = 120_000,
+    playwright_user_agent: str = _DEFAULT_PLAYWRIGHT_UA,
 ) -> SitemapDiscoveryResult:
     """
     Return meeting-candidate URLs to enqueue plus optional persisted sitemap artifacts.
@@ -332,6 +385,9 @@ async def discover_meeting_candidate_urls_from_sitemaps(
         minimum=1,
     )
 
+    pw_ms = int(max(15_000, min(180_000, playwright_timeout_ms)))
+    pw_ua = playwright_user_agent or _DEFAULT_PLAYWRIGHT_UA
+
     collected_at = datetime.now(timezone.utc).isoformat()
     meta: Dict[str, Any] = {
         "jurisdiction_id": (persist.jurisdiction_id if persist else ""),
@@ -345,7 +401,11 @@ async def discover_meeting_candidate_urls_from_sitemaps(
     seeds: List[str] = list(dict.fromkeys(_default_sitemap_seeds(origin)))
     robots_url = urljoin(origin + "/", "robots.txt")
     robots_status, robots_final, robots_bytes, robots_err = await _http_get_content(
-        client, robots_url, max_bytes=min(2_000_000, max_body)
+        client,
+        robots_url,
+        max_bytes=min(2_000_000, max_body),
+        playwright_timeout_ms=pw_ms,
+        playwright_user_agent=pw_ua,
     )
 
     inventory_docs: List[Dict[str, Any]] = []
@@ -548,7 +608,13 @@ async def discover_meeting_candidate_urls_from_sitemaps(
                     return
 
             doc_id = next_doc_id()
-            status, final_u, body_bytes, fetch_err = await _http_get_content(client, key, max_bytes=max_body)
+            status, final_u, body_bytes, fetch_err = await _http_get_content(
+                client,
+                key,
+                max_bytes=max_body,
+                playwright_timeout_ms=pw_ms,
+                playwright_user_agent=pw_ua,
+            )
 
             inv_summary: Dict[str, Any] = {
                 "sitemap_document_id": doc_id,

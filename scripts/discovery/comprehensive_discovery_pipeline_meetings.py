@@ -12,7 +12,9 @@ Goals:
 - Follow agenda / minutes / meeting links from the homepage and search results.
 - Optionally seed the crawl from **XML sitemaps** (``/sitemap.xml``, ``robots.txt`` ``Sitemap:``,
   WordPress ``wp-sitemap.xml``, …): meeting-ish ``<loc>`` URLs are enqueued so pages that are not
-  linked in HTML can still be fetched. Disable with ``SCRAPED_MEETINGS_SITEMAP=false``. Raw
+  linked in HTML can still be fetched. Sitemap HTTP fetches use the same **Playwright** fallback as
+  page HTML when ``httpx`` sees ``403``/TLS errors (raw response bytes, valid XML). Disable with
+  ``SCRAPED_MEETINGS_SITEMAP=false``. Raw
   responses are stored under ``_sitemaps/raw/`` with ``sitemap_inventory.json`` (bundle metadata)
   and ``sitemap_rows.ndjson`` (one flat JSON object per line for database ingest). Disable those
   writes with ``SCRAPED_MEETINGS_SITEMAP_PERSIST=false`` (URLs are still enqueued when sitemaps are on).
@@ -34,18 +36,32 @@ Goals:
 
     ``{root}/{state}/{jurisdiction_type}/{jurisdiction_id}/{year}/``
 
+Each fetched page is also written under ``_crawl_html/page_*.html``. When
+``SCRAPED_MEETINGS_HTML_READABLE_TXT`` is true (default), a sibling ``page_*.readable.txt`` is
+written: scripts/styles removed and visible text flattened for reading in any editor.
+
 Default ``root`` is the repo cache **``data/cache/scraped_meetings``** (same ``data/cache`` family
 as wikidata JSON). Override with env ``SCRAPED_MEETINGS_ROOT`` (e.g. a Google Drive mount) or
 ``--output-root``. ``.env`` is loaded first.
 
 TLS: set ``SCRAPED_MEETINGS_HTTP_VERIFY=false`` only if you must (corporate MITM / broken CA store).
+When verification fails, the scraper may still fetch the same URL via **Playwright** (Chromium’s
+trust store), logging ``meetings_playwright_fallback_ok_after_httpx_tls_error``.
 
 CAPTCHA / anti-bot: successful HTTP 200 responses that look like Cloudflare hCaptcha/reCAPTCHA
 interstitials (and a few other WAFs) are treated as fetch failures with reason ``captcha:…`` and
-log event ``meetings_fetch_captcha_or_bot_wall``. There is no in-repo bypass; use a real browser
-(Playwright), a different network / egress IP, lower concurrency, or add an alternate
-``website_url`` in ``int_jurisdiction_websites`` (e.g. ``www.…`` vs apex) if the host serves real
-HTML to browsers but not to this scraper.
+log event ``meetings_fetch_captcha_or_bot_wall``. When ``SCRAPED_MEETINGS_PLAYWRIGHT_FALLBACK`` is
+true (default), the scraper retries the same URL with **headless Chromium (Playwright)** after
+``httpx`` gets ``401``/``403``/``429``/``202`` or a captcha-like ``200`` body. Install browsers once:
+``playwright install chromium``. Set ``SCRAPED_MEETINGS_PLAYWRIGHT_FALLBACK=false`` to skip.
+Concurrency is capped by ``SCRAPED_MEETINGS_PLAYWRIGHT_MAX_CONCURRENT`` (default ``2``).
+On WSL/Ubuntu, if Chromium fails to start, run ``sudo .venv/bin/python -m playwright install-deps``
+or set ``SCRAPED_MEETINGS_PLAYWRIGHT_CHROMIUM_EXECUTABLE``. If Playwright returns
+``playwright_http_403`` (Akamai / bot rules), try ``SCRAPED_MEETINGS_PLAYWRIGHT_CHANNEL=chrome`` with
+Google Chrome installed in WSL, ``SCRAPED_MEETINGS_PLAYWRIGHT_HEADLESS=false`` when a display is
+available, or run outside WSL. ``SCRAPED_MEETINGS_PLAYWRIGHT_STEALTH=false`` disables
+``playwright-stealth``. Also try a different network or an alternate ``website_url`` in
+``int_jurisdiction_websites``.
 
 Timeouts: ``--timeout`` applies to **connect** and **read** (and write/pool). Optional
 ``SCRAPED_MEETINGS_FETCH_RETRIES`` (default ``1``) adds backoff retries after ``ConnectTimeout`` /
@@ -136,6 +152,11 @@ from scripts.discovery.meetings_platform_heuristics import (
 from scripts.discovery.meetings_sitemap_discovery import (
     SitemapPersistConfig,
     discover_meeting_candidate_urls_from_sitemaps,
+)
+from scripts.discovery.meetings_playwright_fetch import (
+    fetch_html_via_playwright,
+    httpx_status_should_try_playwright,
+    playwright_fallback_enabled,
 )
 
 try:
@@ -650,6 +671,50 @@ def _http_verify() -> bool:
     return v not in ("0", "false", "no", "off")
 
 
+def _meetings_readable_snapshot_txt_enabled() -> bool:
+    v = (os.getenv("SCRAPED_MEETINGS_HTML_READABLE_TXT") or "true").strip().lower()
+    return v not in ("0", "false", "no", "off")
+
+
+def _html_to_readable_plaintext(html: str, source_url: str, *, max_chars: int = 600_000) -> str:
+    """Strip markup noise for a human-readable sidecar next to ``page_*.html``."""
+    from bs4 import BeautifulSoup
+
+    soup = BeautifulSoup(html or "", "html.parser")
+    for tag in soup(["script", "style", "noscript", "svg", "template", "iframe"]):
+        tag.decompose()
+    text = soup.get_text("\n", strip=True)
+    lines = [ln.strip() for ln in text.splitlines() if ln.strip()]
+    body = "\n".join(lines)
+    if len(body) > max_chars:
+        body = body[:max_chars] + "\n\n...[truncated]..."
+    return f"Source: {source_url}\n{'=' * 72}\n\n{body}"
+
+
+def _httpx_error_suggests_tls_or_cert_failure(exc: BaseException) -> bool:
+    """
+    True when ``httpx`` failed before a usable response, likely TLS / CA verification.
+
+    Common on WSL without merged Windows CAs, or corporate TLS inspection. Chromium often still
+    verifies successfully, so :func:`fetch_html_via_playwright` can be tried as a fallback.
+    """
+    blob = f"{type(exc).__name__} {exc!r}".lower()
+    return any(
+        s in blob
+        for s in (
+            "certificate_verify_failed",
+            "cert_verify",
+            "ssl:",
+            "tlsv1",
+            "tls alert",
+            "handshake failure",
+            "unable to get local issuer certificate",
+            "unable to get issuer certificate",
+            "self signed certificate",
+        )
+    )
+
+
 def _fetch_retries() -> int:
     """Extra attempts after a timeout (``SCRAPED_MEETINGS_FETCH_RETRIES``, default 1)."""
     try:
@@ -657,6 +722,36 @@ def _fetch_retries() -> int:
     except ValueError:
         n = 1
     return max(0, min(n, 5))
+
+
+def _non_html_body_reason(content: bytes, content_type_header: str) -> Optional[str]:
+    """
+    If an HTTP 200 body is clearly not HTML (image/PDF/etc.), return a short diagnostic token.
+
+    Servers sometimes mis-label bodies or pages enqueue ``.jpg`` URLs; feeding binary to BeautifulSoup
+    can raise ``AssertionError`` from the stdlib HTML parser.
+    """
+    ct = (content_type_header or "").lower().split(";")[0].strip()
+    if ct.startswith("image/") and ct != "image/svg+xml":
+        return f"content_type:{ct}"
+    if ct in ("application/pdf", "application/x-pdf"):
+        return f"content_type:{ct}"
+    if ct.startswith(("video/", "audio/")):
+        return f"content_type:{ct}"
+    head = content[:32] if content else b""
+    if head.startswith(b"\xff\xd8\xff"):
+        return "magic_jpeg"
+    if head.startswith(b"%PDF"):
+        return "magic_pdf"
+    if head.startswith(b"\x89PNG\r\n\x1a\n"):
+        return "magic_png"
+    if head.startswith((b"GIF87a", b"GIF89a")):
+        return "magic_gif"
+    if len(content) >= 12 and content[:4] == b"RIFF" and content[8:12] == b"WEBP":
+        return "magic_webp"
+    if head.startswith(b"BM") and len(content) > 20:
+        return "magic_bmp"
+    return None
 
 
 def _captcha_or_bot_wall_reason(html: str, headers: Any) -> Optional[str]:
@@ -738,7 +833,7 @@ class ComprehensiveDiscoveryPipelineMeetings:
         self,
         *,
         output_root: Optional[Path] = None,
-        max_pages: int = 25,
+        max_pages: int = 40,
         max_pdfs: int = 80,
         timeout_s: float = 120.0,
     ):
@@ -759,12 +854,34 @@ class ComprehensiveDiscoveryPipelineMeetings:
     def _target_dir(self, state: str, jurisdiction_id: str, year: int) -> Path:
         return self._jurisdiction_base_dir(state, jurisdiction_id) / str(year)
 
-    async def _fetch_page_once(self, client: httpx.AsyncClient, url: str) -> tuple[Optional[str], str]:
-        """Single GET attempt (no retries)."""
+    async def _fetch_page_once(self, client: httpx.AsyncClient, url: str) -> tuple[Optional[str], str, str]:
+        """Single GET attempt (no retries). May fall back to headless Chromium (Playwright).
+
+        On success returns ``(html, "", response_url)`` where ``response_url`` is the final URL
+        after HTTP redirects (used to resolve relative links on cross-host redirects).
+        """
+        timeout_ms = int(max(15_000, min(180_000, float(self.timeout_s) * 1000)))
         try:
             r = await client.get(url, follow_redirects=True)
             if r.status_code != 200:
                 reason = f"http_status_{r.status_code}"
+                if httpx_status_should_try_playwright(r.status_code):
+                    phtml, perr, pfinal = await fetch_html_via_playwright(
+                        url, timeout_ms=timeout_ms, user_agent=_DEFAULT_UA
+                    )
+                    if phtml:
+                        logger.info(
+                            f"meetings_playwright_fallback_ok url={url!r} httpx_status={r.status_code} "
+                            f"(plain HTTP failed; Playwright returned HTML)",
+                        )
+                        return phtml, "", pfinal
+                    miss_msg = (
+                        f"meetings_playwright_fallback_miss url={url!r} httpx_status={r.status_code} detail={perr!r}"
+                    )
+                    if r.status_code in (401, 403):
+                        logger.warning(miss_msg)
+                    else:
+                        logger.debug(miss_msg)
                 logfn = (
                     logger.debug
                     if _is_probable_site_search_probe(url) and 400 <= r.status_code < 500
@@ -776,10 +893,30 @@ class ComprehensiveDiscoveryPipelineMeetings:
                     status=r.status_code,
                     loc=(r.headers.get("location") or ""),
                 )
-                return None, reason
+                return None, reason, url
+            raw = r.content or b""
+            nh = _non_html_body_reason(raw, r.headers.get("content-type") or "")
+            if nh:
+                logger.debug(
+                    "meetings_fetch_non_html_body url={url!r} reason={reason}",
+                    url=url,
+                    reason=nh,
+                )
+                return None, f"non_html:{nh}", str(r.url)
             text = r.text
             captcha_hint = _captcha_or_bot_wall_reason(text, r.headers)
             if captcha_hint:
+                phtml, perr, pfinal = await fetch_html_via_playwright(
+                    url, timeout_ms=timeout_ms, user_agent=_DEFAULT_UA
+                )
+                if phtml:
+                    logger.info(
+                        f"meetings_playwright_fallback_ok_after_captcha_signal url={url!r} signal={captcha_hint}",
+                    )
+                    return phtml, "", pfinal
+                logger.warning(
+                    f"meetings_playwright_fallback_miss_after_captcha_signal url={url!r} signal={captcha_hint} detail={perr!r}",
+                )
                 logfn = logger.debug if _is_probable_site_search_probe(url) else logger.warning
                 logfn(
                     "meetings_fetch_captcha_or_bot_wall url={url!r} signal={signal} html_chars={html_chars}",
@@ -787,8 +924,8 @@ class ComprehensiveDiscoveryPipelineMeetings:
                     signal=captcha_hint,
                     html_chars=len(text),
                 )
-                return None, f"captcha:{captcha_hint}"
-            return text, ""
+                return None, f"captcha:{captcha_hint}", str(r.url)
+            return text, "", str(r.url)
         except httpx.TimeoutException as exc:
             reason = f"timeout:{type(exc).__name__}"
             logfn = logger.debug if _is_probable_site_search_probe(url) else logger.warning
@@ -797,8 +934,21 @@ class ComprehensiveDiscoveryPipelineMeetings:
                 url=url,
                 detail=f"{reason} ({exc!r})",
             )
-            return None, reason
+            return None, reason, url
         except httpx.RequestError as exc:
+            if playwright_fallback_enabled() and _httpx_error_suggests_tls_or_cert_failure(exc):
+                phtml, perr, pfinal = await fetch_html_via_playwright(
+                    url, timeout_ms=timeout_ms, user_agent=_DEFAULT_UA
+                )
+                if phtml:
+                    logger.info(
+                        f"meetings_playwright_fallback_ok_after_httpx_tls_error url={url!r} "
+                        f"(httpx TLS/CA failed; Playwright returned HTML). httpx_exc={exc!r}",
+                    )
+                    return phtml, "", pfinal
+                logger.debug(
+                    f"meetings_playwright_fallback_miss_after_httpx_tls_error url={url!r} detail={perr!r}",
+                )
             reason = f"request_error:{type(exc).__name__}"
             logfn = logger.debug if _is_probable_site_search_probe(url) else logger.warning
             logfn(
@@ -806,41 +956,40 @@ class ComprehensiveDiscoveryPipelineMeetings:
                 url=url,
                 detail=f"{reason} ({exc!r})",
             )
-            return None, reason
+            return None, reason, url
         except Exception as exc:
             reason = f"unexpected:{type(exc).__name__}"
             et = type(exc).__name__
             er = repr(exc)
             logfn = logger.debug if _is_probable_site_search_probe(url) else logger.warning
             logfn(f"meetings_fetch_failed url={url!r} type={et} detail={er}")
-            return None, reason
+            return None, reason, url
 
-    async def _fetch_page(self, client: httpx.AsyncClient, url: str) -> tuple[Optional[str], str]:
+    async def _fetch_page(self, client: httpx.AsyncClient, url: str) -> tuple[Optional[str], str, str]:
         """
-        GET ``url``; return ``(html, "")`` on success, or ``(None, reason)``.
+        GET ``url``; on success return ``(html, "", response_url)``, else ``(None, reason, last_tried_url)``.
 
         Retries once (configurable) only when the failure reason starts with ``timeout:`` —
         helps flaky WSL / slow TLS handshakes (``ConnectTimeout`` vs ``ReadTimeout``).
         """
         extra = _fetch_retries()
         last_reason = "unknown"
+        last_resp_url = url
         for attempt in range(extra + 1):
-            html, last_reason = await self._fetch_page_once(client, url)
+            html, last_reason, last_resp_url = await self._fetch_page_once(client, url)
             if html is not None:
-                return html, ""
+                return html, "", last_resp_url
             if attempt < extra and (last_reason or "").startswith("timeout:"):
                 delay = 0.75 * (attempt + 1)
+                # Pre-format message: Loguru applies str.format() to the template; ``{url!r}`` + kwargs
+                # raised KeyError: 'url' in some environments when mixed with positional-style logging.
                 logger.info(
-                    "meetings_fetch_retry_after_timeout url={url!r} attempt={}/{} sleep_s={}",
-                    url,
-                    attempt + 2,
-                    extra + 1,
-                    delay,
+                    f"meetings_fetch_retry_after_timeout url={url!r} attempt={attempt + 2}/{extra + 1} sleep_s={delay}",
                 )
                 await asyncio.sleep(delay)
                 continue
             break
-        return None, last_reason
+        return None, last_reason, last_resp_url
 
     def _extract_nav_urls(self, html: str, page_url: str, homepage: str) -> List[str]:
         nav, _pdfs = extract_meeting_urls(html, page_url, homepage, generic_hint=MEETING_HINTS)
@@ -998,7 +1147,7 @@ class ComprehensiveDiscoveryPipelineMeetings:
         min_chars = _meetings_home_min_html_chars()
         for i, u in enumerate(uniq):
             fu = _strip_fragment(u)
-            html, err = await self._fetch_page(client, fu)
+            html, err, _resp_u = await self._fetch_page(client, fu)
             n = len(html or "")
             if html is not None and n >= min_chars:
                 chosen = _canonical_homepage_url(u)
@@ -1116,6 +1265,10 @@ class ComprehensiveDiscoveryPipelineMeetings:
                             jurisdiction_type=jtype,
                             homepage_url=hp,
                         ),
+                        playwright_timeout_ms=int(
+                            max(15_000, min(180_000, float(self.timeout_s) * 1000))
+                        ),
+                        playwright_user_agent=_DEFAULT_UA,
                     )
                     for su in sm_res.enqueue_urls:
                         _enqueue(su)
@@ -1158,7 +1311,8 @@ class ComprehensiveDiscoveryPipelineMeetings:
                     continue
                 visited.add(fetch_url)
 
-                html, fetch_err = await self._fetch_page(client, fetch_url)
+                html, fetch_err, response_url = await self._fetch_page(client, fetch_url)
+                page_ctx = (response_url or "").strip() or fetch_url
                 if not html:
                     if _is_probable_site_search_probe(fetch_url):
                         logger.debug(
@@ -1172,7 +1326,7 @@ class ComprehensiveDiscoveryPipelineMeetings:
                 result.pages_fetched.append(fetch_url)
 
                 if _meetings_contact_extract_enabled():
-                    chunk = extract_contacts_from_page(html, fetch_url)
+                    chunk = extract_contacts_from_page(html, page_ctx)
                     if chunk.get("emails") or chunk.get("phones"):
                         contact_page_rows.append(chunk)
 
@@ -1180,15 +1334,15 @@ class ComprehensiveDiscoveryPipelineMeetings:
                     search_seeded = True
                     for su in _discover_site_search_seed_urls(html, hp):
                         _enqueue(su)
-                stack_hints = merge_stack_hints(stack_hints, detect_meeting_stacks(html, fetch_url))
+                stack_hints = merge_stack_hints(stack_hints, detect_meeting_stacks(html, page_ctx))
                 result.detected_stacks = list(stack_hints)
 
                 # Revize / ASP “Site Search” portals (not WordPress ``/?s=``); try a few GET query variants.
-                for portal in extract_site_search_portal_urls(html, fetch_url, hp):
+                for portal in extract_site_search_portal_urls(html, page_ctx, hp):
                     for variant in site_search_portal_variants(portal):
                         _enqueue(variant)
 
-                for yt in extract_youtube_refs(html, fetch_url):
+                for yt in extract_youtube_refs(html, page_ctx):
                     yu = yt.get("url") or ""
                     if not yu or yu in youtube_seen:
                         continue
@@ -1197,11 +1351,11 @@ class ComprehensiveDiscoveryPipelineMeetings:
                         "url": yu,
                         "link_type": yt.get("link_type", "other"),
                         "found_via": yt.get("found_via", ""),
-                        "discovered_on": fetch_url,
+                        "discovered_on": page_ctx,
                     }
                     result.youtube.append(row)
 
-                for vs in extract_other_video_stream_refs(html, fetch_url):
+                for vs in extract_other_video_stream_refs(html, page_ctx):
                     vu = vs.get("url") or ""
                     if not vu or vu in other_stream_seen:
                         continue
@@ -1211,7 +1365,7 @@ class ComprehensiveDiscoveryPipelineMeetings:
                             "url": vu,
                             "platform": vs.get("platform", "unknown"),
                             "found_via": vs.get("found_via", ""),
-                            "discovered_on": fetch_url,
+                            "discovered_on": page_ctx,
                         }
                     )
 
@@ -1222,8 +1376,20 @@ class ComprehensiveDiscoveryPipelineMeetings:
                     snap_path.write_text(html[:2_000_000], encoding="utf-8", errors="replace")
                 except OSError as exc:
                     result.errors.append(f"snapshot_write:{snap_path}:{exc}")
+                if _meetings_readable_snapshot_txt_enabled():
+                    txt_path = snap_path.with_name(f"{snap_path.stem}.readable.txt")
+                    try:
+                        txt_path.write_text(
+                            _html_to_readable_plaintext(html, page_ctx),
+                            encoding="utf-8",
+                            errors="replace",
+                        )
+                    except OSError as exc:
+                        result.errors.append(f"snapshot_readable_write:{txt_path}:{exc}")
+                    except Exception as exc:
+                        result.errors.append(f"snapshot_readable_build:{txt_path}:{exc!r}")
 
-                for pdf, anchor_text in self._extract_pdf_pairs(html, fetch_url, hp):
+                for pdf, anchor_text in self._extract_pdf_pairs(html, page_ctx, hp):
                     if pdf in pdfs_seen:
                         continue
                     pdfs_seen.add(pdf)
@@ -1235,7 +1401,7 @@ class ComprehensiveDiscoveryPipelineMeetings:
                     dest = dest_dir / fname
                     try:
                         pr, why = await _fetch_pdf_with_referers(
-                            client, pdf, referers=[fetch_url, hp]
+                            client, pdf, referers=[page_ctx, fetch_url, hp]
                         )
                         if pr is not None:
                             dest.write_bytes(pr.content)
@@ -1269,7 +1435,7 @@ class ComprehensiveDiscoveryPipelineMeetings:
                         break
 
                 # Enqueue linked meeting pages (not yet visited)
-                for link in self._extract_nav_urls(html, fetch_url, hp):
+                for link in self._extract_nav_urls(html, page_ctx, hp):
                     if PDF_EXT.search(link):
                         continue
                     nu = _strip_fragment(link)
@@ -1402,7 +1568,7 @@ def main() -> None:
         help=f"Load website_url from {INT_JURISDICTION_WEBSITES_TABLE} using derived jurisdiction_id",
     )
     parser.add_argument("--output-root", type=str, default="", help="Override SCRAPED_MEETINGS_ROOT")
-    parser.add_argument("--max-pages", type=int, default=25)
+    parser.add_argument("--max-pages", type=int, default=40)
     parser.add_argument("--max-pdfs", type=int, default=80)
     parser.add_argument(
         "--timeout",

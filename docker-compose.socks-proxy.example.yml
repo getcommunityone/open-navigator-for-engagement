@@ -1,0 +1,14 @@
+# Example: SOCKS5 on host port 9091 for WIKIDATA_HTTPS_PROXY / enrichment scripts.
+# Tor publishes SOCKS on 9050 inside dperson/torproxy — map host 9091 -> 9050.
+#
+#   docker compose -f docker-compose.socks-proxy.example.yml up -d
+#   curl --socks5-hostname 127.0.0.1:9091 -sI https://www.duckduckgo.com/ | head -3
+#
+# Replace with your own SOCKS image (WireGuard/gluetun, corporate jump host, etc.) as needed.
+
+services:
+  tor-socks:
+    image: dperson/torproxy
+    restart: unless-stopped
+    ports:
+      - "9091:9050"

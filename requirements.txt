@@ -5,8 +5,11 @@ pydantic-settings==2.1.0
 
 # Web Scraping & Data Collection
 beautifulsoup4==4.12.2
+duckduckgo-search>=6.3.0,<8  # free text search for jurisdiction website enrichment (no API key)
 selenium==4.16.0
-playwright==1.40.0
+# 1.40 install-deps targets Ubuntu 22.04 package names and fails on 24.04 Noble (libicu70, libasound2, …).
+playwright==1.52.0
+playwright-stealth==2.0.3
 httpx>=0.25.0
 socksio>=1.0.0  # needed for httpx SOCKS proxies (socks5://...)
 aiohttp==3.9.1

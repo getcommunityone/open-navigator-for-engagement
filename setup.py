@@ -34,7 +34,7 @@ setup(
         "pydantic-settings>=2.1.0",
         "beautifulsoup4>=4.12.2",
         "selenium>=4.16.0",
-        "playwright>=1.40.0",
+        "playwright>=1.49.0",
         "httpx>=0.25.2",
         "aiohttp>=3.9.1",
         "openai>=1.6.1",

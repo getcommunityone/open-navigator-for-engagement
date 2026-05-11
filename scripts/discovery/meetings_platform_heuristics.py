@@ -11,6 +11,7 @@ from typing import Dict, FrozenSet, List, Optional, Sequence, Set, Tuple
 from urllib.parse import parse_qs, quote_plus, urljoin, urlparse, urlunparse
 
 from bs4 import BeautifulSoup
+from loguru import logger
 
 # Hosts where PDFs / meeting UI often live off the jurisdiction’s marketing domain.
 _OFFSITE_SUFFIXES: Tuple[str, ...] = (
@@ -35,6 +36,8 @@ _VENDOR_PATH_SNIPPETS: Tuple[str, ...] = (
     "mediaplayer",
     "calendar.aspx",
     "meetingdetail",
+    "meetinginformation",
+    "/portal/",
     "view.ashx",
     "legistar",
     "granicus",
@@ -403,7 +406,15 @@ def extract_site_search_portal_urls(html: str, page_url: str, homepage: str) -> 
     These are not covered by WordPress ``/?s=`` heuristics; we scrape the homepage/nav HTML for
     ``pg=Site+Search``, ``action=search``, and similar patterns.
     """
-    soup = BeautifulSoup(html or "", "html.parser")
+    try:
+        soup = BeautifulSoup(html or "", "html.parser")
+    except (AssertionError, UnicodeDecodeError, TypeError, ValueError) as exc:
+        logger.debug(
+            "meetings_site_search_portal_parse_skip page_url={url!r} detail={}",
+            url=page_url,
+            detail=repr(exc),
+        )
+        return []
     found: List[str] = []
     seen: Set[str] = set()
 
