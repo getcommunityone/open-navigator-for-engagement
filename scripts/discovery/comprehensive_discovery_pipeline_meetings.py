@@ -144,7 +144,7 @@ except ModuleNotFoundError:  # pragma: no cover
     psycopg2 = None  # type: ignore[misc,assignment]
 
 MEETING_HINTS = re.compile(
-    r"(meeting|minutes|minute|agenda|calendar|board|commission|council|hearing|session|video|zoom)",
+    r"(meetings?|minutes?|proceedings|action\s*minutes|agenda|calendar|board|commission|council|hearing|session|video|zoom)",
     re.I,
 )
 PDF_EXT = re.compile(r"\.pdf(\?|$)", re.I)

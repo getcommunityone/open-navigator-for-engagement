@@ -39,7 +39,7 @@ from scripts.discovery.meetings_platform_heuristics import (
 )
 
 MEETING_URL_HINT = re.compile(
-    r"(meeting|minutes|minute|agenda|calendar|board|commission|council|hearing|session|video|zoom|webcast)",
+    r"(meetings?|minutes?|proceedings|action\s*minutes|agenda|calendar|board|commission|council|hearing|session|video|zoom|webcast)",
     re.I,
 )
 

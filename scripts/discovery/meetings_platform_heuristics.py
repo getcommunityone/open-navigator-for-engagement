@@ -56,7 +56,13 @@ _STACK_PATTERNS: Tuple[Tuple[str, re.Pattern], ...] = (
 )
 
 _DOC_TYPE_RULES: Tuple[Tuple[str, re.Pattern], ...] = (
-    ("minutes", re.compile(r"minute|approved\s*minute", re.I)),
+    (
+        "minutes",
+        re.compile(
+            r"minute|approved\s*minute|action\s*minutes?|proceedings",
+            re.I,
+        ),
+    ),
     ("agenda", re.compile(r"agenda|packet", re.I)),
     ("transcript", re.compile(r"transcript|caption|verbatim", re.I)),
     ("video", re.compile(r"video|webcast|recording|youtube|vimeo", re.I)),
@@ -125,6 +131,9 @@ _LINKED_MEETING_ARCHIVE_PATH_MARKERS: Tuple[str, ...] = (
     "board_meeting",
     "/meetings/",
     "/minutes/",
+    "proceedings",
+    "action-minutes",
+    "action_minutes",
     "/agendas/",
     "commission-minute",
     "meeting-archive",
@@ -511,14 +520,14 @@ _YOUTUBE_MEETING_STRONG = re.compile(
     r"\b(?:regular|special|study|work)\s+session\b|\bworkshop\b|"
     r"\b(?:full|complete)\s+meeting\b|\bmeeting\s+(?:video|recording|replay)\b|"
     r"\b(?:live|recorded)\s+(?:stream|meeting)\b|"
-    r"\bagenda\b|\bminutes\b|\bwebcast\b|\bgovernment\s+meeting\b|"
+    r"\bagenda\b|\bminutes\b|\bproceedings\b|\baction\s*minutes\b|\bwebcast\b|\bgovernment\s+meeting\b|"
     r"\bmunicipal\b|\b(?:city|county)\s+hall\b",
     re.I,
 )
 
 _YOUTUBE_MEETING_WEAK = re.compile(
-    r"\b(?:meeting|hearing|session|council|commission|board|supervisor|trustee|"
-    r"alderm(?:an|en)|mayor|clerk|agenda|minutes|townhall)\b",
+    r"\b(?:meetings?|hearing|session|council|commission|board|supervisor|trustee|"
+    r"alderm(?:an|en)|mayor|clerk|agenda|minutes?|proceedings|action\s*minutes|townhall)\b",
     re.I,
 )
 
