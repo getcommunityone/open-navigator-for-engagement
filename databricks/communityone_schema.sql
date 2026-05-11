@@ -353,7 +353,7 @@ CREATE TABLE fact_nonprofit_finance
     filing_key                   string              NOT NULL,
     organization_key             string,
     ein                          string,
-    tax_year                     int,
+    tax_year                     string,
     fiscal_year_end_date_key     int,
     filing_date_key              int,
     total_revenue                decimal(18, 2),

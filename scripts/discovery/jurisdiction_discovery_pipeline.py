@@ -242,7 +242,7 @@ def load_int_jurisdiction_website_map(conn) -> Dict[str, str]:
     """
     ``jurisdiction_id`` → canonical ``website_url`` from ``intermediate.int_jurisdiction_websites``.
 
-    One URL per jurisdiction (prefers USCM, then NACo, NCES directory, then GSA).
+    One URL per jurisdiction (prefers GSA .gov registry, then USCM, NCES directory, then NACo).
     """
     out: Dict[str, str] = {}
     sql = f"""
@@ -255,10 +255,10 @@ def load_int_jurisdiction_website_map(conn) -> Dict[str, str]:
           AND btrim(website_url) <> ''
         ORDER BY jurisdiction_id,
             CASE website_source
-                WHEN 'uscm' THEN 1
-                WHEN 'naco' THEN 2
+                WHEN 'gsa' THEN 1
+                WHEN 'uscm' THEN 2
                 WHEN 'nces_directory' THEN 3
-                WHEN 'gsa' THEN 4
+                WHEN 'naco' THEN 4
                 ELSE 5
             END,
             website_record_key

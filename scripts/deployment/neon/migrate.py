@@ -29,6 +29,11 @@ logger.info(f"Using: {'DEV' if NEON_DATABASE_URL_DEV else 'PROD'} database")
 # Paths - relative to this script's location
 SCRIPT_DIR = Path(__file__).parent
 PROJECT_ROOT = SCRIPT_DIR.parent.parent.parent  # Up from neon/ → deployment/ → scripts/ → project root
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
+
+from calendar_year_util import calendar_year_label
+
 GOLD_DIR = PROJECT_ROOT / "data" / "gold"
 SCHEMA_PATH = SCRIPT_DIR / "schema.sql"
 
@@ -952,7 +957,7 @@ def load_contacts_search(conn, limit_states=None):
                     clean_numeric(row.get('compensation')),
                     clean_numeric(row.get('hours_per_week')),
                     'irs_form990',
-                    row.get('tax_year'),
+                    calendar_year_label(row.get('tax_year')),
                     datetime.now()
                 )
                 records.append(record)

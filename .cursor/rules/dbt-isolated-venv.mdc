@@ -1,0 +1,25 @@
+---
+description: dbt uses a separate virtualenv (.venv-dbt), not the main .venv
+alwaysApply: true
+---
+
+# dbt isolated environment (this repo)
+
+- **Do not** assume `dbt` is on `PATH` or installed in the main **`.venv`**. It usually is not.
+- dbt is kept in a **dedicated venv** at **`.venv-dbt/`** because `dbt-postgres` conflicts with protobuf/pathspec used elsewhere (`requirements-dbt.txt` explains this). **Do not** `pip install` dbt into `.venv` alongside the main app requirements.
+
+**First-time setup (repo root):**
+
+```bash
+./scripts/datasources/openstates/setup_dbt_venv.sh
+```
+
+**Run dbt (repo root):**
+
+```bash
+.venv-dbt/bin/dbt run --project-dir dbt_project --select <model>
+```
+
+Use **`.venv-dbt/bin/dbt`** (or `python` from that venv) for `dbt run`, `dbt compile`, `dbt test`, etc. Add `--profiles-dir` if the project’s `profiles.yml` is not next to `dbt_project`.
+
+When suggesting commands to the user, **prefer the full path** `.venv-dbt/bin/dbt` so copy-paste works without activating a venv.

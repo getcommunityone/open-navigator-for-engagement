@@ -3,23 +3,49 @@ Meetings / minutes scraper (separate from ``ComprehensiveDiscoveryPipeline``).
 
 Goals:
 - Start from a jurisdiction homepage (or ``intermediate.int_jurisdiction_websites``).
-- Prefer **site search** when present (WordPress-style ``?s=meetings``, ``?s=minutes``, etc.).
+- Prefer **site search** when present, detected from the **homepage HTML** (no blind probes):
+  WordPress ``/?s=…`` only when WP markers exist; **Granicus OpenCivic** ``Content-search?…(keyword=)``
+  templates when linked; **Revize / ASP** portals from nav — see ``extract_site_search_portal_urls``,
+  ``html_suggests_wordpress_site``, ``opencivic_content_search_query_variants``.
 - Apply **vendor-style heuristics** (Legistar, Granicus, CivicClerk, …) in
   ``meetings_platform_heuristics`` — same spirit as City-Bureau city-scrapers, without Scrapy.
 - Follow agenda / minutes / meeting links from the homepage and search results.
 - Handle URLs with fragments (e.g. ``.../monthly-meetings/#toggle-id-2``) by fetching the base URL
   and still collecting same-page anchors.
-- Download PDFs (and optional HTML snapshots of key pages) under a CommunityOne folder tree:
+- Collect **YouTube** video and channel links from crawled HTML (anchors, embeds, ``data-src``);
+  stored in ``_manifest.json`` under ``youtube`` (not downloaded). After the crawl, each **video**
+  URL is checked against YouTube **oEmbed** (title / channel name) and scored for meeting-like
+  language (agenda, council, commission, webcast, …). Meeting-related **search keywords** (including
+  ``youtube``, ``video``, ``webcast``, ``live``) are only sent to templates we recognized.
+- Collect **other** meeting / stream platforms (Vimeo, Facebook video, Twitch, Granicus, Zoom,
+  Teams, Google Meet, Wistia, Brightcove, ``.m3u8`` HLS, …) into ``other_video_streams`` in the
+  manifest (not downloaded).
+
+- Download PDFs (and optional HTML snapshots of key pages) under:
 
     ``{root}/{state}/{jurisdiction_type}/{jurisdiction_id}/{year}/``
 
-Default ``root`` matches **log sync / wikidata**: ``LOG_GDRIVE_MOUNT`` (default
-``/mnt/g/My Drive``) + ``CommunityOne/scraped_meetings``, unless ``SCRAPED_MEETINGS_ROOT`` is set
-(full override) or ``SCRAPED_MEETINGS_RELATIVE`` changes the subpath. Load ``.env`` first so these
-match the rest of the repo. If the mount directory does not exist, falls back to
-``~/CommunityOne/scraped_meetings``.
+Default ``root`` is the repo cache **``data/cache/scraped_meetings``** (same ``data/cache`` family
+as wikidata JSON). Override with env ``SCRAPED_MEETINGS_ROOT`` (e.g. a Google Drive mount) or
+``--output-root``. ``.env`` is loaded first.
 
 TLS: set ``SCRAPED_MEETINGS_HTTP_VERIFY=false`` only if you must (corporate MITM / broken CA store).
+
+Timeouts: ``--timeout`` applies to **connect** and **read** (and write/pool). Optional
+``SCRAPED_MEETINGS_FETCH_RETRIES`` (default ``1``) adds backoff retries after ``ConnectTimeout`` /
+``ReadTimeout`` only.
+
+Homepage fallback: when ``SCRAPED_MEETINGS_HOME_FALLBACK`` is true (default), ``scrape`` loads every
+distinct ``website_url`` for the jurisdiction from ``int_jurisdiction_websites`` in source-priority
+order (GSA → USCM → NCES directory → NACO), probes each until one returns HTML with at least
+``SCRAPED_MEETINGS_HOME_MIN_HTML_CHARS`` characters (default ``800``), and crawls that URL. If every
+probe fails, the first-priority URL is still used (same as before). Set ``SCRAPED_MEETINGS_HOME_FALLBACK=false``
+to only use the URL passed on the CLI / from the batch row.
+
+Contact hints: when ``SCRAPED_MEETINGS_CONTACT_EXTRACT`` is true (default), each fetched HTML page is
+scanned for ``mailto:`` / ``tel:`` links and common email / US phone patterns. Results are merged
+into ``_manifest.json`` under ``extracted_contacts`` (deduplicated lists plus optional ``by_page``).
+This is best-effort crawl data, not authoritative directory information.
 
 Examples (Yuma County CO):
 - Search: https://yumacounty.net/?s=meetings
@@ -53,7 +79,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Set, Tuple
-from urllib.parse import urlparse, urlunparse
+from urllib.parse import quote, parse_qs, unquote, urlparse, urlunparse
 
 import httpx
 from loguru import logger
@@ -67,12 +93,28 @@ from scripts.discovery.jurisdiction_discovery_pipeline import (
     jurisdiction_pk_from_geoid,
     resolve_database_url,
 )
-from scripts.utils.gdrive_paths import resolve_scraped_meetings_output_root
+from scripts.utils.gdrive_paths import (
+    resolve_scraped_meetings_output_root,
+    scraped_meetings_root_resolution_note,
+)
+from scripts.discovery.contact_extract_from_html import (
+    extract_contacts_from_page,
+    merge_contact_manifest_rows,
+)
 from scripts.discovery.meetings_platform_heuristics import (
     classify_document,
     detect_meeting_stacks,
     extract_meeting_urls,
+    extract_opencivic_content_search_portals,
+    extract_other_video_stream_refs,
+    extract_site_search_portal_urls,
+    extract_youtube_refs,
+    html_suggests_wordpress_site,
     merge_stack_hints,
+    opencivic_content_search_query_variants,
+    score_youtube_meeting_relevance,
+    site_search_portal_variants,
+    youtube_url_for_oembed,
 )
 
 try:
@@ -99,7 +141,17 @@ def _load_repo_dotenv() -> None:
 
 def default_scraped_meetings_root() -> Path:
     _load_repo_dotenv()
-    return resolve_scraped_meetings_output_root()
+    p = resolve_scraped_meetings_output_root()
+    try:
+        resolved = p.resolve()
+    except OSError:
+        resolved = p.expanduser()
+    logger.info(
+        "Meetings write root → {} | {}",
+        resolved,
+        scraped_meetings_root_resolution_note(),
+    )
+    return p
 
 
 def _mkdir_from_existing_ancestor(target: Path) -> None:
@@ -123,7 +175,7 @@ def _mkdir_from_existing_ancestor(target: Path) -> None:
         if parent == cur:
             raise FileNotFoundError(
                 f"Cannot create meetings output {target}: no existing directory on this path. "
-                "Check SCRAPED_MEETINGS_ROOT and that the drive is mounted."
+                "Check SCRAPED_MEETINGS_ROOT or that the repo parent is writable (default uses data/cache/)."
             )
         cur = parent
     anchor = cur
@@ -139,12 +191,9 @@ def _mkdir_from_existing_ancestor(target: Path) -> None:
             hint = ""
             if str(step).startswith("/mnt/g") or "/mnt/g/" in str(target):
                 hint = (
-                    " Your other scripts use ``LOG_GDRIVE_MOUNT`` (see ``scripts/utils/log_sync.py``). "
-                    "Set ``LOG_GDRIVE_MOUNT`` in ``.env`` to the **same** folder that already works "
-                    "for logs/exports, **remove** ``SCRAPED_MEETINGS_ROOT`` so meetings uses "
-                    "``$LOG_GDRIVE_MOUNT/CommunityOne/scraped_meetings``, or set ``SCRAPED_MEETINGS_ROOT`` "
-                    "to that full path. Raw ``G:`` at ``/mnt/g`` without a ``My Drive`` child cannot "
-                    "be auto-created from WSL."
+                    " Default output is repo ``data/cache/scraped_meetings``. This path is under "
+                    "``/mnt/g`` — set ``SCRAPED_MEETINGS_ROOT`` to a writable Drive folder or fix the "
+                    "WSL mount so ``My Drive`` exists."
                 )
             raise RuntimeError(
                 f"Cannot create directory {step} while preparing meetings output {target}.{hint}"
@@ -160,6 +209,90 @@ def _fs_safe_segment(s: str) -> str:
     return re.sub(r'[^A-Za-z0-9._-]+', "_", (s or "").strip())[:200] or "unknown"
 
 
+def _http_response_is_pdf(resp: httpx.Response) -> bool:
+    """True if the body looks like a PDF (many ``.pdf`` URLs return HTML without ``Referer`` / cookies)."""
+    data = resp.content or b""
+    if data.startswith(b"%PDF"):
+        return True
+    ct = (resp.headers.get("content-type") or "").lower()
+    return "application/pdf" in ct and len(data) > 0
+
+
+def _pdf_download_url_candidates(pdf_url: str) -> List[str]:
+    """
+    Return URLs to try for the same logical document.
+
+    Autauga County (Revize/IIS) links ``/Documents/...`` and ``/Images/...`` but those requests
+    redirect to HTML; the file is served under ``/Sites/Autauga_County/...``. Try that variant
+    first when applicable.
+    """
+    base = (pdf_url or "").strip()
+    if not base:
+        return []
+    alts: List[str] = []
+    try:
+        p = urlparse(base)
+        if p.scheme not in ("http", "https") or not p.netloc:
+            return [base]
+        host = p.netloc.lower().split(":")[0]
+        if host not in ("www.autaugaco.org", "autaugaco.org"):
+            return [base]
+        path = p.path or ""
+        if path.startswith("/Documents/") or path.startswith("/Images/"):
+            alt = urlunparse(
+                (p.scheme, p.netloc, "/Sites/Autauga_County" + path, p.params, p.query, p.fragment)
+            )
+            if alt != base:
+                alts.append(alt)
+    except Exception:
+        return [base]
+    seen: Set[str] = set()
+    out: List[str] = []
+    for u in alts + [base]:
+        if u not in seen:
+            seen.add(u)
+            out.append(u)
+    return out
+
+
+async def _fetch_pdf_with_referers(
+    client: httpx.AsyncClient,
+    pdf_url: str,
+    referers: List[str],
+) -> tuple[Optional[httpx.Response], str]:
+    """
+    GET a PDF URL with ``Referer`` hints (listing page, then homepage). Returns ``(response, "")``
+    when ``_http_response_is_pdf``, else ``(None, diagnostic)``.
+    """
+    detail = ""
+    for fetch_u in _pdf_download_url_candidates(pdf_url):
+        for ref in referers:
+            rref = _strip_fragment(ref).strip()
+            if not rref:
+                continue
+            try:
+                pr = await client.get(
+                    fetch_u,
+                    follow_redirects=True,
+                    headers={"Referer": rref},
+                )
+            except Exception as exc:
+                detail = f"{fetch_u!r}:request:{exc!r}"
+                continue
+            if pr.status_code != 200:
+                detail = f"{fetch_u!r}:http_{pr.status_code}"
+                continue
+            if not pr.content:
+                detail = f"{fetch_u!r}:empty_body"
+                continue
+            if _http_response_is_pdf(pr):
+                return pr, ""
+            ct = pr.headers.get("content-type", "")
+            prefix = (pr.content or b"")[:80]
+            detail = f"{fetch_u!r}:non_pdf ct={ct!r} prefix={prefix!r}"
+    return None, detail or "no_referer_matched"
+
+
 def _jurisdiction_type_from_id(jurisdiction_id: str) -> str:
     if "_" in jurisdiction_id:
         return jurisdiction_id.split("_", 1)[0]
@@ -167,44 +300,86 @@ def _jurisdiction_type_from_id(jurisdiction_id: str) -> str:
 
 
 def _infer_year(url: str, fallback: int) -> int:
-    m = YEAR_IN_PATH.search(url)
-    if m:
+    """
+    Pick a calendar year from the URL for output folder names.
+
+    Regex ``finditer`` does not overlap, so ``01202026`` (Jan 20, 2026) only matched ``2020``.
+    Prefer an **overlapping** scan on the decoded filename stem, then fall back to the last
+    ``20xx`` in the full URL (``%2001`` in encoded paths can look like year 2001 — unquote first).
+    """
+    path = unquote(urlparse(url).path or "")
+    stem = Path(path).stem
+    found: List[Tuple[int, int]] = []
+    for i in range(0, max(0, len(stem) - 3)):
+        if stem[i : i + 2] != "20" or i + 4 > len(stem):
+            continue
+        if not stem[i + 2 : i + 4].isdigit():
+            continue
+        y = int(stem[i : i + 4])
+        if 1990 <= y <= 2100:
+            found.append((i, y))
+    if found:
+        return found[-1][1]
+    decoded = unquote(url)
+    years: List[int] = []
+    for m in YEAR_IN_PATH.finditer(decoded):
         try:
             y = int(m.group(1))
             if 1990 <= y <= 2100:
-                return y
+                years.append(y)
         except ValueError:
-            pass
+            continue
+    if years:
+        return years[-1]
     return fallback
 
 
-def _load_homepage_from_db(jurisdiction_id: str) -> Optional[str]:
+_WEBSITE_SOURCE_PRIORITY_SQL = """CASE website_source
+                    WHEN 'gsa' THEN 1
+                    WHEN 'uscm' THEN 2
+                    WHEN 'nces_directory' THEN 3
+                    WHEN 'naco' THEN 4
+                    ELSE 5 END"""
+
+
+def _load_homepage_candidates_from_db(jurisdiction_id: str) -> List[str]:
+    """
+    All distinct homepage URLs for ``jurisdiction_id``, ordered by ``website_source`` priority
+    (same order as batch ``load_meeting_scrape_jobs_for_state`` / ``DISTINCT ON``).
+    """
     if psycopg2 is None:
         raise RuntimeError("psycopg2 required for --from-db")
-    url = resolve_database_url()
-    with psycopg2.connect(url) as conn:
+    pri = _WEBSITE_SOURCE_PRIORITY_SQL
+    db_url = resolve_database_url()
+    out: List[str] = []
+    with psycopg2.connect(db_url) as conn:
         with conn.cursor() as cur:
             cur.execute(
                 f"""
-                SELECT trim(website_url)
-                FROM {INT_JURISDICTION_WEBSITES_TABLE}
-                WHERE jurisdiction_id = %s
-                  AND website_url IS NOT NULL
-                  AND btrim(website_url) <> ''
-                ORDER BY CASE website_source
-                    WHEN 'uscm' THEN 1
-                    WHEN 'naco' THEN 2
-                    WHEN 'nces_directory' THEN 3
-                    WHEN 'gsa' THEN 4
-                    ELSE 5 END
-                LIMIT 1
+                SELECT u FROM (
+                    SELECT trim(website_url) AS u,
+                           MIN({pri}) AS src_rank,
+                           MIN(website_record_key) AS wrk
+                    FROM {INT_JURISDICTION_WEBSITES_TABLE}
+                    WHERE jurisdiction_id = %s
+                      AND website_url IS NOT NULL
+                      AND btrim(website_url) <> ''
+                    GROUP BY trim(website_url)
+                ) sub
+                ORDER BY src_rank, wrk, u
                 """,
                 (jurisdiction_id,),
             )
-            row = cur.fetchone()
-            if not row:
-                return None
-            return str(row[0]).strip()
+            for row in cur.fetchall():
+                s = str(row[0] or "").strip()
+                if s:
+                    out.append(s)
+    return out
+
+
+def _load_homepage_from_db(jurisdiction_id: str) -> Optional[str]:
+    cands = _load_homepage_candidates_from_db(jurisdiction_id)
+    return cands[0] if cands else None
 
 
 _JURISDICTION_ID_RE = re.compile(
@@ -215,6 +390,30 @@ _JURISDICTION_ID_RE = re.compile(
 
 def _prefer_https_homepage() -> bool:
     return (os.getenv("SCRAPED_MEETINGS_PREFER_HTTPS", "true").strip().lower() not in ("0", "false", "no", "off"))
+
+
+def _meetings_home_fallback_enabled() -> bool:
+    v = (os.getenv("SCRAPED_MEETINGS_HOME_FALLBACK") or "true").strip().lower()
+    return v not in ("0", "false", "no", "off")
+
+
+def _meetings_home_min_html_chars() -> int:
+    raw = (os.getenv("SCRAPED_MEETINGS_HOME_MIN_HTML_CHARS") or "800").strip()
+    try:
+        return max(0, int(raw))
+    except ValueError:
+        return 800
+
+
+def _meetings_home_url_is_actionable(hp: str) -> bool:
+    u = (hp or "").strip()
+    if not u:
+        return False
+    try:
+        p = urlparse(u)
+        return bool(p.scheme in ("http", "https") and p.netloc)
+    except ValueError:
+        return False
 
 
 def _canonical_homepage_url(url: str) -> str:
@@ -259,12 +458,7 @@ def load_meeting_scrape_jobs_for_state(
           AND website_url IS NOT NULL
           AND btrim(website_url) <> ''
         ORDER BY jurisdiction_id,
-            CASE website_source
-                WHEN 'uscm' THEN 1
-                WHEN 'naco' THEN 2
-                WHEN 'nces_directory' THEN 3
-                WHEN 'gsa' THEN 4
-                ELSE 5 END,
+            ({_WEBSITE_SOURCE_PRIORITY_SQL}),
             website_record_key
     """
     jobs: List[Dict[str, str]] = []
@@ -343,12 +537,76 @@ def _site_root_url(url: str) -> str:
 def _search_url_candidates(homepage: str) -> List[str]:
     """WordPress ``/?s=`` and a few common query variants (always against site root)."""
     origin = _site_root_url(homepage).rstrip("/")
-    queries = ["meetings", "minutes", "agenda", "board", "council", "commission"]
+    queries = [
+        "meetings",
+        "minutes",
+        "agenda",
+        "board",
+        "council",
+        "commission",
+        "youtube",
+        "video",
+        "webcast",
+        "live",
+    ]
     out: List[str] = []
     for q in queries:
         out.append(f"{origin}/?s={q}")
     out.append(f"{origin}/?s=meeting+minutes")
     return list(dict.fromkeys(out))
+
+
+def _is_wordpress_site_search_probe(url: str) -> bool:
+    """Root ``/?s=…`` probes used only when the homepage looks like WordPress."""
+    try:
+        p = urlparse(url)
+        if (p.path or "").rstrip("/") not in ("", "/"):
+            return False
+        qs = parse_qs(p.query)
+        return "s" in qs and bool(qs["s"])
+    except Exception:
+        return False
+
+
+def _is_opencivic_content_search_probe(url: str) -> bool:
+    low = (url or "").lower()
+    return "content-search" in low and ("keyword" in low or "dlv_" in low)
+
+
+def _is_probable_site_search_probe(url: str) -> bool:
+    return _is_wordpress_site_search_probe(url) or _is_opencivic_content_search_probe(url)
+
+
+def _discover_site_search_seed_urls(html: str, homepage: str) -> List[str]:
+    """
+    After the homepage HTML loads, enqueue only search URLs that match the detected stack:
+    WordPress ``/?s=`` when WP markers exist; Granicus/OpenCivic ``Content-search`` templates
+    when those links/forms appear.
+    """
+    hp_strip = _strip_fragment(homepage)
+    out: List[str] = []
+    if html_suggests_wordpress_site(html):
+        out.extend(_search_url_candidates(homepage))
+    for tmpl in extract_opencivic_content_search_portals(html, hp_strip, homepage):
+        out.extend(opencivic_content_search_query_variants(tmpl))
+    return list(dict.fromkeys(out))
+
+
+def _host_key_for_home_match(netloc: str) -> str:
+    h = (netloc or "").lower().split(":")[0]
+    return h[4:] if h.startswith("www.") else h
+
+
+def _is_homepage_document_url(fetch_url: str, homepage: str) -> bool:
+    """
+    True when ``fetch_url`` is the same document as canonical ``homepage`` (ignoring fragment).
+
+    Allows ``http`` vs ``https`` differences after redirects; ``www`` is ignored for host match.
+    """
+    a, b = urlparse(fetch_url), urlparse(_strip_fragment(homepage))
+    if _host_key_for_home_match(a.netloc) != _host_key_for_home_match(b.netloc):
+        return False
+    return (a.path or "").rstrip("/") == (b.path or "").rstrip("/")
 
 
 @dataclass
@@ -360,7 +618,12 @@ class MeetingsScrapeResult:
     detected_stacks: List[str] = field(default_factory=list)
     pages_fetched: List[str] = field(default_factory=list)
     pdfs_downloaded: List[Dict[str, Any]] = field(default_factory=list)
+    youtube: List[Dict[str, Any]] = field(default_factory=list)
+    other_video_streams: List[Dict[str, Any]] = field(default_factory=list)
     errors: List[str] = field(default_factory=list)
+    homepage_url_candidates: List[str] = field(default_factory=list)
+    homepage_probe_failures: List[str] = field(default_factory=list)
+    extracted_contacts: Dict[str, Any] = field(default_factory=dict)
 
 
 _DEFAULT_UA = (
@@ -374,9 +637,24 @@ def _http_verify() -> bool:
     return v not in ("0", "false", "no", "off")
 
 
+def _fetch_retries() -> int:
+    """Extra attempts after a timeout (``SCRAPED_MEETINGS_FETCH_RETRIES``, default 1)."""
+    try:
+        n = int((os.getenv("SCRAPED_MEETINGS_FETCH_RETRIES") or "1").strip())
+    except ValueError:
+        n = 1
+    return max(0, min(n, 5))
+
+
+def _meetings_contact_extract_enabled() -> bool:
+    v = (os.getenv("SCRAPED_MEETINGS_CONTACT_EXTRACT") or "true").strip().lower()
+    return v not in ("0", "false", "no", "off")
+
+
 class ComprehensiveDiscoveryPipelineMeetings:
     """
-    Scrape meeting-related pages and download PDFs into ``SCRAPED_MEETINGS_ROOT`` tree.
+    Scrape meeting-related pages and download PDFs under the resolved output root (default
+    ``data/cache/scraped_meetings`` in the repo unless ``SCRAPED_MEETINGS_ROOT`` / ``--output-root``).
     """
 
     def __init__(
@@ -404,19 +682,18 @@ class ComprehensiveDiscoveryPipelineMeetings:
     def _target_dir(self, state: str, jurisdiction_id: str, year: int) -> Path:
         return self._jurisdiction_base_dir(state, jurisdiction_id) / str(year)
 
-    async def _fetch_page(self, client: httpx.AsyncClient, url: str) -> tuple[Optional[str], str]:
-        """
-        GET ``url``; return ``(html, "")`` on success, or ``(None, reason)``.
-
-        Reasons are logged at WARNING so they appear without ``LOGURU_LEVEL=DEBUG``.
-        Loguru ``{{}}`` placeholders in exception text can break ``logger.*("...{}", exc)``;
-        use a plain f-string for the exception part only.
-        """
+    async def _fetch_page_once(self, client: httpx.AsyncClient, url: str) -> tuple[Optional[str], str]:
+        """Single GET attempt (no retries)."""
         try:
             r = await client.get(url, follow_redirects=True)
             if r.status_code != 200:
                 reason = f"http_status_{r.status_code}"
-                logger.warning(
+                logfn = (
+                    logger.debug
+                    if _is_probable_site_search_probe(url) and 400 <= r.status_code < 500
+                    else logger.warning
+                )
+                logfn(
                     "meetings_fetch_non_ok url={url!r} status={status} location={loc!r}",
                     url=url,
                     status=r.status_code,
@@ -426,7 +703,8 @@ class ComprehensiveDiscoveryPipelineMeetings:
             return r.text, ""
         except httpx.TimeoutException as exc:
             reason = f"timeout:{type(exc).__name__}"
-            logger.warning(
+            logfn = logger.debug if _is_probable_site_search_probe(url) else logger.warning
+            logfn(
                 "meetings_fetch_failed url={url!r} {detail}",
                 url=url,
                 detail=f"{reason} ({exc!r})",
@@ -434,7 +712,8 @@ class ComprehensiveDiscoveryPipelineMeetings:
             return None, reason
         except httpx.RequestError as exc:
             reason = f"request_error:{type(exc).__name__}"
-            logger.warning(
+            logfn = logger.debug if _is_probable_site_search_probe(url) else logger.warning
+            logfn(
                 "meetings_fetch_failed url={url!r} {detail}",
                 url=url,
                 detail=f"{reason} ({exc!r})",
@@ -444,8 +723,36 @@ class ComprehensiveDiscoveryPipelineMeetings:
             reason = f"unexpected:{type(exc).__name__}"
             et = type(exc).__name__
             er = repr(exc)
-            logger.warning(f"meetings_fetch_failed url={url!r} type={et} detail={er}")
+            logfn = logger.debug if _is_probable_site_search_probe(url) else logger.warning
+            logfn(f"meetings_fetch_failed url={url!r} type={et} detail={er}")
             return None, reason
+
+    async def _fetch_page(self, client: httpx.AsyncClient, url: str) -> tuple[Optional[str], str]:
+        """
+        GET ``url``; return ``(html, "")`` on success, or ``(None, reason)``.
+
+        Retries once (configurable) only when the failure reason starts with ``timeout:`` —
+        helps flaky WSL / slow TLS handshakes (``ConnectTimeout`` vs ``ReadTimeout``).
+        """
+        extra = _fetch_retries()
+        last_reason = "unknown"
+        for attempt in range(extra + 1):
+            html, last_reason = await self._fetch_page_once(client, url)
+            if html is not None:
+                return html, ""
+            if attempt < extra and (last_reason or "").startswith("timeout:"):
+                delay = 0.75 * (attempt + 1)
+                logger.info(
+                    "meetings_fetch_retry_after_timeout url={url!r} attempt={}/{} sleep_s={}",
+                    url,
+                    attempt + 2,
+                    extra + 1,
+                    delay,
+                )
+                await asyncio.sleep(delay)
+                continue
+            break
+        return None, last_reason
 
     def _extract_nav_urls(self, html: str, page_url: str, homepage: str) -> List[str]:
         nav, _pdfs = extract_meeting_urls(html, page_url, homepage, generic_hint=MEETING_HINTS)
@@ -462,6 +769,172 @@ class ComprehensiveDiscoveryPipelineMeetings:
             out.append((url, anchor))
         return out
 
+    async def _enrich_youtube_rows(
+        self,
+        client: httpx.AsyncClient,
+        rows: List[Dict[str, Any]],
+        *,
+        homepage_url: str,
+    ) -> None:
+        """
+        For each discovered YouTube **video**, call YouTube oEmbed and score title / author for
+        meeting-like wording. Channels and playlists are skipped (no stable oEmbed video).
+        """
+        if not rows:
+            return
+        try:
+            hp_host = urlparse(homepage_url).netloc.lower().split(":")[0]
+        except Exception:
+            hp_host = ""
+        sem = asyncio.Semaphore(6)
+
+        async def one(row: Dict[str, Any]) -> None:
+            async with sem:
+                raw_u = (row.get("url") or "").strip()
+                sub = youtube_url_for_oembed(raw_u)
+                if not sub:
+                    row["meeting_relevance"] = "skipped_non_video_url"
+                    row["youtube_metadata"] = {"note": "channel_playlist_or_unsupported_shape"}
+                    return
+                oe = f"https://www.youtube.com/oembed?url={quote(sub, safe='')}&format=json"
+                try:
+                    r = await client.get(
+                        oe,
+                        headers={"Accept": "application/json"},
+                    )
+                except Exception as exc:
+                    row["meeting_relevance"] = "unknown_oembed_request_error"
+                    row["youtube_metadata"] = {"error": repr(exc), "oembed_url": sub}
+                    return
+                if r.status_code != 200:
+                    row["meeting_relevance"] = "unknown_oembed_http"
+                    row["youtube_metadata"] = {
+                        "http_status": r.status_code,
+                        "oembed_url": sub,
+                    }
+                    return
+                try:
+                    data = r.json()
+                except Exception as exc:
+                    row["meeting_relevance"] = "unknown_oembed_json"
+                    row["youtube_metadata"] = {"error": repr(exc), "oembed_url": sub}
+                    return
+                title = (data.get("title") or "").strip()
+                author = (data.get("author_name") or "").strip()
+                label, score, signals = score_youtube_meeting_relevance(
+                    title,
+                    author,
+                    homepage_host=hp_host,
+                )
+                row["meeting_relevance"] = label
+                row["meeting_relevance_score"] = round(score, 3)
+                row["meeting_relevance_signals"] = signals
+                row["youtube_metadata"] = {
+                    "oembed_watch_url": sub,
+                    "title": title,
+                    "author_name": author,
+                    "thumbnail_url": (data.get("thumbnail_url") or "").strip(),
+                    "provider_name": (data.get("provider_name") or "").strip(),
+                }
+
+        await asyncio.gather(*(one(r) for r in rows))
+        rank = {
+            "likely_meeting": 0,
+            "possible_meeting": 1,
+            "weak_signal": 2,
+            "unclear": 3,
+            "unknown": 3,
+            "skipped_non_video_url": 4,
+            "unknown_oembed_request_error": 5,
+            "unknown_oembed_http": 5,
+            "unknown_oembed_json": 5,
+            "unlikely_meeting": 6,
+        }
+
+        def _sort_key(row: Dict[str, Any]) -> Tuple[int, str]:
+            rel = row.get("meeting_relevance") or "unknown"
+            return (rank.get(rel, 7), row.get("url") or "")
+
+        rows.sort(key=_sort_key)
+
+    async def _select_working_homepage(
+        self,
+        client: httpx.AsyncClient,
+        jurisdiction_id: str,
+        passed_url: str,
+    ) -> Tuple[str, List[str], List[str]]:
+        """
+        Pick a homepage to crawl: ordered DB candidates (when fallback is on), each probed until
+        one returns enough HTML; otherwise first candidate or the passed URL only.
+        """
+        failures: List[str] = []
+        passed_canon = _canonical_homepage_url(passed_url or "")
+
+        if not _meetings_home_fallback_enabled():
+            if _meetings_home_url_is_actionable(passed_canon):
+                return passed_canon, [passed_canon], failures
+            return "", [], (["no_actionable_homepage_url"] if not (passed_url or "").strip() else ["invalid_homepage_url"])
+
+        rows: List[str] = []
+        try:
+            if psycopg2 is not None:
+                rows = _load_homepage_candidates_from_db(jurisdiction_id)
+        except Exception as exc:
+            logger.warning(
+                "meetings_homepage_candidates_db_failed jurisdiction_id={} detail={}",
+                jurisdiction_id,
+                repr(exc),
+            )
+
+        if not rows and (passed_url or "").strip():
+            rows = [passed_url.strip()]
+
+        uniq: List[str] = []
+        seen: Set[str] = set()
+        for raw in rows:
+            cu = _canonical_homepage_url(raw)
+            if not _meetings_home_url_is_actionable(cu):
+                continue
+            key = _strip_fragment(cu)
+            if key in seen:
+                continue
+            seen.add(key)
+            uniq.append(cu)
+
+        if not uniq and _meetings_home_url_is_actionable(passed_canon):
+            uniq = [passed_canon]
+
+        if not uniq:
+            return "", [], ["no_homepage_candidates"]
+
+        min_chars = _meetings_home_min_html_chars()
+        for i, u in enumerate(uniq):
+            fu = _strip_fragment(u)
+            html, err = await self._fetch_page(client, fu)
+            n = len(html or "")
+            if html is not None and n >= min_chars:
+                chosen = _canonical_homepage_url(u)
+                logger.info(
+                    "meetings_homepage_selected jurisdiction_id={} url={} idx={}/{} html_chars={}",
+                    jurisdiction_id,
+                    fu,
+                    i + 1,
+                    len(uniq),
+                    n,
+                )
+                return chosen, uniq, failures
+            failures.append(f"{fu}:{err or f'short_body_chars_{n}'}")
+
+        chosen = uniq[0]
+        logger.warning(
+            "meetings_homepage_probe_all_below_threshold jurisdiction_id={} using_first={} n_candidates={}",
+            jurisdiction_id,
+            _strip_fragment(chosen),
+            len(uniq),
+        )
+        failures.append("_using_first_candidate_after_failed_probes")
+        return chosen, uniq, failures
+
     async def scrape(
         self,
         *,
@@ -476,14 +949,14 @@ class ComprehensiveDiscoveryPipelineMeetings:
         if not jid:
             raise ValueError("Could not derive jurisdiction_id from geoid/type")
 
-        hp = _canonical_homepage_url(homepage_url or "")
+        initial_hp = _canonical_homepage_url(homepage_url or "")
 
         year_now = datetime.now(timezone.utc).year
         stack_hints: List[str] = []
         result = MeetingsScrapeResult(
             jurisdiction_id=jid,
             state=st,
-            homepage_url=hp,
+            homepage_url=initial_hp,
             root_dir=self.output_root,
         )
 
@@ -494,7 +967,11 @@ class ComprehensiveDiscoveryPipelineMeetings:
         queued: Set[str] = set()
         to_visit: List[str] = []
         pdfs_seen: Set[str] = set()
+        youtube_seen: Set[str] = set()
+        other_stream_seen: Set[str] = set()
         pdf_count = 0
+        search_seeded = False
+        contact_page_rows: List[Dict[str, Any]] = []
 
         def _enqueue(u: str) -> None:
             nu = _strip_fragment(u)
@@ -503,18 +980,15 @@ class ComprehensiveDiscoveryPipelineMeetings:
             queued.add(nu)
             to_visit.append(u)
 
-        # Homepage (hash URLs fetch the same document as the base URL)
-        _enqueue(hp)
-        for su in _search_url_candidates(hp):
-            _enqueue(su)
-
         headers = {
             "User-Agent": _DEFAULT_UA,
             "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
             "Accept-Language": "en-US,en;q=0.9",
         }
-        read_s = float(self.timeout_s)
-        timeout = httpx.Timeout(connect=25.0, read=read_s, write=25.0, pool=25.0)
+        # One ``--timeout`` value for connect + read + write + pool (avoids ConnectTimeout while
+        # read is still 120s — we previously capped connect at 25s).
+        t = max(5.0, float(self.timeout_s))
+        timeout = httpx.Timeout(t)
 
         base_dir = self._jurisdiction_base_dir(st, jid)
         snap_dir = base_dir / "_crawl_html"
@@ -528,6 +1002,20 @@ class ComprehensiveDiscoveryPipelineMeetings:
             limits=httpx.Limits(max_keepalive_connections=10, max_connections=20),
         ) as client:
 
+            hp, home_cands, home_probe_failures = await self._select_working_homepage(
+                client, jid, homepage_url or ""
+            )
+            result.homepage_url = hp
+            result.homepage_url_candidates = home_cands
+            result.homepage_probe_failures = home_probe_failures
+
+            # Homepage first; WordPress / OpenCivic search URLs are added only after HTML detection
+            # (avoids ``/?s=webcast`` noise on Revize, Granicus, static sites, …).
+            if _meetings_home_url_is_actionable(hp):
+                _enqueue(hp)
+            else:
+                result.errors.append("no_usable_homepage_url")
+
             while to_visit and len(visited) < self.max_pages and pdf_count < self.max_pdfs:
                 url = to_visit.pop(0)
                 fetch_url = _strip_fragment(url)
@@ -537,11 +1025,60 @@ class ComprehensiveDiscoveryPipelineMeetings:
 
                 html, fetch_err = await self._fetch_page(client, fetch_url)
                 if not html:
-                    result.errors.append(f"no_html:{fetch_url}:{fetch_err or 'unknown'}")
+                    if _is_probable_site_search_probe(fetch_url):
+                        logger.debug(
+                            "meetings_search_probe_skip url={url!r} reason={reason!r}",
+                            url=fetch_url,
+                            reason=fetch_err,
+                        )
+                    else:
+                        result.errors.append(f"no_html:{fetch_url}:{fetch_err or 'unknown'}")
                     continue
                 result.pages_fetched.append(fetch_url)
+
+                if _meetings_contact_extract_enabled():
+                    chunk = extract_contacts_from_page(html, fetch_url)
+                    if chunk.get("emails") or chunk.get("phones"):
+                        contact_page_rows.append(chunk)
+
+                if not search_seeded and _is_homepage_document_url(fetch_url, hp):
+                    search_seeded = True
+                    for su in _discover_site_search_seed_urls(html, hp):
+                        _enqueue(su)
                 stack_hints = merge_stack_hints(stack_hints, detect_meeting_stacks(html, fetch_url))
                 result.detected_stacks = list(stack_hints)
+
+                # Revize / ASP “Site Search” portals (not WordPress ``/?s=``); try a few GET query variants.
+                for portal in extract_site_search_portal_urls(html, fetch_url, hp):
+                    for variant in site_search_portal_variants(portal):
+                        _enqueue(variant)
+
+                for yt in extract_youtube_refs(html, fetch_url):
+                    yu = yt.get("url") or ""
+                    if not yu or yu in youtube_seen:
+                        continue
+                    youtube_seen.add(yu)
+                    row = {
+                        "url": yu,
+                        "link_type": yt.get("link_type", "other"),
+                        "found_via": yt.get("found_via", ""),
+                        "discovered_on": fetch_url,
+                    }
+                    result.youtube.append(row)
+
+                for vs in extract_other_video_stream_refs(html, fetch_url):
+                    vu = vs.get("url") or ""
+                    if not vu or vu in other_stream_seen:
+                        continue
+                    other_stream_seen.add(vu)
+                    result.other_video_streams.append(
+                        {
+                            "url": vu,
+                            "platform": vs.get("platform", "unknown"),
+                            "found_via": vs.get("found_via", ""),
+                            "discovered_on": fetch_url,
+                        }
+                    )
 
                 # HTML snapshots for audit (outside ``{year}/`` so PDF folders stay clean)
                 safe_name = re.sub(r"[^\w.-]+", "_", urlparse(fetch_url).path)[:120] or "index"
@@ -562,14 +1099,17 @@ class ComprehensiveDiscoveryPipelineMeetings:
                     fname = _fs_safe_segment(fname)
                     dest = dest_dir / fname
                     try:
-                        pr = await client.get(pdf, follow_redirects=True)
-                        if pr.status_code == 200 and pr.content:
+                        pr, why = await _fetch_pdf_with_referers(
+                            client, pdf, referers=[fetch_url, hp]
+                        )
+                        if pr is not None:
                             dest.write_bytes(pr.content)
                             result.pdfs_downloaded.append(
                                 {
                                     "url": pdf,
                                     "path": str(dest),
-                                    "year": y,
+                                    # Calendar year as string in JSON (avoids int in manifests / TS strict JSON).
+                                    "year": str(y),
                                     "bytes": len(pr.content),
                                     "doc_type": classify_document(pdf, anchor_text),
                                     "anchor_text": (anchor_text or "")[:500],
@@ -577,7 +1117,14 @@ class ComprehensiveDiscoveryPipelineMeetings:
                             )
                             pdf_count += 1
                         else:
-                            result.errors.append(f"pdf_http:{pdf}:{pr.status_code}")
+                            result.errors.append(f"pdf_rejected_not_pdf:{pdf}:{why}")
+                            try:
+                                if dest.is_file():
+                                    peek = dest.read_bytes()[:5]
+                                    if not peek.startswith(b"%PDF"):
+                                        dest.unlink(missing_ok=True)
+                            except OSError:
+                                pass
                     except OSError as exc:
                         result.errors.append(f"pdf_write:{pdf}:{exc}")
                     except Exception as exc:
@@ -594,6 +1141,14 @@ class ComprehensiveDiscoveryPipelineMeetings:
                     if nu not in visited:
                         _enqueue(link)
 
+            await self._enrich_youtube_rows(client, result.youtube, homepage_url=hp)
+
+            result.extracted_contacts = (
+                merge_contact_manifest_rows(contact_page_rows)
+                if _meetings_contact_extract_enabled()
+                else {}
+            )
+
         manifest_path = base_dir / "_manifest.json"
         try:
             manifest_path.write_text(
@@ -602,11 +1157,18 @@ class ComprehensiveDiscoveryPipelineMeetings:
                         "jurisdiction_id": jid,
                         "state": st,
                         "homepage_url": hp,
+                        "homepage_url_candidates": result.homepage_url_candidates,
+                        "homepage_probe_failures": result.homepage_probe_failures,
+                        "output_root": str(self.output_root.resolve()),
+                        "output_resolution": scraped_meetings_root_resolution_note(),
                         "detected_stacks": result.detected_stacks,
                         "scraped_at": datetime.now(timezone.utc).isoformat(),
                         "pages_fetched": result.pages_fetched,
                         "pdfs": result.pdfs_downloaded,
+                        "youtube": result.youtube,
+                        "other_video_streams": result.other_video_streams,
                         "errors": result.errors,
+                        "extracted_contacts": result.extracted_contacts,
                     },
                     indent=2,
                 ),
@@ -646,10 +1208,12 @@ async def run_meetings_batch(
                     skip_output_root_mkdir=True,
                 )
                 logger.info(
-                    "meetings_done jurisdiction={} pages={} pdfs={} err_lines={}",
+                    "meetings_done jurisdiction={} pages={} pdfs={} youtube={} other_streams={} err_lines={}",
                     jid,
                     len(r.pages_fetched),
                     len(r.pdfs_downloaded),
+                    len(r.youtube),
+                    len(r.other_video_streams),
                     len(r.errors),
                 )
                 return r
@@ -660,7 +1224,10 @@ async def run_meetings_batch(
                     state=job["state"],
                     homepage_url=job.get("url", ""),
                     root_dir=pipe.output_root,
+                    youtube=[],
+                    other_video_streams=[],
                     errors=[f"exception:{exc!r}"],
+                    extracted_contacts={},
                 )
 
     return list(await asyncio.gather(*(one(j) for j in jobs)))
@@ -669,7 +1236,7 @@ async def run_meetings_batch(
 def main() -> None:
     _load_repo_dotenv()
     parser = argparse.ArgumentParser(
-        description="Scrape meeting minutes PDFs into SCRAPED_MEETINGS_ROOT (CommunityOne layout)."
+        description="Scrape meeting minutes; default output <repo>/data/cache/scraped_meetings (env SCRAPED_MEETINGS_ROOT overrides).",
     )
     parser.add_argument("--state", required=True, help="USPS, e.g. CO")
     parser.add_argument(
@@ -705,7 +1272,7 @@ def main() -> None:
         "--timeout",
         type=float,
         default=120.0,
-        help="HTTP read timeout per request (seconds); connect timeout is fixed at 25s",
+        help="HTTP timeout per request for connect, read, write, and pool (seconds; same value for all)",
     )
     parser.add_argument(
         "--concurrency",
@@ -768,12 +1335,21 @@ def main() -> None:
                 homepage_url=j0["url"],
             )
         )
+        try:
+            root_disp = str(pipe.output_root.resolve())
+        except OSError:
+            root_disp = str(pipe.output_root.expanduser())
+        sample_pdf = out.pdfs_downloaded[0]["path"] if out.pdfs_downloaded else "(no pdfs)"
         logger.success(
-            "Done {} — pages={}, pdfs={}, errors={}",
+            "Done {} — pages={}, pdfs={}, youtube={}, other_streams={}, errors={} | root={} | sample_pdf={}",
             out.jurisdiction_id,
             len(out.pages_fetched),
             len(out.pdfs_downloaded),
+            len(out.youtube),
+            len(out.other_video_streams),
             len(out.errors),
+            root_disp,
+            sample_pdf,
         )
     else:
         results = asyncio.run(run_meetings_batch(pipe, jobs, concurrency=args.concurrency))
@@ -782,12 +1358,17 @@ def main() -> None:
         )
         pages = sum(len(r.pages_fetched) for r in results)
         pdfs = sum(len(r.pdfs_downloaded) for r in results)
+        try:
+            batch_root = str(pipe.output_root.resolve())
+        except OSError:
+            batch_root = str(pipe.output_root.expanduser())
         logger.success(
-            "Batch done jobs={} scrape_crashes={} total_pages={} total_pdfs={}",
+            "Batch done jobs={} scrape_crashes={} total_pages={} total_pdfs={} | root={}",
             len(results),
             n_crash,
             pages,
             pdfs,
+            batch_root,
         )
 
 

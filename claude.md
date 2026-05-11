@@ -85,3 +85,9 @@ span.end();
 - Initialize the Web SDK once in `src/instrumentation.ts`, imported at the app entry point.
 - Use `@opentelemetry/sdk-trace-web` + `@opentelemetry/exporter-trace-otlp-http`.
 - Instrument route changes and key user interactions (search, filter, data load).
+
+## Calendar years in JSON (scraped meetings & similar)
+
+- Serialize **calendar year** fields as **JSON strings** (e.g. `"year": "2026"`), not numbers, in manifests and API payloads unless the column is a real SQL `DATE` / `TIMESTAMP`.
+- Internal paths may still use numeric years for folders; convert with `str(y)` at the JSON boundary.
+- Migration: `python scripts/discovery/fix_scraped_meetings_manifest_years.py` (see `--dry-run`).

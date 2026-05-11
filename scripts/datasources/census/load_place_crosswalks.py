@@ -53,6 +53,11 @@ from loguru import logger
 
 
 PROJECT_ROOT = Path(__file__).parent.parent.parent.parent
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
+
+from calendar_year_util import calendar_year_label
+
 SHAPEFILE_CACHE = PROJECT_ROOT / "data" / "cache" / "census" / "shapefiles"
 RELATIONSHIPS_CACHE = PROJECT_ROOT / "data" / "cache" / "census_relationships"
 
@@ -84,7 +89,7 @@ CREATE TABLE IF NOT EXISTS bronze.bronze_jurisdictions_place_county (
     place_area_m2   BIGINT,
     overlap_pct     NUMERIC(6, 3),
     is_primary      BOOLEAN     NOT NULL,
-    vintage_year    SMALLINT,
+    vintage_year    VARCHAR(4),
     source          VARCHAR(255),
     ingestion_date  TIMESTAMP   DEFAULT NOW(),
     PRIMARY KEY (place_geoid, county_geoid)
@@ -391,7 +396,8 @@ def _insert_place_county(conn, df: pd.DataFrame, truncate: bool) -> int:
                 int(r.overlap_area_m2), int(r.place_area_m2),
                 float(r.overlap_pct) if pd.notna(r.overlap_pct) else None,
                 bool(r.is_primary),
-                int(r.vintage_year), r.source,
+                calendar_year_label(r.vintage_year),
+                r.source,
             )
             for r in df.itertuples(index=False)
         ]

@@ -253,7 +253,7 @@ when a city straddles a county line, it appears multiple times.
 | `place_area_m2`  | bigint      | Total land area of the place in m²                 |
 | `overlap_pct`    | numeric     | `100 * overlap_area / place_area`                  |
 | `is_primary`     | bool        | TRUE for the county with the largest overlap       |
-| `vintage_year`   | smallint    | Census shapefile vintage used                      |
+| `vintage_year`   | varchar(4)  | Census shapefile vintage (calendar year label)   |
 
 **Lookup query**:
 

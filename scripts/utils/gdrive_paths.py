@@ -1,9 +1,11 @@
 """
-Google Drive path helpers — same env contract as ``scripts/utils/log_sync.py`` and
-``export_bronze_to_json.py`` (``LOG_GDRIVE_MOUNT``).
+Path helpers shared with ``scripts/utils/log_sync.py`` and ``export_bronze_to_json.py``.
 
-Use **one** mount variable for logs, wikidata exports, and meetings downloads; override only when
-you need a different meetings folder via ``SCRAPED_MEETINGS_ROOT`` or ``SCRAPED_MEETINGS_RELATIVE``.
+- ``LOG_GDRIVE_MOUNT`` / ``gdrive_mount_path()`` — used by **log sync** and wikidata export to copy
+  into Google Drive.
+- ``resolve_scraped_meetings_output_root()`` — **meetings scraper** default is the repo cache
+  (``data/cache/scraped_meetings``), same family as ``data/cache/wikidata``. Override with
+  ``SCRAPED_MEETINGS_ROOT`` (e.g. a mounted Drive path) when you want artifacts outside the repo.
 """
 from __future__ import annotations
 
@@ -12,34 +14,36 @@ from pathlib import Path
 
 _DEFAULT_LOG_GDRIVE_MOUNT = "/mnt/g/My Drive"
 
+# ``scripts/utils/gdrive_paths.py`` → repo root is two parents up from ``scripts/``.
+_REPO_ROOT = Path(__file__).resolve().parents[2]
+
 
 def gdrive_mount_path() -> Path:
     """Mounted Google Drive root (default ``/mnt/g/My Drive``)."""
     return Path(os.getenv("LOG_GDRIVE_MOUNT", _DEFAULT_LOG_GDRIVE_MOUNT)).expanduser()
 
 
-def scraped_meetings_relative_parts() -> tuple[str, ...]:
-    """Path segments under the mount for meeting artifacts (default ``CommunityOne/scraped_meetings``)."""
-    raw = (os.getenv("SCRAPED_MEETINGS_RELATIVE") or "CommunityOne/scraped_meetings").strip()
-    if not raw:
-        raw = "CommunityOne/scraped_meetings"
-    norm = raw.replace("\\", "/").strip("/")
-    return tuple(p for p in norm.split("/") if p)
+def default_scraped_meetings_data_cache() -> Path:
+    """Default meetings artifact root: ``<repo>/data/cache/scraped_meetings`` (gitignored ``data/``)."""
+    return _REPO_ROOT / "data" / "cache" / "scraped_meetings"
+
+
+def scraped_meetings_root_resolution_note() -> str:
+    """Which env branch :pyfunc:`resolve_scraped_meetings_output_root` used (for logs / manifests)."""
+    explicit = (os.getenv("SCRAPED_MEETINGS_ROOT") or "").strip()
+    if explicit:
+        return "SCRAPED_MEETINGS_ROOT"
+    return "DATA_CACHE (repo data/cache/scraped_meetings/)"
 
 
 def resolve_scraped_meetings_output_root() -> Path:
     """
     Resolve where meeting PDFs should be stored.
 
-    - If ``SCRAPED_MEETINGS_ROOT`` is set → that path (full override).
-    - Else if ``LOG_GDRIVE_MOUNT`` exists as a directory → ``LOG_GDRIVE_MOUNT`` / ``SCRAPED_MEETINGS_RELATIVE``.
-    - Else → ``~/CommunityOne/scraped_meetings``.
+    - If ``SCRAPED_MEETINGS_ROOT`` is set → that path (full override, e.g. Google Drive mount).
+    - Else → ``<open-navigator>/data/cache/scraped_meetings`` (with ``{state}/{type}/{id}/…`` under it).
     """
     explicit = (os.getenv("SCRAPED_MEETINGS_ROOT") or "").strip()
     if explicit:
         return Path(explicit).expanduser()
-    mount = gdrive_mount_path()
-    dest = mount.joinpath(*scraped_meetings_relative_parts())
-    if mount.is_dir():
-        return dest
-    return Path.home() / "CommunityOne" / "scraped_meetings"
+    return default_scraped_meetings_data_cache()

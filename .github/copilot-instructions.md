@@ -748,3 +748,10 @@ When suggesting deployment options, consider:
 - **Local Development**: Using start-all.sh with tmux
 
 Always provide complete deployment instructions in `website/docs/deployment/`.
+
+## Calendar years in JSON (meetings manifests, APIs)
+
+- Use **string** JSON values for calendar years (e.g. `"year": "2026"`), not `int`, in `data/cache/scraped_meetings/**/_manifest.json` `pdfs[]` entries and similar payloads.
+- Rationale: years are labels, not numeric measures; keeps TypeScript / strict JSON consumers consistent with GEOID-style strings elsewhere.
+- When editing `scripts/discovery/comprehensive_discovery_pipeline_meetings.py`, keep manifest `year` as `str(...)`.
+- To fix existing files: `python scripts/discovery/fix_scraped_meetings_manifest_years.py --dry-run` then without `--dry-run`.

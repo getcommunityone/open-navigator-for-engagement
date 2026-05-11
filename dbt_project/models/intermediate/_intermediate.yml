@@ -79,16 +79,23 @@ models:
       Materialized as ``intermediate.int_jurisdiction_websites`` (custom intermediate schema — not ``public``).
       Run ``dbt run --select int_jurisdiction_websites`` before expecting columns like ``website_source`` in the warehouse.
 
-      For **GSA** rows, ``jurisdiction_id`` is ``COALESCE(URL match, name match)``: same normalized site origin
-      (https host, lowercase, no ``www.``, no trailing slash) as a USCM city, NCES district, or NACo county row
-      wins over the legacy city+state name match alone.
+      For **GSA** rows, ``jurisdiction_id`` is ``COALESCE(URL match, name match, domain stem match)``:
+      URL referral matches the same normalized site origin as USCM / NCES / NACo rows; otherwise a
+      **name match** ties GSA ``organization``, ``agency``, and ``city`` (normalized via
+      ``normalize_jurisdiction_label_for_match`` — St./Saint, parish/county, trailing ``", ST"`` on
+      registrant fields, etc.) to ``int_jurisdictions`` in the same **state** and **domain_type**
+      category (City/Town/Village/Borough→municipality, County→county, etc.), preferring organization
+      exact match, then agency, then city, then prefix-style matches, then largest area. If those
+      are still null, a **compact domain stem** match compares letters-only ``.gov`` host (optional
+      trailing state code stripped) to letters-only ``name_norm`` for the same state and mapped type.
 
       Jurisdiction website URLs from multiple bronze sources: GSA .gov registry (cisagov/dotgov-data),
       US Conference of Mayors city sites (bronze_jurisdictions_municipalities_uscm.city_website),
       NCES CCD LEA directory (bronze_jurisdictions_school_districts_nces_directory.website),
       and NACo county explorer (bronze_jurisdictions_counties_naco.website). Federal agency .gov
       domains are excluded from the GSA slice only. ``website_source`` identifies the upstream bronze
-      lineage; ``website_record_key`` is unique per row.
+      lineage; ``website_record_key`` is unique per row. Downstream Python pickers prefer
+      **gsa → uscm → nces_directory → naco** (GSA .gov registry first when a row exists for that jurisdiction).
     columns:
       - name: website_record_key
         description: "Stable unique key per row (e.g. gsa domain, uscm|ST|municipality, nces_directory|LEAID, naco|county GEOID)"

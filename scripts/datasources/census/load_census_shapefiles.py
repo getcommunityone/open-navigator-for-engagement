@@ -60,7 +60,7 @@ TYPES = {
                 aland          BIGINT,
                 awater         BIGINT,
                 geom_wkt       TEXT,
-                vintage_year   SMALLINT,
+                vintage_year   VARCHAR(4),
                 ingestion_date TIMESTAMP DEFAULT NOW()
             );
         """,
@@ -88,7 +88,7 @@ TYPES = {
             int(row["ALAND"]) if row["ALAND"] is not None else None,
             int(row["AWATER"]) if row["AWATER"] is not None else None,
             row["geometry"].wkt if row["geometry"] is not None else None,
-            year,
+            str(year),
         ),
     },
 
@@ -111,7 +111,7 @@ TYPES = {
                 aland          BIGINT,
                 awater         BIGINT,
                 geom_wkt       TEXT,
-                vintage_year   SMALLINT,
+                vintage_year   VARCHAR(4),
                 ingestion_date TIMESTAMP DEFAULT NOW()
             );
             CREATE INDEX IF NOT EXISTS idx_bgco_statefp ON bronze.bronze_geo_counties(statefp);
@@ -145,7 +145,7 @@ TYPES = {
             int(row["ALAND"]) if row["ALAND"] is not None else None,
             int(row["AWATER"]) if row["AWATER"] is not None else None,
             row["geometry"].wkt if row["geometry"] is not None else None,
-            year,
+            str(year),
         ),
     },
 
@@ -168,7 +168,7 @@ TYPES = {
                 aland          BIGINT,
                 awater         BIGINT,
                 geom_wkt       TEXT,
-                vintage_year   SMALLINT,
+                vintage_year   VARCHAR(4),
                 ingestion_date TIMESTAMP DEFAULT NOW()
             );
             CREATE INDEX IF NOT EXISTS idx_bgpl_statefp ON bronze.bronze_geo_places(statefp);
@@ -202,7 +202,7 @@ TYPES = {
             int(row["ALAND"]) if row["ALAND"] is not None else None,
             int(row["AWATER"]) if row["AWATER"] is not None else None,
             row["geometry"].wkt if row["geometry"] is not None else None,
-            year,
+            str(year),
         ),
     },
 
@@ -223,7 +223,7 @@ TYPES = {
                 intptlat20     NUMERIC(11,8),
                 intptlon20     NUMERIC(12,8),
                 geom_wkt       TEXT,
-                vintage_year   SMALLINT,
+                vintage_year   VARCHAR(4),
                 ingestion_date TIMESTAMP DEFAULT NOW()
             );
         """,
@@ -254,7 +254,7 @@ TYPES = {
             float(row["INTPTLAT20"]) if row.get("INTPTLAT20") is not None else None,
             float(row["INTPTLON20"]) if row.get("INTPTLON20") is not None else None,
             row["geometry"].wkt if row["geometry"] is not None else None,
-            year,
+            str(year),
         ),
     },
 }

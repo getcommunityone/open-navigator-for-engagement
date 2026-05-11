@@ -35,6 +35,7 @@ import sys
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from config.settings import settings
+from calendar_year_util import calendar_year_label
 from scripts.datasources.irs.nonprofit_discovery import NonprofitDiscovery
 from scripts.discovery.irs_bmf_ingestion import IRSBMFIngestion
 
@@ -280,7 +281,7 @@ class NonprofitGoldTableCreator:
             financial_data.append({
                 'ein': row.get('ein'),
                 'organization_name': row.get('name') or row.get('organization_name'),
-                'tax_year': row.get('tax_period'),
+                'tax_year': calendar_year_label(row.get('tax_period')),
                 'total_revenue': row.get('revenue_amount'),
                 'total_assets': row.get('asset_amount'),
                 'total_expenses': row.get('income_amount'),  # Often mislabeled in APIs

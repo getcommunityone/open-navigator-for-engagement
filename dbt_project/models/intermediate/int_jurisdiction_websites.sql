@@ -6,6 +6,12 @@
 }}
 
 -- Relation in Postgres: intermediate.int_jurisdiction_websites (see dbt intermediate +schema).
+-- Performance (ops): ``ANALYZE`` bronze sources after bulk loads; run ``EXPLAIN (ANALYZE, BUFFERS)``
+-- on compiled SQL under ``target/run/``. Index ``idx_int_jurisdictions_state_type`` is created by
+-- ``dbt_project/scripts/ensure_int_jurisdictions_indexes.sh`` (called from ``dbt_project/setup.sh``)
+-- because ``CREATE INDEX CONCURRENTLY`` cannot run inside dbt's transaction. For heavy GSA name
+-- joins, optionally ``SET work_mem = '256MB'`` in the session before ``dbt run`` (avoid embedding in
+-- ``config(pre_hook=...)`` here: dbt's config parser rejects nested string quotes in some versions).
 -- Query that schema/name after ``dbt run --select int_jurisdiction_websites`` — public.* may be stale/wrong.
 
 -- Map GSA domain_type labels to the jurisdiction_type values used in int_jurisdictions
@@ -13,11 +19,25 @@
 WITH domain_type_map AS (
     SELECT * FROM (VALUES
         ('City',             'municipality'),
+        ('Town',             'municipality'),
+        ('Village',          'municipality'),
+        ('Borough',          'municipality'),
         ('County',           'county'),
         ('State',            'state'),
         ('School District',  'school_district'),
         ('Township',         'township')
     ) AS t(gsa_domain_type, jur_type)
+),
+
+-- Normalized place name for GSA ↔ Census ``int_jurisdictions`` matching (see macro).
+jurisdictions_name_normalized AS (
+    SELECT
+        jurisdiction_id,
+        state_code,
+        jurisdiction_type,
+        area_sq_miles,
+        {{ normalize_jurisdiction_label_for_match('name') }} AS name_norm
+    FROM {{ ref('int_jurisdictions') }}
 ),
 
 state_ref AS (
@@ -60,20 +80,15 @@ gsa_cleaned AS (
         TRIM(city)                                      AS city,
         UPPER(TRIM(state))                              AS state_code,
 
-        NULLIF(
-          REGEXP_REPLACE(
-            REGEXP_REPLACE(
-              REGEXP_REPLACE(LOWER(TRIM(city)), '^(city|town|village|borough|county|township) of\\s+', '', 'g'),
-              '\\s+(city|town|village|borough|county|township)$',
-              '',
-              'g'
-            ),
-            '[^a-z0-9]+',
-            ' ',
-            'g'
-          ),
-          ''
-        )                                               AS city_normalized,
+        {{ normalize_jurisdiction_label_for_match('city') }} AS city_normalized,
+
+        {{ normalize_jurisdiction_label_for_match(
+            "REGEXP_REPLACE(TRIM(organization), ',\\s*[A-Za-z]{2}\\s*$', '', 'gi')"
+        ) }} AS organization_normalized,
+
+        {{ normalize_jurisdiction_label_for_match(
+            "REGEXP_REPLACE(TRIM(agency), ',\\s*[A-Za-z]{2}\\s*$', '', 'gi')"
+        ) }} AS agency_normalized,
 
         CASE UPPER(TRIM(domain_type))
             WHEN 'CITY'           THEN 'municipality'
@@ -92,55 +107,76 @@ gsa_cleaned AS (
       AND TRIM(domain_name) != ''
 ),
 
+-- GSA ``jurisdiction_id``: same state + mapped domain_type as ``int_jurisdictions`` type, then tie-break
+-- name match on organization (registrant) > agency > city, then prefix matches, then land area.
 jurisdiction_match AS (
     SELECT
         c.domain_name,
         j.jurisdiction_id,
         ROW_NUMBER() OVER (
             PARTITION BY c.domain_name
-            ORDER BY j.area_sq_miles DESC NULLS LAST
+            ORDER BY
+                CASE
+                    WHEN j.name_norm = c.organization_normalized
+                         AND c.organization_normalized IS NOT NULL THEN 0
+                    WHEN j.name_norm = c.agency_normalized
+                         AND c.agency_normalized IS NOT NULL THEN 1
+                    WHEN j.name_norm = c.city_normalized
+                         AND c.city_normalized IS NOT NULL THEN 2
+                    WHEN j.name_norm LIKE c.organization_normalized || ' %'
+                         AND c.organization_normalized IS NOT NULL THEN 3
+                    WHEN c.organization_normalized LIKE j.name_norm || ' %'
+                         AND c.organization_normalized IS NOT NULL THEN 4
+                    WHEN j.name_norm LIKE c.agency_normalized || ' %'
+                         AND c.agency_normalized IS NOT NULL THEN 5
+                    WHEN c.agency_normalized LIKE j.name_norm || ' %'
+                         AND c.agency_normalized IS NOT NULL THEN 6
+                    WHEN j.name_norm LIKE c.city_normalized || ' %'
+                         AND c.city_normalized IS NOT NULL THEN 7
+                    WHEN c.city_normalized LIKE j.name_norm || ' %'
+                         AND c.city_normalized IS NOT NULL THEN 8
+                    ELSE 9
+                END,
+                j.area_sq_miles DESC NULLS LAST
         ) AS match_rank
     FROM gsa_cleaned c
-    JOIN domain_type_map dtm ON UPPER(c.domain_type) = UPPER(dtm.gsa_domain_type)
-    JOIN {{ ref('int_jurisdictions') }} j
+    JOIN domain_type_map dtm
+        ON UPPER(TRIM(c.domain_type)) = UPPER(dtm.gsa_domain_type)
+    JOIN jurisdictions_name_normalized j
         ON j.jurisdiction_type = dtm.jur_type
-       AND j.state_code         = c.state_code
-       AND (
-           REGEXP_REPLACE(
-             REGEXP_REPLACE(
-               REGEXP_REPLACE(LOWER(TRIM(j.name)), '^(city|town|village|borough|county|township) of\\s+', '', 'g'),
-               '\\s+(city|town|village|borough|county|township)$',
-               '',
-               'g'
-             ),
-             '[^a-z0-9]+',
-             ' ',
-             'g'
-           ) = c.city_normalized
-           OR REGEXP_REPLACE(
-                REGEXP_REPLACE(
-                  REGEXP_REPLACE(LOWER(TRIM(j.name)), '^(city|town|village|borough|county|township) of\\s+', '', 'g'),
-                  '\\s+(city|town|village|borough|county|township)$',
-                  '',
-                  'g'
-                ),
-                '[^a-z0-9]+',
-                ' ',
-                'g'
-              ) LIKE c.city_normalized || ' %'
-           OR c.city_normalized LIKE REGEXP_REPLACE(
-                REGEXP_REPLACE(
-                  REGEXP_REPLACE(LOWER(TRIM(j.name)), '^(city|town|village|borough|county|township) of\\s+', '', 'g'),
-                  '\\s+(city|town|village|borough|county|township)$',
-                  '',
-                  'g'
-                ),
-                '[^a-z0-9]+',
-                ' ',
-                'g'
-              ) || ' %'
-       )
-    WHERE c.city_normalized IS NOT NULL
+       AND j.state_code = c.state_code
+    WHERE j.name_norm IS NOT NULL
+      AND (
+            c.organization_normalized IS NOT NULL
+         OR c.agency_normalized IS NOT NULL
+         OR c.city_normalized IS NOT NULL
+          )
+      AND (
+            j.name_norm = c.organization_normalized
+         OR j.name_norm = c.agency_normalized
+         OR j.name_norm = c.city_normalized
+         OR (
+                c.organization_normalized IS NOT NULL
+            AND (
+                    j.name_norm LIKE c.organization_normalized || ' %'
+                 OR c.organization_normalized LIKE j.name_norm || ' %'
+                )
+            )
+         OR (
+                c.agency_normalized IS NOT NULL
+            AND (
+                    j.name_norm LIKE c.agency_normalized || ' %'
+                 OR c.agency_normalized LIKE j.name_norm || ' %'
+                )
+            )
+         OR (
+                c.city_normalized IS NOT NULL
+            AND (
+                    j.name_norm LIKE c.city_normalized || ' %'
+                 OR c.city_normalized LIKE j.name_norm || ' %'
+                )
+            )
+          )
 ),
 
 uscm_base AS (
@@ -149,20 +185,7 @@ uscm_base AS (
         TRIM(municipality_name)                           AS municipality_name,
         TRIM(city_website)                                AS raw_website,
         ingestion_date,
-        NULLIF(
-          REGEXP_REPLACE(
-            REGEXP_REPLACE(
-              REGEXP_REPLACE(LOWER(TRIM(municipality_name)), '^(city|town|village|borough|county|township) of\\s+', '', 'g'),
-              '\\s+(city|town|village|borough|county|township)$',
-              '',
-              'g'
-            ),
-            '[^a-z0-9]+',
-            ' ',
-            'g'
-          ),
-          ''
-        )                                                 AS name_normalized
+        {{ normalize_jurisdiction_label_for_match('municipality_name') }} AS name_normalized
     FROM {{ source('bronze', 'bronze_jurisdictions_municipalities_uscm') }}
     WHERE city_website IS NOT NULL
       AND TRIM(city_website) != ''
@@ -187,39 +210,9 @@ uscm_ranked AS (
        AND j.state_code = u.state_code
        AND u.name_normalized IS NOT NULL
        AND (
-           REGEXP_REPLACE(
-             REGEXP_REPLACE(
-               REGEXP_REPLACE(LOWER(TRIM(j.name)), '^(city|town|village|borough|county|township) of\\s+', '', 'g'),
-               '\\s+(city|town|village|borough|county|township)$',
-               '',
-               'g'
-             ),
-             '[^a-z0-9]+',
-             ' ',
-             'g'
-           ) = u.name_normalized
-           OR REGEXP_REPLACE(
-                REGEXP_REPLACE(
-                  REGEXP_REPLACE(LOWER(TRIM(j.name)), '^(city|town|village|borough|county|township) of\\s+', '', 'g'),
-                  '\\s+(city|town|village|borough|county|township)$',
-                  '',
-                  'g'
-                ),
-                '[^a-z0-9]+',
-                ' ',
-                'g'
-              ) LIKE u.name_normalized || ' %'
-           OR u.name_normalized LIKE REGEXP_REPLACE(
-                REGEXP_REPLACE(
-                  REGEXP_REPLACE(LOWER(TRIM(j.name)), '^(city|town|village|borough|county|township) of\\s+', '', 'g'),
-                  '\\s+(city|town|village|borough|county|township)$',
-                  '',
-                  'g'
-                ),
-                '[^a-z0-9]+',
-                ' ',
-                'g'
-              ) || ' %'
+           ({{ normalize_jurisdiction_label_for_match('j.name') }}) = u.name_normalized
+           OR ({{ normalize_jurisdiction_label_for_match('j.name') }}) LIKE u.name_normalized || ' %'
+           OR u.name_normalized LIKE ({{ normalize_jurisdiction_label_for_match('j.name') }}) || ' %'
        )
 ),
 
@@ -476,6 +469,51 @@ gsa_url_match AS (
         ))[1]
 ),
 
+-- When registrant text does not match Census ``name`` but the ``.gov`` host stem equals the
+-- jurisdiction name (letters only, optional trailing state code in the domain), attach the row.
+-- Runs only after URL and full name-match passes; tie-break by land area.
+gsa_domain_compact_hint AS (
+    SELECT
+        c.domain_name,
+        j.jurisdiction_id,
+        ROW_NUMBER() OVER (
+            PARTITION BY c.domain_name
+            ORDER BY j.area_sq_miles DESC NULLS LAST
+        ) AS match_rank
+    FROM gsa_cleaned c
+    INNER JOIN domain_type_map dtm
+        ON UPPER(TRIM(c.domain_type)) = UPPER(dtm.gsa_domain_type)
+    INNER JOIN jurisdictions_name_normalized j
+        ON j.state_code = c.state_code
+       AND j.jurisdiction_type = dtm.jur_type
+       AND j.name_norm IS NOT NULL
+    CROSS JOIN LATERAL (
+        SELECT
+            REGEXP_REPLACE(
+                REGEXP_REPLACE(
+                    LOWER(TRIM(c.domain_name)),
+                    '\.(gov|us)$',
+                    '',
+                    'i'
+                ),
+                '[^a-z0-9]+',
+                '',
+                'g'
+            ) AS stem_all
+    ) sa
+    CROSS JOIN LATERAL (
+        SELECT
+            CASE
+                WHEN LENGTH(sa.stem_all) > 2
+                     AND RIGHT(sa.stem_all, 2) = LOWER(TRIM(c.state_code))
+                THEN SUBSTRING(sa.stem_all, 1, LENGTH(sa.stem_all) - 2)
+                ELSE sa.stem_all
+            END AS stem_no_state
+    ) sn
+    WHERE LENGTH(sn.stem_no_state) >= 6
+      AND REGEXP_REPLACE(j.name_norm, '[^a-z0-9]+', '', 'g') = sn.stem_no_state
+),
+
 gsa_rows AS (
     SELECT
         c.website_record_key,
@@ -489,7 +527,7 @@ gsa_rows AS (
         c.city,
         c.state_code,
         s.state_name                                        AS state,
-        COALESCE(gum.jurisdiction_id, jm.jurisdiction_id)   AS jurisdiction_id,
+        COALESCE(gum.jurisdiction_id, jm.jurisdiction_id, gdh.jurisdiction_id) AS jurisdiction_id,
         c.ingestion_date,
         CURRENT_TIMESTAMP                                   AS transformed_at
     FROM gsa_cleaned c
@@ -500,6 +538,9 @@ gsa_rows AS (
     LEFT JOIN gsa_url_match gum
         ON c.domain_name = gum.domain_name
        AND gum.match_rank = 1
+    LEFT JOIN gsa_domain_compact_hint gdh
+        ON c.domain_name = gdh.domain_name
+       AND gdh.match_rank = 1
 ),
 
 naco_rows AS (

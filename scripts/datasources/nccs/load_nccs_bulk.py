@@ -35,6 +35,12 @@ import argparse
 import sys
 from pathlib import Path
 from typing import List, Optional
+
+_ROOT = Path(__file__).resolve().parent.parent.parent.parent
+if str(_ROOT) not in sys.path:
+    sys.path.insert(0, str(_ROOT))
+
+from calendar_year_util import calendar_year_label
 from loguru import logger
 import pandas as pd
 import psycopg2
@@ -88,10 +94,10 @@ def create_bronze_tables(cursor):
             bmf_asset_code VARCHAR(20),
             bmf_affiliation_code VARCHAR(20),
             org_ruling_date VARCHAR(20),
-            org_fiscal_year INTEGER,
-            org_ruling_year INTEGER,
-            org_year_first INTEGER,
-            org_year_last INTEGER,
+            org_fiscal_year VARCHAR(4),
+            org_ruling_year VARCHAR(4),
+            org_year_first VARCHAR(4),
+            org_year_last VARCHAR(4),
             org_year_count INTEGER,
             org_pers_ico TEXT,
             org_name_sec TEXT,
@@ -151,10 +157,10 @@ def create_bronze_tables(cursor):
             bmf_asset_code VARCHAR(20),
             bmf_affiliation_code VARCHAR(20),
             org_ruling_date VARCHAR(20),
-            org_fiscal_year INTEGER,
-            org_ruling_year INTEGER,
-            org_year_first INTEGER,
-            org_year_last INTEGER,
+            org_fiscal_year VARCHAR(4),
+            org_ruling_year VARCHAR(4),
+            org_year_first VARCHAR(4),
+            org_year_last VARCHAR(4),
             org_year_count INTEGER,
             org_pers_ico TEXT,
             org_name_sec TEXT,
@@ -198,7 +204,11 @@ def _row_to_tuple(row: dict) -> tuple:
         safe_get('bmf_subsection_code'), safe_get('bmf_status_code'), safe_get('bmf_pf_filing_req_code'), safe_get('bmf_organization_code'),
         safe_get('bmf_income_code'), safe_get('bmf_group_exempt_num'), safe_get('bmf_foundation_code'), safe_get('bmf_filing_req_code'),
         safe_get('bmf_deductibility_code'), safe_get('bmf_classification_code'), safe_get('bmf_asset_code'), safe_get('bmf_affiliation_code'),
-        safe_get('org_ruling_date'), safe_get('org_fiscal_year'), safe_get('org_ruling_year'), safe_get('org_year_first'), safe_get('org_year_last'),
+        safe_get('org_ruling_date'),
+        calendar_year_label(safe_get('org_fiscal_year')),
+        calendar_year_label(safe_get('org_ruling_year')),
+        calendar_year_label(safe_get('org_year_first')),
+        calendar_year_label(safe_get('org_year_last')),
         safe_get('org_year_count'), safe_get('org_pers_ico'), safe_get('org_name_sec'), safe_get('org_name_current'), safe_get('org_fiscal_period'),
         safe_get('f990_total_revenue_recent'), safe_get('f990_total_income_recent'), safe_get('f990_total_assets_recent'), safe_get('f990_total_expenses_recent'),
     )
@@ -271,7 +281,7 @@ def load_to_bronze(file_path: Path, db_url: str = DEFAULT_DB_URL):
         total_current_rows = 0
 
         numeric_cols = [
-            'org_fiscal_year', 'org_ruling_year', 'org_year_first', 'org_year_last', 'org_year_count',
+            'org_year_count',
             'f990_total_revenue_recent', 'f990_total_income_recent',
             'f990_total_assets_recent', 'f990_total_expenses_recent',
         ]

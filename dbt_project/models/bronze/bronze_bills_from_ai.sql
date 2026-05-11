@@ -51,7 +51,11 @@ bills_extracted AS (
         bill_data->>'official_number' as official_number,
         bill_data->>'title' as title,
         bill_data->>'jurisdiction' as jurisdiction,
-        (bill_data->>'year')::integer as year,
+        CASE
+            WHEN nullif(trim(bill_data->>'year'), '') ~ '^[0-9]{4}$'
+            THEN trim(bill_data->>'year')
+            ELSE NULL
+        END as year,
         bill_data->>'status' as status,
         bill_data->>'relevance' as relevance,
         bill_data->>'url' as url,

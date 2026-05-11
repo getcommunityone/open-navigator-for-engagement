@@ -59,6 +59,13 @@ else
     exit 1
 fi
 
+# Supporting indexes (CONCURRENTLY — must run outside dbt; no-op if int_jurisdictions missing yet)
+echo ""
+echo "📇 Ensuring support indexes on intermediate.int_jurisdictions (if table exists)..."
+if [[ -f "scripts/ensure_int_jurisdictions_indexes.sh" ]]; then
+    bash "scripts/ensure_int_jurisdictions_indexes.sh" || echo "⚠️  Index step failed (continuing setup)"
+fi
+
 # Try to run staging models
 echo ""
 echo "🚀 Testing dbt models..."

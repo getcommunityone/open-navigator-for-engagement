@@ -173,7 +173,7 @@ CREATE TABLE contacts_search (
     
     -- Metadata
     source VARCHAR(50) DEFAULT 'irs_990',
-    tax_year INTEGER,
+    tax_year VARCHAR(4),
     last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 

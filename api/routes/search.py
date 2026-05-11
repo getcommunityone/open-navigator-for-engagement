@@ -19,6 +19,12 @@ from datetime import datetime, timedelta
 
 from api.errors import ErrorDetail, parse_error
 
+_REPO_ROOT = Path(__file__).resolve().parent.parent.parent
+if str(_REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(_REPO_ROOT))
+
+from calendar_year_util import calendar_year_label
+
 # Import PostgreSQL search functions (primary)
 from api.routes import search_postgres
 
@@ -174,7 +180,7 @@ def fetch_form990_data(ein: str) -> Optional[Dict[str, Any]]:
                 'mission': None,  # Would need to parse PDF
                 'source': 'propublica',
                 'last_updated': datetime.now().isoformat(),
-                'tax_year': filings[0].get('tax_prd_yr') if filings else None
+                'tax_year': calendar_year_label(filings[0].get('tax_prd_yr')) if filings else None
             }
     except Exception as e:
         logger.debug(f"ProPublica lookup failed for EIN {ein}: {e}")
@@ -1138,10 +1144,8 @@ def search_organizations(query: str, state: Optional[str] = None, ntee_code: Opt
             
             score = row[-1]  # Score is always last
             
-            # Parse tax year from tax_period (format: YYYYMM)
-            tax_year = None
-            if tax_period and str(tax_period).isdigit() and len(str(tax_period)) >= 4:
-                tax_year = int(str(tax_period)[:4])
+            # Parse tax year label from tax_period (format: YYYYMM)
+            tax_year = calendar_year_label(tax_period)
             
             # Get enriched data with intelligent backfill (only if requested)
             enrichment = get_enrichment_data(ein, existing_data) if (ein and enrich) else {}
