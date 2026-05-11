@@ -12,7 +12,10 @@ Goals:
 - Follow agenda / minutes / meeting links from the homepage and search results.
 - Optionally seed the crawl from **XML sitemaps** (``/sitemap.xml``, ``robots.txt`` ``Sitemap:``,
   WordPress ``wp-sitemap.xml``, …): meeting-ish ``<loc>`` URLs are enqueued so pages that are not
-  linked in HTML can still be fetched. Disable with ``SCRAPED_MEETINGS_SITEMAP=false``.
+  linked in HTML can still be fetched. Disable with ``SCRAPED_MEETINGS_SITEMAP=false``. Raw
+  responses are stored under ``_sitemaps/raw/`` with ``sitemap_inventory.json`` (bundle metadata)
+  and ``sitemap_rows.ndjson`` (one flat JSON object per line for database ingest). Disable those
+  writes with ``SCRAPED_MEETINGS_SITEMAP_PERSIST=false`` (URLs are still enqueued when sitemaps are on).
 - Follow **linked** meeting-archive URLs on other hosts when the path looks like a commission/board
   archive (e.g. ``/commission-meetings/``); after landing, treat same host as ``page_url`` for PDFs
   (see :func:`meetings_platform_heuristics.is_linked_local_meeting_microsite`).
@@ -130,7 +133,10 @@ from scripts.discovery.meetings_platform_heuristics import (
     site_search_portal_variants,
     youtube_url_for_oembed,
 )
-from scripts.discovery.meetings_sitemap_discovery import discover_meeting_candidate_urls_from_sitemaps
+from scripts.discovery.meetings_sitemap_discovery import (
+    SitemapPersistConfig,
+    discover_meeting_candidate_urls_from_sitemaps,
+)
 
 try:
     import psycopg2
@@ -776,10 +782,10 @@ class ComprehensiveDiscoveryPipelineMeetings:
             if captcha_hint:
                 logfn = logger.debug if _is_probable_site_search_probe(url) else logger.warning
                 logfn(
-                    "meetings_fetch_captcha_or_bot_wall url={url!r} signal={signal} html_chars={}",
+                    "meetings_fetch_captcha_or_bot_wall url={url!r} signal={signal} html_chars={html_chars}",
                     url=url,
                     signal=captcha_hint,
-                    len(text),
+                    html_chars=len(text),
                 )
                 return None, f"captcha:{captcha_hint}"
             return text, ""
@@ -1054,6 +1060,7 @@ class ComprehensiveDiscoveryPipelineMeetings:
         pdf_count = 0
         search_seeded = False
         contact_page_rows: List[Dict[str, Any]] = []
+        sitemap_summary: Optional[Dict[str, Any]] = None
 
         def _enqueue(u: str) -> None:
             nu = _strip_fragment(u)
@@ -1096,15 +1103,44 @@ class ComprehensiveDiscoveryPipelineMeetings:
             if _meetings_home_url_is_actionable(hp):
                 _enqueue(hp)
                 try:
-                    sitemap_urls = await discover_meeting_candidate_urls_from_sitemaps(client, hp)
-                    for su in sitemap_urls:
+                    sitemap_dir = base_dir / "_sitemaps"
+                    sm_res = await discover_meeting_candidate_urls_from_sitemaps(
+                        client,
+                        hp,
+                        persist=SitemapPersistConfig(
+                            output_dir=sitemap_dir,
+                            jurisdiction_base_dir=base_dir,
+                            jurisdiction_id=jid,
+                            state=st,
+                            geoid=(geoid or "").strip(),
+                            jurisdiction_type=jtype,
+                            homepage_url=hp,
+                        ),
+                    )
+                    for su in sm_res.enqueue_urls:
                         _enqueue(su)
-                    if sitemap_urls:
+                    if sm_res.enqueue_urls:
                         logger.info(
                             "meetings_sitemap_enqueued jurisdiction={} n={}",
                             jid,
-                            len(sitemap_urls),
+                            len(sm_res.enqueue_urls),
                         )
+                    for pe in sm_res.persist_errors:
+                        result.errors.append(f"sitemap_persist:{pe}")
+                    if (
+                        sm_res.inventory_rel_path
+                        or sm_res.ndjson_rel_path
+                        or sm_res.persist_errors
+                    ):
+                        sitemap_summary = {
+                            "schema_version": 1,
+                            "inventory_json": sm_res.inventory_rel_path,
+                            "rows_ndjson": sm_res.ndjson_rel_path,
+                            "documents_recorded": sm_res.documents_recorded,
+                            "ndjson_row_count": sm_res.ndjson_row_count,
+                            "meeting_candidate_enqueue_count": len(sm_res.enqueue_urls),
+                            "persist_errors": sm_res.persist_errors,
+                        }
                 except Exception as exc:
                     logger.warning(
                         "meetings_sitemap_seed_failed jurisdiction={} err={!r}",
@@ -1268,6 +1304,7 @@ class ComprehensiveDiscoveryPipelineMeetings:
                         "other_video_streams": result.other_video_streams,
                         "errors": result.errors,
                         "extracted_contacts": result.extracted_contacts,
+                        "sitemaps": sitemap_summary,
                     },
                     indent=2,
                 ),

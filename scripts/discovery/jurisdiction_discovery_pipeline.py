@@ -91,7 +91,9 @@ INT_JURISDICTION_WEBSITES_TABLE = "intermediate.int_jurisdiction_websites"
 # Counties: NACO (association-maintained county site) before GSA — reduces bad GSA stem/name matches
 # on .gov domains. Other types: keep GSA first (authoritative .gov registry).
 WEBSITE_SOURCE_PRIORITY_ORDER_SQL = (
-    "CASE WHEN jurisdiction_id LIKE 'county_%' THEN "
+    # ``%%`` so psycopg2 does not treat ``county_%`` as a printf-style placeholder when this
+    # fragment is embedded next to ``%s`` parameters (e.g. meetings ``--from-db`` queries).
+    "CASE WHEN jurisdiction_id LIKE 'county_%%' THEN "
     "CASE website_source WHEN 'naco' THEN 1 WHEN 'gsa' THEN 2 WHEN 'uscm' THEN 3 "
     "WHEN 'nces_directory' THEN 4 ELSE 5 END ELSE "
     "CASE website_source WHEN 'gsa' THEN 1 WHEN 'uscm' THEN 2 WHEN 'nces_directory' THEN 3 "

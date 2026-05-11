@@ -25,10 +25,10 @@ from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Set, TextIO
+from urllib.parse import urljoin, urlparse
 
 import httpx
 from loguru import logger
-from urllib.parse import urljoin, urlparse
 
 from scripts.discovery.meetings_platform_heuristics import (
     PDF_EXT,
@@ -775,6 +775,7 @@ async def discover_meeting_candidate_urls_from_sitemaps(
             bundle = {
                 "schema_version": SCHEMA_VERSION,
                 "bundle_type": "meetings_sitemap_crawl",
+                "ndjson_row_keys": list(SITEMAP_ROW_KEYS),
                 "jurisdiction_id": persist.jurisdiction_id,
                 "state": persist.state,
                 "geoid": persist.geoid,
