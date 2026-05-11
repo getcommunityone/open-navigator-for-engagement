@@ -24,8 +24,8 @@ Usage:
 """
 import asyncio
 import argparse
-from typing import List, Dict, Optional
-from datetime import datetime
+from typing import List, Dict, Optional, Tuple, Any
+from datetime import datetime, timezone
 import json
 
 from loguru import logger
@@ -119,6 +119,8 @@ class ComprehensiveDiscoveryPipeline:
                 'discovery_timestamp': datetime.now().isoformat(),
                 'websites': [],
                 'youtube_channels': [],
+                # URL probes including not_found/error with checked_at (UTC ISO); see youtube_channel_discovery
+                'youtube_channel_checks': [],
                 'other_video': [],
                 'meeting_platforms': [],
                 'social_media': {},
@@ -145,12 +147,12 @@ class ComprehensiveDiscoveryPipeline:
                     os.getenv("JURISDICTION_DISCOVERY_YOUTUBE_TIMEOUT_SECONDS", "90") or "90"
                 )
                 if yt_timeout_s <= 0:
-                    youtube_channels = await self._discover_youtube(
+                    youtube_channels, youtube_channel_checks = await self._discover_youtube(
                         name, state, jtype, homepage_url
                     )
                 else:
                     try:
-                        youtube_channels = await asyncio.wait_for(
+                        youtube_channels, youtube_channel_checks = await asyncio.wait_for(
                             self._discover_youtube(name, state, jtype, homepage_url),
                             timeout=yt_timeout_s,
                         )
@@ -162,6 +164,18 @@ class ComprehensiveDiscoveryPipeline:
                             state,
                         )
                         youtube_channels = []
+                        youtube_channel_checks = [
+                            {
+                                "outcome": "timeout",
+                                "checked_at": datetime.now(timezone.utc).isoformat(),
+                                "discovery_method": "youtube_discovery_batch",
+                                "reason": (
+                                    "exceeded {:.0f}s (JURISDICTION_DISCOVERY_YOUTUBE_TIMEOUT_SECONDS)".format(
+                                        yt_timeout_s
+                                    )
+                                ),
+                            }
+                        ]
                 
                 # Add LocalView channels if available
                 localview_channel = self._get_localview_channel(name, state)
@@ -169,6 +183,7 @@ class ComprehensiveDiscoveryPipeline:
                     youtube_channels.append(localview_channel)
                 
                 results['youtube_channels'] = youtube_channels
+                results['youtube_channel_checks'] = youtube_channel_checks or []
                 
                 # Step 3: Discover other video platforms (Vimeo, etc.)
                 if homepage_url:
@@ -251,6 +266,7 @@ class ComprehensiveDiscoveryPipeline:
                 "discovery_timestamp": datetime.now().isoformat(),
                 "websites": [],
                 "youtube_channels": [],
+                "youtube_channel_checks": [],
                 "other_video": [],
                 "meeting_platforms": [],
                 "social_media": {},
@@ -315,8 +331,8 @@ class ComprehensiveDiscoveryPipeline:
         state: str,
         jtype: str,
         homepage_url: Optional[str]
-    ) -> List[Dict]:
-        """Discover YouTube channels."""
+    ) -> Tuple[List[Dict], List[Dict[str, Any]]]:
+        """Discover YouTube channels and probe audit rows (includes not_found/error + checked_at)."""
         city_name = name if jtype == 'city' else name.replace(' County', '').strip()
         county_name = name if jtype == 'county' else None
 
@@ -327,7 +343,8 @@ class ComprehensiveDiscoveryPipeline:
                 state_code=state,
                 homepage_url=homepage_url
             )
-        return channels
+            checks = list(getattr(discovery, "last_channel_probe_results", None) or [])
+        return channels, checks
     
     async def _discover_other_video(self, homepage_url: str) -> List[Dict]:
         """Discover Vimeo and other video platforms."""

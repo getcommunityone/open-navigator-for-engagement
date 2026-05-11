@@ -11,8 +11,8 @@ Requires YouTube Data API v3 key (optional - falls back to scraping)
 """
 import asyncio
 import re
-from typing import List, Dict, Optional
-from datetime import datetime
+from typing import List, Dict, Optional, Any
+from datetime import datetime, timezone
 import httpx
 from bs4 import BeautifulSoup
 from loguru import logger
@@ -63,6 +63,10 @@ class YouTubeChannelDiscovery:
                             Falls back to scraping if not provided
         """
         self.api_key = youtube_api_key or os.getenv("YOUTUBE_API_KEY")
+        # Each dict: channel_url, checked_at (UTC ISO), discovery_method,
+        # outcome in found | not_found | error | skipped_invalid_url,
+        # http_status?, reason?, channel_title? when found.
+        self.last_channel_probe_results: List[Dict[str, Any]] = []
         self.client = httpx.AsyncClient(
             timeout=20.0,
             follow_redirects=True,
@@ -75,7 +79,29 @@ class YouTubeChannelDiscovery:
             'government', 'official', 'meetings', 'public meetings', 'city tv',
             'municipal', 'civic', 'city clerk', 'legislative', 'session'
         )
-    
+
+    _PLACE_LSAD_SUFFIX = re.compile(
+        r"\s*,?\s*(city|town|village|borough|county|cdp|municipality)\s*$",
+        re.IGNORECASE,
+    )
+
+    def _compact_name_for_handles(self, raw: str) -> str:
+        """
+        Strip Census/LSAD-style suffixes ("Howell city" → Howell) then remove spaces/apostrophes.
+
+        Without this, patterns like "{city}City" turn "Howell city" → Howellcity → HowellcityCity.
+        """
+        s = (raw or "").strip()
+        if not s:
+            return ""
+        prev = None
+        while prev != s:
+            prev = s
+            s = self._PLACE_LSAD_SUFFIX.sub("", s).strip()
+        compact = re.sub(r"\s+", "", s).replace("'", "")
+        # YouTube handles: keep only safe characters before we build URLs
+        return re.sub(r"[^0-9A-Za-z_-]", "", compact)
+
     def _score_channel_for_policy_content(self, channel_title: str) -> int:
         """
         Score a channel based on how likely it is to contain policy/meeting content.
@@ -153,6 +179,8 @@ class YouTubeChannelDiscovery:
         if not resolved_city_name:
             logger.warning("No city or county name provided for YouTube discovery")
             return []
+
+        self.last_channel_probe_results = []
 
         logger.info(f"Discovering YouTube channels for {resolved_city_name}, {state_code}")
         
@@ -246,31 +274,37 @@ class YouTubeChannelDiscovery:
         county_name: Optional[str]
     ) -> List[str]:
         """Generate common handle patterns to test."""
-        patterns = []
-        
-        # Clean city name (remove spaces, apostrophes)
-        city_clean = city_name.replace(" ", "").replace("'", "")
-        
+        patterns: List[str] = []
+        seen: set[str] = set()
+
+        def _add(pat: str) -> None:
+            h = pat.strip().lstrip("@")
+            if h and h not in seen:
+                seen.add(h)
+                patterns.append(h)
+
+        city_clean = self._compact_name_for_handles(city_name)
+        if not city_clean:
+            return []
+
         # City patterns
         for pattern in self.CITY_HANDLE_PATTERNS:
-            handle = pattern.format(
-                city=city_clean,
-                state=state_code
-            )
-            patterns.append(handle)
-        
+            _add(pattern.format(city=city_clean, state=state_code))
+
         # County patterns
         if county_name:
-            county_clean = county_name.replace(" County", "").replace(" ", "")
-            for pattern in self.COUNTY_HANDLE_PATTERNS:
-                handle = pattern.format(
-                    county=county_clean,
-                    state=state_code
-                )
-                patterns.append(handle)
-        
+            cn = county_name.replace("County", "").replace("county", "")
+            county_clean = self._compact_name_for_handles(cn)
+            if county_clean:
+                for pattern in self.COUNTY_HANDLE_PATTERNS:
+                    _add(pattern.format(county=county_clean, state=state_code))
+
         return patterns
     
+    def _record_channel_probe(self, probe: Dict[str, Any]) -> None:
+        """Append one audit row (persist via pipeline ``youtube_channel_checks`` in payload)."""
+        self.last_channel_probe_results.append(probe)
+
     async def _check_channel_exists(
         self,
         channel_url: str,
@@ -278,38 +312,104 @@ class YouTubeChannelDiscovery:
     ) -> Optional[Dict]:
         """
         Check if channel exists and extract statistics.
-        
+
+        Records one row per attempt in ``self.last_channel_probe_results`` with ``checked_at`` (UTC ISO)
+        and ``outcome`` (found | not_found | error | skipped_invalid_url) for Postgres payload audit.
+
         Returns channel info dict or None if not found.
         """
+        raw_url = channel_url or ""
+        checked_at = datetime.now(timezone.utc).isoformat()
+
         try:
-            response = await self.client.get(channel_url)
-            
-            if response.status_code != 200:
+            channel_url = raw_url.strip().split()[0].rstrip(".,);]") if raw_url.strip() else ""
+            if not channel_url or "youtube.com" not in channel_url.lower():
+                self._record_channel_probe(
+                    {
+                        "channel_url": raw_url.strip()[:2048],
+                        "checked_at": checked_at,
+                        "discovery_method": discovery_method,
+                        "outcome": "skipped_invalid_url",
+                        "http_status": None,
+                        "reason": "not_youtube_or_empty",
+                    }
+                )
                 return None
-            
+
+            response = await self.client.get(channel_url)
+
+            if response.status_code != 200:
+                self._record_channel_probe(
+                    {
+                        "channel_url": channel_url,
+                        "checked_at": datetime.now(timezone.utc).isoformat(),
+                        "discovery_method": discovery_method,
+                        "outcome": "not_found",
+                        "http_status": response.status_code,
+                        "reason": "http_non_200",
+                    }
+                )
+                return None
+
             html = response.text
-            
+
             # Extract channel statistics from page HTML
             stats = self._extract_channel_stats(html)
-            
-            if not stats:  # Couldn't extract stats = likely not a valid channel
+
+            if not stats:
+                self._record_channel_probe(
+                    {
+                        "channel_url": channel_url,
+                        "checked_at": datetime.now(timezone.utc).isoformat(),
+                        "discovery_method": discovery_method,
+                        "outcome": "not_found",
+                        "http_status": response.status_code,
+                        "reason": "no_channel_stats_in_html",
+                    }
+                )
                 return None
-            
+
+            title = stats.get("title", "Unknown") or "Unknown"
+            self._record_channel_probe(
+                {
+                    "channel_url": channel_url,
+                    "checked_at": datetime.now(timezone.utc).isoformat(),
+                    "discovery_method": discovery_method,
+                    "outcome": "found",
+                    "http_status": response.status_code,
+                    "reason": None,
+                    "channel_id": stats.get("channel_id"),
+                    "channel_title": title[:500],
+                    "video_count": stats.get("video_count", 0),
+                }
+            )
+
             return {
                 "channel_url": channel_url,
                 "channel_id": stats.get("channel_id"),
-                "channel_title": stats.get("title", "Unknown"),
+                "channel_title": title,
                 "video_count": stats.get("video_count", 0),
                 "subscriber_count": stats.get("subscriber_count", 0),
                 "view_count": stats.get("view_count", 0),
                 "latest_upload": stats.get("latest_upload"),
                 "discovery_method": discovery_method,
                 "discovered_at": datetime.now().isoformat(),
-                "confidence": 0.9 if discovery_method == "website_scrape" else 0.7
+                "confidence": 0.9 if discovery_method == "website_scrape" else 0.7,
             }
-        
+
         except Exception as e:
-            logger.debug(f"Error checking {channel_url}: {e}")
+            msg = str(e)[:500]
+            logger.trace(f"YouTube probe failed for {channel_url!r}: {e}")
+            self._record_channel_probe(
+                {
+                    "channel_url": (channel_url or raw_url).strip()[:2048],
+                    "checked_at": datetime.now(timezone.utc).isoformat(),
+                    "discovery_method": discovery_method,
+                    "outcome": "error",
+                    "http_status": None,
+                    "reason": msg or "exception",
+                }
+            )
             return None
     
     def _extract_channel_stats(self, html: str) -> Optional[Dict]:

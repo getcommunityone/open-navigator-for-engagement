@@ -488,6 +488,8 @@ def _result_to_scraped_row(r: Dict[str, Any]) -> Tuple[str, str, str, Optional[s
     payload = {
         "websites": r.get("websites"),
         "youtube_channels": r.get("youtube_channels"),
+        # Per-URL probe audit: outcome not_found | found | error | skipped_invalid_url | timeout; checked_at UTC ISO
+        "youtube_channel_checks": r.get("youtube_channel_checks"),
         "other_video": r.get("other_video"),
         "meeting_platforms": r.get("meeting_platforms"),
         "social_media": r.get("social_media"),
@@ -950,7 +952,13 @@ DiscoveryPipeline = JurisdictionDiscoveryPipeline
 
 async def _async_main() -> None:
     parser = argparse.ArgumentParser(description="Postgres jurisdiction discovery → bronze *_scraped")
-    parser.add_argument("--state", type=str, help="USPS filter, e.g. AL")
+    parser.add_argument("--state", type=str, help="USPS filter, e.g. AL (omit with --all-states for every state)")
+    parser.add_argument(
+        "--all-states",
+        action="store_true",
+        help="Process municipalities + counties (+ schools if --all-types) for all states (no USPS filter). "
+        "Large and slow — use --limit during tests.",
+    )
     parser.add_argument("--limit", type=int, help="Max rows per jurisdiction class from bronze")
     parser.add_argument("--all-types", action="store_true", help="Include school districts as well as places + counties")
     parser.add_argument(
@@ -986,9 +994,14 @@ async def _async_main() -> None:
     try:
         if not args.skip_ddl:
             ensure_scraped_tables(pipeline._conn())
+        state_filter = None if args.all_states else args.state
+        if args.all_states and args.state:
+            logger.error("Use either --all-states or --state XX, not both.")
+            return
+
         if args.gsa_bulk_only:
             await pipeline.run_gsa_bulk_only(
-                state_filter=args.state,
+                state_filter=state_filter,
                 limit=args.limit,
                 include_states=args.include_states,
                 include_municipalities=True,
@@ -998,7 +1011,7 @@ async def _async_main() -> None:
             return
 
         jurisdictions = pipeline.load_jurisdictions(
-            state_filter=args.state,
+            state_filter=state_filter,
             top_n=args.limit,
             include_states=args.include_states,
             include_municipalities=True,
@@ -1008,8 +1021,11 @@ async def _async_main() -> None:
         if not jurisdictions:
             logger.warning("No jurisdictions to process")
             return
-        if len(jurisdictions) > 200 and not args.state:
-            logger.error("Refusing unbounded national run without --state (safety). Pass --state XX or raise --limit.")
+        if len(jurisdictions) > 200 and not state_filter and not args.all_states:
+            logger.error(
+                "Refusing unbounded national run without --state (safety). "
+                "Pass --state XX, or --all-states to process every state, or use --limit."
+            )
             return
         await pipeline.discover_batch(jurisdictions, save_interval=max(25, min(100, len(jurisdictions))))
     finally:

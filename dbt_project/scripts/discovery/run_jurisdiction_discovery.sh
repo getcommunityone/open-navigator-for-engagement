@@ -1,7 +1,5 @@
 #!/usr/bin/env bash
-# One entrypoint: same as python -m scripts.discovery.jurisdiction_discovery_pipeline
-# Example: ./scripts/discovery/run_jurisdiction_discovery.sh --state AL --include-states
-# National: ./scripts/discovery/run_jurisdiction_discovery.sh --all-states --no-incremental
+# Run from dbt_project or anywhere: finds repo root + Python, then runs discovery.
 set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)"
 ROOT="$SCRIPT_DIR"
