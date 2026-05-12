@@ -4,7 +4,7 @@ import {
   nationalBaselineWithFallback,
   nationalWeightedCompositeFromStateTrends,
   pctChangeBetween,
-  prevVintageNBack,
+  prevVintageForScorecardTrend,
   regionalWeightedCompositeFromStateTrends,
   trendCell,
 } from './censusMapValueMode'
@@ -140,11 +140,11 @@ export function windowPctForSlug(
   vintages: string[],
   displayVintage: string,
   slug: string,
-  yearsBack: number,
+  yearsBack: 1 | 3 | 5,
   locOpts?: ScorecardLocationOpts | null,
 ): number | null {
   const cur = displayVintage
-  const prev = prevVintageNBack(vintages, cur, yearsBack)
+  const prev = prevVintageForScorecardTrend(vintages, cur, yearsBack)
   if (!prev) return null
   const a =
     locationFips != null
@@ -297,10 +297,10 @@ export function benchWindowPctForSlug(
   vintages: string[],
   displayVintage: string,
   slug: string,
-  yearsBack: number,
+  yearsBack: 1 | 3 | 5,
 ): number | null {
   const cur = displayVintage
-  const prev = prevVintageNBack(vintages, cur, yearsBack)
+  const prev = prevVintageForScorecardTrend(vintages, cur, yearsBack)
   if (!prev) return null
   const a = benchValueForSlug(trends, manifest, benchKind, regionForBench, benchStateFips, cur, slug)
   const b = benchValueForSlug(trends, manifest, benchKind, regionForBench, benchStateFips, prev, slug)

@@ -1,9 +1,10 @@
-import { useCallback, useEffect, useMemo, type ReactNode } from 'react'
+import { useCallback, useEffect, useMemo, type ReactElement, type ReactNode } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
+import Select, { type GroupBase, type SingleValue } from 'react-select'
 import { InfoHelpTrigger } from '../components/InfoHelpTrigger'
 import { GiniIncomeCurrentCell } from '../components/GiniInequalityReadout'
-import { ScorecardTrendAndGiniLegend } from '../components/ScorecardTrendAndGiniLegend'
+import { ScorecardGiniLegend, ScorecardTrendLegend } from '../components/ScorecardTrendAndGiniLegend'
 import { STATE_CODE_TO_NAME } from '../utils/stateMapping'
 import {
   censusMetricRankDirection,
@@ -29,7 +30,7 @@ import {
 } from '../utils/dataExplorerScorecardHelpers'
 import type { TrendArrowPack } from '../utils/dataExplorerScorecardHelpers'
 import { formatMetricValueDisplay, type CensusMetricFormatRow } from '../utils/censusMapTransforms'
-import { prevVintageNBack } from '../utils/censusMapValueMode'
+import { prevVintageForScorecardTrend } from '../utils/censusMapValueMode'
 import {
   CENSUS_REGION_LABEL,
   type CensusRegionId,
@@ -167,11 +168,28 @@ function favorabilityPill(s: ReturnType<typeof trendStatus>): ReactNode {
 function directedTrendHeadline(
   st: ReturnType<typeof trendStatus>,
   arrows: TrendArrowPack,
+  dir: CensusMetricRankDirection,
+  pctWindow: number | null,
 ): string | null {
   if (st === 'na' || arrows.arrow === '—') return null
   if (st === 'flat') return null
-  if (st === 'good') return arrows.label === 'Strong' ? 'Strong improvement' : 'Slight improvement'
-  if (st === 'bad') return arrows.label === 'Strong' ? 'Notable decline' : 'Slight decline'
+
+  const mag =
+    pctWindow != null && Number.isFinite(pctWindow)
+      ? ` (~${pctWindow > 0 ? '+' : ''}${pctWindow.toFixed(SCORECARD_PCT_DECIMALS)}% change in the ACS estimate)`
+      : ''
+
+  if (st === 'good') {
+    return arrows.label === 'Strong' ? `Strong improvement${mag}` : `Slight improvement${mag}`
+  }
+  if (st === 'bad') {
+    // “Decline” only reads well when the estimate actually fell (higher-is-better). For lower-is-better, unfavorable
+    // usually means the estimate rose — say “worse” so it matches the signed % line.
+    if (dir === 'lower') {
+      return arrows.label === 'Strong' ? `Clearly worse for this metric${mag}` : `Slightly worse for this metric${mag}`
+    }
+    return arrows.label === 'Strong' ? `Notable decline${mag}` : `Slight decline${mag}`
+  }
   return null
 }
 
@@ -279,11 +297,143 @@ function stateDisplayNameFromFips(fips: string | null | undefined): string | nul
   return STATE_CODE_TO_NAME[code] ?? code
 }
 
+type WithinPickOption = { value: string; label: string }
+
+function scorecardWithinParamValue(sub: ScorecardSubGeography): string {
+  if (sub.level === 'place') return `place:${sub.geoid7}`
+  if (sub.level === 'county') return `county:${sub.geoid5}`
+  return 'state'
+}
+
+function ScorecardWithinSelect({
+  scoreSub,
+  countyOptions,
+  placeOptions,
+  onPick,
+}: {
+  scoreSub: ScorecardSubGeography
+  countyOptions: { gid: string; name: string }[]
+  placeOptions: { gid: string; name: string }[]
+  onPick: (paramValue: string) => void
+}) {
+  const grouped = useMemo(() => {
+    const groups: { label: string; options: WithinPickOption[] }[] = [
+      {
+        label: 'Statewide',
+        options: [{ value: 'state', label: 'Entire state (all counties)' }],
+      },
+    ]
+    if (countyOptions.length) {
+      groups.push({
+        label: 'Counties',
+        options: countyOptions.map(({ gid, name }) => ({ value: `county:${gid}`, label: name })),
+      })
+    }
+    if (placeOptions.length) {
+      groups.push({
+        label: 'Cities, towns & CDPs',
+        options: placeOptions.map(({ gid, name }) => ({ value: `place:${gid}`, label: name })),
+      })
+    }
+    return groups
+  }, [countyOptions, placeOptions])
+
+  const flat = useMemo(() => grouped.flatMap((g) => g.options), [grouped])
+
+  const value = useMemo(() => {
+    const key = scorecardWithinParamValue(scoreSub)
+    return flat.find((o) => o.value === key) ?? flat[0] ?? null
+  }, [flat, scoreSub])
+
+  return (
+    <Select<WithinPickOption, false, GroupBase<WithinPickOption>>
+      inputId="scorecard-within"
+      instanceId="scorecard-within-select"
+      aria-label="County, city, or whole state"
+      options={grouped}
+      value={value}
+      onChange={(opt: SingleValue<WithinPickOption>) => {
+        if (opt) onPick(opt.value)
+      }}
+      isSearchable
+      isClearable={false}
+      placeholder="Type to search counties and places…"
+      menuPlacement="auto"
+      maxMenuHeight={320}
+      noOptionsMessage={({ inputValue }) =>
+        inputValue.trim() ? `No match for “${inputValue.trim()}”` : 'Start typing to filter'
+      }
+      styles={{
+        container: (base) => ({ ...base, minWidth: 0, flex: 1 }),
+        control: (base, state) => ({
+          ...base,
+          minHeight: 40,
+          borderRadius: 8,
+          borderColor: state.isFocused ? '#0d9488' : '#cbd5e1',
+          boxShadow: state.isFocused ? '0 0 0 2px rgba(13, 148, 136, 0.28)' : 'none',
+          '&:hover': { borderColor: state.isFocused ? '#0d9488' : '#94a3b8' },
+        }),
+        valueContainer: (base) => ({ ...base, paddingLeft: 10, paddingRight: 6 }),
+        singleValue: (base) => ({ ...base, color: '#0f172a', fontSize: 14 }),
+        input: (base) => ({ ...base, color: '#0f172a', fontSize: 14 }),
+        placeholder: (base) => ({ ...base, color: '#64748b', fontSize: 14 }),
+        menu: (base) => ({ ...base, zIndex: 50, borderRadius: 8, overflow: 'hidden', border: '1px solid #e2e8f0' }),
+        menuList: (base) => ({ ...base, maxHeight: 'min(45vh, 20rem)' }),
+        groupHeading: (base) => ({
+          ...base,
+          fontSize: 11,
+          fontWeight: 700,
+          textTransform: 'uppercase',
+          letterSpacing: '0.04em',
+          color: '#64748b',
+          background: '#f8fafc',
+          margin: 0,
+          padding: '6px 10px',
+        }),
+        option: (base, state) => ({
+          ...base,
+          fontSize: 13,
+          color: '#0f172a',
+          backgroundColor: state.isSelected ? '#ccfbf1' : state.isFocused ? '#f1f5f9' : 'white',
+          cursor: 'pointer',
+        }),
+        indicatorSeparator: () => ({ display: 'none' }),
+        dropdownIndicator: (base, state) => ({
+          ...base,
+          color: state.isFocused ? '#0f766e' : '#64748b',
+          padding: 6,
+        }),
+      }}
+    />
+  )
+}
+
 function sectionTrendGrade(favorable: number, counted: number): { letter: string; pill: string } {
   if (counted <= 0) return { letter: '—', pill: 'No trend data' }
   const ratio = favorable / counted
   const letter = ratio >= 0.67 ? 'A' : ratio >= 0.4 ? 'B' : 'C'
   return { letter, pill: `${favorable}/${counted} favorable trends` }
+}
+
+/** Compact “How to read trend arrows” beside Map links (avoids a full-width footer band). */
+function ScorecardTrendArrowsHelpInline(): ReactElement {
+  return (
+    <details className="relative min-w-0 shrink-0 text-left text-[10px] leading-snug text-slate-600 sm:text-xs">
+      <summary
+        className="cursor-pointer select-none list-none whitespace-nowrap font-semibold text-teal-800 underline decoration-teal-600/35 underline-offset-2 hover:text-teal-950 [&::-webkit-details-marker]:hidden"
+        title="How to read trend arrows in the scorecard table"
+      >
+        How to read arrows
+      </summary>
+      <div className="absolute right-0 top-full z-30 mt-1 w-[min(22rem,calc(100vw-2.5rem))] rounded-md border border-slate-200 bg-white p-2 text-left shadow-lg">
+        <p className="text-[10px] leading-snug text-slate-600">
+          Scored metrics (e.g. income, poverty): ↑↑ / ↑ = stronger vs milder <span className="text-emerald-800">favorable</span>{' '}
+          change; ↓↓ / ↓ = <span className="text-amber-900">unfavorable</span>. Neutral metrics (e.g. median rent): same arrows
+          for magnitude; labels do not call the move good or bad.
+        </p>
+      </div>
+    </details>
+  )
 }
 
 export default function DataExplorerScorecardPage() {
@@ -517,7 +667,9 @@ export default function DataExplorerScorecardPage() {
     } else if (scoreSub.level === 'place' && placeTrends?.vintages?.length) {
       raw = intersectVintageLists(raw, placeTrends.vintages)
     }
-    return raw
+    const uniq = Array.from(new Set(raw.map((x) => String(x).trim()).filter(Boolean)))
+    uniq.sort((a, b) => Number(a) - Number(b))
+    return uniq
   }, [manifest?.vintages, stateTrends?.vintages, scoreSub.level, countyTrends?.vintages, placeTrends?.vintages])
 
   const displayVintage = useMemo(() => {
@@ -714,26 +866,29 @@ export default function DataExplorerScorecardPage() {
     }
   }
 
-  const vyPr1 = prevVintageNBack(vintages, displayVintage, 1)
-  const vyPr3 = prevVintageNBack(vintages, displayVintage, 3)
-  const vyPr5 = prevVintageNBack(vintages, displayVintage, 5)
-  const vyPrTrend = prevVintageNBack(vintages, displayVintage, trendYears)
-  const canTrend1 = !!prevVintageNBack(vintages, displayVintage, 1)
-  const canTrend3 = !!prevVintageNBack(vintages, displayVintage, 3)
-  const canTrend5 = !!prevVintageNBack(vintages, displayVintage, 5)
+  const vyPr1 = prevVintageForScorecardTrend(vintages, displayVintage, 1)
+  const vyPr3 = prevVintageForScorecardTrend(vintages, displayVintage, 3)
+  const vyPr5 = prevVintageForScorecardTrend(vintages, displayVintage, 5)
+  const vyPrTrend = prevVintageForScorecardTrend(vintages, displayVintage, trendYears)
+  const canTrend1 = !!prevVintageForScorecardTrend(vintages, displayVintage, 1)
+  const canTrend3 = !!prevVintageForScorecardTrend(vintages, displayVintage, 3)
+  const canTrend5 = !!prevVintageForScorecardTrend(vintages, displayVintage, 5)
 
   const helpCurrent = `Latest ACS 5-year estimate for the end year shown (${displayVintage}). Dollar amounts use the same compact formatting as the map.`
   const vyForTrendHelp = trendYears === 1 ? vyPr1 : trendYears === 3 ? vyPr3 : vyPr5
-  const helpTrend = `${trendYears}-year window: percent change between ${displayVintage} and ${vyForTrendHelp ?? 'the comparison vintage'} when that vintage exists in this export. The ↑/↓ arrows follow the sign of that change (estimate rose or fell); double arrows mean a large move (about 8%+ absolute change). “Favorable / unfavorable” uses each metric’s direction (e.g. higher income is usually better; longer commute time is worse), so a rising estimate can still be unfavorable.`
+  const helpTrend =
+    trendYears === 1
+      ? `1yr trend: percent change between successive ACS 5-year estimates in this bundle (${vyPr1 ?? '…'} → ${displayVintage}). Each value is a full 5-year survey window, not a single calendar year. The ↑/↓ arrows follow the sign of that change; double arrows mean a large move (about 8%+ absolute change). “Favorable / unfavorable” uses each metric’s direction (e.g. higher income is usually better; longer commute time is worse).`
+      : `${trendYears}yr trend: percent change between the ACS 5-year estimate ending in ${displayVintage} and the estimate ending in ${vyForTrendHelp ?? '…'} (${trendYears} calendar years earlier on the survey end-year — two published 5-year tables, not single-year ACS). The ↑/↓ arrows follow the sign of that change; double arrows mean a large move (about 8%+ absolute change). “Favorable / unfavorable” uses each metric’s direction.`
   const helpVs = showBenchmarkColumn
     ? `“Ahead / behind” compares ${selectedPlaceLabel}'s latest ${displayVintage} value to ${benchmarkEntitySentence}. The smaller line compares ${trendYears}-year growth pace (percentage-point difference in % change) versus ${paceVersusLabel}.`
     : ''
 
   return (
-    <div className="mx-auto w-full max-w-3xl min-w-0 space-y-4 px-4 pb-10 sm:max-w-4xl md:px-8">
-      <div className="rounded-xl border border-slate-200/90 bg-slate-100/90 p-2.5 sm:p-3">
-        <div className="rounded-lg border border-slate-200 bg-white p-3 shadow-sm sm:p-4">
-          <div className="flex flex-col gap-3">
+    <div className="mx-auto w-full max-w-3xl min-w-0 space-y-2 px-4 pb-8 sm:max-w-4xl md:px-8">
+      <div className="rounded-xl border border-slate-400/45 bg-slate-300/35 p-2 shadow-sm sm:p-2">
+        <div className="rounded-lg border border-slate-300/80 bg-white p-2.5 shadow-sm sm:p-3">
+          <div className="flex flex-col gap-2.5">
             <div className="min-w-0 space-y-0.5">
               <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-500 leading-tight">
                 {locationFips ? 'Selected area' : 'Location'}
@@ -751,7 +906,7 @@ export default function DataExplorerScorecardPage() {
             </div>
 
             {locationFips ? (
-              <div className="flex flex-col gap-3 lg:flex-row lg:items-stretch lg:gap-4">
+              <div className="flex flex-col gap-2 lg:flex-row lg:items-stretch lg:gap-3">
                 <div className="flex w-full min-w-0 flex-col gap-2 lg:max-w-[16rem] lg:flex-shrink-0">
                   <label className="sr-only" htmlFor="scorecard-state">
                     Change state
@@ -829,7 +984,7 @@ export default function DataExplorerScorecardPage() {
                 </div>
               </div>
             ) : (
-              <div className="flex min-w-0 items-center gap-2 sm:max-w-xl">
+              <div className="flex min-w-0 flex-wrap items-center gap-2 sm:max-w-xl">
                 <label className="sr-only" htmlFor="scorecard-state">
                   Select a state
                 </label>
@@ -848,126 +1003,101 @@ export default function DataExplorerScorecardPage() {
                     </option>
                   ))}
                 </select>
-                <Link
-                  to={mapHref}
-                  title="Open in Data Explorer map"
-                  className="inline-flex shrink-0 items-center rounded-lg border border-slate-200 bg-white px-2.5 py-2 text-[11px] font-semibold text-teal-800 shadow-sm transition hover:border-teal-300 hover:bg-teal-50/90"
-                >
-                  Map
-                </Link>
+                <div className="ml-auto flex shrink-0 items-center gap-1.5">
+                  <ScorecardTrendArrowsHelpInline />
+                  <Link
+                    to={mapHref}
+                    title="Open in Data Explorer map"
+                    className="inline-flex shrink-0 items-center rounded-lg border border-slate-200 bg-white px-2.5 py-2 text-[11px] font-semibold text-teal-800 shadow-sm transition hover:border-teal-300 hover:bg-teal-50/90"
+                  >
+                    Map
+                  </Link>
+                </div>
               </div>
             )}
 
-            <div className="flex w-full min-w-0 flex-col gap-2 sm:max-w-xl">
+            <div className="flex w-full min-w-0 flex-col gap-1.5 sm:max-w-xl">
               {locationFips ? (
                 <>
                   {!(countyFetched && placeFetched) ? (
-                    <div className="flex min-w-0 items-start gap-2">
+                    <div className="flex min-w-0 items-start justify-between gap-2">
                       <p className="min-w-0 flex-1 text-[11px] leading-snug text-slate-500">Loading county &amp; place lists…</p>
-                      <Link
-                        to={mapHref}
-                        title="Open in Data Explorer map"
-                        className="inline-flex shrink-0 items-center rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-[11px] font-semibold text-teal-800 shadow-sm transition hover:border-teal-300 hover:bg-teal-50/90"
-                      >
-                        Map
-                      </Link>
+                      <div className="flex shrink-0 items-center gap-1.5">
+                        <ScorecardTrendArrowsHelpInline />
+                        <Link
+                          to={mapHref}
+                          title="Open in Data Explorer map"
+                          className="inline-flex shrink-0 items-center rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-[11px] font-semibold text-teal-800 shadow-sm transition hover:border-teal-300 hover:bg-teal-50/90"
+                        >
+                          Map
+                        </Link>
+                      </div>
                     </div>
                   ) : countyOptions.length === 0 && placeOptions.length === 0 ? (
-                    <div className="flex min-w-0 flex-wrap items-start gap-2">
+                    <div className="flex min-w-0 flex-wrap items-start justify-between gap-2">
                       <p className="min-w-0 flex-1 text-[11px] leading-snug text-amber-900">
                         County/place trend files are not in this bundle for this state — statewide scorecard only.
                       </p>
-                      <Link
-                        to={mapHref}
-                        title="Open in Data Explorer map"
-                        className="inline-flex shrink-0 items-center rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-[11px] font-semibold text-teal-800 shadow-sm transition hover:border-teal-300 hover:bg-teal-50/90"
-                      >
-                        Map
-                      </Link>
+                      <div className="flex shrink-0 items-center gap-1.5">
+                        <ScorecardTrendArrowsHelpInline />
+                        <Link
+                          to={mapHref}
+                          title="Open in Data Explorer map"
+                          className="inline-flex shrink-0 items-center rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-[11px] font-semibold text-teal-800 shadow-sm transition hover:border-teal-300 hover:bg-teal-50/90"
+                        >
+                          Map
+                        </Link>
+                      </div>
                     </div>
                   ) : (
-                    <div className="flex min-w-0 items-center gap-2">
+                    <div className="flex min-w-0 flex-nowrap items-center gap-1.5 sm:gap-2">
                       <label className="sr-only" htmlFor="scorecard-within">
                         County, city, or whole state
                       </label>
-                      <select
-                        id="scorecard-within"
-                        className="min-w-0 flex-1 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm outline-none ring-offset-0 focus:ring-2 focus:ring-teal-600/35"
-                        value={
-                          scoreSub.level === 'place'
-                            ? `place:${scoreSub.geoid7}`
-                            : scoreSub.level === 'county'
-                              ? `county:${scoreSub.geoid5}`
-                              : 'state'
-                        }
-                        onChange={(e) => {
-                          const v = e.target.value
-                          const next = new URLSearchParams(sp)
-                          if (v === 'state') {
-                            next.delete('county')
-                            next.delete('place')
-                          } else if (v.startsWith('county:')) {
-                            next.set('county', v.slice(7))
-                            next.delete('place')
-                          } else if (v.startsWith('place:')) {
-                            next.set('place', v.slice(6))
-                            next.delete('county')
-                          }
-                          setSp(next, { replace: true })
-                        }}
-                      >
-                        <option value="state">Entire state (all counties)</option>
-                        {countyOptions.length ? (
-                          <optgroup label="Counties">
-                            {countyOptions.map(({ gid, name }) => (
-                              <option key={gid} value={`county:${gid}`}>
-                                {name}
-                              </option>
-                            ))}
-                          </optgroup>
-                        ) : null}
-                        {placeOptions.length ? (
-                          <optgroup label="Cities, towns &amp; CDPs">
-                            {placeOptions.map(({ gid, name }) => (
-                              <option key={gid} value={`place:${gid}`}>
-                                {name}
-                              </option>
-                            ))}
-                          </optgroup>
-                        ) : null}
-                      </select>
-                      <Link
-                        to={mapHref}
-                        title="Open in Data Explorer map"
-                        className="inline-flex shrink-0 items-center rounded-lg border border-slate-200 bg-white px-2.5 py-2 text-[11px] font-semibold text-teal-800 shadow-sm transition hover:border-teal-300 hover:bg-teal-50/90"
-                      >
-                        Map
-                      </Link>
+                      <div className="min-w-0 flex-1 overflow-hidden">
+                        <ScorecardWithinSelect
+                          scoreSub={scoreSub}
+                          countyOptions={countyOptions}
+                          placeOptions={placeOptions}
+                          onPick={(v) => {
+                            const next = new URLSearchParams(sp)
+                            if (v === 'state') {
+                              next.delete('county')
+                              next.delete('place')
+                            } else if (v.startsWith('county:')) {
+                              next.set('county', v.slice(7))
+                              next.delete('place')
+                            } else if (v.startsWith('place:')) {
+                              next.set('place', v.slice(6))
+                              next.delete('county')
+                            }
+                            setSp(next, { replace: true })
+                          }}
+                        />
+                      </div>
+                      <div className="ml-auto flex shrink-0 items-center gap-1.5">
+                        <ScorecardTrendArrowsHelpInline />
+                        <Link
+                          to={mapHref}
+                          title="Open in Data Explorer map"
+                          className="inline-flex shrink-0 items-center rounded-lg border border-slate-200 bg-white px-2.5 py-2 text-[11px] font-semibold text-teal-800 shadow-sm transition hover:border-teal-300 hover:bg-teal-50/90"
+                        >
+                          Map
+                        </Link>
+                      </div>
                     </div>
                   )}
                 </>
               ) : null}
             </div>
           </div>
-
-          <div className="mt-3 flex justify-end border-t border-slate-100 pt-2">
-            <details className="min-w-0 max-w-full text-xs text-slate-600 sm:max-w-[22rem] sm:text-right">
-              <summary className="cursor-pointer select-none list-none font-semibold text-teal-800 underline decoration-teal-600/35 underline-offset-2 hover:text-teal-950 [&::-webkit-details-marker]:hidden">
-                How to read trend arrows
-              </summary>
-              <p className="mt-2 rounded-md border border-slate-100 bg-slate-50 p-2 text-left text-[10px] leading-snug text-slate-600">
-                Scored metrics (e.g. income, poverty): ↑↑ / ↑ = stronger vs milder <span className="text-emerald-800">favorable</span> change; ↓↓ / ↓ ={' '}
-                <span className="text-amber-900">unfavorable</span> (we label that “decline” in the table). Neutral metrics (e.g. median rent): same arrows for magnitude; labels do not call the move good or bad.
-              </p>
-            </details>
-          </div>
         </div>
       </div>
 
       {locationFips ? (
-        <div className="rounded-xl border border-slate-200/90 bg-slate-100/90 p-3 sm:p-4">
-          <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm sm:p-6">
-            <div className="flex flex-col gap-8 lg:flex-row lg:items-center lg:justify-between lg:gap-10">
+        <div className="rounded-xl border border-slate-400/45 bg-slate-300/35 p-2 shadow-sm sm:p-2.5">
+          <div className="rounded-lg border border-slate-300/80 bg-white p-3 shadow-sm sm:p-4">
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between lg:gap-6">
               <div className="min-w-0 flex-1">
                 <p className="text-xs font-medium text-slate-500">Overall picture for</p>
                 <h2 className="mt-1 font-serif text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
@@ -1032,8 +1162,8 @@ export default function DataExplorerScorecardPage() {
       ) : null}
 
       {locationFips ? (
-        <div className="rounded-xl border border-slate-200/90 bg-slate-100/90 p-3 sm:p-4">
-          <ScorecardTrendAndGiniLegend />
+        <div className="rounded-xl border border-slate-400/45 bg-slate-300/35 p-2 shadow-sm sm:p-2.5">
+          <ScorecardTrendLegend />
         </div>
       ) : null}
 
@@ -1042,7 +1172,7 @@ export default function DataExplorerScorecardPage() {
         const { letter, pill } = sectionGradeByGroupId.get(g.id) ?? { letter: '—', pill: 'No trend data' }
 
         return (
-          <div key={`${g.id}-trend-${trendYears}`} className="rounded-xl border border-slate-200/90 bg-slate-100/90 p-3 sm:p-4">
+          <div key={`${g.id}-trend-${trendYears}`} className="rounded-xl border border-slate-400/45 bg-slate-300/35 p-2 shadow-sm sm:p-2.5">
             <section className="overflow-x-auto rounded-lg border border-slate-200 bg-white shadow-sm">
             <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 bg-slate-50 px-4 py-2">
               <div className="min-w-0 flex-1 space-y-2">
@@ -1146,7 +1276,7 @@ export default function DataExplorerScorecardPage() {
                         : null)
                   const giniNoTrend = slug === 'gini_income_inequality' && !anyTrend
                   const trendHeadlineDirected =
-                    giniNoTrend || !anyTrend || dir === 'neutral' ? null : directedTrendHeadline(stW, arrows)
+                    giniNoTrend || !anyTrend || dir === 'neutral' ? null : directedTrendHeadline(stW, arrows, dir, pW)
                   const paceLine =
                     showBenchmarkColumn && !giniNoTrend
                       ? paceVsBenchOneLiner(pW, bW, paceVersusLabel, `${trendYears}-year`)

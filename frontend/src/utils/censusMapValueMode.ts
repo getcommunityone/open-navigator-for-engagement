@@ -155,6 +155,33 @@ export function prevVintageNBack(vintages: string[], current: string, n: number)
   return j >= 0 ? vintages[j]! : null
 }
 
+/**
+ * Comparison end-year exactly ``calendarYearsBack`` before ``current`` (e.g. 5 → 2024 vs 2019).
+ * Used for scorecard 3yr / 5yr windows so we compare by calendar span on the ACS end-year axis,
+ * not by “N rows back” in the vintage list (which misaligns when the bundle skips years).
+ */
+export function prevVintageCalendarYearsBack(
+  vintages: string[],
+  current: string,
+  calendarYearsBack: number,
+): string | null {
+  const cur = String(current).trim()
+  const y = Number(cur)
+  if (!Number.isFinite(y) || calendarYearsBack < 1) return null
+  const target = String(y - calendarYearsBack)
+  return vintages.includes(target) ? target : null
+}
+
+/** Scorecard trend toggle: 1yr = successive published end-year in the list; 3yr/5yr = calendar gap. */
+export function prevVintageForScorecardTrend(
+  vintages: string[],
+  current: string,
+  trendYears: 1 | 3 | 5,
+): string | null {
+  if (trendYears === 1) return prevVintageInList(vintages, current)
+  return prevVintageCalendarYearsBack(vintages, current, trendYears)
+}
+
 export function pctChangeBetween(now: number | null, prev: number | null): number | null {
   if (now == null || prev == null || !Number.isFinite(now) || !Number.isFinite(prev) || prev === 0) return null
   const p = ((now - prev) / prev) * 100

@@ -4,7 +4,7 @@ import { GINI_CHOROPLETH_LEGEND_CHIPS, giniLetterGradeFromValue } from '../utils
 /** Compact legend row for map choropleth (raw Gini only). */
 export function GiniIncomeInequalityLetterLegend(): ReactElement {
   return (
-    <div className="mb-2 rounded-md border border-slate-200/90 bg-white px-2 py-1.5 shadow-sm">
+    <div className="rounded-md border border-slate-200/90 bg-white px-2 py-1.5 shadow-sm">
       <p className="mb-0.5 text-[9px] font-semibold uppercase tracking-wide text-slate-500">Gini inequality grades</p>
       <p className="mb-1 text-[9px] leading-snug text-slate-600">
         Lower Gini = more equal income spread (A is best). This is not economic efficiency or purchasing power.

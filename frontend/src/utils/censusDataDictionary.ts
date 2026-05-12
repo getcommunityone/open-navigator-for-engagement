@@ -275,7 +275,7 @@ export const CENSUS_MAP_UI_HELP = {
   scale: 'Nonlinear scales spread or compress the numeric range before mapping to color or bubble size (useful for skewed metrics).',
   mapValue:
     'Raw uses the published estimate. % change vs prior year compares to the previous year in the year slider order. % vs national compares to a U.S. or population-weighted benchmark when exported.',
-  play: 'Animates through each year in the slider using the same metric and view settings.',
+  play: 'Plays once through each year (oldest to newest) using the same metric and view, then stops.',
   allGeographiesTable:
     'Sortable list for the selected year and map value mode; numbers match the map. Click a row where supported to drill down.',
 } as const

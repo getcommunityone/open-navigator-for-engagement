@@ -1,5 +1,15 @@
 // @ts-nocheck — react-simple-maps ships without TypeScript types (same as USMap.tsx)
-import { startTransition, useCallback, useEffect, useId, useMemo, useRef, useState, type ReactNode } from 'react'
+import {
+  startTransition,
+  useCallback,
+  useEffect,
+  useId,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from 'react'
 import { createPortal } from 'react-dom'
 import { motion, useReducedMotion } from 'framer-motion'
 import { Link, Navigate, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom'
@@ -277,6 +287,43 @@ function manifestVintagesFromManifest(manifest: CensusManifest): string[] {
   return manifest.vintage ? [manifest.vintage] : []
 }
 
+/** Dedupe + ascending calendar order for ACS end-years (slider / play). */
+function chronoUniqueVintages(years: string[]): string[] {
+  const seen = new Set<string>()
+  const out: string[] = []
+  for (const y of years) {
+    if (!y || seen.has(y)) continue
+    seen.add(y)
+    out.push(y)
+  }
+  out.sort((a, b) => Number(a) - Number(b))
+  return out
+}
+
+/**
+ * After the vintage list is swapped mid-play (manifest → trends), map the same calendar year
+ * to its new index; if that year vanished, use the latest year still ≤ heldYear.
+ */
+function indexForHeldYearInNewVintages(vintages: string[], heldYear: string): number {
+  if (!vintages.length) return 0
+  const exact = vintages.indexOf(heldYear)
+  if (exact >= 0) return exact
+  const hy = Number(heldYear)
+  if (!Number.isFinite(hy)) return 0
+  let bestIdx = 0
+  let bestVal = -Infinity
+  for (let i = 0; i < vintages.length; i++) {
+    const y = Number(vintages[i])
+    if (!Number.isFinite(y)) continue
+    if (y <= hy && y >= bestVal) {
+      bestVal = y
+      bestIdx = i
+    }
+  }
+  if (bestVal > -Infinity) return bestIdx
+  return 0
+}
+
 function metricHasTrendSeriesInRow(row: Record<string, unknown>, slug: string): boolean {
   const series = row[slug]
   return Boolean(series && typeof series === 'object' && !Array.isArray(series))
@@ -335,18 +382,19 @@ function sliderVintages(args: {
   placeTrends: CountyPlaceTrendsPayload | null | undefined
   stateFips: string | undefined
 }): string[] {
-  const mv = manifestVintagesFromManifest(args.manifest)
+  const mv = chronoUniqueVintages(manifestVintagesFromManifest(args.manifest))
+  let resolved: string[]
   if (args.mode === 'us') {
-    if (args.stateTrends?.vintages?.length) return stateTrendSliderVintages(args.stateTrends, args.metricSlug)
-    return mv.length ? mv : ['2022']
+    if (args.stateTrends?.vintages?.length) resolved = stateTrendSliderVintages(args.stateTrends, args.metricSlug)
+    else resolved = mv.length ? mv : ['2022']
+  } else if (args.mode === 'stateCounty' && args.stateFips && args.countyTrends?.vintages?.length) {
+    resolved = countyPlaceSliderVintages(args.countyTrends, args.stateFips, args.metricSlug)
+  } else if (args.mode === 'place' && args.stateFips && args.placeTrends?.vintages?.length) {
+    resolved = countyPlaceSliderVintages(args.placeTrends, args.stateFips, args.metricSlug)
+  } else {
+    resolved = mv.length ? mv : ['2022']
   }
-  if (args.mode === 'stateCounty' && args.stateFips && args.countyTrends?.vintages?.length) {
-    return countyPlaceSliderVintages(args.countyTrends, args.stateFips, args.metricSlug)
-  }
-  if (args.mode === 'place' && args.stateFips && args.placeTrends?.vintages?.length) {
-    return countyPlaceSliderVintages(args.placeTrends, args.stateFips, args.metricSlug)
-  }
-  return mv.length ? mv : ['2022']
+  return chronoUniqueVintages(resolved)
 }
 
 /** Top-N for race bar charts (states / counties / places). */
@@ -833,7 +881,11 @@ function VintageAndPlayControls({
             }
           }}
           className="inline-flex items-center gap-1 rounded-md border border-slate-300 bg-white px-2 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50 shrink-0"
-          title={playing ? 'Pause animation' : `${CENSUS_MAP_UI_HELP.play} Starts from the first year, then steps forward.`}
+          title={
+            playing
+              ? 'Pause animation'
+              : `${CENSUS_MAP_UI_HELP.play} Starts at the oldest year in the list and advances until the newest, then stops.`
+          }
         >
           {playing ? <PauseIcon className="h-4 w-4" /> : <PlayIcon className="h-4 w-4" />}
           {playing ? 'Pause' : 'Play years'}
@@ -849,7 +901,7 @@ const explorerFilterTile =
 function CensusExplorerFilterBar({
   leadingSlot,
   metricFullHelp,
-  metrics,
+  metricChoices,
   metricSlug,
   onMetricChange,
   vintages,
@@ -865,7 +917,8 @@ function CensusExplorerFilterBar({
 }: {
   leadingSlot?: ReactNode
   metricFullHelp: string
-  metrics: CensusMetric[]
+  /** Metrics shown in the topic dropdown (excludes internal / table-total slugs). */
+  metricChoices: CensusMetric[]
   metricSlug: string
   onMetricChange: (slug: string) => void
   vintages: string[]
@@ -893,7 +946,7 @@ function CensusExplorerFilterBar({
       <div className={`${explorerFilterTile} min-w-0 flex-1 xl:min-w-[11rem] xl:max-w-md`}>
         <CensusMetricToolbarControl
           metricFullHelp={metricFullHelp}
-          metrics={metrics}
+          metrics={metricChoices}
           metricSlug={metricSlug}
           onPickMetric={onMetricChange}
           unconstrainedWidth
@@ -1273,6 +1326,21 @@ function DrilldownMapBoundsController({ data }: { data: GeoJSONFeatureCollection
   return null
 }
 
+/** Wheel on county/place maps zooms the map; scroll is not passed to the page (drill-down UX). */
+function CensusLeafletCaptureWheelZoom() {
+  const map = useMap()
+  useEffect(() => {
+    const el = map.getContainer()
+    L.DomEvent.disableScrollPropagation(el)
+    L.DomEvent.disableClickPropagation(el)
+    return () => {
+      L.DomEvent.enableScrollPropagation(el)
+      L.DomEvent.enableClickPropagation(el)
+    }
+  }, [map])
+  return null
+}
+
 function featureLatLng(feature: GeoJSON.Feature): { lat: number; lng: number } | null {
   try {
     const layer = L.geoJSON(feature as never)
@@ -1362,7 +1430,6 @@ function ChoroplethLegend({
           <p className="mb-2 text-[10px] leading-snug text-slate-600">{semantics.gradientHint}</p>
         </>
       ) : null}
-      {letterGradeLegend}
       <svg width="100%" height="52" viewBox="0 0 260 52" preserveAspectRatio="xMidYMid meet" className="max-w-full">
         <defs>
           <linearGradient id={gradId} x1="0%" y1="0%" x2="100%" y2="0%">
@@ -1378,6 +1445,9 @@ function ChoroplethLegend({
           </text>
         ))}
       </svg>
+      {letterGradeLegend ? (
+        <div className="mt-2 border-t border-slate-200/90 pt-2">{letterGradeLegend}</div>
+      ) : null}
       <div className="mt-2">
         <button
           type="button"
@@ -1449,7 +1519,6 @@ function BubbleLegend({
           <span>Bubble size scale</span>
         )}
       </div>
-      {letterGradeLegend}
       <div className="flex items-end justify-around gap-2 px-2" style={{ height: 56 }}>
         {items.map((it, i) => (
           <div key={i} className="flex flex-col items-center gap-1">
@@ -1465,6 +1534,9 @@ function BubbleLegend({
           </div>
         ))}
       </div>
+      {letterGradeLegend ? (
+        <div className="mt-2 border-t border-slate-200/90 pt-2">{letterGradeLegend}</div>
+      ) : null}
       <div className="mt-2">
         <button
           type="button"
@@ -1689,6 +1761,29 @@ function CensusMapPage() {
     setAnimIndex(ix >= 0 ? ix : 0)
   }, [effectiveVintage, vintages.join(','), playing])
 
+  const vintagesPlayKeyRef = useRef<string>('')
+  const animIndexPlayRef = useRef(0)
+  animIndexPlayRef.current = animIndex
+  useLayoutEffect(() => {
+    const key = vintages.join(',')
+    if (playing) {
+      const prevKey = vintagesPlayKeyRef.current
+      if (prevKey && prevKey !== key) {
+        const prevList = prevKey.split(',')
+        const safeIx = Math.min(
+          Math.max(0, animIndexPlayRef.current),
+          Math.max(0, prevList.length - 1),
+        )
+        const heldYear = prevList[safeIx]
+        if (heldYear) {
+          const nextIx = indexForHeldYearInNewVintages(vintages, heldYear)
+          setAnimIndex(nextIx)
+        }
+      }
+    }
+    vintagesPlayKeyRef.current = key
+  }, [playing, vintages])
+
   const canPlayMultiVintage =
     vintages.length > 1 &&
     (mode === 'us' || (mode === 'stateCounty' && !!stateFips) || (mode === 'place' && !!stateFips))
@@ -1696,7 +1791,10 @@ function CensusMapPage() {
   const canTrendAnimate = canPlayMultiVintage
 
   const displayVintage = useMemo(() => {
-    if (playing && canTrendAnimate) return vintages[animIndex % vintages.length]!
+    if (playing && canTrendAnimate && vintages.length) {
+      const ix = Math.min(Math.max(0, animIndex), vintages.length - 1)
+      return vintages[ix]!
+    }
     if (scrubVintage && vintages.includes(scrubVintage)) return scrubVintage
     return effectiveVintage
   }, [playing, canTrendAnimate, animIndex, vintages, scrubVintage, effectiveVintage])
@@ -1707,7 +1805,12 @@ function CensusMapPage() {
       setAnimIndex((i) => {
         const list = vintagesRef.current
         if (!list.length) return 0
-        return (i + 1) % list.length
+        const last = list.length - 1
+        if (i >= last) {
+          queueMicrotask(() => setPlaying(false))
+          return last
+        }
+        return i + 1
       })
     }, PLAY_INTERVAL_MS)
     return () => window.clearInterval(t)
@@ -2546,7 +2649,7 @@ function CensusMapPage() {
 
   const wrapExplorerMap = (child: JSX.Element) =>
     nestedInDataExplorer ? (
-      <div className="rounded-xl border border-slate-200/80 bg-slate-100/90 p-3 sm:p-4 md:p-5">{child}</div>
+      <div className="min-w-0 rounded-lg border border-slate-200/70 bg-white/40 p-1.5 sm:p-2">{child}</div>
     ) : (
       child
     )
@@ -2554,7 +2657,7 @@ function CensusMapPage() {
   return (
     <div
       className={
-        nestedInDataExplorer ? 'mx-auto w-full min-w-0 space-y-4' : 'mx-auto w-full max-w-[1600px] p-4 md:p-6'
+        nestedInDataExplorer ? 'mx-auto w-full min-w-0 space-y-2.5' : 'mx-auto w-full max-w-[1600px] p-4 md:p-6'
       }
     >
       {!nestedInDataExplorer ? (
@@ -2568,13 +2671,7 @@ function CensusMapPage() {
       ) : null}
 
       {!censusOnboardingDismissed ? (
-        <div
-          className={
-            nestedInDataExplorer
-              ? 'mb-4 rounded-xl border border-slate-200/80 bg-slate-100/90 p-3 sm:p-4'
-              : 'mb-4'
-          }
-        >
+        <div className={nestedInDataExplorer ? 'mb-2 rounded-lg border border-sky-200/90 bg-sky-50/90 p-2 sm:p-2.5' : 'mb-4'}>
           <div
             className="flex flex-col gap-2 rounded-lg border border-sky-200 bg-sky-50/80 px-3 py-2.5 text-sm text-slate-800 shadow-sm sm:flex-row sm:items-center sm:justify-between"
             role="status"
@@ -2613,10 +2710,10 @@ function CensusMapPage() {
       />
 
       {mode === 'us' && wrapExplorerMap(
-        <div className="flex min-w-0 flex-col gap-4">
+        <div className="flex min-w-0 flex-col gap-3">
           <CensusExplorerFilterBar
             metricFullHelp={metricFullHelp}
-            metrics={selectableMetrics}
+            metricChoices={selectableMetrics}
             metricSlug={metricSlug}
             onMetricChange={onMetricChange}
             vintages={vintages}
@@ -2633,7 +2730,7 @@ function CensusMapPage() {
               setAdvancedMapOptionsOpen(true)
             }}
           />
-          <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_minmax(300px,26rem)] gap-4 items-start">
+          <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_minmax(300px,26rem)] gap-3 items-start">
           <div
             className="flex min-w-0 flex-col overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm"
             role="region"
@@ -2998,11 +3095,11 @@ function CensusMapPage() {
       )}
 
       {mode === 'stateCounty' && stateFips && wrapExplorerMap(
-        <div className="flex min-w-0 flex-col gap-4">
+        <div className="flex min-w-0 flex-col gap-3">
           <CensusExplorerFilterBar
             leadingSlot={mapToolbarDrillNav}
             metricFullHelp={metricFullHelp}
-            metrics={selectableMetrics}
+            metricChoices={selectableMetrics}
             metricSlug={metricSlug}
             onMetricChange={onMetricChange}
             vintages={vintages}
@@ -3019,7 +3116,7 @@ function CensusMapPage() {
               setAdvancedMapOptionsOpen(true)
             }}
           />
-          <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_minmax(300px,26rem)] gap-4 items-start">
+          <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_minmax(300px,26rem)] gap-3 items-start">
           <div
             className="flex min-w-0 flex-col overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm"
             role="region"
@@ -3059,6 +3156,7 @@ function CensusMapPage() {
                     scrollWheelZoom
                     style={{ height: '100%', width: '100%', minHeight: 400 }}
                   >
+                    <CensusLeafletCaptureWheelZoom />
                     {viz === 'filled' && (
                       <GeoJSON
                         key={`${metricSlug}-${scale}-county-filled`}
@@ -3275,11 +3373,11 @@ function CensusMapPage() {
       )}
 
       {mode === 'place' && wrapExplorerMap(
-        <div className="flex min-w-0 flex-col gap-4">
+        <div className="flex min-w-0 flex-col gap-3">
           <CensusExplorerFilterBar
             leadingSlot={mapToolbarDrillNav}
             metricFullHelp={metricFullHelp}
-            metrics={selectableMetrics}
+            metricChoices={selectableMetrics}
             metricSlug={metricSlug}
             onMetricChange={onMetricChange}
             vintages={vintages}
@@ -3296,7 +3394,7 @@ function CensusMapPage() {
               setAdvancedMapOptionsOpen(true)
             }}
           />
-          <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_minmax(300px,26rem)] gap-4 items-start">
+          <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_minmax(300px,26rem)] gap-3 items-start">
           <div
             className="flex min-w-0 flex-col overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm"
             role="region"
@@ -3343,6 +3441,7 @@ function CensusMapPage() {
                     scrollWheelZoom
                     style={{ height: '100%', width: '100%', minHeight: 400 }}
                   >
+                    <CensusLeafletCaptureWheelZoom />
                     {viz === 'filled' && (
                       <GeoJSON
                         key={`${metricSlug}-${scale}-place-filled`}
