@@ -255,6 +255,23 @@ def resolve_page_href(page_url: str, href: str) -> str:
     return dedupe_repeated_url_path(full)
 
 
+def document_join_base(page_url: str, soup: BeautifulSoup) -> str:
+    """
+    Base URL for resolving relative ``href``/``src`` in this document.
+
+    When the page has ``<base href="…">`` (common on Revize / IIS sites), relative links like
+    ``Documents/…`` must join to that base — not to ``…/Default.asp?…``, or ``urljoin`` drops the
+    site subdirectory (e.g. Autauga County ``/Sites/Autauga_County/``).
+    """
+    pu = (page_url or "").strip()
+    tag = soup.find("base", href=True)
+    if tag:
+        b = (tag.get("href") or "").strip()
+        if b and not b.lower().startswith("javascript:"):
+            return resolve_page_href(pu, b)
+    return pu
+
+
 def site_search_portal_variants(portal_url: str) -> List[str]:
     """
     For same-site search portal URLs, return the base URL plus a few GET variants with meeting
@@ -329,6 +346,7 @@ def extract_opencivic_content_search_portals(html: str, page_url: str, homepage:
     Example host: ``dallascounty-al.org`` (Granicus OpenCivic ``Content-search``).
     """
     soup = BeautifulSoup(html or "", "html.parser")
+    join_base = document_join_base(page_url, soup)
     found: List[str] = []
     seen: Set[str] = set()
 
@@ -340,7 +358,7 @@ def extract_opencivic_content_search_portals(html: str, page_url: str, homepage:
             return
         if "keyword" not in u0.lower() and "dlv_" not in u0.lower():
             return
-        full = resolve_page_href(page_url, u0)
+        full = resolve_page_href(join_base, u0)
         if not is_same_site(full, homepage):
             return
         if full not in seen:
@@ -417,9 +435,10 @@ def extract_site_search_portal_urls(html: str, page_url: str, homepage: str) -> 
         return []
     found: List[str] = []
     seen: Set[str] = set()
+    join_base = document_join_base(page_url, soup)
 
     def add(raw: str) -> None:
-        u = resolve_page_href(page_url, raw.strip())
+        u = resolve_page_href(join_base, raw.strip())
         if not u or u in seen:
             return
         if not is_same_site(u, homepage):
@@ -433,7 +452,7 @@ def extract_site_search_portal_urls(html: str, page_url: str, homepage: str) -> 
         href = (a.get("href") or "").strip()
         if not href or href.startswith("#") or href.lower().startswith("javascript:"):
             continue
-        full = resolve_page_href(page_url, href)
+        full = resolve_page_href(join_base, href)
         if _SITE_SEARCH_URL_RE.search(full) or _SITE_SEARCH_URL_RE.search(href):
             add(full)
             continue
@@ -447,7 +466,7 @@ def extract_site_search_portal_urls(html: str, page_url: str, homepage: str) -> 
             continue
         if (form.get("method") or "get").upper() != "GET":
             continue
-        full = resolve_page_href(page_url, action)
+        full = resolve_page_href(join_base, action)
         if is_same_site(full, homepage) and _SITE_SEARCH_URL_RE.search(full):
             add(full)
 
@@ -883,6 +902,7 @@ def extract_meeting_urls(
     - Trusted offsite vendor meeting pages (narrow path heuristics).
     """
     soup = BeautifulSoup(html or "", "html.parser")
+    join_base = document_join_base(page_url, soup)
     nav: List[str] = []
     pdfs: List[Tuple[str, str]] = []
     seen_nav: Set[str] = set()
@@ -902,7 +922,7 @@ def extract_meeting_urls(
         href = (a.get("href") or "").strip()
         if not href or href.startswith("#") or href.lower().startswith("javascript:"):
             continue
-        full = resolve_page_href(page_url, href)
+        full = resolve_page_href(join_base, href)
         text = (a.get_text() or "").strip()
         text_l = text.lower()
         if PDF_EXT.search(full):
@@ -937,7 +957,7 @@ def extract_meeting_urls(
         src = (tag.get("src") or "").strip()
         if not src:
             continue
-        full = resolve_page_href(page_url, src)
+        full = resolve_page_href(join_base, src)
         if (
             is_same_site(full, homepage)
             or is_same_site(full, page_url)

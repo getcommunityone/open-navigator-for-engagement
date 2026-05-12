@@ -225,9 +225,9 @@ models:
   
   - name: int_events_channels
     description: >
-      Cleaned and standardized YouTube channel registry sourced from
-      bronze `bronze_events_channels`. Provides canonical channel metadata and
-      validation flags for downstream enrichment.
+      YouTube channel registry derived from `int_events_localview` channel_ids,
+      enriched with `bronze_events_youtube` URLs and `jurisdictions` JSONB from
+      `int_localview_channel_geography` joined to `int_jurisdictions`.
 
   - name: int_events_channels_enriched
     description: |

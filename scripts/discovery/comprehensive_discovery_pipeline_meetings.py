@@ -31,6 +31,8 @@ Goals:
 - Collect **other** meeting / stream platforms (Vimeo, Facebook video, Twitch, Granicus, Zoom,
   Teams, Google Meet, Wistia, Brightcove, ``.m3u8`` HLS, …) into ``other_video_streams`` in the
   manifest (not downloaded).
+- **PDF URLs** written to ``_manifest.json`` ``pdfs[].url`` are **path-normalized** (e.g. spaces
+  percent-encoded as ``%20``) so manifests and downstream loaders match RFC-safe URLs used for GET.
 
 - Download PDFs (and optional HTML snapshots of key pages) under:
 
@@ -98,6 +100,10 @@ Run::
 
     .venv/bin/python -m scripts.discovery.comprehensive_discovery_pipeline_meetings \\
         --state AL --type county --geoids 01001,01003,01009 --from-db --concurrency 6 --timeout 120
+
+    # Rerun counties whose cached manifest is failed (0 pages) or shallow (few pages; see --shallow-max-pages)
+    .venv/bin/python -m scripts.discovery.comprehensive_discovery_pipeline_meetings \\
+        --state AL --type county --from-db --retry-failed-shallow --concurrency 6 --timeout 120
 """
 from __future__ import annotations
 
@@ -130,6 +136,7 @@ from scripts.utils.gdrive_paths import (
     resolve_scraped_meetings_output_root,
     scraped_meetings_root_resolution_note,
 )
+from scripts.utils.http_url_normalize import normalize_http_url_path_encoding as _normalize_http_url_path_encoding
 from scripts.discovery.contact_extract_from_html import (
     extract_contacts_from_page,
     merge_contact_manifest_rows,
@@ -293,7 +300,7 @@ def _pdf_download_url_candidates(pdf_url: str) -> List[str]:
     for u in alts + [base]:
         if u not in seen:
             seen.add(u)
-            out.append(u)
+            out.append(_normalize_http_url_path_encoding(u))
     return out
 
 
@@ -555,6 +562,58 @@ def load_meeting_scrape_jobs_for_geoids(
             }
         )
     return jobs
+
+
+def _manifest_page_count(path: Path) -> int:
+    try:
+        d = json.loads(path.read_text(encoding="utf-8"))
+        return len(d.get("pages_fetched") or [])
+    except Exception:
+        return -1
+
+
+def collect_retry_geoids_from_scraped_manifests(
+    *,
+    state: str,
+    jtype: str,
+    scraped_root: Path,
+    shallow_max_pages: int,
+    retry_modes: Set[str],
+) -> List[str]:
+    """
+    GEOIDs whose manifest under ``scraped_root`` qualifies for retry: **failed** (0 HTML pages
+    fetched) or **shallow** (``1 <= pages < shallow_max_pages``). Unreadable or missing manifests
+    are skipped.
+    """
+    st = (state or "").strip().upper()
+    jt = (jtype or "").strip().lower()
+    if not jt or jt == "all":
+        raise ValueError("collect_retry_geoids_from_scraped_manifests requires a concrete jtype (e.g. county)")
+    cap = max(2, int(shallow_max_pages))
+    base = scraped_root / _fs_safe_segment(st) / _fs_safe_segment(jt)
+    prefix = f"{jt}_"
+    found: Set[str] = set()
+    if not base.is_dir():
+        return []
+    for mf in sorted(base.glob(f"{jt}_*/_manifest.json")):
+        n = _manifest_page_count(mf)
+        if n < 0:
+            continue
+        folder = mf.parent.name
+        if not folder.startswith(prefix):
+            continue
+        geoid = folder[len(prefix) :]
+        if not geoid:
+            continue
+        if "failed" in retry_modes and n == 0:
+            found.add(geoid)
+        if "shallow" in retry_modes and 0 < n < cap:
+            found.add(geoid)
+
+    def _sort_key(g: str) -> Tuple[int, Any]:
+        return (0, int(g)) if g.isdigit() else (1, g)
+
+    return sorted(found, key=_sort_key)
 
 
 def _site_root_url(url: str) -> str:
@@ -1187,6 +1246,13 @@ class ComprehensiveDiscoveryPipelineMeetings:
             raise ValueError("Could not derive jurisdiction_id from geoid/type")
 
         initial_hp = _canonical_homepage_url(homepage_url or "")
+        logger.info(
+            "meetings_scrape_start jurisdiction={} geoid={} state={} homepage={}",
+            jid,
+            geoid,
+            st,
+            (initial_hp[:160] + "...") if len(initial_hp) > 160 else initial_hp,
+        )
 
         year_now = datetime.now(timezone.utc).year
         stack_hints: List[str] = []
@@ -1389,7 +1455,8 @@ class ComprehensiveDiscoveryPipelineMeetings:
                     except Exception as exc:
                         result.errors.append(f"snapshot_readable_build:{txt_path}:{exc!r}")
 
-                for pdf, anchor_text in self._extract_pdf_pairs(html, page_ctx, hp):
+                for pdf_raw, anchor_text in self._extract_pdf_pairs(html, page_ctx, hp):
+                    pdf = _normalize_http_url_path_encoding(pdf_raw)
                     if pdf in pdfs_seen:
                         continue
                     pdfs_seen.add(pdf)
@@ -1497,6 +1564,12 @@ async def run_meetings_batch(
         return []
     _mkdir_from_existing_ancestor(pipe.output_root)
     sem = asyncio.Semaphore(max(1, concurrency))
+    logger.info(
+        "meetings_batch_start jobs={} concurrency={} "
+        "(quiet until each jurisdiction finishes; first log may take several minutes)",
+        len(jobs),
+        concurrency,
+    )
 
     async def one(job: Dict[str, str]) -> MeetingsScrapeResult:
         jid = job["jurisdiction_id"]
@@ -1557,6 +1630,30 @@ def main() -> None:
         help=f"Scrape every row in {INT_JURISDICTION_WEBSITES_TABLE} for --state (optional --type filter)",
     )
     parser.add_argument(
+        "--retry-failed-shallow",
+        action="store_true",
+        help=(
+            "Rescrape jurisdictions whose cached _manifest.json is failed (0 pages) or shallow "
+            "(1..N-1 pages; N from --shallow-max-pages). Scans --output-root or default "
+            "SCRAPED_MEETINGS_ROOT. Requires --from-db. Not compatible with --geoid, --geoids, or "
+            "--batch-from-db."
+        ),
+    )
+    parser.add_argument(
+        "--retry-mode",
+        default="failed,shallow",
+        help="With --retry-failed-shallow: comma list: failed, shallow (default: both)",
+    )
+    parser.add_argument(
+        "--shallow-max-pages",
+        type=int,
+        default=6,
+        help=(
+            "With --retry-failed-shallow: treat as shallow when 1 <= len(pages_fetched) < this "
+            "(default 6 → shallow is 1–5 pages)"
+        ),
+    )
+    parser.add_argument(
         "--type",
         default="county",
         help="jurisdiction type, or 'all' with --batch-from-db to include every id prefix in that state",
@@ -1580,16 +1677,51 @@ def main() -> None:
         "--concurrency",
         type=int,
         default=8,
-        help="Max concurrent jurisdictions when running multiple jobs (--geoids or --batch-from-db)",
+        help="Max concurrent jurisdictions for multi-job runs (--geoids, --batch-from-db, --retry-failed-shallow)",
     )
     args = parser.parse_args()
 
     state = (args.state or "").strip().upper()
     jobs: List[Dict[str, str]] = []
 
+    if args.batch_from_db and args.retry_failed_shallow:
+        raise SystemExit("Choose only one of --batch-from-db or --retry-failed-shallow")
+
     if args.batch_from_db:
         jf: Optional[str] = None if (args.type or "").strip().lower() == "all" else args.type
         jobs = load_meeting_scrape_jobs_for_state(state, jf)
+    elif args.retry_failed_shallow:
+        if not args.from_db:
+            raise SystemExit("--retry-failed-shallow requires --from-db")
+        if (args.geoids or "").strip() or (args.geoid or "").strip():
+            raise SystemExit("--retry-failed-shallow cannot be combined with --geoid or --geoids")
+        if (args.type or "").strip().lower() in ("all", ""):
+            raise SystemExit("--retry-failed-shallow requires a concrete --type (e.g. county), not 'all'")
+        scraped_root = Path(args.output_root).expanduser() if args.output_root else default_scraped_meetings_root()
+        retry_modes = {m.strip().lower() for m in (args.retry_mode or "").split(",") if m.strip()}
+        geoids = collect_retry_geoids_from_scraped_manifests(
+            state=state,
+            jtype=args.type,
+            scraped_root=scraped_root,
+            shallow_max_pages=args.shallow_max_pages,
+            retry_modes=retry_modes,
+        )
+        logger.info(
+            "meetings_retry_manifest_targets state={} type={} n_geoids={} retry_modes={} shallow_max_pages={} root={}",
+            state,
+            args.type,
+            len(geoids),
+            ",".join(sorted(retry_modes)) or "(none)",
+            args.shallow_max_pages,
+            scraped_root,
+        )
+        if not geoids:
+            rel = scraped_root / _fs_safe_segment(state) / _fs_safe_segment(args.type)
+            raise SystemExit(
+                f"No failed/shallow manifests found under {rel} for --retry-mode={args.retry_mode!r}. "
+                "Run a normal scrape first, or adjust --shallow-max-pages / paths."
+            )
+        jobs = load_meeting_scrape_jobs_for_geoids(state, args.type, ",".join(geoids))
     elif (args.geoids or "").strip():
         if not args.from_db:
             raise SystemExit("--geoids requires --from-db to resolve website_url from the warehouse")
@@ -1614,10 +1746,29 @@ def main() -> None:
             }
         ]
     else:
-        raise SystemExit("Provide --geoid, --geoids, or --batch-from-db")
+        raise SystemExit("Provide --geoid, --geoids, --batch-from-db, or --retry-failed-shallow")
 
     if not jobs:
+        if (args.geoids or "").strip() and args.from_db:
+            raise SystemExit(
+                "No scrape jobs to run: every --geoids entry was skipped (invalid GEOID) or had no "
+                "website_url in int_jurisdiction_websites. Check DATABASE_URL, dbt seed, and GEOIDs "
+                "(5-digit county FIPS, e.g. 01001)."
+            )
         raise SystemExit("No scrape jobs to run (empty list).")
+
+    logger.info(
+        "meetings_cli_ready jobs={} state={} mode={}",
+        len(jobs),
+        state,
+        "batch-from-db"
+        if args.batch_from_db
+        else (
+            "retry-failed-shallow"
+            if args.retry_failed_shallow
+            else ("geoids" if (args.geoids or "").strip() else "single-geoid")
+        ),
+    )
 
     root = Path(args.output_root).expanduser() if args.output_root else None
     pipe = ComprehensiveDiscoveryPipelineMeetings(

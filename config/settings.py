@@ -1,16 +1,22 @@
 """
 Configuration settings for the Oral Health Policy Pulse system.
 """
+from pathlib import Path
 from typing import List, Optional
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+# Resolve ``.env`` from repo root so CLI scripts work regardless of cwd
+# (``config/settings.py`` → parent = ``config/``, parent.parent = project root).
+_REPO_ROOT = Path(__file__).resolve().parent.parent
+_DOTENV = _REPO_ROOT / ".env"
 
 
 class Settings(BaseSettings):
     """Application settings with environment variable support."""
     
     model_config = SettingsConfigDict(
-        env_file=".env",
+        env_file=str(_DOTENV) if _DOTENV.is_file() else None,
         env_file_encoding="utf-8",
         case_sensitive=False,
         extra="ignore"

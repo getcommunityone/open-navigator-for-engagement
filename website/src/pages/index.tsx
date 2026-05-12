@@ -105,7 +105,7 @@ function HomepageHeader() {
             Public Benefit Corporation
           </p>
           <p style={{ fontSize: '0.9rem', opacity: 0.8, marginBottom: 0, lineHeight: 1.6 }}>
-            GroundVue is a public benefit corporation with a fiscal-sponsored nonprofit 501(c)(3). We are solely funded by mission-aligned impact investors and philanthropic institutions.
+            CommunityOne is a public benefit corporation with a fiscal-sponsored nonprofit 501(c)(3). We are solely funded by mission-aligned impact investors and philanthropic institutions.
           </p>
         </div>
 
@@ -446,7 +446,7 @@ function WhyItMatters() {
             Public Benefit Corporation
           </p>
           <p style={{ fontSize: '1rem', color: '#333', maxWidth: '620px', margin: '0 auto 1.25rem', lineHeight: 1.7 }}>
-            GroundVue is a public benefit corporation with a fiscal-sponsored nonprofit <strong>501(c)(3)</strong>. We are solely funded by mission-aligned impact investors and philanthropic institutions.
+            CommunityOne is a public benefit corporation with a fiscal-sponsored nonprofit <strong>501(c)(3)</strong>. We are solely funded by mission-aligned impact investors and philanthropic institutions.
           </p>
           <div style={{
             display: 'flex',

@@ -8,6 +8,9 @@ parquet file under ``--data-dir`` (default: ``data/cache/census/acs``).
 Designed to be invoked either standalone or as a step in
 ``scripts/download_bronze.py``.
 
+``--all-years`` discovers vintages from ``https://api.census.gov/data.json``
+(``acs/acs5``); on failure it falls back to 2009 through the latest known year.
+
 Usage:
     # Download all key tables for all U.S. counties (default cache dir)
     python scripts/datasources/census/download_census_acs_data.py
@@ -15,9 +18,20 @@ Usage:
     # California counties only
     python scripts/datasources/census/download_census_acs_data.py --state 06
 
-    # City-level data for Texas
-    python scripts/datasources/census/download_census_acs_data.py \\
-        --geography place --state 48
+    # State-level estimates (all states / DC / PR — one row per state per table)
+    python scripts/datasources/census/download_census_acs_data.py --geography state --state '*'
+
+    # Single state summary (e.g. Alabama only)
+    python scripts/datasources/census/download_census_acs_data.py --geography state --state 01
+
+    # City / places — requires state FIPS (same cache pattern as B19013_place_01_2022.parquet)
+    python scripts/datasources/census/download_census_acs_data.py --geography place --state 01
+
+    # Unified school districts (K–12) for Alabama
+    python scripts/datasources/census/download_census_acs_data.py --geography sduni --state 01
+
+    # Elementary-only districts (empty parquet in states with none of this type)
+    python scripts/datasources/census/download_census_acs_data.py --geography sdelem --state 06
 
     # Re-download even if cached
     python scripts/datasources/census/download_census_acs_data.py --force
@@ -25,15 +39,37 @@ Usage:
     # Different ACS 5-year vintage
     python scripts/datasources/census/download_census_acs_data.py --year 2021
 
+    # Every ACS 5-year vintage published on the Census API (trend panels)
+    python scripts/datasources/census/download_census_acs_data.py --all-years
+
+    # Unified school districts — all states + DC + PR, all vintages (very large run)
+    python scripts/datasources/census/download_census_acs_data.py --geography sduni --all-states --all-years
+
     # List all available tables
     python scripts/datasources/census/download_census_acs_data.py --list-tables
 """
 import asyncio
 import argparse
+import json
+import urllib.error
+import urllib.request
 from pathlib import Path
 from typing import Optional
 import sys
 
+# First ACS 5-year API vintage; used only if data.json cannot be read.
+_ACS5_FALLBACK_FIRST_YEAR = 2009
+_ACS5_FALLBACK_LAST_YEAR = 2024
+_CENSUS_DATA_CATALOG_URL = "https://api.census.gov/data.json"
+
+# U.S. states, the District of Columbia, and Puerto Rico (two-digit FIPS) for
+# per-state ACS pulls (place, school districts, state-scoped county, etc.).
+CENSUS_ACS_STATE_FIPS: tuple[str, ...] = (
+    "01", "02", "04", "05", "06", "08", "09", "10", "11", "12", "13", "15", "16", "17",
+    "18", "19", "20", "21", "22", "23", "24", "25", "26", "27", "28", "29", "30", "31",
+    "32", "33", "34", "35", "36", "37", "38", "39", "40", "41", "42", "44", "45", "46",
+    "47", "48", "49", "50", "51", "53", "54", "55", "56", "72",
+)
 # Add project root to path for imports
 # __file__ = .../examples/download_acs_to_d_drive.py
 # parent = .../examples
@@ -42,6 +78,47 @@ sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent))
 
 from scripts.datasources.census.load_acs import ACSDataIngestion
 from loguru import logger
+import httpx
+
+
+def _census_api_bad_request(exc: BaseException) -> bool:
+    """True if ``exc`` is a Census HTTP 400 (often: table not in that vintage)."""
+    return isinstance(exc, httpx.HTTPStatusError) and exc.response.status_code == 400
+
+
+def list_acs5_api_vintages() -> list[int]:
+    """
+    Return sorted ACS 5-year API vintage years (e.g. 2009, …, 2024).
+
+    Reads the public Census dataset catalog. Falls back to a fixed range if
+    the request fails or the catalog shape changes.
+    """
+    try:
+        with urllib.request.urlopen(_CENSUS_DATA_CATALOG_URL, timeout=60) as resp:
+            payload = json.loads(resp.read().decode("utf-8"))
+    except (urllib.error.URLError, TimeoutError, json.JSONDecodeError, OSError) as e:
+        logger.warning(
+            f"Could not fetch ACS5 vintages from {_CENSUS_DATA_CATALOG_URL} ({e!r}); "
+            f"using fallback {_ACS5_FALLBACK_FIRST_YEAR}–{_ACS5_FALLBACK_LAST_YEAR}"
+        )
+        return list(range(_ACS5_FALLBACK_FIRST_YEAR, _ACS5_FALLBACK_LAST_YEAR + 1))
+
+    years: set[int] = set()
+    for item in payload.get("dataset", []):
+        if not isinstance(item, dict):
+            continue
+        ds = item.get("c_dataset") or []
+        if list(ds)[:2] == ["acs", "acs5"]:
+            v = item.get("c_vintage")
+            if v is not None:
+                years.add(int(v))
+    if not years:
+        logger.warning(
+            "Catalog contained no acs/acs5 entries; "
+            f"using fallback {_ACS5_FALLBACK_FIRST_YEAR}–{_ACS5_FALLBACK_LAST_YEAR}"
+        )
+        return list(range(_ACS5_FALLBACK_FIRST_YEAR, _ACS5_FALLBACK_LAST_YEAR + 1))
+    return sorted(years)
 
 
 async def download_comprehensive_acs_data(
@@ -51,17 +128,19 @@ async def download_comprehensive_acs_data(
     tables: Optional[list] = None,
     year: int = 2022,
     force: bool = False,
+    skip_http_400: bool = False,
 ):
     """
     Download comprehensive ACS demographic data.
 
     Args:
         data_dir: Directory to store data
-        geography: Geographic level (county, place, tract)
+        geography: Geographic level (county, place, tract, cousub, state, sduni, sdelem, sdsec)
         state: State FIPS code (* for all states)
         tables: List of table codes (None = download key tables)
         year: ACS 5-year vintage (e.g., 2022)
         force: If True, re-download even if cached parquet already exists
+        skip_http_400: If True, log and continue on HTTP 400 (missing table for vintage)
     """
     logger.info("=" * 80)
     logger.info("ACS Data Download to D Drive")
@@ -76,29 +155,29 @@ async def download_comprehensive_acs_data(
     
     # Default key tables if none specified
     if tables is None:
-        tables = [
-            # Demographics
-            "B01001",  # Sex by Age
-            "B02001",  # Race
-            "B03002",  # Hispanic or Latino Origin
-            
-            # Economics  
-            "B19013",  # Median Household Income
-            "B17001",  # Poverty Status
-            "B23025",  # Employment Status
-            
-            # Health Insurance (CRITICAL for oral health policy!)
-            "B27001",  # Health Insurance Coverage by Age
-            "B27010",  # Health Insurance Coverage (Under 19)
-            
-            # Education
-            "B15003",  # Educational Attainment
-            "B14001",  # School Enrollment
-            
-            # Housing
-            "B25077",  # Median Home Value
-            "B25064",  # Median Gross Rent
-        ]
+        tables = sorted(
+            {
+                "B01001",
+                "B02001",
+                "B03002",
+                "B19013",
+                "B17001",
+                "B23025",
+                "B27001",
+                "B27010",
+                "B15003",
+                "B14001",
+                "B25077",
+                "B25064",
+                "B01002",
+                "B19301",
+                "B19083",
+                "B08303",
+                "B25070",
+                "B25001",
+                "B01003",
+            }
+        )
     
     logger.info(f"Downloading {len(tables)} tables (year={year}, force={force})...")
 
@@ -130,6 +209,12 @@ async def download_comprehensive_acs_data(
             await asyncio.sleep(1.5)
 
         except Exception as e:
+            if skip_http_400 and _census_api_bad_request(e):
+                logger.warning(
+                    f"Skipping {table} for {year}: Census API HTTP 400 "
+                    f"(table may not exist for this 5-year vintage)"
+                )
+                continue
             logger.error(f"❌ Failed to download {table}: {e}")
             failures.append((table, str(e)))
             continue
@@ -165,6 +250,7 @@ async def download_health_insurance_focus(
     state: str = "*",
     year: int = 2022,
     force: bool = False,
+    skip_http_400: bool = False,
 ):
     """
     Download health-insurance-focused tables for oral-health policy analysis.
@@ -209,6 +295,12 @@ async def download_health_insurance_focus(
             logger.success(f"✅ Downloaded {len(df)} counties")
             await asyncio.sleep(1.5)
         except Exception as e:
+            if skip_http_400 and _census_api_bad_request(e):
+                logger.warning(
+                    f"Skipping {table_code} for {year}: Census API HTTP 400 "
+                    f"(table may not exist for this 5-year vintage)"
+                )
+                continue
             logger.error(f"❌ Failed: {e}")
             failures.append((table_code, str(e)))
             continue
@@ -224,6 +316,7 @@ async def download_by_state_batch(
     geography: str = "county",
     year: int = 2022,
     force: bool = False,
+    skip_http_400: bool = False,
 ):
     """
     Download data for multiple states in batch.
@@ -261,10 +354,83 @@ async def download_by_state_batch(
                 logger.success(f"✅ {table}: {len(df)} records")
                 await asyncio.sleep(1)
             except Exception as e:
+                if skip_http_400 and _census_api_bad_request(e):
+                    logger.warning(
+                        f"Skipping {table} ({state_fips}) for {year}: Census API HTTP 400 "
+                        f"(table may not exist for this 5-year vintage)"
+                    )
+                    continue
                 logger.error(f"❌ {table}: {e}")
                 failures.append((f"{table}/{state_fips}", str(e)))
                 continue
 
+    return failures
+
+
+async def download_acs_for_years(
+    data_dir: Path,
+    geography: str,
+    state: str,
+    states: Optional[list[str]],
+    years: list[int],
+    force: bool,
+    health_insurance_only: bool,
+    skip_http_400: bool = False,
+    comprehensive_state_fips: Optional[list[str]] = None,
+) -> list[tuple[str, str]]:
+    """
+    Run the appropriate download path for each ACS vintage in ``years``.
+
+    ``comprehensive_state_fips``: when set (e.g. all U.S. states from ``--all-states``),
+    run the comprehensive table set once per state in this list, then per year.
+
+    Failure keys are prefixed with state and/or year when multiple states or years
+    are requested.
+    """
+    failures: list[tuple[str, str]] = []
+    multi_year = len(years) > 1
+    state_loop = comprehensive_state_fips if comprehensive_state_fips is not None else [state]
+    multi_state = bool(comprehensive_state_fips and len(comprehensive_state_fips) > 1)
+
+    def tag(name: str, y: int, state_slug: Optional[str]) -> str:
+        parts: list[str] = []
+        if multi_state and state_slug is not None:
+            parts.append(state_slug)
+        if multi_year:
+            parts.append(str(y))
+        parts.append(name)
+        return "/".join(parts) if parts else name
+
+    if health_insurance_only:
+        for idx, year in enumerate(years, 1):
+            logger.info(f"\n{'=' * 20} ACS vintage {year} ({idx}/{len(years)}) {'=' * 20}")
+            _, f = await download_health_insurance_focus(
+                data_dir, state, year=year, force=force, skip_http_400=skip_http_400,
+            )
+            failures.extend((tag(n, year, None), e) for n, e in f)
+        return failures
+
+    if states is not None:
+        for idx, year in enumerate(years, 1):
+            logger.info(f"\n{'=' * 20} ACS vintage {year} ({idx}/{len(years)}) {'=' * 20}")
+            f = await download_by_state_batch(
+                data_dir, states, geography, year=year, force=force, skip_http_400=skip_http_400,
+            )
+            failures.extend((tag(n, year, None), e) for n, e in f)
+        return failures
+
+    for st in state_loop:
+        for idx, year in enumerate(years, 1):
+            log_state = f" state {st} " if multi_state else " "
+            logger.info(
+                f"\n{'=' * 20}{log_state}ACS vintage {year} ({idx}/{len(years)}) {'=' * 20}"
+            )
+            _, f = await download_comprehensive_acs_data(
+                data_dir, geography, st, year=year, force=force, skip_http_400=skip_http_400,
+            )
+            failures.extend(
+                (tag(n, year, st if multi_state else None), e) for n, e in f
+            )
     return failures
 
 
@@ -309,8 +475,20 @@ Examples:
   # Download key tables for all U.S. counties (default cache dir)
   python scripts/datasources/census/download_census_acs_data.py
 
+  # State-level tables (all states / DC / PR)
+  python scripts/datasources/census/download_census_acs_data.py --geography state --state '*'
+
+  # State-level for Alabama only (one row per table)
+  python scripts/datasources/census/download_census_acs_data.py --geography state --state 01
+
   # California counties only
   python scripts/datasources/census/download_census_acs_data.py --state 06
+
+  # Places (cities/CDPs) — requires state FIPS; files like B19013_place_01_2022.parquet
+  python scripts/datasources/census/download_census_acs_data.py --geography place --state 01
+
+  # Unified school districts — requires state FIPS; files like B19013_sduni_01_2022.parquet
+  python scripts/datasources/census/download_census_acs_data.py --geography sduni --state 01
 
   # Health-insurance focused tables only
   python scripts/datasources/census/download_census_acs_data.py --health-insurance-only
@@ -323,6 +501,12 @@ Examples:
 
   # Different ACS 5-year vintage
   python scripts/datasources/census/download_census_acs_data.py --year 2021
+
+  # Every ACS 5-year vintage (Census API catalog)
+  python scripts/datasources/census/download_census_acs_data.py --all-years
+
+  # Unified school districts — all states + DC + PR, all vintages (very large)
+  python scripts/datasources/census/download_census_acs_data.py --geography sduni --all-states --all-years
 
   # Custom data directory
   python scripts/datasources/census/download_census_acs_data.py --data-dir /mnt/d/acs
@@ -340,14 +524,22 @@ Examples:
     )
     parser.add_argument(
         "--geography",
-        choices=["county", "place", "tract", "cousub"],
+        choices=["state", "county", "place", "tract", "cousub", "sduni", "sdelem", "sdsec"],
         default="county",
-        help="Geographic level (default: county)",
+        help=(
+            "Geographic level (default: county). sduni/sdelem/sdsec = ACS school districts "
+            "(unified / elementary / secondary). place and sd* require --state FIPS "
+            "(or use --all-states for every state + DC + PR)."
+        ),
     )
     parser.add_argument(
         "--state",
         default="*",
-        help="State FIPS code or * for all states (default: *)",
+        help=(
+            "State FIPS or * (default: *). place / sduni / sdelem / sdsec require a "
+            "2-digit FIPS (not *) unless you use --states for multi-state batch or "
+            "--all-states for every state + DC + PR."
+        ),
     )
     parser.add_argument(
         "--states",
@@ -358,7 +550,25 @@ Examples:
         "--year",
         type=int,
         default=2022,
-        help="ACS 5-year vintage (default: 2022 — most recent complete release)",
+        help="ACS 5-year vintage when not using --all-years (default: 2022)",
+    )
+    parser.add_argument(
+        "--all-years",
+        action="store_true",
+        help=(
+            "Download every ACS 5-year vintage listed for acs/acs5 in the Census "
+            "data catalog (https://api.census.gov/data.json). Ignores --year. "
+            "HTTP 400 responses (table not published that vintage) are skipped with a warning."
+        ),
+    )
+    parser.add_argument(
+        "--all-states",
+        action="store_true",
+        help=(
+            "Loop every U.S. state, DC, and Puerto Rico (52 two-digit FIPS from "
+            "CENSUS_ACS_STATE_FIPS). Only for place, sduni, sdelem, or sdsec. "
+            "Cannot be combined with --states or --health-insurance-only."
+        ),
     )
     parser.add_argument(
         "--force",
@@ -383,25 +593,62 @@ Examples:
         acs.list_available_tables()
         return 0
 
+    _GEO_NEEDS_STATE = frozenset({"place", "sduni", "sdelem", "sdsec"})
+
+    if args.all_states and args.states:
+        parser.error("Cannot combine --all-states with --states")
+
+    if args.all_states:
+        if args.geography not in _GEO_NEEDS_STATE:
+            parser.error(
+                "--all-states is only supported for --geography "
+                "place, sduni, sdelem, or sdsec"
+            )
+        if args.health_insurance_only:
+            parser.error("--all-states cannot be used with --health-insurance-only")
+
+    if args.geography in _GEO_NEEDS_STATE and not args.states and not args.all_states:
+        st = (args.state or "").strip()
+        if st in ("*", ""):
+            parser.error(
+                f"--geography {args.geography} requires a 2-digit state FIPS "
+                f"(e.g. --state 01), not '*', unless you pass --all-states. "
+                f"Per-state parquet names look like B19013_place_01_2022.parquet. "
+                f"For a hand-picked multi-state list use --states 01 06 …"
+            )
+
     if not verify_data_dir(args.data_dir):
         logger.error("Data directory verification failed. See errors above.")
         return 1
 
-    failures: list[tuple[str, str]] = []
-    if args.health_insurance_only:
-        _, failures = asyncio.run(download_health_insurance_focus(
-            args.data_dir, args.state, year=args.year, force=args.force,
-        ))
-    elif args.states:
-        failures = asyncio.run(download_by_state_batch(
-            args.data_dir, args.states, args.geography,
-            year=args.year, force=args.force,
-        ))
-    else:
-        _, failures = asyncio.run(download_comprehensive_acs_data(
-            args.data_dir, args.geography, args.state,
-            year=args.year, force=args.force,
-        ))
+    years = list_acs5_api_vintages() if args.all_years else [args.year]
+    if args.all_years:
+        logger.info(
+            f"--all-years: {len(years)} vintages ({years[0]} … {years[-1]}); "
+            f"~{len(years)}× the usual API traffic — ensure quota and disk space."
+        )
+
+    if args.all_states:
+        logger.info(
+            f"--all-states: {len(CENSUS_ACS_STATE_FIPS)} areas "
+            f"(50 states + DC + PR); each gets a full comprehensive table set per year."
+        )
+
+    comp_state_list = list(CENSUS_ACS_STATE_FIPS) if args.all_states else None
+
+    failures = asyncio.run(
+        download_acs_for_years(
+            args.data_dir,
+            args.geography,
+            args.state,
+            args.states,
+            years,
+            args.force,
+            args.health_insurance_only,
+            skip_http_400=args.all_years,
+            comprehensive_state_fips=comp_state_list,
+        )
+    )
 
     logger.info(f"Data stored in: {args.data_dir.absolute()}")
 

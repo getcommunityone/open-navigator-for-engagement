@@ -5,7 +5,7 @@ pydantic-settings==2.1.0
 
 # Web Scraping & Data Collection
 beautifulsoup4==4.12.2
-duckduckgo-search>=6.3.0,<8  # free text search for jurisdiction website enrichment (no API key)
+ddgs>=9.14,<10  # metasearch (replaces duckduckgo-search) for jurisdiction website enrichment
 selenium==4.16.0
 # 1.40 install-deps targets Ubuntu 22.04 package names and fails on 24.04 Noble (libicu70, libasound2, …).
 playwright==1.52.0
@@ -91,7 +91,7 @@ python-dateutil==2.8.2
 pytz==2023.3
 tenacity==8.2.3
 loguru==0.7.2
-click==8.1.7
+click>=8.1.8,<9  # ddgs 9.14+ requires click>=8.1.8 (was 8.1.7; conflicts with ddgs)
 tqdm==4.66.1
 
 # Testing

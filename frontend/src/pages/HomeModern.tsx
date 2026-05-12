@@ -1267,7 +1267,7 @@ export default function HomeModern() {
           <div className="border-t border-gray-200 pt-6">
             <p className="text-xs font-bold uppercase tracking-widest text-[#52796F] mb-2">Public Benefit Corporation</p>
             <p className="text-base text-gray-600 leading-relaxed">
-              GroundVue is a public benefit corporation with a fiscal-sponsored nonprofit 501(c)(3). We are solely funded by mission-aligned impact investors and philanthropic institutions.
+              CommunityOne is a public benefit corporation with a fiscal-sponsored nonprofit 501(c)(3). We are solely funded by mission-aligned impact investors and philanthropic institutions.
             </p>
           </div>
         </div>

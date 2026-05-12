@@ -35,7 +35,8 @@ import {
   BellAlertIcon,
   EnvelopeIcon,
   Cog6ToothIcon,
-  ArrowRightOnRectangleIcon
+  ArrowRightOnRectangleIcon,
+  GlobeAmericasIcon,
 } from '@heroicons/react/24/outline'
 import { useAuth } from '../contexts/AuthContext'
 import AddressLookup from '../components/AddressLookup'
@@ -1036,6 +1037,13 @@ export default function Home() {
                     <span className="font-medium">Policy Map</span>
                   </Link>
                   <Link
+                    to="/census-map"
+                    className="flex items-center gap-3 px-4 py-3 rounded-lg text-gray-700 hover:bg-[#354F52] hover:text-white transition-all group"
+                  >
+                    <GlobeAmericasIcon className="h-5 w-5 group-hover:scale-110 transition-transform" />
+                    <span className="font-medium">Census map</span>
+                  </Link>
+                  <Link
                     to="/nonprofits"
                     className="flex items-center gap-3 px-4 py-3 rounded-lg text-gray-700 hover:bg-[#354F52] hover:text-white transition-all group"
                   >
@@ -1728,6 +1736,27 @@ export default function Home() {
             </Link>
 
             <Link
+              to="/census-map"
+              className="group bg-gradient-to-br from-gray-50 to-white border-2 border-gray-200 rounded-2xl p-8 hover:border-[#354F52] hover:shadow-xl transition-all"
+            >
+              <div
+                className="w-14 h-14 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform"
+                style={{ backgroundColor: '#354F5220' }}
+              >
+                <GlobeAmericasIcon className="h-7 w-7" style={{ color: '#354F52' }} />
+              </div>
+              <h3 className="text-xl font-bold mb-3" style={{ color: '#354F52' }}>
+                Census map
+              </h3>
+              <p className="text-gray-600 mb-4">
+                Explore ACS county metrics and drill into city-level places where data is published
+              </p>
+              <span className="inline-flex items-center gap-2 text-sm font-medium" style={{ color: '#52796F' }}>
+                Open map <ArrowRightIcon className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
+              </span>
+            </Link>
+
+            <Link
               to="/nonprofits"
               className="group bg-gradient-to-br from-gray-50 to-white border-2 border-gray-200 rounded-2xl p-8 hover:border-[#9B59B6] hover:shadow-xl transition-all"
             >
@@ -1902,7 +1931,7 @@ export default function Home() {
             <div className="border-t border-gray-200 pt-6 mb-6">
               <p className="text-xs font-bold uppercase tracking-widest text-[#52796F] mb-2">Public Benefit Corporation</p>
               <p className="text-base text-gray-600 leading-relaxed">
-                GroundVue is a public benefit corporation with a fiscal-sponsored nonprofit 501(c)(3). We are solely funded by mission-aligned impact investors and philanthropic institutions.
+                CommunityOne is a public benefit corporation with a fiscal-sponsored nonprofit 501(c)(3). We are solely funded by mission-aligned impact investors and philanthropic institutions.
               </p>
             </div>
 

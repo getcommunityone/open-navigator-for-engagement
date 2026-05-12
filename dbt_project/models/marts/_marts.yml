@@ -297,7 +297,11 @@ models:
               values: ['active', 'recent', 'stale', 'inactive', 'no_videos']
       - name: event_count
         description: Number of associated events/videos
-  
+      - name: jurisdictions
+        description: JSONB array of jurisdiction objects (jurisdiction_id, name, state, geoid, type)
+      - name: jurisdiction_ids
+        description: Ordered text array of canonical jurisdiction_id values (type_geoid), same rows as jurisdictions
+
   - name: events_search
     description: |
       Production API-ready meeting events table.

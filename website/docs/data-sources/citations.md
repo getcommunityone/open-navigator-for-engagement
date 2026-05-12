@@ -431,6 +431,7 @@ This is separate from the word-finding API and has different pricing.
 
 **In this section:**
 - [U.S. Census Bureau](#us-census-bureau)
+- [State Symbols USA (reference)](#state-symbols-usa-reference)
 - [IRS Tax-Exempt Organization Search (TEOS)](#irs-tax-exempt-organization-search-teos)
 - [Open States API](#open-states-api)
 - [LegiScan](#legiscan-)
@@ -443,6 +444,29 @@ This is separate from the word-finding API and has different pricing.
 - **License:** Public Domain (U.S. Government)
 - **Datasets:** Census Gazetteer, American Community Survey (ACS), Decennial Census
 - **Coverage:** All 50 states, 3,144 counties, 19,000+ incorporated places
+
+---
+
+### State Symbols USA (reference)
+
+**Organization:** State Symbols USA (educational resource; Dotsquares)  
+**What we use:** Curated **state colors** and related civic identity reference material (third-party compilation, not a government primary source).
+
+- **Website:** https://statesymbolsusa.org/
+- **State colors (category):** https://statesymbolsusa.org/categories/colors
+- **License / use:** Site content is copyrighted; treat as **reference-only**. Link and credit [State Symbols USA](https://statesymbolsusa.org/) when you mention or display derived context. Do **not** republish their imagery or text as your own without permission from the site operators.
+- **Local cache:** A representative **license-plate collage** image used on state-colors content can be mirrored for offline documentation via `scripts/state_symbols/download_state_symbols_assets.sh` → `data/cache/state_symbols/` (see `scripts/state_symbols/README.md` and `_manifest.json` next to the JPEG).
+
+**BibTeX:**
+```bibtex
+@misc{state_symbols_usa,
+  author = {{State Symbols USA}},
+  title = {State Symbols, Icons, and Treasures Across the {USA}},
+  year = {2025},
+  url = {https://statesymbolsusa.org/categories/colors},
+  note = {Educational reference; state colors category URL. Check site terms before redistributing media.}
+}
+```
 
 ---
 
@@ -2550,6 +2574,7 @@ We are grateful to the following organizations and individuals:
 - OHDSI for OMOP Common Data Model (vocabulary system)
 - Every.org for charity metadata and mission statements
 - Findhelp.org for local social services directory (400K+ programs)
+- [State Symbols USA](https://statesymbolsusa.org/categories/colors) for curated state-colors reference (see [Government Data — State Symbols USA](#state-symbols-usa-reference))
 
 **Government:**
 - Alabama Secretary of State for Fair Campaign Practices Act (FCPA) public campaign finance reports ([Alabama Votes FCPA portal](https://fcpa.alabamavotes.gov/page.request.do?page=page.acfPublicGeneralReports))

@@ -46,6 +46,7 @@ const navigation = [
       { name: 'Elected Officials', href: '/people', icon: UserGroupIcon },
       { name: 'Public Policies', href: '/public-policies', icon: DocumentTextIcon },
       { name: 'Policy Map', href: '/policy-map', icon: MapIcon },
+      { name: 'Census map', href: '/census-map', icon: MapIcon },
     ]
   },
   { 

@@ -132,6 +132,11 @@ const sidebars: SidebarsConfig = {
       items: [
         'for-developers',
         {
+          type: 'doc',
+          id: 'guides/hackathon-video-submission-ideas',
+          label: 'Hackathon ideas & demo videos',
+        },
+        {
           type: 'category',
           label: 'Setup & Installation',
           items: [
@@ -172,7 +177,6 @@ const sidebars: SidebarsConfig = {
           type: 'category',
           label: 'How-To Guides',
           items: [
-            'guides/hackathon-video-submission-ideas',
             'guides/jurisdiction-setup',
             'guides/legislative-tracking-maps',
             'guides/huggingface-publishing',
@@ -335,6 +339,12 @@ const sidebars: SidebarsConfig = {
         id: 'for-developers',
       },
       items: [
+        'for-developers',
+        {
+          type: 'doc',
+          id: 'guides/hackathon-video-submission-ideas',
+          label: 'Hackathon ideas & demo videos',
+        },
         {
           type: 'category',
           label: 'Setup & Installation',
@@ -372,7 +382,6 @@ const sidebars: SidebarsConfig = {
           type: 'category',
           label: 'How-To Guides',
           items: [
-            'guides/hackathon-video-submission-ideas',
             'guides/jurisdiction-setup',
             'guides/huggingface-publishing',
             'guides/huggingface-quickstart',

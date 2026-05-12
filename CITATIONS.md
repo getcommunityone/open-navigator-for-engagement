@@ -48,6 +48,13 @@ July 2023, Toronto, Canada.
 - Source: https://www.census.gov/
 - License: Public Domain (U.S. Government)
 
+### **State Symbols USA** (reference)
+- Curated state colors and civic identity reference material (third-party educational site, not a government primary source)
+- Colors category: https://statesymbolsusa.org/categories/colors
+- Site: https://statesymbolsusa.org/
+- **Use:** Reference and attribution only; site content is copyrighted—link to the live site in published materials.
+- **Local asset mirror:** `scripts/state_symbols/download_state_symbols_assets.sh` caches the license-plate collage used on state-colors pages under `data/cache/state_symbols/` (see [website/docs/data-sources/citations.md](website/docs/data-sources/citations.md#state-symbols-usa-reference) for full notes).
+
 ### **Open States / Plural Policy** ⭐
 - Comprehensive state and local legislative information
 - Organization: Plural Policy (formerly Open States Foundation)

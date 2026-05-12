@@ -157,6 +157,7 @@ python scripts/datasources/census/download_census_acs_data.py --list-tables
 
 | Option   | What it produces                                           |
 | -------- | ---------------------------------------------------------- |
+| `state`  | One row per state (and DC, PR where published), ~52 rows per table with `--state *`. |
 | `county` | One row per county (~3.2k rows per table). **Default.**    |
 | `place`  | **One row per incorporated place / CDP — city-level data.**|
 | `tract`  | One row per Census tract (~84k tracts; finer than county). |

@@ -1,4 +1,4 @@
-import { Routes, Route } from 'react-router-dom'
+import { Routes, Route, Navigate, useParams, useLocation } from 'react-router-dom'
 import Layout from './components/Layout'
 import Home from './pages/Home'
 import HomeModern from './pages/HomeModern'
@@ -24,8 +24,18 @@ import FactChecking from './pages/FactChecking'
 import UnifiedSearch from './pages/UnifiedSearch'
 import JurisdictionsSearch from './pages/JurisdictionsSearch'
 import PolicyMap from './pages/PolicyMap'
+import CensusMapPage from './pages/CensusMapPage'
 import BillDetail from './pages/BillDetail'
 import NotFound from './pages/NotFound'
+
+/** Old bookmarked URLs used `/census-map/county/...`; national view is now state-level at `/census-map/us/...`. */
+function CensusCountyAliasRedirect() {
+  const { vintage, metric } = useParams<{ vintage: string; metric: string }>()
+  const { search } = useLocation()
+  const v = vintage ?? '2022'
+  const m = metric ?? 'median_household_income'
+  return <Navigate to={`/census-map/us/${v}/${m}${search}`} replace />
+}
 
 function App() {
   return (
@@ -48,6 +58,17 @@ function App() {
         <Route path="people" element={<PeopleFinder />} />
         <Route path="heatmap" element={<Heatmap />} />
         <Route path="policy-map" element={<PolicyMap />} />
+        <Route
+          path="census-map"
+          element={<Navigate to="/census-map/us/2022/median_household_income" replace />}
+        />
+        <Route path="census-map/us/:vintage/:metric" element={<CensusMapPage />} />
+        <Route path="census-map/state/:stateFips/:vintage/:metric" element={<CensusMapPage />} />
+        <Route
+          path="census-map/county/:vintage/:metric"
+          element={<CensusCountyAliasRedirect />}
+        />
+        <Route path="census-map/place/:stateFips/:vintage/:metric" element={<CensusMapPage />} />
         <Route path="bill/:billId" element={<BillDetail />} />
         <Route path="documents" element={<Documents />} />
         <Route path="opportunities" element={<Opportunities />} />

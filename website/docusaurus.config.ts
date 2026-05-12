@@ -206,8 +206,8 @@ const config: Config = {
               href: 'https://github.com/getcommunityone/open-navigator-for-engagement',
             },
             {
-              label: 'GroundVue (Partner)',
-              href: 'https://www.groundvue.org/',
+              label: 'CommunityOne',
+              href: 'https://www.communityone.com/',
             },
           ],
         },

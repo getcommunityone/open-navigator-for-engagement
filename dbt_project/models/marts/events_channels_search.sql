@@ -56,6 +56,7 @@ SELECT
     
     -- Jurisdiction associations
     jurisdictions,
+    jurisdiction_ids,
     jurisdiction_association_count,
     event_jurisdiction_count,
     

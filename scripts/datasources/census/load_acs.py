@@ -24,16 +24,6 @@ import httpx
 import pandas as pd
 from loguru import logger
 
-try:
-    from pyspark.sql import SparkSession, DataFrame
-    from pyspark.sql.types import StructType, StructField, StringType, IntegerType, FloatType
-    from pyspark.sql.functions import lit
-    PYSPARK_AVAILABLE = True
-except ImportError:
-    PYSPARK_AVAILABLE = False
-    SparkSession = None
-    DataFrame = None
-
 from config import settings
 
 
@@ -71,6 +61,12 @@ class ACSDataIngestion:
         "B25003": "Tenure (Owner vs Renter)",
         "B25077": "Median Home Value",
         "B25064": "Median Gross Rent",
+        "B01002": "Median Age by Sex",
+        "B19301": "Per Capita Income",
+        "B19083": "Gini Index of Income Inequality",
+        "B08303": "Travel Time to Work",
+        "B25070": "Gross Rent as Percentage of Household Income",
+        "B01003": "Total Population",
         
         # Education
         "B15003": "Educational Attainment",
@@ -96,16 +92,23 @@ class ACSDataIngestion:
         "place": "Place (City/Town)",
         "tract": "Census Tract",
         "cousub": "County Subdivision",
+        "sduni": "School District (Unified)",
+        "sdelem": "School District (Elementary)",
+        "sdsec": "School District (Secondary)",
     }
+
+    # Geographies that must use ``in=state:XX`` with a concrete state FIPS (not ``*``).
+    _GEO_REQUIRES_STATE_FIPS = frozenset({"place", "sduni", "sdelem", "sdsec"})
     
-    def __init__(self, data_dir: Optional[Path] = None, spark: Optional[SparkSession] = None):
+    def __init__(self, data_dir: Optional[Path] = None, spark: Any = None):
         """
         Initialize ACS ingestion.
         
         Args:
             data_dir: Base directory for data storage (default: data/cache/acs)
                      Can be set to D:/ for D drive storage
-            spark: Optional Spark session for Delta Lake integration
+            spark: Reserved; API + parquet paths use pandas only. Pass a Spark session
+                   only if you extend this class for Delta Lake (not used today).
         """
         if data_dir is None:
             self.data_dir = Path("data/cache/acs")
@@ -113,27 +116,11 @@ class ACSDataIngestion:
             self.data_dir = Path(data_dir)
         
         self.data_dir.mkdir(parents=True, exist_ok=True)
+        self.spark = spark  # always None unless caller injects a session for custom use
         
-        if not PYSPARK_AVAILABLE:
-            logger.warning("PySpark not available - data will be stored as Parquet only")
-            self.spark = None
-        elif spark is not None:
-            self.spark = spark
-        else:
-            # PySpark is importable but starting a session needs a working Java
-            # runtime. The API-based downloader path doesn't actually use Spark,
-            # so failing here would be unhelpful — degrade to parquet-only.
-            try:
-                self.spark = SparkSession.builder.appName("ACSIngestion").getOrCreate()
-            except Exception as e:
-                logger.warning(
-                    f"Could not start Spark session ({e.__class__.__name__}): {e}. "
-                    "Continuing without Spark — data will be stored as Parquet only."
-                )
-                self.spark = None
-        
-        # Census API key (optional but recommended for higher rate limits)
-        self.api_key = settings.CENSUS_API_KEY if hasattr(settings, 'CENSUS_API_KEY') else None
+        # Census API key: env ``CENSUS_API_KEY`` → Settings field ``census_api_key`` (not ``CENSUS_API_KEY`` on model)
+        raw = getattr(settings, "census_api_key", None) or getattr(settings, "CENSUS_API_KEY", None)
+        self.api_key = (str(raw).strip() if raw else None) or None
         
         logger.info(f"ACS data directory: {self.data_dir.absolute()}")
     
@@ -152,8 +139,12 @@ class ACSDataIngestion:
         
         Args:
             table: ACS table code (e.g., "B19013" for median household income)
-            geography: Geographic level (county, place, tract, etc.)
-            state: State FIPS code (* for all states)
+            geography: Geographic level (state, county, place, tract, cousub,
+                sduni, sdelem, sdsec). ``place`` and ``sd*`` require a 2-digit state FIPS
+                (same cache pattern as ``B19013_place_01_2022.parquet``).
+            state: For county/tract/cousub: parent state FIPS or ``*`` (national).
+                   For ``place`` / ``sduni`` / ``sdelem`` / ``sdsec``: a single state FIPS only.
+                   For ``geography="state"``: ``*`` = all states/DC/PR; else one state FIPS.
             year: ACS year (2022 is most recent 5-year estimate)
         
         Returns:
@@ -162,6 +153,8 @@ class ACSDataIngestion:
         Example:
             # Get median household income for all counties
             df = await acs.download_acs_data_api("B19013", "county", "*")
+            # State-level estimates (all states, one row per state)
+            df = await acs.download_acs_data_api("B19013", "state", "*")
         """
         if not self.api_key:
             logger.warning("No Census API key found. Get one at: https://api.census.gov/data/key_signup.html")
@@ -170,24 +163,44 @@ class ACSDataIngestion:
         # Construct API URL
         base_url = f"https://api.census.gov/data/{year}/acs/acs5"
         
-        # Determine geography parameter based on level
+        # Nested geographies use ``for=...&in=state:XX``. State summary uses ``for=state:*`` or ``for=state:06`` only.
         geo_params = {
-            "county": f"county:*",
-            "place": f"place:*",
-            "tract": f"tract:*",
-            "cousub": f"county subdivision:*",
+            "county": "county:*",
+            "place": "place:*",
+            "tract": "tract:*",
+            "cousub": "county subdivision:*",
+            "sduni": "school district (unified):*",
+            "sdelem": "school district (elementary):*",
+            "sdsec": "school district (secondary):*",
         }
-        
+
         # Get all variables for this table
         variables = f"group({table})"
-        
-        params = {
-            "get": variables,
-            "for": geo_params.get(geography, "county:*"),
-        }
-        
-        if state != "*":
-            params["in"] = f"state:{state}"
+
+        state_token = "*" if state == "*" else str(state).strip().zfill(2)
+
+        if geography in self._GEO_REQUIRES_STATE_FIPS and state_token == "*":
+            raise ValueError(
+                f"geography={geography!r} requires a 2-digit state FIPS (e.g. '01'), not '*'"
+            )
+
+        params: Dict[str, str] = {"get": variables}
+
+        if geography == "us":
+            # Single national row (cache files like ``B19013_us_1_{year}.parquet`` with state token ``1``).
+            params["for"] = "us:1"
+        elif geography == "state":
+            if state_token == "*":
+                params["for"] = "state:*"
+            else:
+                params["for"] = f"state:{state_token}"
+        elif geography != "us":
+            try:
+                params["for"] = geo_params[geography]
+            except KeyError as e:
+                raise ValueError(f"Unknown geography level: {geography!r}") from e
+            if state_token != "*":
+                params["in"] = f"state:{state_token}"
         
         if self.api_key:
             params["key"] = self.api_key
@@ -195,27 +208,47 @@ class ACSDataIngestion:
         logger.info(f"Downloading ACS table {table} ({self.ACS_TABLES.get(table, 'Unknown')})...")
         logger.info(f"Geography: {geography}, State: {state}, Year: {year}")
         
-        async with httpx.AsyncClient(timeout=300.0) as client:
+        async with httpx.AsyncClient(timeout=300.0, follow_redirects=False) as client:
             try:
                 response = await client.get(base_url, params=params)
+                if response.status_code in (301, 302, 303, 307, 308):
+                    loc = (response.headers.get("location") or "").lower()
+                    if "invalid_key" in loc:
+                        raise ValueError(
+                            "api.census.gov rejected this API key (invalid or revoked). "
+                            "Create or verify your key at https://api.census.gov/data/key_signup.html "
+                            "and set CENSUS_API_KEY in the project root .env. "
+                            "To use the anonymous tier (lower daily limits), remove or blank CENSUS_API_KEY."
+                        )
                 response.raise_for_status()
-                
+
+                if response.status_code == 204:
+                    logger.warning(
+                        f"Census API returned 204 No Content — no {geography!r} rows for "
+                        f"state {state_token} year {year} (e.g. no districts of this type)"
+                    )
+                    df = pd.DataFrame()
+                    cache_file = self.data_dir / f"{table}_{geography}_{state}_{year}.parquet"
+                    df.to_parquet(cache_file, index=False)
+                    logger.info(f"Cached empty result to: {cache_file}")
+                    return df
+
                 # Parse JSON response
                 data = response.json()
-                
+
                 # First row is headers, rest is data
                 headers = data[0]
                 rows = data[1:]
-                
+
                 df = pd.DataFrame(rows, columns=headers)
-                
+
                 logger.success(f"Downloaded {len(df)} records for table {table}")
-                
+
                 # Cache the data
                 cache_file = self.data_dir / f"{table}_{geography}_{state}_{year}.parquet"
                 df.to_parquet(cache_file, index=False)
                 logger.info(f"Cached to: {cache_file}")
-                
+
                 return df
                 
             except httpx.HTTPStatusError as e:
