@@ -30,7 +30,11 @@ Goals:
   ``youtube``, ``video``, ``webcast``, ``live``) are only sent to templates we recognized.
 - Collect **other** meeting / stream platforms (Vimeo, Facebook video, Twitch, Granicus, Zoom,
   Teams, Google Meet, Wistia, Brightcove, ``.m3u8`` HLS, …) into ``other_video_streams`` in the
-  manifest (not downloaded).
+  manifest. **SuiteOne** (``*.suiteonemedia.com``): enqueue ``/?embed=1`` and ``/event/?id=…`` from
+  city sites; JWPlayer / S3 ``suiteone.*.videofiles`` ``.mp4`` URLs are recorded and, by default,
+  downloaded under ``_video_assets/``, transcoded to **Opus**, and the MP4 removed after success.
+  Env: ``SCRAPED_MEETINGS_DOWNLOAD_SUITEONE_MP4``, ``SCRAPED_MEETINGS_DOWNLOAD_MP4_OPUS``,
+  ``SCRAPED_MEETINGS_DELETE_MP4_AFTER_OPUS``, ``SCRAPED_MEETINGS_MAX_VIDEO_DOWNLOADS``.
 - **PDF URLs** written to ``_manifest.json`` ``pdfs[].url`` are **path-normalized** (e.g. spaces
   percent-encoded as ``%20``) so manifests and downstream loaders match RFC-safe URLs used for GET.
 
@@ -109,10 +113,14 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import hashlib
 import json
 import os
 import re
+import shutil
+import subprocess
 import sys
+import time
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
@@ -172,7 +180,7 @@ except ModuleNotFoundError:  # pragma: no cover
     psycopg2 = None  # type: ignore[misc,assignment]
 
 MEETING_HINTS = re.compile(
-    r"(meetings?|minutes?|proceedings|action\s*minutes|agenda|calendar|board|commission|council|hearing|session|video|zoom)",
+    r"(meetings?|minutes?|proceedings|action\s*minutes|agenda|calendar|board|commission|council|hearing|session|video|zoom|/event/|\bmedia\b)",
     re.I,
 )
 PDF_EXT = re.compile(r"\.pdf(\?|$)", re.I)
@@ -256,6 +264,23 @@ def _strip_fragment(url: str) -> str:
 
 def _fs_safe_segment(s: str) -> str:
     return re.sub(r'[^A-Za-z0-9._-]+', "_", (s or "").strip())[:200] or "unknown"
+
+
+def _meetings_log_url(url: str, *, maxlen: int = 160) -> str:
+    u = (url or "").strip()
+    if len(u) <= maxlen:
+        return u
+    return u[: max(0, maxlen - 3)] + "..."
+
+
+def _meeting_pdf_disk_filename(pdf_url: str) -> str:
+    p = urlparse(pdf_url)
+    tail = Path(p.path).name or "document.pdf"
+    if tail.lower().endswith(".pdf"):
+        return _fs_safe_segment(tail)
+    stem = Path(tail).stem or "document"
+    h = hashlib.sha256(pdf_url.encode("utf-8", errors="replace")).hexdigest()[:14]
+    return _fs_safe_segment(f"{stem}_{h}.pdf")
 
 
 def _http_response_is_pdf(resp: httpx.Response) -> bool:
@@ -702,6 +727,227 @@ def _is_homepage_document_url(fetch_url: str, homepage: str) -> bool:
     return (a.path or "").rstrip("/") == (b.path or "").rstrip("/")
 
 
+_DEFAULT_UA = (
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) "
+    "Chrome/120.0.0.0 Safari/537.36 OpenNavigatorMeetings/1.0"
+)
+
+
+def suiteonemedia_embed_index_url(page_or_home_url: str) -> Optional[str]:
+    """SuiteOne full meeting index at ``/?embed=1`` (same host as any SuiteOne page URL)."""
+    if not (page_or_home_url or "").strip():
+        return None
+    u = _strip_fragment(page_or_home_url.strip())
+    try:
+        p = urlparse(u)
+    except Exception:
+        return None
+    if p.scheme not in ("http", "https") or not p.netloc:
+        return None
+    host = _host_key_for_home_match(p.netloc)
+    if not host.endswith(".suiteonemedia.com"):
+        return None
+    return f"{p.scheme}://{p.netloc}/?embed=1"
+
+
+def _meetings_download_mp4_opus_enabled() -> bool:
+    v = (os.getenv("SCRAPED_MEETINGS_DOWNLOAD_MP4_OPUS") or "1").strip().lower()
+    return v not in ("0", "false", "no", "off")
+
+
+def _meetings_save_suiteone_mp4_to_disk() -> bool:
+    v = (os.getenv("SCRAPED_MEETINGS_DOWNLOAD_SUITEONE_MP4") or "1").strip().lower()
+    return v not in ("0", "false", "no", "off")
+
+
+def _meetings_download_suiteone_video_assets() -> bool:
+    return _meetings_save_suiteone_mp4_to_disk() or _meetings_download_mp4_opus_enabled()
+
+
+def _meetings_max_video_mp4_bytes() -> int:
+    try:
+        return max(10_000_000, int(os.getenv("SCRAPED_MEETINGS_MAX_MP4_BYTES") or str(2_147_483_648)))
+    except ValueError:
+        return 2_147_483_648
+
+
+def _meetings_delete_mp4_after_opus() -> bool:
+    v = (os.getenv("SCRAPED_MEETINGS_DELETE_MP4_AFTER_OPUS") or "1").strip().lower()
+    return v not in ("0", "false", "no", "off")
+
+
+def _is_suiteone_style_mp4_asset(url: str, platform: str = "", found_via: str = "") -> bool:
+    low = (url or "").lower()
+    if not low.startswith("http") or ".mp4" not in low:
+        return False
+    if platform == "suiteone_s3_mp4":
+        return True
+    if "suiteone" in low and "amazonaws.com" in low and "videofiles" in low:
+        return True
+    fv = (found_via or "").lower()
+    if fv.startswith("jwplayer_") or fv.startswith("suiteone_"):
+        return True
+    return False
+
+
+async def _download_suiteone_mp4_transcode_opus(
+    client: httpx.AsyncClient,
+    *,
+    mp4_url: str,
+    referer: str,
+    discovered_on: str,
+    found_via: str,
+    platform: str,
+    video_dir: Path,
+    max_bytes: int,
+) -> Dict[str, Any]:
+    want_opus = _meetings_download_mp4_opus_enabled() and bool(shutil.which("ffmpeg"))
+    video_dir.mkdir(parents=True, exist_ok=True)
+    h = hashlib.sha256(mp4_url.encode("utf-8", errors="replace")).hexdigest()[:20]
+    stem = f"{h}_suiteone"
+    mp4_path = video_dir / f"{stem}.mp4"
+    opus_path = video_dir / f"{stem}.opus"
+    meta_path = video_dir / f"{stem}.asset.json"
+    ref = (referer or discovered_on or "").strip() or mp4_url
+    headers = {"Referer": ref, "User-Agent": _DEFAULT_UA}
+    short_mp4 = _meetings_log_url(mp4_url, maxlen=140)
+    try:
+        async with client.stream("GET", mp4_url, headers=headers, follow_redirects=True) as resp:
+            if resp.status_code != 200:
+                return {"error": f"mp4_http_{resp.status_code}", "source_mp4_url": mp4_url}
+            clen = (resp.headers.get("content-length") or "").strip()
+            logger.info(
+                "meetings_mp4_download_start url={} content_length={} max_mb={:.0f}",
+                short_mp4,
+                clen or "?",
+                max_bytes / 1_000_000,
+            )
+            ct = (resp.headers.get("content-type") or "").lower()
+            if "video" not in ct and "octet-stream" not in ct and "binary" not in ct:
+                if "mp4" not in mp4_url.lower():
+                    return {"error": f"mp4_unexpected_content_type:{ct}", "source_mp4_url": mp4_url}
+            received = 0
+            last_log_t = time.monotonic()
+            last_log_bytes = 0
+            with mp4_path.open("wb") as f:
+                async for chunk in resp.aiter_bytes():
+                    received += len(chunk)
+                    if received > max_bytes:
+                        try:
+                            mp4_path.unlink(missing_ok=True)
+                        except OSError:
+                            pass
+                        return {"error": "mp4_too_large", "source_mp4_url": mp4_url, "max_bytes": max_bytes}
+                    f.write(chunk)
+                    now = time.monotonic()
+                    if received - last_log_bytes >= 50_000_000 or now - last_log_t >= 30.0:
+                        logger.info(
+                            "meetings_mp4_download_progress url={} downloaded_mb={:.1f}",
+                            short_mp4,
+                            received / 1_000_000,
+                        )
+                        last_log_t = now
+                        last_log_bytes = received
+            logger.info(
+                "meetings_mp4_download_done url={} total_mb={:.2f}",
+                short_mp4,
+                received / 1_000_000,
+            )
+    except Exception as exc:
+        try:
+            mp4_path.unlink(missing_ok=True)
+        except OSError:
+            pass
+        return {"error": f"mp4_download:{exc!r}", "source_mp4_url": mp4_url}
+
+    def _ffmpeg() -> None:
+        subprocess.run(
+            [
+                "ffmpeg",
+                "-nostdin",
+                "-hide_banner",
+                "-loglevel",
+                "error",
+                "-y",
+                "-i",
+                str(mp4_path),
+                "-vn",
+                "-c:a",
+                "libopus",
+                "-b:a",
+                "96k",
+                str(opus_path),
+            ],
+            check=True,
+            capture_output=True,
+            timeout=7200,
+        )
+
+    rel_video = "_video_assets"
+    mp4_rel = f"{rel_video}/{mp4_path.name}"
+    opus_rel: Optional[str] = None
+
+    if want_opus:
+        logger.info("meetings_mp4_transcode_start path={}", mp4_path.name)
+        try:
+            await asyncio.to_thread(_ffmpeg)
+            opus_rel = f"{rel_video}/{opus_path.name}"
+            logger.info("meetings_mp4_transcode_done opus_path={}", opus_path.name)
+        except subprocess.CalledProcessError as exc:
+            try:
+                opus_path.unlink(missing_ok=True)
+            except OSError:
+                pass
+            return {
+                "error": f"ffmpeg_failed:{(exc.stderr or b'').decode('utf-8', errors='replace')[:500]}",
+                "source_mp4_url": mp4_url,
+                "mp4_relative_path": mp4_rel,
+            }
+        except Exception as exc:
+            try:
+                opus_path.unlink(missing_ok=True)
+            except OSError:
+                pass
+            return {"error": f"ffmpeg:{exc!r}", "source_mp4_url": mp4_url, "mp4_relative_path": mp4_rel}
+
+    sidecar = {
+        "schema_version": 1,
+        "source_mp4_url": mp4_url,
+        "discovered_on_page_url": discovered_on,
+        "found_via": found_via,
+        "platform": platform,
+        "http_referer_used": ref,
+        "opus_relative_path": opus_rel,
+        "mp4_relative_path": mp4_rel,
+        "transcoded_to_opus": bool(opus_rel),
+    }
+    try:
+        meta_path.write_text(json.dumps(sidecar, indent=2), encoding="utf-8")
+    except OSError as exc:
+        return {"error": f"asset_json_write:{exc}", "source_mp4_url": mp4_url}
+
+    mp4_kept_rel: Optional[str] = mp4_rel
+    if want_opus and _meetings_delete_mp4_after_opus() and opus_rel:
+        try:
+            mp4_path.unlink(missing_ok=True)
+            sidecar["mp4_relative_path"] = None
+            sidecar["mp4_deleted_after_opus"] = True
+            meta_path.write_text(json.dumps(sidecar, indent=2), encoding="utf-8")
+        except OSError:
+            pass
+        mp4_kept_rel = None
+
+    return {
+        "source_mp4_url": mp4_url,
+        "discovered_on": discovered_on,
+        "found_via": found_via,
+        "platform": platform,
+        "opus_relative_path": opus_rel,
+        "mp4_relative_path": mp4_kept_rel,
+        "sidecar_relative_path": f"{rel_video}/{meta_path.name}",
+    }
+
+
 @dataclass
 class MeetingsScrapeResult:
     jurisdiction_id: str
@@ -717,12 +963,7 @@ class MeetingsScrapeResult:
     homepage_url_candidates: List[str] = field(default_factory=list)
     homepage_probe_failures: List[str] = field(default_factory=list)
     extracted_contacts: Dict[str, Any] = field(default_factory=dict)
-
-
-_DEFAULT_UA = (
-    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) "
-    "Chrome/120.0.0.0 Safari/537.36 OpenNavigatorMeetings/1.0"
-)
+    video_assets: List[Dict[str, Any]] = field(default_factory=list)
 
 
 def _http_verify() -> bool:
@@ -886,6 +1127,8 @@ class ComprehensiveDiscoveryPipelineMeetings:
     """
     Scrape meeting-related pages and download PDFs under the resolved output root (default
     ``data/cache/scraped_meetings`` in the repo unless ``SCRAPED_MEETINGS_ROOT`` / ``--output-root``).
+
+    ``max_pdfs`` caps PDF GETs only; HTML crawl continues until ``max_pages``.
     """
 
     def __init__(
@@ -894,11 +1137,18 @@ class ComprehensiveDiscoveryPipelineMeetings:
         output_root: Optional[Path] = None,
         max_pages: int = 40,
         max_pdfs: int = 80,
+        max_video_downloads: int = 24,
         timeout_s: float = 120.0,
     ):
         self.output_root = Path(output_root) if output_root else default_scraped_meetings_root()
         self.max_pages = max_pages
         self.max_pdfs = max_pdfs
+        try:
+            self.max_video_downloads = max(
+                0, int(os.getenv("SCRAPED_MEETINGS_MAX_VIDEO_DOWNLOADS") or max_video_downloads)
+            )
+        except (TypeError, ValueError):
+            self.max_video_downloads = max(0, int(max_video_downloads))
         self.timeout_s = timeout_s
 
     def _jurisdiction_base_dir(self, state: str, jurisdiction_id: str) -> Path:
@@ -1317,6 +1567,9 @@ class ComprehensiveDiscoveryPipelineMeetings:
             # (avoids ``/?s=webcast`` noise on Revize, Granicus, static sites, …).
             if _meetings_home_url_is_actionable(hp):
                 _enqueue(hp)
+                emb = suiteonemedia_embed_index_url(hp)
+                if emb:
+                    _enqueue(emb)
                 try:
                     sitemap_dir = base_dir / "_sitemaps"
                     sm_res = await discover_meeting_candidate_urls_from_sitemaps(
@@ -1370,12 +1623,23 @@ class ComprehensiveDiscoveryPipelineMeetings:
             else:
                 result.errors.append("no_usable_homepage_url")
 
-            while to_visit and len(visited) < self.max_pages and pdf_count < self.max_pdfs:
+            while to_visit and len(visited) < self.max_pages:
                 url = to_visit.pop(0)
                 fetch_url = _strip_fragment(url)
                 if fetch_url in visited:
                     continue
                 visited.add(fetch_url)
+                logger.info(
+                    "meetings_crawl_fetch_start jurisdiction={} visited={}/{} queue_remaining={} "
+                    "pdfs_saved={}/{} url={}",
+                    jid,
+                    len(visited),
+                    self.max_pages,
+                    len(to_visit),
+                    pdf_count,
+                    self.max_pdfs,
+                    _meetings_log_url(fetch_url),
+                )
 
                 html, fetch_err, response_url = await self._fetch_page(client, fetch_url)
                 page_ctx = (response_url or "").strip() or fetch_url
@@ -1389,7 +1653,16 @@ class ComprehensiveDiscoveryPipelineMeetings:
                     else:
                         result.errors.append(f"no_html:{fetch_url}:{fetch_err or 'unknown'}")
                     continue
+                logger.info(
+                    "meetings_crawl_fetch_ok jurisdiction={} url={} html_chars={}",
+                    jid,
+                    _meetings_log_url(page_ctx),
+                    len(html or ""),
+                )
                 result.pages_fetched.append(fetch_url)
+                emb_idx = suiteonemedia_embed_index_url(page_ctx)
+                if emb_idx:
+                    _enqueue(emb_idx)
 
                 if _meetings_contact_extract_enabled():
                     chunk = extract_contacts_from_page(html, page_ctx)
@@ -1455,51 +1728,50 @@ class ComprehensiveDiscoveryPipelineMeetings:
                     except Exception as exc:
                         result.errors.append(f"snapshot_readable_build:{txt_path}:{exc!r}")
 
-                for pdf_raw, anchor_text in self._extract_pdf_pairs(html, page_ctx, hp):
-                    pdf = _normalize_http_url_path_encoding(pdf_raw)
-                    if pdf in pdfs_seen:
-                        continue
-                    pdfs_seen.add(pdf)
-                    y = _infer_year(pdf, year_now)
-                    dest_dir = self._target_dir(st, jid, y)
-                    dest_dir.mkdir(parents=True, exist_ok=True)
-                    fname = Path(urlparse(pdf).path).name or "document.pdf"
-                    fname = _fs_safe_segment(fname)
-                    dest = dest_dir / fname
-                    try:
-                        pr, why = await _fetch_pdf_with_referers(
-                            client, pdf, referers=[page_ctx, fetch_url, hp]
-                        )
-                        if pr is not None:
-                            dest.write_bytes(pr.content)
-                            result.pdfs_downloaded.append(
-                                {
-                                    "url": pdf,
-                                    "path": str(dest),
-                                    # Calendar year as string in JSON (avoids int in manifests / TS strict JSON).
-                                    "year": str(y),
-                                    "bytes": len(pr.content),
-                                    "doc_type": classify_document(pdf, anchor_text),
-                                    "anchor_text": (anchor_text or "")[:500],
-                                }
+                if pdf_count < self.max_pdfs:
+                    for pdf_raw, anchor_text in self._extract_pdf_pairs(html, page_ctx, hp):
+                        pdf = _normalize_http_url_path_encoding(pdf_raw)
+                        if pdf in pdfs_seen:
+                            continue
+                        pdfs_seen.add(pdf)
+                        y = _infer_year(pdf, year_now)
+                        dest_dir = self._target_dir(st, jid, y)
+                        dest_dir.mkdir(parents=True, exist_ok=True)
+                        fname = _meeting_pdf_disk_filename(pdf)
+                        dest = dest_dir / fname
+                        try:
+                            pr, why = await _fetch_pdf_with_referers(
+                                client, pdf, referers=[page_ctx, fetch_url, hp]
                             )
-                            pdf_count += 1
-                        else:
-                            result.errors.append(f"pdf_rejected_not_pdf:{pdf}:{why}")
-                            try:
-                                if dest.is_file():
-                                    peek = dest.read_bytes()[:5]
-                                    if not peek.startswith(b"%PDF"):
-                                        dest.unlink(missing_ok=True)
-                            except OSError:
-                                pass
-                    except OSError as exc:
-                        result.errors.append(f"pdf_write:{pdf}:{exc}")
-                    except Exception as exc:
-                        result.errors.append(f"pdf_dl:{pdf}:{exc}")
+                            if pr is not None:
+                                dest.write_bytes(pr.content)
+                                result.pdfs_downloaded.append(
+                                    {
+                                        "url": pdf,
+                                        "path": str(dest),
+                                        "year": str(y),
+                                        "bytes": len(pr.content),
+                                        "doc_type": classify_document(pdf, anchor_text),
+                                        "anchor_text": (anchor_text or "")[:500],
+                                    }
+                                )
+                                pdf_count += 1
+                            else:
+                                result.errors.append(f"pdf_rejected_not_pdf:{pdf}:{why}")
+                                try:
+                                    if dest.is_file():
+                                        peek = dest.read_bytes()[:5]
+                                        if not peek.startswith(b"%PDF"):
+                                            dest.unlink(missing_ok=True)
+                                except OSError:
+                                    pass
+                        except OSError as exc:
+                            result.errors.append(f"pdf_write:{pdf}:{exc}")
+                        except Exception as exc:
+                            result.errors.append(f"pdf_dl:{pdf}:{exc}")
 
-                    if pdf_count >= self.max_pdfs:
-                        break
+                        if pdf_count >= self.max_pdfs:
+                            break
 
                 # Enqueue linked meeting pages (not yet visited)
                 for link in self._extract_nav_urls(html, page_ctx, hp):
@@ -1510,6 +1782,65 @@ class ComprehensiveDiscoveryPipelineMeetings:
                         _enqueue(link)
 
             await self._enrich_youtube_rows(client, result.youtube, homepage_url=hp)
+
+            if _meetings_download_suiteone_video_assets() and self.max_video_downloads > 0:
+                n_elig = sum(
+                    1
+                    for row in result.other_video_streams
+                    if _is_suiteone_style_mp4_asset(
+                        (row.get("url") or "").strip(),
+                        platform=(row.get("platform") or "").strip(),
+                        found_via=(row.get("found_via") or "").strip(),
+                    )
+                )
+                logger.info(
+                    "meetings_video_phase_start jurisdiction={} other_streams_total={} "
+                    "suiteone_mp4_candidates={} max_downloads={}",
+                    jid,
+                    len(result.other_video_streams),
+                    n_elig,
+                    self.max_video_downloads,
+                )
+                video_dir = base_dir / "_video_assets"
+                seen_mp4: Set[str] = set()
+                max_b = _meetings_max_video_mp4_bytes()
+                for row in result.other_video_streams:
+                    if len(result.video_assets) >= self.max_video_downloads:
+                        break
+                    u = (row.get("url") or "").strip()
+                    if not u or u in seen_mp4:
+                        continue
+                    seen_mp4.add(u)
+                    plat = (row.get("platform") or "").strip()
+                    fv = (row.get("found_via") or "").strip()
+                    if not _is_suiteone_style_mp4_asset(u, platform=plat, found_via=fv):
+                        continue
+                    discovered_on = (row.get("discovered_on") or hp or "").strip()
+                    rec = await _download_suiteone_mp4_transcode_opus(
+                        client,
+                        mp4_url=u,
+                        referer=discovered_on,
+                        discovered_on=discovered_on,
+                        found_via=fv,
+                        platform=plat,
+                        video_dir=video_dir,
+                        max_bytes=max_b,
+                    )
+                    result.video_assets.append(rec)
+                    if rec.get("error"):
+                        result.errors.append(f"video_asset:{u[:120]}:{rec['error']}")
+                    else:
+                        logger.info(
+                            "meetings_video_asset_saved jurisdiction={} mp4_rel={} opus={}",
+                            jid,
+                            rec.get("mp4_relative_path") or "",
+                            bool(rec.get("opus_relative_path")),
+                        )
+                logger.info(
+                    "meetings_video_phase_done jurisdiction={} video_assets_rows={}",
+                    jid,
+                    len(result.video_assets),
+                )
 
             result.extracted_contacts = (
                 merge_contact_manifest_rows(contact_page_rows)
@@ -1535,6 +1866,7 @@ class ComprehensiveDiscoveryPipelineMeetings:
                         "pdfs": result.pdfs_downloaded,
                         "youtube": result.youtube,
                         "other_video_streams": result.other_video_streams,
+                        "video_assets": result.video_assets,
                         "errors": result.errors,
                         "extracted_contacts": result.extracted_contacts,
                         "sitemaps": sitemap_summary,
@@ -1583,12 +1915,13 @@ async def run_meetings_batch(
                     skip_output_root_mkdir=True,
                 )
                 logger.info(
-                    "meetings_done jurisdiction={} pages={} pdfs={} youtube={} other_streams={} err_lines={}",
+                    "meetings_done jurisdiction={} pages={} pdfs={} youtube={} other_streams={} video_assets={} err_lines={}",
                     jid,
                     len(r.pages_fetched),
                     len(r.pdfs_downloaded),
                     len(r.youtube),
                     len(r.other_video_streams),
+                    len(r.video_assets),
                     len(r.errors),
                 )
                 return r
@@ -1794,12 +2127,13 @@ def main() -> None:
             root_disp = str(pipe.output_root.expanduser())
         sample_pdf = out.pdfs_downloaded[0]["path"] if out.pdfs_downloaded else "(no pdfs)"
         logger.success(
-            "Done {} — pages={}, pdfs={}, youtube={}, other_streams={}, errors={} | root={} | sample_pdf={}",
+            "Done {} — pages={}, pdfs={}, youtube={}, other_streams={}, video_assets={}, errors={} | root={} | sample_pdf={}",
             out.jurisdiction_id,
             len(out.pages_fetched),
             len(out.pdfs_downloaded),
             len(out.youtube),
             len(out.other_video_streams),
+            len(out.video_assets),
             len(out.errors),
             root_disp,
             sample_pdf,

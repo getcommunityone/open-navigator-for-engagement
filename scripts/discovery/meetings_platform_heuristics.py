@@ -51,6 +51,7 @@ _OFFSITE_SUFFIXES: Tuple[str, ...] = (
     "streamlinevillage.com",
     "boarddocs.com",
     "municodemeetings.com",
+    "suiteonemedia.com",
 )
 
 # Offsite HTML we may follow (narrow path hints to avoid crawling the whole vendor CDN).
@@ -141,10 +142,29 @@ def _path_query_lower(url: str) -> str:
         return (url or "").lower()
 
 
-def is_vendor_meeting_page_url(url: str) -> bool:
-    if not is_trusted_offsite(url):
+def is_suiteone_document_download_url(url: str) -> bool:
+    """SuiteOne agenda/minutes endpoints without a ``.pdf`` suffix (response is still PDF)."""
+    try:
+        host = urlparse(url).netloc.lower().split(":")[0].rstrip(".")
+    except Exception:
+        return False
+    if not host or not _host_matches_suffix(host, "suiteonemedia.com"):
         return False
     pq = _path_query_lower(url)
+    return "/event/getagendafile/" in pq or "/event/getminutesfile/" in pq
+
+
+def is_vendor_meeting_page_url(url: str) -> bool:
+    pq = _path_query_lower(url)
+    try:
+        host = urlparse(url).netloc.lower().split(":")[0].rstrip(".")
+    except Exception:
+        host = ""
+    if host and _host_matches_suffix(host, "suiteonemedia.com"):
+        if "/web/home.aspx" in pq or "/event/" in pq or "embed=1" in pq:
+            return True
+    if not is_trusted_offsite(url):
+        return False
     return any(snippet in pq for snippet in _VENDOR_PATH_SNIPPETS)
 
 
@@ -797,6 +817,12 @@ _OTHER_VIDEO_STREAM_PATTERNS: Tuple[Tuple[str, re.Pattern], ...] = (
 def _classify_other_stream_platform(full: str) -> Optional[str]:
     if _looks_like_youtube_url(full):
         return None
+    if re.search(
+        r"\.amazonaws\.com/suiteone\.(?:[^/]+/videofiles/.+\.mp4|[^/]+\.videofiles/[^/]+\.mp4)",
+        full,
+        re.I,
+    ):
+        return "suiteone_s3_mp4"
     if re.search(r"\.m3u8(?:\?|#|$)", full, re.I):
         return "hls_manifest"
     for platform, pat in _OTHER_VIDEO_STREAM_PATTERNS:
@@ -875,6 +901,21 @@ def extract_other_video_stream_refs(html: str, page_url: str) -> List[Dict[str, 
         if href:
             consider(href, "link_href")
 
+    blob = html or ""
+    for label, pat in (
+        ("jwplayer_var_src", r"var\s+src\s*=\s*['\"](https?://[^'\"]+\.mp4[^'\"]*)['\"]"),
+        (
+            "jwplayer_sources_file",
+            r"sources\s*:\s*\[\s*\{\s*file\s*:\s*['\"](https?://[^'\"]+\.mp4[^'\"]*)['\"]",
+        ),
+        (
+            "suiteone_s3_mp4_literal",
+            r"(https://s3\.amazonaws\.com/suiteone[^\\s\"'<>]+\.mp4(?:\?[^\\s\"'<>]*)?)",
+        ),
+    ):
+        for m in re.finditer(pat, blob, re.I):
+            consider(m.group(1), label)
+
     return out
 
 
@@ -923,6 +964,7 @@ def extract_meeting_urls(
 
     - Same-site links matching ``generic_hint`` on URL or anchor text, or PDFs.
     - Trusted offsite PDFs (Legistar / Granicus / …).
+    - SuiteOne ``/event/GetAgendaFile/…`` and ``/event/GetMinutesFile/…`` (no ``.pdf`` suffix).
     - Trusted offsite vendor meeting pages (narrow path heuristics).
     """
     soup = _beautifulsoup_meetings(html, page_url=page_url, log_label="extract_meeting_urls")
@@ -952,6 +994,14 @@ def extract_meeting_urls(
         text = (a.get_text() or "").strip()
         text_l = text.lower()
         if PDF_EXT.search(full):
+            if (
+                is_same_site(full, homepage)
+                or is_same_site(full, page_url)
+                or is_trusted_offsite(full)
+            ):
+                add_pdf(full, text)
+            continue
+        if is_suiteone_document_download_url(full):
             if (
                 is_same_site(full, homepage)
                 or is_same_site(full, page_url)
