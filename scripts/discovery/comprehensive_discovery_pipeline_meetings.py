@@ -30,11 +30,17 @@ Goals:
   ``youtube``, ``video``, ``webcast``, ``live``) are only sent to templates we recognized.
 - Collect **other** meeting / stream platforms (Vimeo, Facebook video, Twitch, Granicus, Zoom,
   Teams, Google Meet, Wistia, Brightcove, ``.m3u8`` HLS, …) into ``other_video_streams`` in the
-  manifest. **SuiteOne** (``*.suiteonemedia.com``): enqueue ``/?embed=1`` and ``/event/?id=…`` from
-  city sites; JWPlayer / S3 ``suiteone.*.videofiles`` ``.mp4`` URLs are recorded and, by default,
-  downloaded under ``_video_assets/``, transcoded to **Opus**, and the MP4 removed after success.
-  Env: ``SCRAPED_MEETINGS_DOWNLOAD_SUITEONE_MP4``, ``SCRAPED_MEETINGS_DOWNLOAD_MP4_OPUS``,
-  ``SCRAPED_MEETINGS_DELETE_MP4_AFTER_OPUS``, ``SCRAPED_MEETINGS_MAX_VIDEO_DOWNLOADS``.
+  manifest (URLs are recorded; most are not downloaded). **SuiteOne** (``*.suiteonemedia.com``): after any SuiteOne
+  HTML fetch, the crawl also enqueues ``https://{host}/?embed=1`` (full meeting index), not only when
+  the jurisdiction homepage is on that host. JWPlayer inline ``var src`` and S3
+  ``suiteone.*.videofiles`` ``.mp4`` URLs are captured into ``other_video_streams``. **SuiteOne video
+  defaults:** MP4s are downloaded (``SCRAPED_MEETINGS_DOWNLOAD_SUITEONE_MP4`` defaults on; set
+  ``false`` to skip). **Opus:** ``SCRAPED_MEETINGS_DOWNLOAD_MP4_OPUS`` defaults **on**; when ``ffmpeg``
+  is on ``PATH``, audio is transcoded to **Opus**. **Cleanup:** ``SCRAPED_MEETINGS_DELETE_MP4_AFTER_OPUS``
+  defaults **on** so the MP4 is removed after a successful Opus encode (set ``false`` to keep both).
+  ``*.asset.json`` records source URL and paths. **Agendas:** SuiteOne
+  ``/event/GetAgendaFile/…`` and ``/event/GetMinutesFile/…`` links (no ``.pdf`` suffix) are downloaded
+  as PDFs like other meeting documents.
 - **PDF URLs** written to ``_manifest.json`` ``pdfs[].url`` are **path-normalized** (e.g. spaces
   percent-encoded as ``%20``) so manifests and downstream loaders match RFC-safe URLs used for GET.
 
@@ -262,10 +268,6 @@ def _strip_fragment(url: str) -> str:
     return urlunparse((p.scheme, p.netloc, p.path, p.params, p.query, ""))
 
 
-def _fs_safe_segment(s: str) -> str:
-    return re.sub(r'[^A-Za-z0-9._-]+', "_", (s or "").strip())[:200] or "unknown"
-
-
 def _meetings_log_url(url: str, *, maxlen: int = 160) -> str:
     u = (url or "").strip()
     if len(u) <= maxlen:
@@ -273,7 +275,12 @@ def _meetings_log_url(url: str, *, maxlen: int = 160) -> str:
     return u[: max(0, maxlen - 3)] + "..."
 
 
+def _fs_safe_segment(s: str) -> str:
+    return re.sub(r'[^A-Za-z0-9._-]+', "_", (s or "").strip())[:200] or "unknown"
+
+
 def _meeting_pdf_disk_filename(pdf_url: str) -> str:
+    """Stable unique on-disk name; SuiteOne agendas often use ``/Agenda`` without a ``.pdf`` suffix."""
     p = urlparse(pdf_url)
     tail = Path(p.path).name or "document.pdf"
     if tail.lower().endswith(".pdf"):
@@ -727,14 +734,13 @@ def _is_homepage_document_url(fetch_url: str, homepage: str) -> bool:
     return (a.path or "").rstrip("/") == (b.path or "").rstrip("/")
 
 
-_DEFAULT_UA = (
-    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) "
-    "Chrome/120.0.0.0 Safari/537.36 OpenNavigatorMeetings/1.0"
-)
-
-
 def suiteonemedia_embed_index_url(page_or_home_url: str) -> Optional[str]:
-    """SuiteOne full meeting index at ``/?embed=1`` (same host as any SuiteOne page URL)."""
+    """
+    SuiteOne exposes a full meeting index at ``/?embed=1`` on the same host.
+
+    Call with any ``https://*.suiteonemedia.com/…`` URL (homepage, ``Web/Home.aspx``, ``/event/…``)
+    so embed is enqueued even when the crawl started from a city marketing domain.
+    """
     if not (page_or_home_url or "").strip():
         return None
     u = _strip_fragment(page_or_home_url.strip())
@@ -751,16 +757,23 @@ def suiteonemedia_embed_index_url(page_or_home_url: str) -> Optional[str]:
 
 
 def _meetings_download_mp4_opus_enabled() -> bool:
+    """
+    Default **on** when unset. Opus is only produced when ``ffmpeg`` exists at runtime.
+
+    Set ``SCRAPED_MEETINGS_DOWNLOAD_MP4_OPUS=false`` to keep MP4-only (no transcoding).
+    """
     v = (os.getenv("SCRAPED_MEETINGS_DOWNLOAD_MP4_OPUS") or "1").strip().lower()
     return v not in ("0", "false", "no", "off")
 
 
 def _meetings_save_suiteone_mp4_to_disk() -> bool:
+    """Default ``true`` (unset). Set ``SCRAPED_MEETINGS_DOWNLOAD_SUITEONE_MP4=false`` to skip MP4 GETs."""
     v = (os.getenv("SCRAPED_MEETINGS_DOWNLOAD_SUITEONE_MP4") or "1").strip().lower()
     return v not in ("0", "false", "no", "off")
 
 
 def _meetings_download_suiteone_video_assets() -> bool:
+    """Save SuiteOne MP4s and/or transcode to Opus depending on env (see module docstring)."""
     return _meetings_save_suiteone_mp4_to_disk() or _meetings_download_mp4_opus_enabled()
 
 
@@ -772,11 +785,13 @@ def _meetings_max_video_mp4_bytes() -> int:
 
 
 def _meetings_delete_mp4_after_opus() -> bool:
+    """Default **on** when unset. Set ``SCRAPED_MEETINGS_DELETE_MP4_AFTER_OPUS=false`` to retain MP4 after Opus."""
     v = (os.getenv("SCRAPED_MEETINGS_DELETE_MP4_AFTER_OPUS") or "1").strip().lower()
     return v not in ("0", "false", "no", "off")
 
 
 def _is_suiteone_style_mp4_asset(url: str, platform: str = "", found_via: str = "") -> bool:
+    """Narrow MP4 download/transcode to SuiteOne S3/JWPlayer-surfaced URLs (not arbitrary ``.mp4``)."""
     low = (url or "").lower()
     if not low.startswith("http") or ".mp4" not in low:
         return False
@@ -801,6 +816,14 @@ async def _download_suiteone_mp4_transcode_opus(
     video_dir: Path,
     max_bytes: int,
 ) -> Dict[str, Any]:
+    """
+    Download one SuiteOne-style MP4 under ``_video_assets/``.
+
+    Opus transcoding runs when :func:`_meetings_download_mp4_opus_enabled` (default on) **and**
+    ``ffmpeg`` is on ``PATH``. Otherwise the MP4 is kept and ``*.asset.json`` records
+    ``opus_relative_path`` as ``null``. When Opus succeeds and :func:`_meetings_delete_mp4_after_opus`
+    is true (default), the MP4 file is removed after encoding.
+    """
     want_opus = _meetings_download_mp4_opus_enabled() and bool(shutil.which("ffmpeg"))
     video_dir.mkdir(parents=True, exist_ok=True)
     h = hashlib.sha256(mp4_url.encode("utf-8", errors="replace")).hexdigest()[:20]
@@ -814,16 +837,21 @@ async def _download_suiteone_mp4_transcode_opus(
     try:
         async with client.stream("GET", mp4_url, headers=headers, follow_redirects=True) as resp:
             if resp.status_code != 200:
-                return {"error": f"mp4_http_{resp.status_code}", "source_mp4_url": mp4_url}
+                return {
+                    "error": f"mp4_http_{resp.status_code}",
+                    "source_mp4_url": mp4_url,
+                }
             clen = (resp.headers.get("content-length") or "").strip()
             logger.info(
-                "meetings_mp4_download_start url={} content_length={} max_mb={:.0f}",
+                "meetings_mp4_download_start url={} content_length={} max_mb={:.0f} referer={}",
                 short_mp4,
                 clen or "?",
                 max_bytes / 1_000_000,
+                _meetings_log_url(ref, maxlen=100),
             )
             ct = (resp.headers.get("content-type") or "").lower()
             if "video" not in ct and "octet-stream" not in ct and "binary" not in ct:
+                # Many CDNs still use application/octet-stream for MP4.
                 if "mp4" not in mp4_url.lower():
                     return {"error": f"mp4_unexpected_content_type:{ct}", "source_mp4_url": mp4_url}
             received = 0
@@ -924,7 +952,7 @@ async def _download_suiteone_mp4_transcode_opus(
     try:
         meta_path.write_text(json.dumps(sidecar, indent=2), encoding="utf-8")
     except OSError as exc:
-        return {"error": f"asset_json_write:{exc}", "source_mp4_url": mp4_url}
+        return {"error": f"asset_json_write:{exc}", "source_mp4_url": mp4_url, "opus_relative_path": opus_rel}
 
     mp4_kept_rel: Optional[str] = mp4_rel
     if want_opus and _meetings_delete_mp4_after_opus() and opus_rel:
@@ -959,11 +987,17 @@ class MeetingsScrapeResult:
     pdfs_downloaded: List[Dict[str, Any]] = field(default_factory=list)
     youtube: List[Dict[str, Any]] = field(default_factory=list)
     other_video_streams: List[Dict[str, Any]] = field(default_factory=list)
+    video_assets: List[Dict[str, Any]] = field(default_factory=list)
     errors: List[str] = field(default_factory=list)
     homepage_url_candidates: List[str] = field(default_factory=list)
     homepage_probe_failures: List[str] = field(default_factory=list)
     extracted_contacts: Dict[str, Any] = field(default_factory=dict)
-    video_assets: List[Dict[str, Any]] = field(default_factory=list)
+
+
+_DEFAULT_UA = (
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) "
+    "Chrome/120.0.0.0 Safari/537.36 OpenNavigatorMeetings/1.0"
+)
 
 
 def _http_verify() -> bool:
@@ -1128,7 +1162,8 @@ class ComprehensiveDiscoveryPipelineMeetings:
     Scrape meeting-related pages and download PDFs under the resolved output root (default
     ``data/cache/scraped_meetings`` in the repo unless ``SCRAPED_MEETINGS_ROOT`` / ``--output-root``).
 
-    ``max_pdfs`` caps PDF GETs only; HTML crawl continues until ``max_pages``.
+    ``max_pdfs`` caps **PDF GETs only**; the HTML crawl (navigation, ``other_video_streams``, …)
+    continues until ``max_pages`` so vendor pages with MP4s are still reached after many agendas.
     """
 
     def __init__(
@@ -1144,9 +1179,7 @@ class ComprehensiveDiscoveryPipelineMeetings:
         self.max_pages = max_pages
         self.max_pdfs = max_pdfs
         try:
-            self.max_video_downloads = max(
-                0, int(os.getenv("SCRAPED_MEETINGS_MAX_VIDEO_DOWNLOADS") or max_video_downloads)
-            )
+            self.max_video_downloads = max(0, int(os.getenv("SCRAPED_MEETINGS_MAX_VIDEO_DOWNLOADS") or max_video_downloads))
         except (TypeError, ValueError):
             self.max_video_downloads = max(0, int(max_video_downloads))
         self.timeout_s = timeout_s
@@ -1640,7 +1673,6 @@ class ComprehensiveDiscoveryPipelineMeetings:
                     self.max_pdfs,
                     _meetings_log_url(fetch_url),
                 )
-
                 html, fetch_err, response_url = await self._fetch_page(client, fetch_url)
                 page_ctx = (response_url or "").strip() or fetch_url
                 if not html:
@@ -1749,6 +1781,7 @@ class ComprehensiveDiscoveryPipelineMeetings:
                                     {
                                         "url": pdf,
                                         "path": str(dest),
+                                        # Calendar year as string in JSON (avoids int in manifests / TS strict JSON).
                                         "year": str(y),
                                         "bytes": len(pr.content),
                                         "doc_type": classify_document(pdf, anchor_text),
@@ -1934,6 +1967,7 @@ async def run_meetings_batch(
                     root_dir=pipe.output_root,
                     youtube=[],
                     other_video_streams=[],
+                    video_assets=[],
                     errors=[f"exception:{exc!r}"],
                     extracted_contacts={},
                 )

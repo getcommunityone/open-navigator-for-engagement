@@ -92,3 +92,26 @@ export function stateNameToCode(stateName: string): string {
   console.warn(`State name "${stateName}" not found in mapping`)
   return stateName
 }
+
+function looksLikeUspsCode(s: string): boolean {
+  return s.length === 2 && /^[A-Z]{2}$/i.test(s)
+}
+
+/**
+ * Derive a USPS state code from a Nominatim `address` object (US results).
+ * Handles full state names and `ISO3166-2-lvl4` like `US-NE`.
+ */
+export function nominatimUsStateCode(addr: Record<string, unknown> | null | undefined): string | null {
+  if (!addr || typeof addr !== 'object') return null
+  const rec = addr as Record<string, string | undefined>
+  if (rec.state) {
+    const c = stateNameToCode(rec.state)
+    if (looksLikeUspsCode(c)) return c.toUpperCase()
+  }
+  const iso = rec['ISO3166-2-lvl4']
+  if (iso && typeof iso === 'string' && iso.toUpperCase().startsWith('US-') && iso.length >= 5) {
+    const c = iso.slice(3).toUpperCase()
+    if (looksLikeUspsCode(c)) return c
+  }
+  return null
+}

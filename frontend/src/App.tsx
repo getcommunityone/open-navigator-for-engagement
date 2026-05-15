@@ -18,6 +18,7 @@ import Explore from './pages/Explore'
 import Events from './pages/Events'
 import Services from './pages/Services'
 import Developers from './pages/Developers'
+import JurisdictionMappingQualityPage from './pages/JurisdictionMappingQualityPage'
 import Hackathons from './pages/Hackathons'
 import OpenSource from './pages/OpenSource'
 import AdvocacyTopics from './pages/AdvocacyTopics'
@@ -110,6 +111,7 @@ function App() {
         <Route path="data-explorer" element={<DataExplorerLayout />}>
           <Route index element={<DataExplorerMapDefaultRedirect />} />
           <Route path="scorecard" element={<DataExplorerScorecardPage />} />
+          <Route path="jurisdiction-quality" element={<JurisdictionMappingQualityPage />} />
           <Route path="map/us/:vintage/:metric" element={<CensusMapPage />} />
           <Route path="map/state/:stateFips/:vintage/:metric" element={<CensusMapPage />} />
           <Route path="map/place/:stateFips/:vintage/:metric" element={<CensusMapPage />} />
@@ -126,6 +128,10 @@ function App() {
         <Route path="events" element={<Events />} />
         <Route path="services" element={<Services />} />
         <Route path="developers" element={<Developers />} />
+        <Route
+          path="build/jurisdiction-mapping-quality"
+          element={<Navigate to="/data-explorer/jurisdiction-quality" replace />}
+        />
         <Route path="hackathons" element={<Hackathons />} />
         <Route path="opensource" element={<OpenSource />} />
         <Route path="advocacy-topics" element={<AdvocacyTopics />} />

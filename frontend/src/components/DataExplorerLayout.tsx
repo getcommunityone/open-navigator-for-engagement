@@ -1,5 +1,9 @@
 import { NavLink, Outlet, useLocation } from 'react-router-dom'
-import { DATA_EXPLORER_MAP_BASE, DATA_EXPLORER_SCORECARD } from '../utils/dataExplorerPaths'
+import {
+  DATA_EXPLORER_JURISDICTION_QUALITY,
+  DATA_EXPLORER_MAP_BASE,
+  DATA_EXPLORER_SCORECARD,
+} from '../utils/dataExplorerPaths'
 
 function tabCls({ isActive }: { isActive: boolean }) {
   return [
@@ -11,9 +15,11 @@ function tabCls({ isActive }: { isActive: boolean }) {
 }
 
 export default function DataExplorerLayout() {
-  const { pathname } = useLocation()
+  const { pathname, hash } = useLocation()
   const onMap = pathname.startsWith(`${DATA_EXPLORER_MAP_BASE}/`) || pathname === DATA_EXPLORER_MAP_BASE
   const onScorecard = pathname.startsWith(DATA_EXPLORER_SCORECARD)
+  const onJurisdictionQuality =
+    pathname === DATA_EXPLORER_JURISDICTION_QUALITY || pathname.startsWith(`${DATA_EXPLORER_JURISDICTION_QUALITY}/`)
 
   return (
     <div className="flex min-h-[calc(100dvh-4.25rem)] flex-1 flex-col bg-slate-200">
@@ -21,22 +27,55 @@ export default function DataExplorerLayout() {
         <header className="shrink-0 rounded-lg border border-slate-300/80 bg-white px-3 py-2 shadow-sm sm:px-4 sm:py-2">
           <h1 className="text-lg font-semibold leading-tight text-slate-900 sm:text-xl">Data explorer</h1>
           <p className="mt-0.5 max-w-[52rem] text-[11px] leading-snug text-slate-600 sm:text-xs">
-            American Community Survey (ACS) 5-year estimates — browse a map or read a location scorecard with multi-year
-            trends and benchmarks.
+            American Community Survey (ACS) 5-year estimates — map and scorecard — plus jurisdiction website mapping
+            coverage (counties, cities, school districts) from directory seeds and dbt marts.
           </p>
-          <nav className="mt-1.5 flex flex-wrap gap-0.5" aria-label="Data explorer views">
-            <NavLink to={DATA_EXPLORER_MAP_BASE} className={tabCls}>
+          <nav
+            className="mt-1.5 -mx-1 flex gap-1 overflow-x-auto px-1 pb-0.5 sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0"
+            aria-label="Data explorer views"
+            style={{ WebkitOverflowScrolling: 'touch' }}
+          >
+            <NavLink
+              to={DATA_EXPLORER_MAP_BASE}
+              className={({ isActive }) => `${tabCls({ isActive })} shrink-0 whitespace-nowrap`}
+            >
               Map view
             </NavLink>
-            <NavLink to={DATA_EXPLORER_SCORECARD} className={tabCls}>
+            <NavLink
+              to={DATA_EXPLORER_SCORECARD}
+              className={({ isActive }) => `${tabCls({ isActive })} shrink-0 whitespace-nowrap`}
+            >
               Scorecard
             </NavLink>
+            <NavLink
+              to={DATA_EXPLORER_JURISDICTION_QUALITY}
+              end
+              className={({ isActive }) =>
+                `${tabCls({
+                  isActive: isActive && pathname === DATA_EXPLORER_JURISDICTION_QUALITY && hash !== '#state',
+                })} shrink-0 whitespace-nowrap`
+              }
+            >
+              Data quality
+            </NavLink>
+            <NavLink
+              to={`${DATA_EXPLORER_JURISDICTION_QUALITY}#state`}
+              className={() =>
+                `${tabCls({
+                  isActive: pathname === DATA_EXPLORER_JURISDICTION_QUALITY && hash === '#state',
+                })} shrink-0 whitespace-nowrap`
+              }
+            >
+              By state
+            </NavLink>
           </nav>
-          {(onMap || onScorecard) && (
+          {(onMap || onScorecard || onJurisdictionQuality) && (
             <p className="mt-0.5 text-[10px] leading-snug text-slate-600 sm:text-[11px]" aria-live="polite">
               {onMap
                 ? 'Choropleth and drill-downs match the static census map bundle.'
-                : 'Trend windows follow the vintage list in the published bundle (1-, 3-, and 5-year lookbacks when years exist).'}
+                : onScorecard
+                  ? 'Trend windows follow the vintage list in the published bundle (1-, 3-, and 5-year lookbacks when years exist).'
+                  : 'Mapping rates use NACo, USCM, NCES directory, GSA .gov, and overrides — snapshot from `frontend/public/data/jurisdiction_mapping_quality.json`.'}
             </p>
           )}
         </header>

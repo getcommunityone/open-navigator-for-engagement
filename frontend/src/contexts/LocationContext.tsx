@@ -2,11 +2,15 @@ import React, { createContext, useContext, useState, useEffect, ReactNode } from
 import { useAuth } from './AuthContext'
 import { stateNameToCode } from '../utils/stateMapping'
 
-interface LocationData {
+export type LocationGranularity = 'state' | 'county'
+
+export interface LocationData {
   address?: string
   state: string
   county: string
   city: string
+  /** When Nominatim returns a state or county boundary without a city/town. */
+  granularity?: LocationGranularity
   school_board?: string
   latitude?: number
   longitude?: number
@@ -75,7 +79,12 @@ export const LocationProvider: React.FC<{ children: ReactNode }> = ({ children }
     localStorage.removeItem('user_location')
   }
 
-  const hasLocation = location !== null && !!location.state && !!location.city
+  const hasLocation =
+    location !== null &&
+    !!location.state &&
+    (!!location.city ||
+      location.granularity === 'state' ||
+      (location.granularity === 'county' && !!location.county))
 
   return (
     <LocationContext.Provider value={{ location, setLocation, clearLocation, hasLocation }}>

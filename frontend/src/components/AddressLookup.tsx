@@ -1,16 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { MapPinIcon, MagnifyingGlassIcon } from '@heroicons/react/24/outline'
-import { stateNameToCode } from '../utils/stateMapping'
-import { useLocation as useLocationContext } from '../contexts/LocationContext'
-
-interface LocationData {
-  address: string
-  state: string
-  county: string
-  city: string
-  latitude?: number
-  longitude?: number
-}
+import { nominatimUsStateCode } from '../utils/stateMapping'
+import { useLocation as useLocationContext, type LocationData, type LocationGranularity } from '../contexts/LocationContext'
 
 interface AddressLookupProps {
   onLocationFound: (location: LocationData) => void
@@ -177,28 +168,63 @@ export default function AddressLookup({ onLocationFound, initialAddress = '', co
   }
 
   const processResult = (result: any) => {
-    const addr = result.address
+    const addr = result.address || {}
 
-    // Convert state name to 2-letter code
-    const stateName = addr.state || ''
-    const stateCode = stateNameToCode(stateName)
-    console.log(`🗺️ [AddressLookup] State conversion: "${stateName}" → "${stateCode}"`)
+    const stateCode = nominatimUsStateCode(addr) || ''
+    console.log(`🗺️ [AddressLookup] State from Nominatim address: → "${stateCode}"`)
+
+    const county = (addr.county as string) || ''
+    const city =
+      (addr.city as string) ||
+      (addr.town as string) ||
+      (addr.village as string) ||
+      (addr.municipality as string) ||
+      (addr.hamlet as string) ||
+      (addr.suburb as string) ||
+      ''
+
+    const hasMunicipality = Boolean(city.trim())
+    const hasCounty = Boolean(county.trim())
+
+    let granularity: LocationGranularity | undefined
+    if (!hasMunicipality) {
+      if (hasCounty) {
+        granularity = 'county'
+      } else if (
+        result.addresstype === 'state' ||
+        (stateCode &&
+          result.class === 'boundary' &&
+          result.type === 'administrative' &&
+          result.addresstype !== 'county')
+      ) {
+        granularity = 'state'
+      }
+    }
+
+    if (!stateCode) {
+      setError('Could not determine a U.S. state from this place. Try a street address or pick a suggestion from the list.')
+      setSuggestions([])
+      setShowSuggestions(false)
+      return
+    }
+
+    if (!hasMunicipality && !granularity) {
+      setError(
+        'Could not determine a city or county from this place. Try a street address, city name, or pick a more specific suggestion.'
+      )
+      setSuggestions([])
+      setShowSuggestions(false)
+      return
+    }
 
     const locationData: LocationData = {
       address: result.display_name,
       state: stateCode,
-      county: addr.county || '',
-      city: addr.city || addr.town || addr.village || addr.municipality || '',
+      county,
+      city,
+      granularity,
       latitude: parseFloat(result.lat),
       longitude: parseFloat(result.lon),
-    }
-
-    // Validate we got the essential data
-    if (!locationData.state || !locationData.city) {
-      setError('Could not determine city and state from this address. Please be more specific.')
-      setSuggestions([])
-      setShowSuggestions(false)
-      return
     }
 
     console.log('📍 [AddressLookup] Location found:', locationData)
@@ -632,7 +658,10 @@ export default function AddressLookup({ onLocationFound, initialAddress = '', co
               <div className="flex flex-wrap gap-3">
                 <button
                   onClick={() => {
-                    window.location.href = `/documents?state=${foundLocation.state}&city=${foundLocation.city}`
+                    const cityQ = foundLocation.city
+                      ? `&city=${encodeURIComponent(foundLocation.city)}`
+                      : ''
+                    window.location.href = `/documents?state=${foundLocation.state}${cityQ}`
                   }}
                   className="flex-1 min-w-[200px] px-4 py-2 bg-white border-2 border-primary-600 text-primary-700 rounded-lg hover:bg-primary-50 transition-colors font-medium"
                 >
@@ -640,7 +669,10 @@ export default function AddressLookup({ onLocationFound, initialAddress = '', co
                 </button>
                 <button
                   onClick={() => {
-                    window.location.href = `/nonprofits?state=${foundLocation.state}&city=${foundLocation.city}`
+                    const cityQ = foundLocation.city
+                      ? `&city=${encodeURIComponent(foundLocation.city)}`
+                      : ''
+                    window.location.href = `/nonprofits?state=${foundLocation.state}${cityQ}`
                   }}
                   className="flex-1 min-w-[200px] px-4 py-2 bg-white border-2 border-primary-600 text-primary-700 rounded-lg hover:bg-primary-50 transition-colors font-medium"
                 >

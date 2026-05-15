@@ -389,7 +389,7 @@ export default function HomeModern() {
 
             {/* Desktop CTA Button */}
             <Link
-              to="/explore"
+              to="/data-explorer/map/us/2024/median_household_income"
               className="hidden md:block px-6 py-2.5 rounded-lg text-white font-semibold hover:shadow-lg transition-all"
               style={{ backgroundColor: '#354F52' }}
             >
@@ -432,7 +432,7 @@ export default function HomeModern() {
                 </button>
               ))}
               <Link
-                to="/explore"
+                to="/data-explorer/map/us/2024/median_household_income"
                 className="block w-full text-center px-4 py-3 mt-2 rounded-lg text-white font-semibold"
                 style={{ backgroundColor: '#354F52' }}
                 onClick={() => setMobileMenuOpen(false)}

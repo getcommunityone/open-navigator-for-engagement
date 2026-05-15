@@ -15,6 +15,7 @@ import {
   UserGroupIcon,
   ChatBubbleBottomCenterTextIcon,
   CheckCircleIcon,
+  MapIcon,
   MapPinIcon,
   PlusIcon,
   BellIcon,
@@ -40,7 +41,8 @@ import {
 import { useAuth } from '../contexts/AuthContext'
 import AddressLookup from '../components/AddressLookup'
 import HeroLicensePlateBadge from '../components/HeroLicensePlateBadge'
-import { useLocation as useLocationContext } from '../contexts/LocationContext'
+import { useLocation as useLocationContext, type LocationData } from '../contexts/LocationContext'
+import { formatCommunityPlaceLine } from '../utils/communityLocationLabel'
 
 // Trending topic/cause interface
 interface TrendingCause {
@@ -206,7 +208,7 @@ export default function Home() {
 
   // Fetch stats based on location AND search scope
   const { data: locationStats } = useQuery({
-    queryKey: ['location-stats', location?.state, location?.city, location?.county, searchScope],
+    queryKey: ['location-stats', location?.state, location?.city, location?.county, location?.granularity, searchScope],
     queryFn: async () => {
       if (!location) return null;
       
@@ -319,18 +321,6 @@ export default function Home() {
     const row = HERO_SEARCH_TAB_DEFS.find((t) => t.id === heroSearchTab)
     return row?.types ?? HERO_SEARCH_TAB_DEFS[0].types
   }, [heroSearchTab])
-
-  const heroLocationLabel = React.useMemo(() => {
-    if (!location?.state) return 'Set your location'
-    if (searchScope === 'national') return 'United States'
-    if (searchScope === 'county' && location.county) return `${location.county}, ${location.state}`
-    if (searchScope === 'city' && location.city) return `${location.city}, ${location.state}`
-    if (searchScope === 'state') return location.state
-    if (searchScope === 'community' && location.city) return `${location.city} (schools), ${location.state}`
-    if (location.county) return `${location.county}, ${location.state}`
-    if (location.city) return `${location.city}, ${location.state}`
-    return location.state
-  }, [location, searchScope])
 
   // Generate dynamic subtitle based on location and search scope
   const getSubtitle = () => {
@@ -541,21 +531,27 @@ export default function Home() {
     navigate(searchUrl)
   }
 
-  const handleAddressFound = (locationData: any) => {
-    console.log('📍 [Home] Address found, updating location:', locationData);
+  const handleAddressFound = (locationData: LocationData) => {
+    console.log('📍 [Home] Address found, updating location:', locationData)
     setLocation({
       address: locationData.address,
       state: locationData.state,
       county: locationData.county,
       city: locationData.city,
+      granularity: locationData.granularity,
       latitude: locationData.latitude,
       longitude: locationData.longitude,
     })
-    console.log('📍 [Home] Location updated, should trigger stats refetch');
-    console.log('📍 [Home] New subtitle will be:', `Track Decisions in ${locationData.city}, ${locationData.state}`);
-    
+    if (locationData.granularity === 'state') {
+      setSearchScope('state')
+    } else if (locationData.granularity === 'county') {
+      setSearchScope('county')
+    } else {
+      setSearchScope('city')
+    }
+
     // Close the modal and return to search tab
-    setSelectedTab(0);
+    setSelectedTab(0)
   }
 
   // Debug: Log when location changes
@@ -847,7 +843,7 @@ export default function Home() {
               )}
               <div className="flex items-center gap-2">
                 <Link
-                  to="/explore"
+                  to="/data-explorer/map/us/2024/median_household_income"
                   className="h-[42px] px-6 rounded-lg text-white font-semibold hover:shadow-lg transition-all flex items-center"
                   style={{ backgroundColor: '#354F52' }}
                 >
@@ -1089,10 +1085,14 @@ export default function Home() {
                           id="hero-search-primary"
                           className="overflow-visible rounded-xl border-[1.5px] border-[#d4e8e8] bg-white shadow-[0_4px_20px_rgba(26,107,107,0.08)]"
                         >
-                          <form onSubmit={handleSearch} className="flex flex-col lg:flex-row lg:items-stretch divide-y lg:divide-y-0 lg:divide-x divide-[#d4e8e8]">
+                          <form onSubmit={handleSearch} className="flex flex-col lg:flex-row lg:items-start divide-y lg:divide-y-0 lg:divide-x divide-[#d4e8e8]">
                             <div className="relative min-w-0 flex-1 p-3 md:py-3.5 md:pl-4 md:pr-2">
-                              <label htmlFor="hero-search-input" className="sr-only">
-                                Search query
+                              <label
+                                htmlFor="hero-search-input"
+                                className="mb-1 block text-left text-[13px] font-medium leading-snug text-[#6b8a8a] sm:text-sm"
+                                style={{ fontFamily: "'DM Sans', sans-serif" }}
+                              >
+                                Search for topics, people, organizations, or causes
                               </label>
                               <div className="flex min-h-[2.75rem] items-center gap-2.5 rounded-[10px] border border-[#c5dede] bg-[#f7fafb] px-3 py-1.5 shadow-[inset_0_1px_2px_rgba(15,43,43,0.06)] transition-colors focus-within:border-[#1a6b6b] focus-within:bg-white focus-within:shadow-[inset_0_0_0_1px_rgba(26,107,107,0.2),0_1px_3px_rgba(26,107,107,0.08)]">
                                 <MagnifyingGlassIcon
@@ -1403,42 +1403,65 @@ export default function Home() {
                                 )}
                               </div>
                               
-                            <div className="flex flex-col justify-center gap-2 border-[#d4e8e8] px-3 py-3 md:px-4 lg:w-[min(20rem,32vw)] lg:shrink-0 lg:border-t-0">
-                              <button
-                                type="button"
-                                onClick={() => setSelectedTab(1)}
-                                className="flex w-full items-center gap-2 rounded-lg py-1 text-left transition-colors hover:bg-[#f2fafa]"
-                                aria-label={`Location: ${heroLocationLabel}. Change location.`}
+                            <div className="flex flex-col justify-start border-[#d4e8e8] p-3 md:px-4 md:py-3.5 lg:w-[min(20rem,32vw)] lg:shrink-0 lg:border-t-0">
+                              <label
+                                htmlFor="hero-search-scope"
+                                className="mb-1 block text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-[#6b8a8a]"
+                                style={{ fontFamily: "'DM Sans', sans-serif" }}
                               >
-                                <MapPinIcon className="mt-0.5 h-5 w-5 shrink-0 text-red-600" aria-hidden />
-                                <span
-                                  className="break-words text-sm font-medium leading-snug text-[#2c4a4a] md:text-[15px]"
-                                  style={{ fontFamily: "'DM Sans', sans-serif" }}
-                                >
-                                  {heroLocationLabel}
-                                </span>
-                              </button>
+                                Search In
+                              </label>
                               {location ? (
-                                <select
-                                  value={searchScope}
-                                  onChange={(e) => setSearchScope(e.target.value)}
-                                  className="w-full rounded-md border border-[#d4e8e8] bg-[#f7fafa] px-2 py-1.5 text-xs text-[#6b8a8a] focus:outline-none focus:ring-1 focus:ring-[#1a6b6b]"
-                                  aria-label="Search area"
+                                <div className="relative pb-6">
+                                  <div className="flex min-h-[2.75rem] items-center rounded-[10px] border border-[#c5dede] bg-white px-3 py-1.5 shadow-[inset_0_1px_2px_rgba(15,43,43,0.04)] transition-colors focus-within:border-[#1a6b6b] focus-within:shadow-[inset_0_0_0_1px_rgba(26,107,107,0.2),0_1px_3px_rgba(26,107,107,0.08)]">
+                                  <select
+                                    id="hero-search-scope"
+                                    value={searchScope}
+                                    onChange={(e) => setSearchScope(e.target.value)}
+                                    className="min-h-[2.25rem] w-full min-w-0 flex-1 cursor-pointer border-0 bg-transparent p-0 text-[15px] font-medium leading-snug text-[#0f2b2b] focus:outline-none focus:ring-0"
+                                    aria-label="Search area"
+                                    style={{ fontFamily: "'DM Sans', sans-serif" }}
+                                  >
+                                    <option value="city" disabled={!location.city}>
+                                      My City ({location.city || '—'})
+                                    </option>
+                                    <option value="county" disabled={!location.county}>
+                                      My County ({location.county || '—'})
+                                    </option>
+                                    <option value="community" disabled={!location.city}>
+                                      School Board ({location.city || '—'})
+                                    </option>
+                                    <option value="state">My State ({location.state})</option>
+                                    <option value="national">National</option>
+                                  </select>
+                                  </div>
+                                  <button
+                                    type="button"
+                                    onClick={() => setSelectedTab(1)}
+                                    className="absolute bottom-0 left-0 right-0 flex items-center justify-center gap-1 text-xs font-medium text-[#1a6b6b] underline decoration-[#1a6b6b]/40 underline-offset-2 hover:text-[#0f2b2b] hover:decoration-[#0f2b2b]/40"
+                                    style={{ fontFamily: "'DM Sans', sans-serif" }}
+                                  >
+                                    <MapIcon className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                                    Change Location
+                                  </button>
+                                </div>
+                              ) : (
+                                <button
+                                  type="button"
+                                  onClick={() => setSelectedTab(1)}
+                                  className="flex min-h-[2.75rem] w-full items-center justify-center gap-2 rounded-[10px] border border-[#1a6b6b] bg-[#e8f4f4] px-3 py-1.5 text-sm font-semibold text-[#0f2b2b] transition-colors hover:bg-[#d9ecec]"
                                   style={{ fontFamily: "'DM Sans', sans-serif" }}
                                 >
-                                  <option value="city">City: {location.city}</option>
-                                  <option value="county">County: {location.county || 'County'}</option>
-                                  <option value="community">School: {location.city}</option>
-                                  <option value="state">State: {location.state}</option>
-                                  <option value="national">National</option>
-                                </select>
-                              ) : null}
+                                  <MapIcon className="h-4 w-4 shrink-0" aria-hidden />
+                                  Set Your Location First
+                                </button>
+                              )}
                             </div>
 
-                            <div className="flex items-stretch p-1.5 lg:min-w-[8.5rem] lg:flex-initial lg:justify-center lg:p-2">
+                            <div className="flex items-center justify-center p-3 lg:min-w-[8.5rem] lg:flex-initial lg:self-center lg:p-2">
                               <button
                                 type="submit"
-                                className="w-full rounded-lg bg-[#1a6b6b] px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[#2a8585] lg:self-stretch lg:py-0 lg:leading-none"
+                                className="w-full min-h-[2.75rem] rounded-lg bg-[#1a6b6b] px-5 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[#2a8585] lg:w-auto lg:min-w-[7.5rem]"
                                 style={{ fontFamily: "'DM Sans', sans-serif" }}
                               >
                                 Search
@@ -1519,8 +1542,8 @@ export default function Home() {
               </button>
             </div>
             <p className="text-gray-600 mb-6">
-              {location 
-                ? `Currently set to ${location.city}, ${location.state}. Enter a new address to change your community.`
+              {location
+                ? `Currently set to ${formatCommunityPlaceLine(location)}. Enter a new address to change your community.`
                 : 'Enter your address to find local organizations, city councils, county boards, school districts, and charities near you'}
             </p>
             <AddressLookup onLocationFound={handleAddressFound} />
@@ -1535,7 +1558,8 @@ export default function Home() {
                       Location Set Successfully!
                     </h3>
                     <p className="text-green-700">
-                      You're all set for <strong>{location.city}, {location.state}</strong>. You can now search for topics in your community.
+                      You&apos;re all set for <strong>{formatCommunityPlaceLine(location)}</strong>. You can now
+                      search for topics in your community.
                     </p>
                   </div>
                 </div>
@@ -1671,7 +1695,7 @@ export default function Home() {
           <h2 className="text-3xl font-bold text-center mb-12 text-white">Explore the Platform</h2>
           
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            <Link to="/analytics" className="group">
+            <Link to="/data-explorer/map/us/2024/median_household_income" className="group">
               <div className="bg-white border-2 border-gray-200 rounded-lg p-6 hover:border-primary-500 transition-colors">
                 <ChartBarIcon className="h-10 w-10 text-primary-600 mb-4" />
                 <h3 className="text-xl font-semibold mb-2" style={{ color: '#354F52' }}>Data & Trends</h3>

@@ -20,13 +20,18 @@ export function defaultLicensePlatePublicSrc(): string | null {
   return `${WIKICOMMONS_PLATES_PUBLIC_BASE}/${m.default_plate}`
 }
 
-/** Latest Commons plate for the USPS code when present in the cache; otherwise default sample plate. */
+/**
+ * Latest Commons plate for the USPS code when present in the synced cache.
+ * When the user picks a state we have no `{USPS}_latest.*` for, return null so the hero
+ * uses the CSS plate (correct state / city text) instead of reusing the default Alabama photo
+ * (same URL for many states → looks like the plate “never updates”).
+ */
 export function licensePlatePublicSrc(stateCode: string | null | undefined): string | null {
   const fallback = defaultLicensePlatePublicSrc()
-  if (!fallback) return null
-  if (stateCode && stateCode.length === 2) {
-    const fn = m.by_usps[stateCode.toUpperCase()]
-    if (fn) return `${WIKICOMMONS_PLATES_PUBLIC_BASE}/${fn}`
+  if (!stateCode || stateCode.length !== 2) {
+    return fallback ?? null
   }
-  return fallback
+  const fn = m.by_usps[stateCode.toUpperCase()]
+  if (fn) return `${WIKICOMMONS_PLATES_PUBLIC_BASE}/${fn}`
+  return null
 }
