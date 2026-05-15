@@ -38,6 +38,9 @@ Goals:
   ``false`` to skip). **Opus:** ``SCRAPED_MEETINGS_DOWNLOAD_MP4_OPUS`` defaults **on**; when ``ffmpeg``
   is on ``PATH``, audio is transcoded to **Opus**. **Cleanup:** ``SCRAPED_MEETINGS_DELETE_MP4_AFTER_OPUS``
   defaults **on** so the MP4 is removed after a successful Opus encode (set ``false`` to keep both).
+  A sweep at the start/end of the video phase also deletes stale ``*_suiteone.mp4`` files when a
+  sibling Opus exists (from earlier runs). Opus must be at least ``SCRAPED_MEETINGS_MIN_OPUS_BYTES_FOR_MP4_DELETE``
+  bytes (default 102400) before the MP4 is removed.
   ``*.asset.json`` records source URL and paths. **Agendas:** SuiteOne
   ``/event/GetAgendaFile/…`` and ``/event/GetMinutesFile/…`` links (no ``.pdf`` suffix) are downloaded
   as PDFs like other meeting documents.
@@ -790,6 +793,72 @@ def _meetings_delete_mp4_after_opus() -> bool:
     return v not in ("0", "false", "no", "off")
 
 
+def _meetings_min_opus_bytes_for_mp4_cleanup() -> int:
+    """Do not delete the source MP4 unless the Opus file is at least this large (avoids partial encodes)."""
+    try:
+        return max(1_024, int(os.getenv("SCRAPED_MEETINGS_MIN_OPUS_BYTES_FOR_MP4_DELETE") or "102400"))
+    except ValueError:
+        return 102_400
+
+
+def _update_suiteone_asset_json_after_mp4_delete(meta_path: Path) -> None:
+    """Clear ``mp4_relative_path`` in the sidecar after the MP4 file was removed."""
+    if not meta_path.is_file():
+        return
+    try:
+        sidecar = json.loads(meta_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return
+    if not isinstance(sidecar, dict):
+        return
+    sidecar["mp4_relative_path"] = None
+    sidecar["mp4_deleted_after_opus"] = True
+    try:
+        meta_path.write_text(json.dumps(sidecar, indent=2), encoding="utf-8")
+    except OSError as exc:
+        logger.warning("meetings_mp4_sidecar_update_failed path={} err={}", meta_path.name, exc)
+
+
+def _prune_suiteone_mp4s_with_opus(video_dir: Path) -> int:
+    """
+    Remove ``*_suiteone.mp4`` files when a sibling ``*_suiteone.opus`` exists (current + prior runs).
+
+    Used after each transcode and once at the end of the video phase. Honors
+    ``SCRAPED_MEETINGS_DELETE_MP4_AFTER_OPUS`` (default on).
+    """
+    if not _meetings_delete_mp4_after_opus():
+        return 0
+    if not video_dir.is_dir():
+        return 0
+    min_opus = _meetings_min_opus_bytes_for_mp4_cleanup()
+    removed = 0
+    for mp4_path in sorted(video_dir.glob("*_suiteone.mp4")):
+        stem = mp4_path.stem
+        opus_path = video_dir / f"{stem}.opus"
+        meta_path = video_dir / f"{stem}.asset.json"
+        if not opus_path.is_file():
+            continue
+        try:
+            if opus_path.stat().st_size < min_opus:
+                logger.warning(
+                    "meetings_mp4_prune_skip_small_opus mp4={} opus_bytes={} min={}",
+                    mp4_path.name,
+                    opus_path.stat().st_size,
+                    min_opus,
+                )
+                continue
+        except OSError:
+            continue
+        try:
+            mp4_path.unlink(missing_ok=True)
+            _update_suiteone_asset_json_after_mp4_delete(meta_path)
+            removed += 1
+            logger.info("meetings_mp4_pruned path={} opus={}", mp4_path.name, opus_path.name)
+        except OSError as exc:
+            logger.warning("meetings_mp4_prune_failed path={} err={}", mp4_path.name, exc)
+    return removed
+
+
 def _is_suiteone_style_mp4_asset(url: str, platform: str = "", found_via: str = "") -> bool:
     """Narrow MP4 download/transcode to SuiteOne S3/JWPlayer-surfaced URLs (not arbitrary ``.mp4``)."""
     low = (url or "").lower()
@@ -956,14 +1025,32 @@ async def _download_suiteone_mp4_transcode_opus(
 
     mp4_kept_rel: Optional[str] = mp4_rel
     if want_opus and _meetings_delete_mp4_after_opus() and opus_rel:
-        try:
-            mp4_path.unlink(missing_ok=True)
-            sidecar["mp4_relative_path"] = None
-            sidecar["mp4_deleted_after_opus"] = True
-            meta_path.write_text(json.dumps(sidecar, indent=2), encoding="utf-8")
-        except OSError:
-            pass
-        mp4_kept_rel = None
+        if opus_path.is_file() and opus_path.stat().st_size >= _meetings_min_opus_bytes_for_mp4_cleanup():
+            try:
+                mp4_path.unlink(missing_ok=True)
+                sidecar["mp4_relative_path"] = None
+                sidecar["mp4_deleted_after_opus"] = True
+                meta_path.write_text(json.dumps(sidecar, indent=2), encoding="utf-8")
+                mp4_kept_rel = None
+                logger.info("meetings_mp4_deleted_after_opus mp4={} opus={}", mp4_path.name, opus_path.name)
+            except OSError as exc:
+                logger.warning(
+                    "meetings_mp4_delete_after_opus_failed mp4={} err={} "
+                    "(set SCRAPED_MEETINGS_DELETE_MP4_AFTER_OPUS=false to keep MP4s)",
+                    mp4_path.name,
+                    exc,
+                )
+        else:
+            logger.warning(
+                "meetings_mp4_kept_after_opus opus_too_small mp4={} opus_bytes={}",
+                mp4_path.name,
+                opus_path.stat().st_size if opus_path.is_file() else 0,
+            )
+    elif want_opus and opus_rel and not _meetings_delete_mp4_after_opus():
+        logger.debug(
+            "meetings_mp4_retained SCRAPED_MEETINGS_DELETE_MP4_AFTER_OPUS=false mp4={}",
+            mp4_path.name,
+        )
 
     return {
         "source_mp4_url": mp4_url,
@@ -1178,10 +1265,7 @@ class ComprehensiveDiscoveryPipelineMeetings:
         self.output_root = Path(output_root) if output_root else default_scraped_meetings_root()
         self.max_pages = max_pages
         self.max_pdfs = max_pdfs
-        try:
-            self.max_video_downloads = max(0, int(os.getenv("SCRAPED_MEETINGS_MAX_VIDEO_DOWNLOADS") or max_video_downloads))
-        except (TypeError, ValueError):
-            self.max_video_downloads = max(0, int(max_video_downloads))
+        self.max_video_downloads = max(0, int(max_video_downloads))
         self.timeout_s = timeout_s
 
     def _jurisdiction_base_dir(self, state: str, jurisdiction_id: str) -> Path:
@@ -1835,6 +1919,19 @@ class ComprehensiveDiscoveryPipelineMeetings:
                     self.max_video_downloads,
                 )
                 video_dir = base_dir / "_video_assets"
+                delete_mp4 = _meetings_delete_mp4_after_opus()
+                logger.info(
+                    "meetings_video_phase_config delete_mp4_after_opus={} ffmpeg={}",
+                    delete_mp4,
+                    bool(shutil.which("ffmpeg")),
+                )
+                n_pruned = _prune_suiteone_mp4s_with_opus(video_dir)
+                if n_pruned:
+                    logger.info(
+                        "meetings_video_phase_pruned_stale_mp4 jurisdiction={} removed={}",
+                        jid,
+                        n_pruned,
+                    )
                 seen_mp4: Set[str] = set()
                 max_b = _meetings_max_video_mp4_bytes()
                 for row in result.other_video_streams:
@@ -1869,10 +1966,12 @@ class ComprehensiveDiscoveryPipelineMeetings:
                             rec.get("mp4_relative_path") or "",
                             bool(rec.get("opus_relative_path")),
                         )
+                n_pruned_after = _prune_suiteone_mp4s_with_opus(video_dir)
                 logger.info(
-                    "meetings_video_phase_done jurisdiction={} video_assets_rows={}",
+                    "meetings_video_phase_done jurisdiction={} video_assets_rows={} mp4_pruned_after={}",
                     jid,
                     len(result.video_assets),
+                    n_pruned_after,
                 )
 
             result.extracted_contacts = (
@@ -2033,7 +2132,16 @@ def main() -> None:
     )
     parser.add_argument("--output-root", type=str, default="", help="Override SCRAPED_MEETINGS_ROOT")
     parser.add_argument("--max-pages", type=int, default=40)
-    parser.add_argument("--max-pdfs", type=int, default=80)
+    parser.add_argument("--max-pdfs", type=int, default=80, help="Max PDF downloads per jurisdiction")
+    parser.add_argument(
+        "--max-video-downloads",
+        type=int,
+        default=None,
+        help=(
+            "Max SuiteOne-style MP4 downloads (and Opus transcodes) per jurisdiction "
+            "(default 24, or SCRAPED_MEETINGS_MAX_VIDEO_DOWNLOADS from env)."
+        ),
+    )
     parser.add_argument(
         "--timeout",
         type=float,
@@ -2138,11 +2246,27 @@ def main() -> None:
     )
 
     root = Path(args.output_root).expanduser() if args.output_root else None
+    if args.max_video_downloads is not None:
+        max_video_downloads = max(0, int(args.max_video_downloads))
+    else:
+        try:
+            max_video_downloads = max(
+                0, int(os.getenv("SCRAPED_MEETINGS_MAX_VIDEO_DOWNLOADS") or "24")
+            )
+        except (TypeError, ValueError):
+            max_video_downloads = 24
     pipe = ComprehensiveDiscoveryPipelineMeetings(
         output_root=root,
         max_pages=args.max_pages,
         max_pdfs=args.max_pdfs,
+        max_video_downloads=max_video_downloads,
         timeout_s=args.timeout,
+    )
+    logger.info(
+        "meetings_limits max_pages={} max_pdfs={} max_video_downloads={}",
+        pipe.max_pages,
+        pipe.max_pdfs,
+        pipe.max_video_downloads,
     )
 
     if len(jobs) == 1:

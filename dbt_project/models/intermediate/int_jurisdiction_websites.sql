@@ -17,20 +17,23 @@
 -- After adding denylist rows: ``dbt seed --select jurisdiction_website_domain_denylist`` then rebuild this model.
 -- Curated URLs: ``jurisdiction_website_url_overrides`` seed (``dbt seed --select jurisdiction_website_url_overrides``).
 -- Python scrapers rank **override** (this seed) first, then **NACO over GSA** for ``county_*`` ids so
--- curated and NACo county URLs beat questionable GSA .gov registry matches.
+-- curated and NACo county URLs beat questionable GSA .gov registry matches. **League** municipal
+-- directories union in after USCM with the same name-normalization join pattern.
 
 -- Map GSA domain_type labels to the jurisdiction_type values used in int_jurisdictions
 -- so the name-match join targets the right pool of records.
 WITH domain_type_map AS (
     SELECT * FROM (VALUES
-        ('City',             'municipality'),
-        ('Town',             'municipality'),
-        ('Village',          'municipality'),
-        ('Borough',          'municipality'),
-        ('County',           'county'),
-        ('State',            'state'),
-        ('School District',  'school_district'),
-        ('Township',         'township')
+        ('City',                          'municipality'),
+        ('Town',                          'municipality'),
+        ('Village',                       'municipality'),
+        ('Borough',                       'municipality'),
+        ('County',                        'county'),
+        ('State',                         'state'),
+        ('State or territory',            'state'),
+        ('State or territory - Election', 'state'),
+        ('School District',               'school_district'),
+        ('Township',                      'township')
     ) AS t(gsa_domain_type, jur_type)
 ),
 
@@ -95,14 +98,15 @@ gsa_cleaned AS (
             "REGEXP_REPLACE(TRIM(agency), ',\\s*[A-Za-z]{2}\\s*$', '', 'gi')"
         ) }} AS agency_normalized,
 
-        CASE UPPER(TRIM(domain_type))
-            WHEN 'CITY'           THEN 'municipality'
-            WHEN 'COUNTY'         THEN 'county'
-            WHEN 'STATE'          THEN 'state'
-            WHEN 'SCHOOL DISTRICT' THEN 'school_district'
-            WHEN 'TOWNSHIP'       THEN 'township'
-            WHEN 'INTERSTATE'     THEN 'interstate'
-            WHEN 'INDEPENDENT INTRASTATE' THEN 'special_district'
+        CASE
+            WHEN UPPER(TRIM(domain_type)) IN ('STATE', 'STATE OR TERRITORY', 'STATE OR TERRITORY - ELECTION')
+                THEN 'state'
+            WHEN UPPER(TRIM(domain_type)) = 'CITY' THEN 'municipality'
+            WHEN UPPER(TRIM(domain_type)) = 'COUNTY' THEN 'county'
+            WHEN UPPER(TRIM(domain_type)) = 'SCHOOL DISTRICT' THEN 'school_district'
+            WHEN UPPER(TRIM(domain_type)) = 'TOWNSHIP' THEN 'township'
+            WHEN UPPER(TRIM(domain_type)) = 'INTERSTATE' THEN 'interstate'
+            WHEN UPPER(TRIM(domain_type)) = 'INDEPENDENT INTRASTATE' THEN 'special_district'
             ELSE 'other'
         END                                             AS jurisdiction_category,
 
@@ -258,6 +262,99 @@ uscm_rows AS (
     WHERE u.match_rank = 1
 ),
 
+league_base AS (
+    SELECT
+        TRIM(l.row_key)                                   AS row_key,
+        UPPER(TRIM(l.state_code))                         AS state_code,
+        TRIM(l.municipality_name)                         AS municipality_name,
+        TRIM(l.website)                                   AS raw_website,
+        NULLIF(TRIM(l.jurisdiction_id), '')               AS bronze_jurisdiction_id,
+        NULLIF(TRIM(l.census_geoid), '')                  AS bronze_census_geoid,
+        l.ingestion_date,
+        {{ normalize_jurisdiction_label_for_match('l.municipality_name') }} AS name_normalized
+    FROM {{ source('bronze', 'bronze_jurisdictions_municipalities_league') }} l
+    WHERE l.website IS NOT NULL
+      AND TRIM(l.website) != ''
+),
+
+league_ranked AS (
+    SELECT
+        l.row_key,
+        l.state_code,
+        l.municipality_name,
+        l.raw_website,
+        l.ingestion_date,
+        l.name_normalized,
+        -- Bronze league loader copies ``m-{ST}-{geoid}`` ids from bronze municipalities; warehouse
+        -- jurisdictions use ``municipality_{geoid}``. Only trust bronze_jurisdiction_id when it
+        -- exists in int_jurisdictions, otherwise fall back to GEOID / normalized name match.
+        COALESCE(j_bronze.jurisdiction_id, jg.jurisdiction_id, j.jurisdiction_id) AS jurisdiction_id,
+        ROW_NUMBER() OVER (
+            PARTITION BY l.row_key
+            ORDER BY (COALESCE(j_bronze.jurisdiction_id, jg.jurisdiction_id, j.jurisdiction_id) IS NOT NULL) DESC,
+                     j_bronze.jurisdiction_id IS NOT NULL DESC,
+                     jg.jurisdiction_id IS NOT NULL DESC,
+                     j.area_sq_miles DESC NULLS LAST
+        ) AS match_rank
+    FROM league_base l
+    LEFT JOIN {{ ref('int_jurisdictions') }} j_bronze
+        ON NULLIF(TRIM(l.bronze_jurisdiction_id), '') = j_bronze.jurisdiction_id
+       AND j_bronze.jurisdiction_type = 'municipality'
+    LEFT JOIN {{ ref('int_jurisdictions') }} jg
+        ON j_bronze.jurisdiction_id IS NULL
+       AND l.bronze_census_geoid IS NOT NULL
+       AND jg.jurisdiction_type = 'municipality'
+       AND jg.state_code = l.state_code
+       AND jg.geoid = l.bronze_census_geoid
+    LEFT JOIN {{ ref('int_jurisdictions') }} j
+        ON j_bronze.jurisdiction_id IS NULL
+       AND jg.jurisdiction_id IS NULL
+       AND j.jurisdiction_type = 'municipality'
+       AND j.state_code = l.state_code
+       AND l.name_normalized IS NOT NULL
+       AND (
+           ({{ normalize_jurisdiction_label_for_match('j.name') }}) = l.name_normalized
+           OR ({{ normalize_jurisdiction_label_for_match('j.name') }}) LIKE l.name_normalized || ' %'
+           OR l.name_normalized LIKE ({{ normalize_jurisdiction_label_for_match('j.name') }}) || ' %'
+       )
+),
+
+league_rows AS (
+    SELECT
+        'league|' || l.row_key                                  AS website_record_key,
+        'league'                                                AS website_source,
+        NULLIF(
+          LOWER(TRIM((regexp_match(
+            regexp_replace(
+              CASE
+                WHEN l.raw_website ~* '^https?://' THEN TRIM(l.raw_website)
+                ELSE 'https://' || TRIM(REGEXP_REPLACE(l.raw_website, '^/+', ''))
+              END,
+              '^https?://', '', 'i'
+            ),
+            '^([^/?#]+)'
+          ))[1])),
+          ''
+        )                                                       AS domain_name,
+        CASE
+            WHEN l.raw_website ~* '^https?://' THEN TRIM(l.raw_website)
+            ELSE 'https://' || TRIM(REGEXP_REPLACE(l.raw_website, '^/+', ''))
+        END                                                     AS website_url,
+        CAST(NULL AS VARCHAR)                                   AS domain_type,
+        'municipality'                                          AS jurisdiction_category,
+        l.municipality_name                                     AS organization_name,
+        CAST(NULL AS VARCHAR)                                   AS agency,
+        l.municipality_name                                     AS city,
+        l.state_code,
+        s.state_name                                            AS state,
+        l.jurisdiction_id,
+        l.ingestion_date,
+        CURRENT_TIMESTAMP                                       AS transformed_at
+    FROM league_ranked l
+    LEFT JOIN state_ref s ON l.state_code = s.state_code
+    WHERE l.match_rank = 1
+),
+
 nces_base AS (
     SELECT
         TRIM(n.nces_id)                                   AS nces_id,
@@ -363,6 +460,40 @@ uscm_url_referral AS (
       AND u.jurisdiction_id IS NOT NULL
 ),
 
+league_url_referral AS (
+    SELECT
+        (regexp_match(
+            NULLIF(
+                REGEXP_REPLACE(
+                    REGEXP_REPLACE(
+                        REGEXP_REPLACE(
+                            LOWER(
+                                CASE
+                                    WHEN l.raw_website ~* '^https?://' THEN TRIM(l.raw_website)
+                                    ELSE 'https://' || TRIM(REGEXP_REPLACE(l.raw_website, '^/+', ''))
+                                END
+                            ),
+                            '^http:', 'https:',
+                            'i'
+                        ),
+                        '^https://www\.', 'https://',
+                        'i'
+                    ),
+                    '/+$', '',
+                    'g'
+                ),
+                ''
+            ),
+            '^(https://[^/?#]+)'
+        ))[1]                                                    AS origin_norm,
+        l.jurisdiction_id,
+        'municipality'                                           AS matched_jurisdiction_category,
+        'league'                                                 AS referral_source
+    FROM league_ranked l
+    WHERE l.match_rank = 1
+      AND l.jurisdiction_id IS NOT NULL
+),
+
 nces_url_referral AS (
     SELECT
         (regexp_match(
@@ -432,6 +563,8 @@ naco_url_referral AS (
 referral_url_jurisdictions AS (
     SELECT * FROM uscm_url_referral WHERE origin_norm IS NOT NULL
     UNION ALL
+    SELECT * FROM league_url_referral WHERE origin_norm IS NOT NULL
+    UNION ALL
     SELECT * FROM nces_url_referral WHERE origin_norm IS NOT NULL
     UNION ALL
     SELECT * FROM naco_url_referral WHERE origin_norm IS NOT NULL
@@ -447,8 +580,9 @@ gsa_url_match AS (
                 CASE WHEN r.matched_jurisdiction_category = c.jurisdiction_category THEN 0 ELSE 1 END,
                 CASE r.referral_source
                     WHEN 'uscm' THEN 1
-                    WHEN 'nces_directory' THEN 2
-                    WHEN 'naco' THEN 3
+                    WHEN 'league' THEN 2
+                    WHEN 'nces_directory' THEN 3
+                    WHEN 'naco' THEN 4
                 END
         ) AS match_rank
     FROM gsa_cleaned c
@@ -519,6 +653,23 @@ gsa_domain_compact_hint AS (
       AND REGEXP_REPLACE(j.name_norm, '[^a-z0-9]+', '', 'g') = sn.stem_no_state
 ),
 
+-- GSA ``State or territory`` (and election variant): attach to the single state-government row
+-- for that USPS code. Registrant ``organization`` is often blank and agency text rarely equals
+-- Census ``name`` (e.g. "State of Connecticut …" vs "Connecticut"); short hosts like ``ct.gov``
+-- fail the >=6-letter stem rule in ``gsa_domain_compact_hint``.
+gsa_state_direct_match AS (
+    SELECT
+        c.domain_name,
+        j.jurisdiction_id
+    FROM gsa_cleaned c
+    INNER JOIN domain_type_map dtm
+        ON UPPER(TRIM(c.domain_type)) = UPPER(dtm.gsa_domain_type)
+       AND dtm.jur_type = 'state'
+    INNER JOIN jurisdictions_name_normalized j
+        ON j.jurisdiction_type = 'state'
+       AND j.state_code = c.state_code
+),
+
 gsa_rows AS (
     SELECT
         c.website_record_key,
@@ -532,11 +683,18 @@ gsa_rows AS (
         c.city,
         c.state_code,
         s.state_name                                        AS state,
-        COALESCE(gum.jurisdiction_id, jm.jurisdiction_id, gdh.jurisdiction_id) AS jurisdiction_id,
+        COALESCE(
+            gsm.jurisdiction_id,
+            gum.jurisdiction_id,
+            jm.jurisdiction_id,
+            gdh.jurisdiction_id
+        ) AS jurisdiction_id,
         c.ingestion_date,
         CURRENT_TIMESTAMP                                   AS transformed_at
     FROM gsa_cleaned c
     LEFT JOIN state_ref s ON c.state_code = s.state_code
+    LEFT JOIN gsa_state_direct_match gsm
+        ON c.domain_name = gsm.domain_name
     LEFT JOIN jurisdiction_match jm
         ON c.domain_name = jm.domain_name
        AND jm.match_rank = 1
@@ -673,6 +831,8 @@ combined AS (
     SELECT * FROM gsa_rows
     UNION ALL
     SELECT * FROM uscm_rows
+    UNION ALL
+    SELECT * FROM league_rows
     UNION ALL
     SELECT * FROM nces_rows
     UNION ALL

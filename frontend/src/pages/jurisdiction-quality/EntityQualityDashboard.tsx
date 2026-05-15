@@ -1,6 +1,6 @@
 /**
  * Entity-first jurisdiction mapping quality dashboard (layout inspired by internal mock:
- * entity tiles (incl. State) → sub-sections Overview / Population / Income when a type tile is selected).
+ * entity tiles (incl. State) → Overview / By population / By income tabs directly under the selected tile.
  * Uses live JSON from export_jurisdiction_mapping_quality_json.py including entity_state_rollup.
  * Styling stays on the light `.jmq-quality-page` tokens — do not switch the page to a dark/black background.
  */
@@ -17,9 +17,6 @@ import {
   BarChart,
   CartesianGrid,
   Cell,
-  Legend,
-  Pie,
-  PieChart,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -91,7 +88,14 @@ type SummaryRow = {
   jurisdictions_touching_uscm: number
   jurisdictions_touching_nces: number
   jurisdictions_touching_gsa: number
+  jurisdictions_touching_league: number
   jurisdictions_touching_override: number
+  primary_from_naco?: number
+  primary_from_uscm?: number
+  primary_from_nces_directory?: number
+  primary_from_gsa?: number
+  primary_from_league?: number
+  primary_from_override?: number
 }
 
 type MunicipalityPlaceSummaryRow = {
@@ -104,7 +108,14 @@ type MunicipalityPlaceSummaryRow = {
   jurisdictions_touching_uscm: number
   jurisdictions_touching_nces: number
   jurisdictions_touching_gsa: number
+  jurisdictions_touching_league: number
   jurisdictions_touching_override: number
+  primary_from_naco?: number
+  primary_from_uscm?: number
+  primary_from_nces_directory?: number
+  primary_from_gsa?: number
+  primary_from_league?: number
+  primary_from_override?: number
 }
 
 type SourceRow = { website_source: string; distinct_jurisdictions: number }
@@ -115,6 +126,48 @@ type StateRollupRow = {
   with_primary_website: number
   pct_with_primary_website: number | null
 }
+
+/** One row per state: ACS tiers + whether the state-government row has a primary portal URL. */
+export type StateQualityRow = {
+  state_code: string
+  state_fips: string
+  state_name: string
+  acs_population: number | null
+  acs_median_household_income: number | null
+  state_population_tier: string | null
+  state_income_level: string | null
+  /** Always 1 — one state government per row. */
+  total_jurisdictions: number
+  /** 0 or 1 — primary URL on ``jurisdiction_type = 'state'``. */
+  with_primary_website: number
+  pct_with_primary_website: number | null
+  has_state_portal?: boolean
+  primary_website_url?: string | null
+  primary_website_source?: string | null
+  n_website_candidate_rows?: number
+  has_gsa_source?: boolean
+  has_override_source?: boolean
+  website_candidates?: { source: string; url: string }[]
+}
+
+type StateBucketSummaryRow = {
+  state_population_tier?: string
+  state_income_level?: string
+  state_count: number
+  total_jurisdictions: number
+  with_primary_website: number
+  pct_with_primary_website: number | null
+}
+
+const STATE_POPULATION_TIER_ORDER = [
+  'Very Large',
+  'Large',
+  'Major Mid-Sized',
+  'Mid-Sized',
+  'Small',
+] as const
+
+const STATE_INCOME_TIER_ORDER = ['High Earner', 'Middle Class', 'Lower Middle', 'Low Income'] as const
 
 type UnmappedDrillRow = {
   jurisdiction_id: string
@@ -128,6 +181,7 @@ type UnmappedDrillRow = {
   has_uscm_source?: boolean | null
   has_nces_directory_source?: boolean | null
   has_gsa_source?: boolean | null
+  has_league_source?: boolean | null
   has_override_source?: boolean | null
   acs_population_tier?: string | null
   acs_income_level?: string | null
@@ -175,6 +229,56 @@ export type QualityPayload = {
     municipality_towns_and_cdp: StateRollupRow[]
     school_district: StateRollupRow[]
   }
+  acs_vintage_year?: string | null
+  acs_source?: string | null
+  states?: StateQualityRow[]
+  summary_by_state_population_tier?: StateBucketSummaryRow[]
+  summary_by_state_income_level?: StateBucketSummaryRow[]
+  state_population_tiers_explained?: Record<string, string>
+  state_income_levels_explained?: Record<string, string>
+  /** ACS bucket rollups scoped to each entity slice (cities = incorporated cities only, etc.). */
+  entity_acs_by_slice?: Partial<
+    Record<
+      Exclude<EntityKey, 'state'>,
+      {
+        by_population_tier: {
+          bucket: string
+          total_jurisdictions: number
+          with_primary_website: number
+          pct_with_primary_website: number | null
+          primary_from_naco?: number
+          primary_from_uscm?: number
+          primary_from_nces_directory?: number
+          primary_from_gsa?: number
+          primary_from_league?: number
+          primary_from_override?: number
+        }[]
+        by_income_level: {
+          bucket: string
+          total_jurisdictions: number
+          with_primary_website: number
+          pct_with_primary_website: number | null
+          primary_from_naco?: number
+          primary_from_uscm?: number
+          primary_from_nces_directory?: number
+          primary_from_gsa?: number
+          primary_from_league?: number
+          primary_from_override?: number
+        }[]
+      }
+    >
+  >
+  /** Per-bucket unmapped rows (Postgres); aligns with population/income table missing counts. */
+  entity_acs_unmapped_drill?: Partial<
+    Record<
+      Exclude<EntityKey, 'state'>,
+      {
+        by_population_tier: Record<string, UnmappedDrillRow[]>
+        by_income_level: Record<string, UnmappedDrillRow[]>
+      }
+    >
+  >
+  entity_acs_bucket_drill_cap?: number
 }
 
 export type EntityKey = 'cities' | 'towns' | 'counties' | 'schools' | 'state'
@@ -186,37 +290,61 @@ const ENTITY_ROLLUP_KEY: Record<Exclude<EntityKey, 'state'>, keyof NonNullable<Q
   schools: 'school_district',
 }
 
-const ENTITY_STATE_ROLLUP_KEYS = [
-  'county',
-  'municipality_incorporated_city',
-  'municipality_towns_and_cdp',
-  'school_district',
-] as const satisfies readonly (keyof NonNullable<QualityPayload['entity_state_rollup']>)[]
+function stateRowsToRollup(states: StateQualityRow[]): StateRollupRow[] {
+  return states.map((s) => ({
+    state_code: s.state_code,
+    total_jurisdictions: s.total_jurisdictions,
+    with_primary_website: s.with_primary_website,
+    pct_with_primary_website: s.pct_with_primary_website,
+  }))
+}
 
-/** Per-state totals summed across counties, cities, towns/CDP, and school districts (disjoint jurisdiction types). */
-function mergeStateRollups(rollups: NonNullable<QualityPayload['entity_state_rollup']>): StateRollupRow[] {
-  const byState = new Map<string, { total: number; withUrl: number }>()
-  for (const key of ENTITY_STATE_ROLLUP_KEYS) {
-    for (const r of rollups[key] ?? []) {
-      const sc = String(r.state_code ?? '').trim()
-      if (!sc) continue
-      const prev = byState.get(sc) ?? { total: 0, withUrl: 0 }
-      prev.total += Number(r.total_jurisdictions)
-      prev.withUrl += Number(r.with_primary_website)
-      byState.set(sc, prev)
-    }
-  }
-  return Array.from(byState.entries())
-    .map(([state_code, { total, withUrl }]) => {
-      const pct = total > 0 ? Math.round((1000 * withUrl) / total) / 10 : null
+function stateBucketChartRows(
+  summaries: StateBucketSummaryRow[] | undefined,
+  tierKey: 'state_population_tier' | 'state_income_level',
+  order: readonly string[],
+): { bucket: string; n: number; withUrl: number; pct: number; missing: number; stateCount: number }[] {
+  if (!summaries?.length) return []
+  const byTier = new Map(summaries.map((r) => [String(r[tierKey] ?? ''), r]))
+  return order
+    .map((tier) => {
+      const r = byTier.get(tier)
+      if (!r) return null
+      const n = Number(r.total_jurisdictions)
+      const withUrl = Number(r.with_primary_website)
+      const pct = r.pct_with_primary_website != null ? Number(r.pct_with_primary_website) : n > 0 ? (100 * withUrl) / n : 0
       return {
-        state_code,
-        total_jurisdictions: total,
-        with_primary_website: withUrl,
-        pct_with_primary_website: pct,
+        bucket: tier,
+        n,
+        withUrl,
+        pct,
+        missing: Math.max(0, n - withUrl),
+        stateCount: Number(r.state_count),
       }
     })
-    .sort((a, b) => a.state_code.localeCompare(b.state_code))
+    .filter((x): x is NonNullable<typeof x> => x != null && x.n > 0)
+}
+
+function stateBucketTableRows(
+  summaries: StateBucketSummaryRow[] | undefined,
+  tierKey: 'state_population_tier' | 'state_income_level',
+  order: readonly string[],
+): { bucket: string; tierValue: string; n: number; withUrl: number; pct: number; missing: number }[] {
+  return stateBucketChartRows(summaries, tierKey, order).map((r) => ({
+    bucket: `${r.bucket} (${r.stateCount} states)`,
+    tierValue: r.bucket,
+    n: r.n,
+    withUrl: r.withUrl,
+    pct: r.pct,
+    missing: r.missing,
+  }))
+}
+
+function fmtPop(n: number | null | undefined): string {
+  if (n == null || Number.isNaN(n)) return '—'
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`
+  if (n >= 1_000) return `${Math.round(n / 1_000)}k`
+  return fmt(n)
 }
 
 const ENTITY_META: Record<
@@ -227,13 +355,13 @@ const ENTITY_META: Record<
     label: 'State',
     icon: '📍',
     accentVar: '--jmq-teal',
-    sourceKeys: ['naco', 'uscm', 'nces_directory', 'gsa', 'override'],
+    sourceKeys: ['gsa', 'override'],
   },
   cities: {
     label: 'Cities',
     icon: '🏙',
     accentVar: '--jmq-amber',
-    sourceKeys: ['uscm', 'gsa', 'override'],
+    sourceKeys: ['uscm', 'league', 'gsa', 'override'],
   },
   towns: {
     label: 'Towns & Villages',
@@ -283,13 +411,14 @@ function aggregateMuniKinds(
     | 'jurisdictions_touching_uscm'
     | 'jurisdictions_touching_nces'
     | 'jurisdictions_touching_gsa'
+    | 'jurisdictions_touching_league'
     | 'jurisdictions_touching_override'
   >
 } {
   let total = 0
   let withUrl = 0
   let syntaxOk = 0
-  const touch = { naco: 0, uscm: 0, nces: 0, gsa: 0, override: 0 }
+  const touch = { naco: 0, uscm: 0, nces: 0, gsa: 0, league: 0, override: 0 }
   for (const r of rows ?? []) {
     if (!kinds.includes(r.municipality_place_kind)) continue
     total += Number(r.total_jurisdictions)
@@ -299,6 +428,7 @@ function aggregateMuniKinds(
     touch.uscm += Number(r.jurisdictions_touching_uscm)
     touch.nces += Number(r.jurisdictions_touching_nces)
     touch.gsa += Number(r.jurisdictions_touching_gsa)
+    touch.league += Number(r.jurisdictions_touching_league)
     touch.override += Number(r.jurisdictions_touching_override)
   }
   const pct = total > 0 ? (100 * withUrl) / total : 0
@@ -312,9 +442,77 @@ function aggregateMuniKinds(
       jurisdictions_touching_uscm: touch.uscm,
       jurisdictions_touching_nces: touch.nces,
       jurisdictions_touching_gsa: touch.gsa,
+      jurisdictions_touching_league: touch.league,
       jurisdictions_touching_override: touch.override,
     },
   }
+}
+
+function aggregateMuniPrimaryFrom(
+  rows: MunicipalityPlaceSummaryRow[] | undefined,
+  kinds: string[],
+): PrimarySourceRow | null {
+  let total = 0
+  const sums = {
+    primary_from_naco: 0,
+    primary_from_uscm: 0,
+    primary_from_nces_directory: 0,
+    primary_from_gsa: 0,
+    primary_from_league: 0,
+    primary_from_override: 0,
+  }
+  for (const r of rows ?? []) {
+    if (!kinds.includes(r.municipality_place_kind)) continue
+    total += Number(r.total_jurisdictions)
+    sums.primary_from_naco += Number(r.primary_from_naco ?? 0)
+    sums.primary_from_uscm += Number(r.primary_from_uscm ?? 0)
+    sums.primary_from_nces_directory += Number(r.primary_from_nces_directory ?? 0)
+    sums.primary_from_gsa += Number(r.primary_from_gsa ?? 0)
+    sums.primary_from_league += Number(r.primary_from_league ?? 0)
+    sums.primary_from_override += Number(r.primary_from_override ?? 0)
+  }
+  if (total === 0) return null
+  return {
+    jurisdiction_type: 'municipality',
+    total_jurisdictions: total,
+    with_primary_website: Object.values(sums).reduce((a, b) => a + b, 0),
+    pct_with_primary_website: null,
+    jurisdictions_touching_naco: 0,
+    jurisdictions_touching_uscm: 0,
+    jurisdictions_touching_nces: 0,
+    jurisdictions_touching_gsa: 0,
+    jurisdictions_touching_league: 0,
+    jurisdictions_touching_override: 0,
+    ...sums,
+  }
+}
+
+/** State tile: count of state governments with a mapped primary portal (not local jurisdictions). */
+function stateGovMetrics(states: StateQualityRow[]): {
+  total: number
+  withUrl: number
+  pct: number
+  syntaxErr: number
+  touch: SummaryRow | null
+} {
+  const total = states.length
+  const withUrl = states.filter((s) => Number(s.with_primary_website) > 0).length
+  const pct = total > 0 ? (100 * withUrl) / total : 0
+  return { total, withUrl, pct, syntaxErr: 0, touch: null }
+}
+
+function metricsFromRollupRow(row: StateRollupRow): {
+  total: number
+  withUrl: number
+  pct: number
+  syntaxErr: number
+  touch: SummaryRow | null
+} {
+  const total = Number(row.total_jurisdictions)
+  const withUrl = Number(row.with_primary_website)
+  const pct =
+    row.pct_with_primary_website != null ? Number(row.pct_with_primary_website) : total > 0 ? (100 * withUrl) / total : 0
+  return { total, withUrl, pct, syntaxErr: 0, touch: null }
 }
 
 function entityMetrics(
@@ -328,67 +526,6 @@ function entityMetrics(
   syntaxErr: number
   touch: MunicipalityPlaceSummaryRow | SummaryRow | null
 } {
-  if (entity === 'state') {
-    const county = summaryByType.find((x) => x.jurisdiction_type === 'county')
-    const school = summaryByType.find((x) => x.jurisdiction_type === 'school_district')
-    const city = muniRows?.find((x) => x.municipality_place_kind === 'incorporated_city')
-    const agg = aggregateMuniKinds(muniRows, ['incorporated_other', 'unknown', 'census_designated_place'])
-    const total =
-      Number(county?.total_jurisdictions ?? 0) +
-      Number(school?.total_jurisdictions ?? 0) +
-      Number(city?.total_jurisdictions ?? 0) +
-      agg.total
-    const withUrl =
-      Number(county?.with_primary_website ?? 0) +
-      Number(school?.with_primary_website ?? 0) +
-      Number(city?.with_primary_website ?? 0) +
-      agg.withUrl
-    const syn =
-      Number(county?.with_primary_url_syntax_ok ?? 0) +
-      Number(school?.with_primary_url_syntax_ok ?? 0) +
-      Number(city?.with_primary_url_syntax_ok ?? 0) +
-      agg.syntaxOk
-    const pct = total > 0 ? (100 * withUrl) / total : 0
-    const touch: SummaryRow = {
-      jurisdiction_type: 'state_view',
-      total_jurisdictions: total,
-      with_primary_website: withUrl,
-      pct_with_primary_website: pct,
-      with_primary_url_syntax_ok: syn,
-      jurisdictions_touching_naco:
-        Number(county?.jurisdictions_touching_naco ?? 0) +
-        Number(school?.jurisdictions_touching_naco ?? 0) +
-        Number(city?.jurisdictions_touching_naco ?? 0) +
-        Number(agg.touch.jurisdictions_touching_naco ?? 0),
-      jurisdictions_touching_uscm:
-        Number(county?.jurisdictions_touching_uscm ?? 0) +
-        Number(school?.jurisdictions_touching_uscm ?? 0) +
-        Number(city?.jurisdictions_touching_uscm ?? 0) +
-        Number(agg.touch.jurisdictions_touching_uscm ?? 0),
-      jurisdictions_touching_nces:
-        Number(county?.jurisdictions_touching_nces ?? 0) +
-        Number(school?.jurisdictions_touching_nces ?? 0) +
-        Number(city?.jurisdictions_touching_nces ?? 0) +
-        Number(agg.touch.jurisdictions_touching_nces ?? 0),
-      jurisdictions_touching_gsa:
-        Number(county?.jurisdictions_touching_gsa ?? 0) +
-        Number(school?.jurisdictions_touching_gsa ?? 0) +
-        Number(city?.jurisdictions_touching_gsa ?? 0) +
-        Number(agg.touch.jurisdictions_touching_gsa ?? 0),
-      jurisdictions_touching_override:
-        Number(county?.jurisdictions_touching_override ?? 0) +
-        Number(school?.jurisdictions_touching_override ?? 0) +
-        Number(city?.jurisdictions_touching_override ?? 0) +
-        Number(agg.touch.jurisdictions_touching_override ?? 0),
-    } as SummaryRow
-    return {
-      total,
-      withUrl,
-      pct,
-      syntaxErr: Math.max(0, withUrl - syn),
-      touch,
-    }
-  }
   if (entity === 'counties') {
     const r = summaryByType.find((x) => x.jurisdiction_type === 'county')
     if (!r) return { total: 0, withUrl: 0, pct: 0, syntaxErr: 0, touch: null }
@@ -433,36 +570,468 @@ function entityMetrics(
   return { total: agg.total, withUrl: agg.withUrl, pct: agg.pct, syntaxErr, touch: null }
 }
 
-function sourcePie(
-  touch: SummaryRow | MunicipalityPlaceSummaryRow | null,
+type PrimarySourceRow = SummaryRow | MunicipalityPlaceSummaryRow
+
+const PRIMARY_SOURCE_DEFS: {
+  sourceKey: string
+  field: keyof Pick<
+    SummaryRow,
+    | 'primary_from_naco'
+    | 'primary_from_uscm'
+    | 'primary_from_nces_directory'
+    | 'primary_from_gsa'
+    | 'primary_from_league'
+    | 'primary_from_override'
+  >
+  label: string
+  fill: string
+}[] = [
+  { sourceKey: 'naco', field: 'primary_from_naco', label: 'NACo', fill: '#6e40c9' },
+  { sourceKey: 'uscm', field: 'primary_from_uscm', label: 'USCM', fill: '#0969da' },
+  { sourceKey: 'nces_directory', field: 'primary_from_nces_directory', label: 'NCES', fill: '#117a72' },
+  { sourceKey: 'gsa', field: 'primary_from_gsa', label: 'GSA', fill: '#9a6700' },
+  { sourceKey: 'league', field: 'primary_from_league', label: 'League', fill: '#8250df' },
+  { sourceKey: 'override', field: 'primary_from_override', label: 'Override', fill: '#116329' },
+]
+
+function sourceMappingRateRows(
+  row: PrimarySourceRow | null,
+  total: number,
+  withUrl: number,
   entity: EntityKey,
-): { name: string; value: number; fill: string }[] {
-  if (!touch) return []
+  opts?: { includeZero?: boolean },
+): { sourceKey: string; label: string; mapped: number; pctTotal: number; pctMapped: number; fill: string }[] {
+  if (!row || total <= 0) return []
   const allowed = new Set(ENTITY_META[entity].sourceKeys)
-  const defs: { sourceKey: string; field: keyof SummaryRow; short: string; fill: string }[] = [
-    { sourceKey: 'naco', field: 'jurisdictions_touching_naco', short: 'naco', fill: '#6e40c9' },
-    { sourceKey: 'uscm', field: 'jurisdictions_touching_uscm', short: 'uscm', fill: '#0969da' },
-    { sourceKey: 'nces_directory', field: 'jurisdictions_touching_nces', short: 'nces', fill: '#117a72' },
-    { sourceKey: 'gsa', field: 'jurisdictions_touching_gsa', short: 'gsa', fill: '#9a6700' },
-    { sourceKey: 'override', field: 'jurisdictions_touching_override', short: 'override', fill: '#116329' },
-  ]
-  const out: { name: string; value: number; fill: string }[] = []
-  for (const d of defs) {
-    if (!allowed.has(d.sourceKey)) continue
-    const v = Number((touch as SummaryRow)[d.field] ?? 0)
-    if (v > 0) out.push({ name: d.short, value: v, fill: d.fill })
+  const rows = PRIMARY_SOURCE_DEFS.filter((d) => allowed.has(d.sourceKey)).map((d) => {
+    const mapped = Number(row[d.field] ?? 0)
+    return {
+      sourceKey: d.sourceKey,
+      label: d.label,
+      mapped,
+      pctTotal: total > 0 ? (100 * mapped) / total : 0,
+      pctMapped: withUrl > 0 ? (100 * mapped) / withUrl : 0,
+      fill: d.fill,
+    }
+  })
+  return opts?.includeZero ? rows : rows.filter((r) => r.mapped > 0)
+}
+
+function TypicalStatePortalSourcesCard({
+  row,
+  total,
+  withUrl,
+}: {
+  row: PrimarySourceRow | null
+  total: number
+  withUrl: number
+}) {
+  const rates = sourceMappingRateRows(row, total, withUrl, 'state', { includeZero: true })
+  const hasPrimaryCols = row != null && PRIMARY_SOURCE_DEFS.some((d) => d.field in row)
+
+  return (
+    <div className="jmq-card !py-3">
+      <div className="mb-2 font-mono text-[10px] font-semibold uppercase text-[var(--jmq-text-muted)]">
+        Typical state-portal sources
+      </div>
+      {!row ? (
+        <p className="text-xs text-[var(--jmq-text-muted)]">No state summary row.</p>
+      ) : !hasPrimaryCols ? (
+        <p className="text-xs text-[#4d2d00]">
+          Re-run dbt + <code className="text-[10px]">export_jurisdiction_mapping_quality_json.py</code> for{' '}
+          <code className="text-[10px]">primary_from_*</code>.
+        </p>
+      ) : (
+        <div className="space-y-2">
+          {rates.map((r) => (
+            <div key={r.sourceKey}>
+              <div className="flex items-center justify-between gap-2">
+                <span className={sourceBadgeClass(r.sourceKey)}>{r.label}</span>
+                <span className="font-mono text-xs font-semibold tabular-nums" style={{ color: r.fill }}>
+                  {r.pctTotal.toFixed(1)}%
+                </span>
+              </div>
+              <div className="mt-0.5 font-mono text-[10px] text-[var(--jmq-text-muted)]">
+                {fmt(r.mapped)} of {fmt(total)} state governments
+              </div>
+            </div>
+          ))}
+          <div className="flex items-center justify-between border-t border-[var(--jmq-border)] pt-2 font-mono text-[10px]">
+            <span className="text-[var(--jmq-text-muted)]">Missing portal</span>
+            <span className="font-semibold text-[var(--jmq-red)]">
+              {total > 0 ? ((100 * Math.max(0, total - withUrl)) / total).toFixed(1) : '0'}%
+            </span>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+function sourceMappingChartCopy(entity: EntityKey): { title: string; sub: string } {
+  const labels = ENTITY_META[entity].sourceKeys.map((k) => PRIMARY_SOURCE_DEFS.find((d) => d.sourceKey === k)?.label ?? k)
+  const title = `Mapped by source (${labels.join(' · ')})`
+  const sub =
+    entity === 'state'
+      ? 'Share of state governments whose winning primary URL came from each directory (52 rows).'
+      : `${ENTITY_META[entity].label}: share of jurisdictions whose winning primary URL came from each directory.`
+  return { title, sub }
+}
+
+function SourceMappingBarChart({
+  row,
+  total,
+  withUrl,
+  entity,
+}: {
+  row: PrimarySourceRow | null
+  total: number
+  withUrl: number
+  entity: EntityKey
+}) {
+  const rows = sourceMappingRateRows(row, total, withUrl, entity, { includeZero: entity === 'state' })
+  const hasPrimaryCols = row != null && PRIMARY_SOURCE_DEFS.some((d) => d.field in row)
+  if (!row) {
+    return <p className="text-xs text-[var(--jmq-text-muted)]">No summary row for this entity.</p>
   }
-  return out
+  if (!hasPrimaryCols && withUrl > 0) {
+    return (
+      <p className="text-xs text-[#4d2d00]">
+        Re-run dbt quality marts and <code className="text-[10px]">export_jurisdiction_mapping_quality_json.py</code> for{' '}
+        <code className="text-[10px]">primary_from_*</code> columns.
+      </p>
+    )
+  }
+  if (rows.length === 0) {
+    return <p className="text-xs text-[var(--jmq-text-muted)]">No mapped jurisdictions from any directory yet.</p>
+  }
+  const chartHeight = Math.max(120, rows.length * 36 + 24)
+  return (
+    <div style={{ height: chartHeight }} className="w-full">
+      <ResponsiveContainer width="100%" height="100%">
+        <BarChart layout="vertical" data={rows} margin={{ top: 4, right: 12, bottom: 4, left: 4 }}>
+          <CartesianGrid strokeDasharray="3 3" stroke="var(--jmq-border)" horizontal={false} />
+          <XAxis
+            type="number"
+            domain={[0, 100]}
+            tickFormatter={(v) => `${v}%`}
+            tick={{ fontSize: 10, fill: 'var(--jmq-text-muted)' }}
+          />
+          <YAxis
+            type="category"
+            dataKey="label"
+            width={64}
+            tick={{ fontSize: 10, fill: 'var(--jmq-text-muted)' }}
+          />
+          <Tooltip
+            formatter={(v: number, _name, item) => {
+              const mapped = (item?.payload as { mapped?: number })?.mapped ?? 0
+              return [`${Number(v).toFixed(1)}% (${fmt(mapped)} mapped)`, '% of all jurisdictions']
+            }}
+            contentStyle={{ background: 'var(--jmq-surface2)', border: '1px solid var(--jmq-border)', fontSize: 12 }}
+          />
+          <Bar dataKey="pctTotal" name="% mapped" radius={[0, 4, 4, 0]}>
+            {rows.map((d, i) => (
+              <Cell key={i} fill={d.fill} fillOpacity={0.85} />
+            ))}
+          </Bar>
+        </BarChart>
+      </ResponsiveContainer>
+    </div>
+  )
+}
+
+function SourceMappingRatesCard({
+  row,
+  total,
+  withUrl,
+  entity,
+  compact = false,
+}: {
+  row: PrimarySourceRow | null
+  total: number
+  withUrl: number
+  entity: EntityKey
+  compact?: boolean
+}) {
+  const rates = sourceMappingRateRows(row, total, withUrl, entity, { includeZero: entity === 'state' })
+  const hasPrimaryCols = row != null && PRIMARY_SOURCE_DEFS.some((d) => d.field in row)
+  const title = entity === 'state' ? 'Map rate · state portal sources' : 'Primary URL by source'
+  const sub =
+    entity === 'state'
+      ? 'Share of state governments whose winning primary URL came from GSA or a curated override (52 rows).'
+      : 'Winning primary URL by directory. Sources with zero mapped are hidden; rows sum to mapped coverage.'
+
+  if (!row) {
+    return (
+      <div className="jmq-card !py-3">
+        <div className="jmq-card-title text-sm">{title}</div>
+        <p className="mt-1 text-xs text-[var(--jmq-text-muted)]">No summary row for this entity.</p>
+      </div>
+    )
+  }
+
+  if (!hasPrimaryCols && withUrl > 0) {
+    return (
+      <div className="jmq-card !py-3">
+        <div className="jmq-card-title text-sm">{title}</div>
+        <p className="mt-1 text-xs text-[#4d2d00]">
+          Re-run dbt quality marts and <code className="text-[10px]">export_jurisdiction_mapping_quality_json.py</code> for{' '}
+          <code className="text-[10px]">primary_from_*</code> columns.
+        </p>
+      </div>
+    )
+  }
+
+  return (
+    <div className={`jmq-card ${compact ? '!py-3' : ''}`}>
+      <div className="jmq-card-title text-sm">{title}</div>
+      <p className="jmq-card-sub !mb-2">{sub}</p>
+      <table className="jmq-dt w-full text-[11px]">
+        <thead>
+          <tr>
+            {['Source', 'Mapped', '% of all', '% of mapped'].map((h) => (
+              <th key={h}>{h}</th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {rates.map((r) => (
+            <tr key={r.sourceKey}>
+              <td>
+                <span className={sourceBadgeClass(r.sourceKey)}>{r.label}</span>
+              </td>
+              <td className="font-mono">{fmt(r.mapped)}</td>
+              <td className="font-mono">{r.pctTotal.toFixed(1)}%</td>
+              <td className="font-mono font-semibold" style={{ color: r.fill }}>
+                {r.pctMapped.toFixed(1)}%
+              </td>
+            </tr>
+          ))}
+          <tr className="border-t border-[var(--jmq-border)] font-semibold">
+            <td>Missing URL</td>
+            <td className="font-mono">{fmt(Math.max(0, total - withUrl))}</td>
+            <td className="font-mono">{total > 0 ? ((100 * Math.max(0, total - withUrl)) / total).toFixed(1) : '0'}%</td>
+            <td className="font-mono text-[var(--jmq-text-muted)]">—</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  )
+}
+
+type EntityAcsBucketRow = {
+  bucket: string
+  total_jurisdictions: number
+  with_primary_website: number
+  pct_with_primary_website: number | null
+  primary_from_naco?: number
+  primary_from_uscm?: number
+  primary_from_nces_directory?: number
+  primary_from_gsa?: number
+  primary_from_league?: number
+  primary_from_override?: number
+}
+
+function entityAcsBucketTableRows(
+  slice: { by_population_tier?: EntityAcsBucketRow[]; by_income_level?: EntityAcsBucketRow[] } | undefined,
+  tierKey: 'by_population_tier' | 'by_income_level',
+): { bucket: string; tierValue: string; n: number; withUrl: number; pct: number; missing: number }[] {
+  return (slice?.[tierKey] ?? []).map((r) => {
+    const n = Number(r.total_jurisdictions)
+    const w = Number(r.with_primary_website)
+    const pct = r.pct_with_primary_website != null ? Number(r.pct_with_primary_website) : n > 0 ? (100 * w) / n : 0
+    return {
+      bucket: r.bucket,
+      tierValue: r.bucket,
+      n,
+      withUrl: w,
+      pct,
+      missing: Math.max(0, n - w),
+    }
+  })
+}
+
+function StateTierDrillPanel({
+  tierLabel,
+  tierField,
+  tierValue,
+  states,
+  onClose,
+  onDrillState,
+}: {
+  tierLabel: string
+  tierField: 'state_population_tier' | 'state_income_level'
+  tierValue: string
+  states: StateQualityRow[]
+  onClose: () => void
+  onDrillState: (s: StateQualityRow) => void
+}) {
+  const inTier = states
+    .filter((s) => s[tierField] === tierValue)
+    .map((s) => {
+      const total = Number(s.total_jurisdictions)
+      const withUrl = Number(s.with_primary_website)
+      const pct = s.pct_with_primary_website != null ? Number(s.pct_with_primary_website) : total > 0 ? (100 * withUrl) / total : 0
+      return { ...s, missing: Math.max(0, total - withUrl), pct }
+    })
+    .sort((a, b) => b.missing - a.missing)
+
+  const modal = (
+    <div
+      className="jmq-modal-portal-root jmq-modal-scrim fixed inset-0 z-[300] flex items-start justify-end p-4"
+      role="dialog"
+      aria-modal
+      onClick={(ev) => {
+        if (ev.target === ev.currentTarget) onClose()
+      }}
+    >
+      <div
+        className="flex max-h-[92vh] w-full max-w-2xl flex-col overflow-hidden rounded-xl border border-[var(--jmq-border)] bg-[var(--jmq-surface)] shadow-2xl"
+        onClick={(ev) => ev.stopPropagation()}
+      >
+        <div className="flex items-center gap-3 border-b border-[var(--jmq-border)] px-4 py-3">
+          <div className="h-7 w-1 shrink-0 rounded bg-[var(--jmq-teal)]" />
+          <div className="min-w-0 flex-1">
+            <div className="text-[15px] font-bold text-[var(--jmq-text)]">States in tier</div>
+            <div className="mt-0.5 font-mono text-xs text-[var(--jmq-text-muted)]">
+              State · {tierValue} ({tierLabel})
+            </div>
+          </div>
+          <button type="button" onClick={onClose} className="shrink-0 rounded-md border border-[var(--jmq-border)] bg-[var(--jmq-surface2)] px-3 py-1 text-xs">
+            ✕ Close
+          </button>
+        </div>
+        <div className="border-b border-[var(--jmq-border)] bg-[var(--jmq-amber-dim)] px-4 py-2 text-[11px] text-[#4d2d00]">
+          States in this ACS tier. Drill a state missing a portal to see its state-government row. For cities, counties, or districts in a state, use those tiles with the state filter.
+        </div>
+        <div className="flex-1 overflow-y-auto p-2">
+          {inTier.length === 0 ? (
+            <p className="p-8 text-center text-sm text-[var(--jmq-text-muted)]">No states in this tier (load state ACS in export).</p>
+          ) : (
+            <table className="jmq-dt w-full text-xs">
+              <thead>
+                <tr>
+                  {['State', 'ACS pop', 'Portal', 'Status', 'Drill'].map((h) => (
+                    <th key={h}>{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {inTier.map((s) => (
+                  <tr key={s.state_code}>
+                    <td className="font-mono font-semibold">{s.state_code}</td>
+                    <td className="font-mono text-[10px]">{fmtPop(s.acs_population)}</td>
+                    <td className="font-mono text-[10px]">{s.missing > 0 ? '—' : '✓ mapped'}</td>
+                    <td>
+                      <CovBarLite pct={s.pct} width={72} />
+                    </td>
+                    <td>
+                      {s.missing > 0 ? (
+                        <button
+                          type="button"
+                          className="rounded border border-[var(--jmq-red)] bg-[var(--jmq-red-dim)] px-2 py-0.5 font-mono text-[10px]"
+                          onClick={() => onDrillState(s)}
+                        >
+                          ↗
+                        </button>
+                      ) : (
+                        <span className="text-[var(--jmq-green)] text-[10px]">✓</span>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+  if (typeof document === 'undefined') return null
+  return createPortal(modal, document.body)
 }
 
 function matchesEntityUnmapped(entity: EntityKey, r: UnmappedDrillRow): boolean {
-  if (entity === 'state') return true
+  if (entity === 'state') return r.jurisdiction_type === 'state'
   if (entity === 'counties') return r.jurisdiction_type === 'county'
   if (entity === 'schools') return r.jurisdiction_type === 'school_district'
   if (r.jurisdiction_type !== 'municipality') return false
   const k = r.municipality_place_kind ?? 'unknown'
   if (entity === 'cities') return k === 'incorporated_city'
   return k === 'incorporated_other' || k === 'unknown' || k === 'census_designated_place'
+}
+
+function statePortalDetailLines(s: StateQualityRow): string[] {
+  const lines: string[] = []
+  if (s.primary_website_url) {
+    lines.push(`Primary URL (${s.primary_website_source ?? 'unknown'}): ${s.primary_website_url}`)
+  } else {
+    lines.push('Primary URL: none in warehouse')
+  }
+  const candidates = s.website_candidates ?? []
+  if (candidates.length > 0) {
+    lines.push(
+      `Candidate rows (${candidates.length}): ${candidates.map((c) => `${c.source} → ${c.url}`).join(' · ')}`,
+    )
+  } else {
+    lines.push(`Candidate rows in warehouse: ${s.n_website_candidate_rows ?? 0}`)
+  }
+  if (!s.primary_website_url && (s.n_website_candidate_rows ?? 0) === 0) {
+    lines.push(
+      'GSA may list portal.ct.gov / dc.gov, but automated matching often skips CT/DC until jurisdiction_website_url_overrides is seeded and dbt is re-run.',
+    )
+  }
+  return lines
+}
+
+function StatePortalUrlCell({ s }: { s: StateQualityRow }) {
+  if (s.primary_website_url) {
+    return (
+      <div className="max-w-[220px]">
+        <a
+          href={s.primary_website_url}
+          target="_blank"
+          rel="noreferrer"
+          className="block truncate font-mono text-[10px] text-[var(--jmq-teal)] hover:underline"
+          title={s.primary_website_url}
+        >
+          {s.primary_website_url.replace(/^https?:\/\//, '')}
+        </a>
+        {s.primary_website_source ? (
+          <span className={`mt-0.5 inline-block ${sourceBadgeClass(s.primary_website_source)}`}>
+            {s.primary_website_source}
+          </span>
+        ) : null}
+      </div>
+    )
+  }
+  const candidates = s.website_candidates ?? []
+  if (candidates.length > 0) {
+    return (
+      <div className="max-w-[220px] space-y-0.5">
+        {candidates.slice(0, 3).map((c) => (
+          <div key={`${c.source}-${c.url}`} className="truncate font-mono text-[10px] text-[var(--jmq-text-muted)]" title={c.url}>
+            <span className={sourceBadgeClass(c.source)}>{c.source}</span>{' '}
+            <a href={c.url} target="_blank" rel="noreferrer" className="text-[var(--jmq-teal)] hover:underline">
+              {c.url.replace(/^https?:\/\//, '')}
+            </a>
+          </div>
+        ))}
+        {candidates.length > 3 ? (
+          <span className="font-mono text-[10px] text-[var(--jmq-text-muted)]">+{candidates.length - 3} more</span>
+        ) : null}
+      </div>
+    )
+  }
+  if (s.has_state_portal || Number(s.with_primary_website) > 0) {
+    return (
+      <span className="font-mono text-[10px] text-[#4d2d00]" title="Portal is mapped in summary counts but URL fields are missing from the JSON snapshot.">
+        Mapped · re-export JSON
+      </span>
+    )
+  }
+  return <span className="font-mono text-[10px] text-[var(--jmq-red)]">None in warehouse</span>
 }
 
 function sourceBadgeClass(src: string): string {
@@ -472,6 +1041,7 @@ function sourceBadgeClass(src: string): string {
     uscm: 'jmq-src-badge--uscm',
     nces_directory: 'jmq-src-badge--nces_directory',
     gsa: 'jmq-src-badge--gsa',
+    league: 'jmq-src-badge--league',
     override: 'jmq-src-badge--override',
   }
   return `${base} ${m[src] ?? ''}`.trim()
@@ -501,6 +1071,7 @@ function DrillPanel({
   subtitle,
   onClose,
   bannerExtra,
+  useBucketDrill = false,
 }: {
   rows: UnmappedDrillRow[]
   title: string
@@ -508,6 +1079,8 @@ function DrillPanel({
   onClose: () => void
   /** Optional second line in the amber banner (e.g. fallback sample explanation). */
   bannerExtra?: string | null
+  /** True when rows come from entity_acs_unmapped_drill (matches table counts). */
+  useBucketDrill?: boolean
 }) {
   const modal = (
     <div
@@ -540,7 +1113,11 @@ function DrillPanel({
           </button>
         </div>
         <div className="border-b border-[var(--jmq-border)] bg-[var(--jmq-amber-dim)] px-4 py-2 text-[11px] text-[#4d2d00]">
-          <div>Sample from JSON export (capped). Query Postgres for full unmapped set.</div>
+          <div>
+            {useBucketDrill
+              ? 'Unmapped list for this ACS bucket (from Postgres export).'
+              : 'Sample from global JSON export (capped). Re-export for per-bucket lists or query Postgres.'}
+          </div>
           {bannerExtra ? <div className="mt-1 font-medium">{bannerExtra}</div> : null}
         </div>
         <div className="flex-1 overflow-y-auto">
@@ -569,7 +1146,7 @@ function DrillPanel({
                     <td className="px-3 py-2 font-mono text-[10px]">{r.acs_population_tier ?? '—'}</td>
                     <td className="px-3 py-2 font-mono text-[10px]">{r.acs_income_level ?? '—'}</td>
                     <td className="px-3 py-2 font-mono text-[10px] text-[var(--jmq-text-muted)]">
-                      {[r.has_naco_source && 'NACo', r.has_uscm_source && 'USCM', r.has_nces_directory_source && 'NCES', r.has_gsa_source && 'GSA', r.has_override_source && 'ovr']
+                      {[r.has_naco_source && 'NACo', r.has_uscm_source && 'USCM', r.has_nces_directory_source && 'NCES', r.has_gsa_source && 'GSA', r.has_league_source && 'League', r.has_override_source && 'ovr']
                         .filter(Boolean)
                         .join(', ') || '—'}
                     </td>
@@ -586,20 +1163,315 @@ function DrillPanel({
   return createPortal(modal, document.body)
 }
 
-function StateAnalysisSection({
+type EnrichedStateRollup = StateRollupRow & {
+  name: string
+  missing: number
+  pct: number
+  state_population_tier?: string | null
+  acs_population?: number | null
+  state_income_level?: string | null
+}
+
+function enrichStateRollup(
+  rollup: StateRollupRow[],
+  stateQuality?: StateQualityRow[],
+): EnrichedStateRollup[] {
+  const qualityByCode = new Map<string, StateQualityRow>()
+  for (const s of stateQuality ?? []) qualityByCode.set(s.state_code, s)
+  return rollup.map((r) => {
+    const total = Number(r.total_jurisdictions)
+    const withUrl = Number(r.with_primary_website)
+    const pct = r.pct_with_primary_website != null ? Number(r.pct_with_primary_website) : total > 0 ? (100 * withUrl) / total : 0
+    const q = qualityByCode.get(r.state_code)
+    return {
+      ...r,
+      name: q?.state_name ?? US_STATE_NAMES[r.state_code] ?? r.state_code,
+      missing: Math.max(0, total - withUrl),
+      pct,
+      state_population_tier: q?.state_population_tier ?? null,
+      acs_population: q?.acs_population ?? null,
+      state_income_level: q?.state_income_level ?? null,
+    }
+  })
+}
+
+/** State-by-state coverage + missing-primary-URL drill for cities, towns, counties, schools. */
+function EntityStateRollupSection({
   entity,
   rollup,
   unmapped,
+  stateQuality,
 }: {
-  entity: EntityKey
+  entity: Exclude<EntityKey, 'state'>
   rollup: StateRollupRow[]
   unmapped: UnmappedDrillRow[]
+  stateQuality?: StateQualityRow[]
 }) {
+  const label = ENTITY_META[entity].label
+  const [view, setView] = useState<'worst' | 'best' | 'all'>('worst')
+  const [search, setSearch] = useState('')
+  const [sortCol, setSortCol] = useState<'pct' | 'missing' | 'total_jurisdictions' | 'state_code'>('missing')
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc')
+  const [drill, setDrill] = useState<EnrichedStateRollup | null>(null)
+
+  const enriched = useMemo(() => enrichStateRollup(rollup, stateQuality), [rollup, stateQuality])
+
+  const filtered = useMemo(() => {
+    let rows = [...enriched]
+    const q = search.trim().toLowerCase()
+    if (q) rows = rows.filter((r) => r.name.toLowerCase().includes(q) || r.state_code.toLowerCase().includes(q))
+    rows.sort((a, b) => {
+      let c = 0
+      if (sortCol === 'state_code') c = a.state_code.localeCompare(b.state_code)
+      else if (sortCol === 'total_jurisdictions')
+        c = Number(a.total_jurisdictions) - Number(b.total_jurisdictions)
+      else c = Number(a[sortCol]) - Number(b[sortCol])
+      return sortDir === 'asc' ? c : -c
+    })
+    if (!q && view === 'worst') return rows.filter((r) => r.missing > 0).slice(0, 15)
+    if (!q && view === 'best') return [...enriched].sort((a, b) => b.pct - a.pct).slice(0, 15)
+    return rows
+  }, [enriched, search, sortCol, sortDir, view])
+
+  const chartData = useMemo(() => {
+    const withGaps = [...enriched].filter((r) => r.missing > 0).sort((a, b) => b.missing - a.missing)
+    if (view === 'best') return [...enriched].sort((a, b) => b.pct - a.pct).slice(0, 20)
+    return withGaps.slice(0, 20)
+  }, [enriched, view])
+
+  const drillRows = useMemo(() => {
+    if (!drill) return []
+    return unmapped.filter((r) => r.state_code === drill.state_code && matchesEntityUnmapped(entity, r)).slice(0, 80)
+  }, [drill, entity, unmapped])
+
+  const totalMissing = useMemo(() => enriched.reduce((s, r) => s + r.missing, 0), [enriched])
+
+  const setDrillFromBar = (barData: unknown) => {
+    const p = (barData as { payload?: EnrichedStateRollup } | null)?.payload
+    if (p?.state_code && p.missing > 0) setDrill(p)
+  }
+
+  const toggleSort = (col: 'pct' | 'missing' | 'total_jurisdictions' | 'state_code') => {
+    if (sortCol === col) setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'))
+    else {
+      setSortCol(col)
+      setSortDir(col === 'missing' ? 'desc' : 'asc')
+    }
+  }
+
+  return (
+    <div id="jmq-missing-by-state" className="scroll-mt-24">
+      {drill ? (
+        <DrillPanel
+          rows={drillRows}
+          title="Missing primary URL"
+          subtitle={`${drill.name} (${drill.state_code}) · ${label} · sample`}
+          bannerExtra={
+            drillRows.length === 0
+              ? `The summary shows ${fmt(drill.missing)} missing ${label.toLowerCase()} in ${drill.state_code}, but none appear in the capped export sample. Re-export with a higher JURIS_MAPPING_QUALITY_UNMAPPED_CAP or query Postgres.`
+              : `Showing up to 80 unmapped ${label.toLowerCase()} from the export sample (${fmt(drill.missing)} missing in this state per rollup).`
+          }
+          onClose={() => setDrill(null)}
+        />
+      ) : null}
+
+      <div className="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
+        {[
+          { label: 'States in view', val: fmt(enriched.length) },
+          { label: 'With any gap', val: fmt(enriched.filter((s) => s.missing > 0).length) },
+          { label: 'Missing URLs (sum)', val: fmt(totalMissing) },
+          {
+            label: 'National coverage',
+            val: `${(
+              (enriched.reduce((s, r) => s + Number(r.with_primary_website), 0) /
+                Math.max(1, enriched.reduce((s, r) => s + Number(r.total_jurisdictions), 0))) *
+              100
+            ).toFixed(1)}%`,
+          },
+        ].map((k) => (
+          <div key={k.label} className="rounded-lg border border-[var(--jmq-border)] bg-[var(--jmq-surface2)] px-3 py-2">
+            <div className="font-mono text-[10px] font-semibold uppercase tracking-wide text-[var(--jmq-text-muted)]">
+              {k.label}
+            </div>
+            <div className="mt-1 font-mono text-sm font-bold text-[var(--jmq-text)]">{k.val}</div>
+          </div>
+        ))}
+      </div>
+
+      <div className="jmq-pill-row mb-3">
+        {(
+          [
+            ['worst', '15 Most gaps'],
+            ['best', '15 Best coverage'],
+            ['all', 'All states'],
+          ] as const
+        ).map(([id, lbl]) => (
+          <button
+            key={id}
+            type="button"
+            className={`jmq-pill text-xs ${view === id && !search ? 'jmq-pill--active' : ''}`}
+            onClick={() => {
+              setView(id)
+              setSearch('')
+              setSortCol(id === 'best' ? 'pct' : 'missing')
+              setSortDir(id === 'best' ? 'desc' : 'desc')
+            }}
+          >
+            {lbl}
+          </button>
+        ))}
+        <input
+          type="search"
+          placeholder="Search state…"
+          value={search}
+          onChange={(e) => {
+            setSearch(e.target.value)
+            setView('all')
+          }}
+          className="ml-auto w-44 rounded-md border border-[var(--jmq-border)] bg-[var(--jmq-surface)] px-2 py-1.5 text-xs text-[var(--jmq-text)]"
+        />
+      </div>
+
+      <div className="jmq-card mb-4">
+        <div className="jmq-card-title">Missing primary URLs by state (click a bar)</div>
+        <p className="jmq-card-sub">
+          Count of {label.toLowerCase()} without a mapped primary website in each state. Bars with zero are omitted in this chart.
+        </p>
+        <div className="h-56 w-full sm:h-64">
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={chartData} margin={{ top: 8, right: 12, bottom: 48, left: 8 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="var(--jmq-border)" />
+              <XAxis dataKey="state_code" tick={{ fontSize: 10, fill: 'var(--jmq-text-muted)' }} interval={0} angle={-40} textAnchor="end" height={50} />
+              <YAxis
+                tickFormatter={(v) => fmt(v)}
+                tick={{ fontSize: 10, fill: 'var(--jmq-text-muted)' }}
+                width={48}
+                label={{
+                  value: 'Missing primary URL (count)',
+                  angle: -90,
+                  position: 'insideLeft',
+                  offset: 4,
+                  fill: 'var(--jmq-text-muted)',
+                  fontSize: 11,
+                  fontWeight: 600,
+                }}
+              />
+              <Tooltip contentStyle={{ background: 'var(--jmq-surface2)', border: '1px solid var(--jmq-border)' }} />
+              <Bar dataKey="missing" name="Missing" radius={[3, 3, 0, 0]} cursor="pointer" onClick={setDrillFromBar}>
+                {chartData.map((d, i) => (
+                  <Cell key={i} fill={barColor(d.pct)} fillOpacity={0.85} />
+                ))}
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
+
+      <div className="jmq-card">
+        <div className="jmq-card-title">
+          {search ? `Search: “${search}”` : view === 'worst' ? 'States with the most missing URLs' : view === 'best' ? 'Highest coverage by state' : 'All states'}
+        </div>
+        <p className="jmq-card-sub">
+          Per-state rollup for {label.toLowerCase()}. Use <strong>↗ Missing</strong> to open the unmapped sample for that state.
+        </p>
+        <div className="jmq-tbl-wrap mt-2">
+          <table className="jmq-dt text-xs">
+            <thead>
+              <tr>
+                {(
+                  [
+                    { k: null, l: '#' },
+                    { k: 'state_code', l: 'St' },
+                    { k: null, l: 'Name' },
+                    { k: 'total_jurisdictions', l: 'Total' },
+                    { k: 'pct', l: 'Coverage' },
+                    { k: 'missing', l: 'Missing' },
+                    { k: null, l: 'Drill' },
+                  ] as { k: 'pct' | 'missing' | 'total_jurisdictions' | 'state_code' | null; l: string }[]
+                ).map(({ k, l }) => (
+                  <th
+                    key={l}
+                    className={`${k ? 'cursor-pointer select-none' : ''} ${sortCol === k ? 'text-[var(--jmq-teal)]' : ''}`}
+                    onClick={k ? () => toggleSort(k) : undefined}
+                  >
+                    {l}
+                    {k ? <span className="ml-1 opacity-60">{sortCol === k ? (sortDir === 'asc' ? '↑' : '↓') : '↕'}</span> : null}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {filtered.length === 0 ? (
+                <tr>
+                  <td colSpan={7} className="py-8 text-center text-[var(--jmq-text-muted)]">
+                    No states match this filter.
+                  </td>
+                </tr>
+              ) : (
+                filtered.map((r, i) => {
+                  const rank = !search && view !== 'all' ? i + 1 : null
+                  return (
+                    <tr key={r.state_code}>
+                      <td className="font-mono text-[10px] text-[var(--jmq-text-muted)]">{rank ? `#${rank}` : ''}</td>
+                      <td className="font-mono font-semibold">{r.state_code}</td>
+                      <td>{r.name}</td>
+                      <td className="font-mono tabular-nums">{fmt(Number(r.total_jurisdictions))}</td>
+                      <td>
+                        <CovBarLite pct={r.pct} width={72} />
+                      </td>
+                      <td className="font-mono text-[10px] text-[var(--jmq-red)]">{r.missing > 0 ? fmt(r.missing) : '—'}</td>
+                      <td>
+                        {r.missing > 0 ? (
+                          <button
+                            type="button"
+                            className="rounded border border-[var(--jmq-red)] bg-[var(--jmq-red-dim)] px-2 py-0.5 font-mono text-[10px] text-[var(--jmq-red)] hover:opacity-90"
+                            onClick={() => setDrill(r)}
+                          >
+                            ↗ Missing
+                          </button>
+                        ) : (
+                          <span className="text-[var(--jmq-green)] font-mono text-[10px]">✓</span>
+                        )}
+                      </td>
+                    </tr>
+                  )
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function StateAnalysisSection({
+  rollup,
+  unmapped,
+  stateQuality,
+}: {
+  rollup: StateRollupRow[]
+  unmapped: UnmappedDrillRow[]
+  stateQuality?: StateQualityRow[]
+}) {
+  const qualityByCode = useMemo(() => {
+    const m = new Map<string, StateQualityRow>()
+    for (const s of stateQuality ?? []) m.set(s.state_code, s)
+    return m
+  }, [stateQuality])
   const [view, setView] = useState<'worst' | 'best' | 'all'>('worst')
   const [search, setSearch] = useState('')
   const [sortCol, setSortCol] = useState<'pct' | 'missing' | 'total_jurisdictions' | 'state_code'>('pct')
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc')
-  type EnrichedState = StateRollupRow & { name: string; missing: number; pct: number }
+  type EnrichedState = StateRollupRow & {
+    name: string
+    missing: number
+    pct: number
+    state_population_tier?: string | null
+    acs_population?: number | null
+    state_income_level?: string | null
+    portal?: StateQualityRow
+  }
   const [drill, setDrill] = useState<EnrichedState | null>(null)
 
   const enriched = useMemo(
@@ -608,14 +1480,19 @@ function StateAnalysisSection({
         const total = Number(r.total_jurisdictions)
         const withUrl = Number(r.with_primary_website)
         const pct = r.pct_with_primary_website != null ? Number(r.pct_with_primary_website) : total > 0 ? (100 * withUrl) / total : 0
+        const q = qualityByCode.get(r.state_code)
         return {
           ...r,
-          name: US_STATE_NAMES[r.state_code] ?? r.state_code,
+          name: q?.state_name ?? US_STATE_NAMES[r.state_code] ?? r.state_code,
           missing: Math.max(0, total - withUrl),
           pct,
+          state_population_tier: q?.state_population_tier ?? null,
+          acs_population: q?.acs_population ?? null,
+          state_income_level: q?.state_income_level ?? null,
+          portal: q,
         }
       }),
-    [rollup],
+    [rollup, qualityByCode],
   )
 
   const filtered = useMemo(() => {
@@ -641,14 +1518,10 @@ function StateAnalysisSection({
     return base.slice(0, 20)
   }, [enriched, view])
 
-  const worst = [...enriched].sort((a, b) => a.pct - b.pct)[0]
-  const best = [...enriched].sort((a, b) => b.pct - a.pct)[0]
-  const spread = worst && best ? (best.pct - worst.pct).toFixed(1) : '0'
-
   const drillRows = useMemo(() => {
     if (!drill) return []
-    return unmapped.filter((r) => r.state_code === drill.state_code && matchesEntityUnmapped(entity, r)).slice(0, 80)
-  }, [drill, unmapped, entity])
+    return unmapped.filter((r) => r.state_code === drill.state_code && r.jurisdiction_type === 'state').slice(0, 80)
+  }, [drill, unmapped])
 
   const setDrillFromBar = (barData: unknown) => {
     const p = (barData as { payload?: EnrichedState } | null)?.payload
@@ -668,12 +1541,14 @@ function StateAnalysisSection({
       {drill ? (
         <DrillPanel
           rows={drillRows}
-          title="Unmapped sample"
-          subtitle={`${drill.name} (${drill.state_code}) · ${fmt(drill.missing)} missing in warehouse`}
+          title="State without portal"
+          subtitle={`${drill.name} (${drill.state_code}) · state government row`}
           bannerExtra={
-            drillRows.length === 0
-              ? 'No rows for this state + entity in the exported unmapped sample (list is capped globally). Re-export with a higher JURIS_MAPPING_QUALITY_UNMAPPED_CAP or query Postgres.'
-              : null
+            drill?.portal
+              ? statePortalDetailLines(drill.portal).join(' · ')
+              : drillRows.length === 0
+                ? 'No state-government row in the unmapped export sample (capped list). Re-export or query jurisdiction_mapping_analysis where jurisdiction_type = state.'
+                : null
           }
           onClose={() => setDrill(null)}
         />
@@ -681,10 +1556,10 @@ function StateAnalysisSection({
 
       <div className="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
         {[
-          { label: 'States in snapshot', val: fmt(enriched.length) },
-          { label: 'Worst coverage', val: worst ? `${worst.state_code} (${worst.pct.toFixed(1)}%)` : '—' },
-          { label: 'Best coverage', val: best ? `${best.state_code} (${best.pct.toFixed(1)}%)` : '—' },
-          { label: 'Spread (pp)', val: `Δ ${spread}` },
+          { label: 'State governments', val: fmt(enriched.length) },
+          { label: 'With portal', val: fmt(enriched.filter((s) => s.pct >= 100).length) },
+          { label: 'Missing portal', val: fmt(enriched.filter((s) => s.missing > 0).length) },
+          { label: 'Mapped share', val: `${((enriched.filter((s) => s.pct >= 100).length / Math.max(1, enriched.length)) * 100).toFixed(1)}%` },
         ].map((k) => (
           <div key={k.label} className="rounded-lg border border-[var(--jmq-border)] bg-[var(--jmq-surface2)] px-3 py-2">
             <div className="font-mono text-[10px] font-semibold uppercase tracking-wide text-[var(--jmq-text-muted)]">
@@ -730,8 +1605,8 @@ function StateAnalysisSection({
       </div>
 
       <div className="jmq-card mb-4">
-        <div className="jmq-card-title">Coverage % by state (click a bar)</div>
-        <p className="jmq-card-sub">States sorted {view === 'best' ? 'best' : 'worst'} first in chart below.</p>
+        <div className="jmq-card-title">State portal mapped (click a bar)</div>
+        <p className="jmq-card-sub">Each bar is one state government — 100% = primary URL in warehouse, 0% = missing.</p>
         <div className="h-56 w-full sm:h-64">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart
@@ -771,8 +1646,8 @@ function StateAnalysisSection({
       </div>
 
       <div className="jmq-card mb-4">
-        <div className="jmq-card-title">Missing URL volume — top 15 states</div>
-        <p className="jmq-card-sub">Click a bar to open unmapped sample for that state.</p>
+        <div className="jmq-card-title">States without a portal</div>
+        <p className="jmq-card-sub">State governments missing a primary URL (click a bar to drill).</p>
         <div className="h-48 w-full">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart
@@ -827,7 +1702,9 @@ function StateAnalysisSection({
         <div className="jmq-card-title">
           {search ? `Search: “${search}”` : view === 'worst' ? '15 lowest coverage' : view === 'best' ? '15 highest coverage' : 'All states'}
         </div>
-        <p className="jmq-card-sub">Click column headers to sort. Use ↗ to drill when missing &gt; 0.</p>
+        <p className="jmq-card-sub">
+          One row per state government (official state portal in the warehouse). ACS tiers are Census state estimates.
+        </p>
         <div className="jmq-tbl-wrap mt-2">
           <table className="jmq-dt text-xs">
             <thead>
@@ -837,10 +1714,11 @@ function StateAnalysisSection({
                     { k: null, l: '#' },
                     { k: 'state_code', l: 'St' },
                     { k: null, l: 'Name' },
-                    { k: 'total_jurisdictions', l: 'Total' },
-                    { k: null, l: 'With URL' },
-                    { k: 'pct', l: 'Cov %' },
-                    { k: 'missing', l: 'Missing' },
+                    { k: null, l: 'Pop tier' },
+                    { k: null, l: 'ACS pop' },
+                    { k: null, l: 'Primary URL' },
+                    { k: 'pct', l: 'Portal' },
+                    { k: 'missing', l: 'Gap' },
                     { k: null, l: 'Drill' },
                   ] as { k: 'pct' | 'missing' | 'total_jurisdictions' | 'state_code' | null; l: string }[]
                 ).map(({ k, l }) => (
@@ -863,14 +1741,15 @@ function StateAnalysisSection({
                     <td className="font-mono text-[10px] text-[var(--jmq-text-muted)]">{rank ? `#${rank}` : ''}</td>
                     <td className="font-mono font-semibold">{r.state_code}</td>
                     <td>{r.name}</td>
-                    <td className="jmq-dt-num tabular-nums">{fmt(r.total_jurisdictions)}</td>
-                    <td className="jmq-dt-num tabular-nums" style={{ color: barColor(r.pct) }}>
-                      {fmt(r.with_primary_website)}
+                    <td className="font-mono text-[10px] text-[var(--jmq-text-muted)]">{r.state_population_tier ?? '—'}</td>
+                    <td className="font-mono text-[10px] tabular-nums">{fmtPop(r.acs_population)}</td>
+                    <td className="min-w-[12rem] max-w-[280px]">
+                      {r.portal ? <StatePortalUrlCell s={r.portal} /> : <span className="text-[var(--jmq-text-muted)]">—</span>}
                     </td>
                     <td>
                       <CovBarLite pct={r.pct} width={72} />
                     </td>
-                    <td className="jmq-dt-num font-mono">{fmt(r.missing)}</td>
+                    <td className="font-mono text-[10px]">{r.missing > 0 ? 'No portal' : '—'}</td>
                     <td>
                       {r.missing > 0 ? (
                         <button
@@ -878,7 +1757,7 @@ function StateAnalysisSection({
                           className="rounded border border-[var(--jmq-red)] bg-[var(--jmq-red-dim)] px-2 py-0.5 font-mono text-[10px] text-[var(--jmq-red)] hover:opacity-90"
                           onClick={() => setDrill(r)}
                         >
-                          ↗ {fmt(r.missing)}
+                          ↗ Drill
                         </button>
                       ) : (
                         <span className="text-[var(--jmq-green)] font-mono text-[10px]">✓</span>
@@ -898,21 +1777,34 @@ function StateAnalysisSection({
 function SectionTable({
   rows,
   onDrillMissing,
+  variant = 'default',
 }: {
-  rows: { bucket: string; n: number; withUrl: number; pct: number; missing: number }[]
-  onDrillMissing: (bucket: string) => void
+  rows: { bucket: string; tierValue?: string; n: number; withUrl: number; pct: number; missing: number }[]
+  onDrillMissing: (row: { bucket: string; tierValue?: string; missing: number }) => void
+  variant?: 'default' | 'state_portal'
 }) {
   const data = rows.filter((r) => r.n > 0)
+  const headers =
+    variant === 'state_portal'
+      ? ['Tier', 'States', 'With portal', 'Coverage', 'Missing portals', 'Drill']
+      : ['Bucket', 'In bucket', 'With URL', 'Coverage', 'Missing', 'Drill']
   return (
     <table className="jmq-dt w-full text-xs">
       <thead>
         <tr>
-          {['Bucket', 'In bucket', 'With URL', 'Coverage', 'Missing', 'Drill'].map((h) => (
+          {headers.map((h) => (
             <th key={h}>{h}</th>
           ))}
         </tr>
       </thead>
       <tbody>
+        {data.length === 0 ? (
+          <tr>
+            <td colSpan={6} className="px-3 py-8 text-center text-sm text-[var(--jmq-text-muted)]">
+              No bucket rows in this export. Re-export after state ACS is loaded (see Refresh panel).
+            </td>
+          </tr>
+        ) : null}
         {data.map((r) => (
           <tr key={r.bucket}>
             <td className="font-semibold text-[var(--jmq-text)]">{r.bucket}</td>
@@ -929,7 +1821,7 @@ function SectionTable({
                 <button
                   type="button"
                   className="rounded border border-[var(--jmq-red)] bg-[var(--jmq-red-dim)] px-2 py-0.5 font-mono text-[10px]"
-                  onClick={() => onDrillMissing(r.bucket)}
+                  onClick={() => onDrillMissing({ bucket: r.bucket, tierValue: r.tierValue, missing: r.missing })}
                 >
                   ↗
                 </button>
@@ -956,9 +1848,21 @@ export default function EntityQualityDashboard({
   const [entity, setEntity] = useState<EntityKey>('cities')
   const [section, setSection] = useState<'overview' | 'population' | 'income'>('overview')
   type BucketDrill =
-    | { field: 'acs_population_tier'; value: string }
-    | { field: 'acs_income_level'; value: string }
+    | {
+        mode: 'state_tier'
+        field: 'state_population_tier' | 'state_income_level'
+        value: string
+      }
+    | {
+        mode: 'entity_acs'
+        entityKey: Exclude<EntityKey, 'state'>
+        field: 'acs_population_tier' | 'acs_income_level'
+        value: string
+        expectedMissing: number
+      }
   const [bucketDrill, setBucketDrill] = useState<BucketDrill | null>(null)
+  const [stateJurisDrill, setStateJurisDrill] = useState<StateQualityRow | null>(null)
+  const [stateFilter, setStateFilter] = useState('')
   const [mappedIssuesOpen, setMappedIssuesOpen] = useState(false)
 
   const location = useLocation()
@@ -976,6 +1880,10 @@ export default function EntityQualityDashboard({
     prevEntityRef.current = entity
   }, [entity, location.hash, location.pathname, location.search, navigate])
 
+  useEffect(() => {
+    setStateFilter('')
+  }, [entity])
+
   const summaryByType = data.summary_by_type ?? []
   const muniRows = data.summary_municipality_by_place_kind ?? []
   const popRowsAll = data.summary_by_acs_population_tier ?? []
@@ -984,59 +1892,82 @@ export default function EntityQualityDashboard({
   const unmapped = drill?.unmapped ?? []
   const mappedIssues = drill?.mapped_url_issues ?? []
 
-  const metrics = useMemo(() => entityMetrics(entity, summaryByType, muniRows), [entity, summaryByType, muniRows])
-  const touchForPie = useMemo(() => {
-    if (entity === 'state') return entityMetrics('state', summaryByType, muniRows).touch as SummaryRow | null
-    if (entity === 'cities') return muniRows.find((x) => x.municipality_place_kind === 'incorporated_city') ?? null
-    if (entity === 'towns') {
-      const agg = aggregateMuniKinds(muniRows, ['incorporated_other', 'unknown', 'census_designated_place'])
-      return {
-        jurisdictions_touching_naco: agg.touch.jurisdictions_touching_naco,
-        jurisdictions_touching_uscm: agg.touch.jurisdictions_touching_uscm,
-        jurisdictions_touching_nces: agg.touch.jurisdictions_touching_nces,
-        jurisdictions_touching_gsa: agg.touch.jurisdictions_touching_gsa,
-        jurisdictions_touching_override: agg.touch.jurisdictions_touching_override,
-      } as MunicipalityPlaceSummaryRow
-    }
-    return (summaryByType.find((x) => x.jurisdiction_type === (entity === 'counties' ? 'county' : 'school_district')) ??
-      null) as SummaryRow | null
-  }, [entity, summaryByType, muniRows])
+  const stateQualityRows = data.states ?? []
 
-  const pieData = useMemo(() => sourcePie(touchForPie, entity), [touchForPie, entity])
+  const filteredRollupRow = useMemo(() => {
+    if (entity === 'state' || !stateFilter) return null
+    const roll = data.entity_state_rollup
+    if (!roll) return null
+    return roll[ENTITY_ROLLUP_KEY[entity]]?.find((r) => r.state_code === stateFilter) ?? null
+  }, [data.entity_state_rollup, entity, stateFilter])
 
-  const acsJurisdictionFilter = entity === 'counties' ? 'county' : entity === 'schools' ? 'school_district' : 'municipality'
+  const metrics = useMemo(() => {
+    if (entity === 'state') return stateGovMetrics(stateQualityRows)
+    if (filteredRollupRow) return metricsFromRollupRow(filteredRollupRow)
+    return entityMetrics(entity, summaryByType, muniRows)
+  }, [entity, filteredRollupRow, stateQualityRows, summaryByType, muniRows])
+
+  const sourceRateRow = useMemo((): PrimarySourceRow | null => {
+    if (filteredRollupRow) return null
+    if (entity === 'state') return summaryByType.find((x) => x.jurisdiction_type === 'state') ?? null
+    if (entity === 'cities') return muniRows?.find((x) => x.municipality_place_kind === 'incorporated_city') ?? null
+    if (entity === 'towns')
+      return aggregateMuniPrimaryFrom(muniRows, ['incorporated_other', 'unknown', 'census_designated_place'])
+    if (entity === 'counties') return summaryByType.find((x) => x.jurisdiction_type === 'county') ?? null
+    if (entity === 'schools') return summaryByType.find((x) => x.jurisdiction_type === 'school_district') ?? null
+    return null
+  }, [entity, filteredRollupRow, muniRows, summaryByType])
+
+  const entityAcsSlice =
+    entity !== 'state' ? data.entity_acs_by_slice?.[entity as Exclude<EntityKey, 'state'>] : undefined
 
   const popTableRows = useMemo(() => {
+    if (entity === 'state') {
+      return stateBucketTableRows(data.summary_by_state_population_tier, 'state_population_tier', STATE_POPULATION_TIER_ORDER)
+    }
+    if (entityAcsSlice?.by_population_tier?.length) {
+      return entityAcsBucketTableRows(entityAcsSlice, 'by_population_tier')
+    }
+    const acsJurisdictionFilter = entity === 'counties' ? 'county' : entity === 'schools' ? 'school_district' : 'municipality'
     return popRowsAll
       .filter((r) => r.jurisdiction_type === acsJurisdictionFilter)
       .map((r) => {
         const n = Number(r.total_jurisdictions)
         const w = Number(r.with_primary_website)
         const pct = r.pct_with_primary_website != null ? Number(r.pct_with_primary_website) : n > 0 ? (100 * w) / n : 0
-        return { bucket: r.acs_population_tier, n, withUrl: w, pct, missing: Math.max(0, n - w) }
+        return { bucket: r.acs_population_tier, tierValue: r.acs_population_tier, n, withUrl: w, pct, missing: Math.max(0, n - w) }
       })
-  }, [popRowsAll, acsJurisdictionFilter])
+  }, [entity, entityAcsSlice, popRowsAll, data.summary_by_state_population_tier])
 
   const incTableRows = useMemo(() => {
+    if (entity === 'state') {
+      return stateBucketTableRows(data.summary_by_state_income_level, 'state_income_level', STATE_INCOME_TIER_ORDER)
+    }
+    if (entityAcsSlice?.by_income_level?.length) {
+      return entityAcsBucketTableRows(entityAcsSlice, 'by_income_level')
+    }
+    const acsJurisdictionFilter = entity === 'counties' ? 'county' : entity === 'schools' ? 'school_district' : 'municipality'
     return incRowsAll
       .filter((r) => r.jurisdiction_type === acsJurisdictionFilter)
       .map((r) => {
         const n = Number(r.total_jurisdictions)
         const w = Number(r.with_primary_website)
         const pct = r.pct_with_primary_website != null ? Number(r.pct_with_primary_website) : n > 0 ? (100 * w) / n : 0
-        return { bucket: r.acs_income_level, n, withUrl: w, pct, missing: Math.max(0, n - w) }
+        return { bucket: r.acs_income_level, tierValue: r.acs_income_level, n, withUrl: w, pct, missing: Math.max(0, n - w) }
       })
-  }, [incRowsAll, acsJurisdictionFilter])
+  }, [entity, entityAcsSlice, incRowsAll, data.summary_by_state_income_level])
 
   const popChartData = popTableRows.filter((r) => r.n > 0)
   const incChartData = incTableRows.filter((r) => r.n > 0)
 
   const rollup = useMemo(() => {
+    if (entity === 'state') return stateRowsToRollup(stateQualityRows)
     const roll = data.entity_state_rollup
     if (!roll) return []
-    if (entity === 'state') return mergeStateRollups(roll)
-    return roll[ENTITY_ROLLUP_KEY[entity]] ?? []
-  }, [data.entity_state_rollup, entity])
+    const rows = roll[ENTITY_ROLLUP_KEY[entity]] ?? []
+    if (!stateFilter) return rows
+    return rows.filter((r) => r.state_code === stateFilter)
+  }, [data.entity_state_rollup, entity, stateFilter, stateQualityRows])
 
   const insight = useMemo(() => {
     const { total, withUrl, pct } = metrics
@@ -1048,30 +1979,67 @@ export default function EntityQualityDashboard({
     if (entity === 'counties')
       return `Counties are the best-covered class in most snapshots (~${pct.toFixed(1)}%). Remaining ${fmt(miss)} gaps skew rural / edge cases.`
     if (entity === 'state')
-      return `All jurisdiction types combined (~${pct.toFixed(1)}% with a primary URL). ${fmt(miss)} still lack one — use the state chart below, then pick a type tile for ACS or source detail.`
-    return `School districts are NCES-driven (~${pct.toFixed(1)}%). ${fmt(miss)} districts still lack a warehouse primary; URL-shape flags are counted separately.`
-  }, [entity, metrics])
+      return `${fmt(withUrl)} of ${fmt(total)} state governments have a primary portal URL in the warehouse (${pct.toFixed(1)}%). ${fmt(miss)} states lack one. Population / income tabs group states by ACS tiers.`
+    const stateNote = stateFilter ? ` · ${US_STATE_NAMES[stateFilter] ?? stateFilter} (${stateFilter})` : ''
+    return `${ENTITY_META[entity].label}${stateNote}: ~${pct.toFixed(1)}% with a primary URL; ${fmt(miss)} still missing. Use the state filter to scope drills to one state.`
+  }, [entity, metrics, stateFilter])
 
-  const bucketUnmappedResult = useMemo(() => {
-    if (!bucketDrill) return { rows: [] as UnmappedDrillRow[], bannerExtra: null as string | null }
-    const base = unmapped.filter((r) => matchesEntityUnmapped(entity, r))
-    const key = bucketDrill.field
-    const val = bucketDrill.value
-    const strict = base.filter((r) => String(r[key] ?? '') === val)
-    if (strict.length > 0) return { rows: strict.slice(0, 80), bannerExtra: null }
-    const tail = base.slice(0, 60)
-    if (tail.length === 0) {
+  const entityAcsDrillResult = useMemo(() => {
+    if (!bucketDrill || bucketDrill.mode !== 'entity_acs') {
       return {
-        rows: [],
-        bannerExtra:
-          'No unmapped rows for this entity appear in the exported sample (raise JURIS_MAPPING_QUALITY_UNMAPPED_CAP and re-export, or query Postgres).',
+        rows: [] as UnmappedDrillRow[],
+        bannerExtra: null as string | null,
+        useBucketDrill: false,
       }
     }
-    return {
-      rows: tail,
-      bannerExtra: `No rows in this sample matched “${val}” on ${key}. Showing ${tail.length} unmapped ${ENTITY_META[entity].label.toLowerCase()} rows from the export sample instead.`,
+    const ek = bucketDrill.entityKey
+    const val = bucketDrill.value
+    const tierListKey = bucketDrill.field === 'acs_population_tier' ? 'by_population_tier' : 'by_income_level'
+    let bucketRows =
+      data.entity_acs_unmapped_drill?.[ek]?.[tierListKey]?.[val]?.slice() ?? []
+    if (stateFilter) bucketRows = bucketRows.filter((r) => r.state_code === stateFilter)
+
+    if (bucketRows.length > 0) {
+      const expected = bucketDrill.expectedMissing
+      const cap = data.entity_acs_bucket_drill_cap
+      let bannerExtra: string | null = null
+      if (expected > 0 && bucketRows.length < expected) {
+        bannerExtra = `Showing ${fmt(bucketRows.length)} of ${fmt(expected)} missing in this bucket${
+          cap != null ? ` (export cap ${fmt(cap)} per bucket; re-export with JURIS_MAPPING_QUALITY_BUCKET_DRILL_CAP)` : ''
+        }.`
+      }
+      return { rows: bucketRows.slice(0, 80), bannerExtra, useBucketDrill: true }
     }
-  }, [bucketDrill, unmapped, entity])
+
+    let base = unmapped.filter((r) => matchesEntityUnmapped(ek, r))
+    if (stateFilter) base = base.filter((r) => r.state_code === stateFilter)
+    const strict = base.filter((r) => String(r[bucketDrill.field] ?? '') === val)
+    if (strict.length > 0) {
+      const expected = bucketDrill.expectedMissing
+      const bannerExtra =
+        expected > 0 && strict.length < expected
+          ? `Showing ${fmt(strict.length)} of ${fmt(expected)} missing from the global capped sample — re-export to populate entity_acs_unmapped_drill.`
+          : 'Legacy global sample only; re-run export_jurisdiction_mapping_quality_json.py for per-bucket drill lists.'
+      return { rows: strict.slice(0, 80), bannerExtra, useBucketDrill: false }
+    }
+    const parts: string[] = []
+    if (bucketDrill.expectedMissing > 0) {
+      parts.push(
+        `The summary shows ${fmt(bucketDrill.expectedMissing)} missing ${ENTITY_META[ek].label.toLowerCase()} in “${val}”.`,
+      )
+      parts.push('Re-run export_jurisdiction_mapping_quality_json.py (entity_acs_unmapped_drill) or query Postgres.')
+    } else {
+      parts.push(`No unmapped ${ENTITY_META[ek].label.toLowerCase()} in this bucket.`)
+    }
+    return { rows: [], bannerExtra: parts.join(' '), useBucketDrill: false }
+  }, [bucketDrill, data.entity_acs_bucket_drill_cap, data.entity_acs_unmapped_drill, stateFilter, unmapped])
+
+  const stateJurisDrillRows = useMemo(() => {
+    if (!stateJurisDrill) return []
+    return unmapped
+      .filter((r) => r.state_code === stateJurisDrill.state_code && r.jurisdiction_type === 'state')
+      .slice(0, 80)
+  }, [stateJurisDrill, unmapped])
 
   const syntaxIssueRows = useMemo(() => {
     if (entity !== 'schools') return []
@@ -1079,6 +2047,24 @@ export default function EntityQualityDashboard({
   }, [mappedIssues, entity])
 
   const hasAcs = popRowsAll.length > 0 || incRowsAll.length > 0
+  const hasStateAcs = stateQualityRows.some((s) => s.acs_population != null)
+
+  const statePopChartData = useMemo(
+    () => stateBucketChartRows(data.summary_by_state_population_tier, 'state_population_tier', STATE_POPULATION_TIER_ORDER),
+    [data.summary_by_state_population_tier],
+  )
+  const stateIncChartData = useMemo(
+    () => stateBucketChartRows(data.summary_by_state_income_level, 'state_income_level', STATE_INCOME_TIER_ORDER),
+    [data.summary_by_state_income_level],
+  )
+  const statePopTableRows = useMemo(
+    () => stateBucketTableRows(data.summary_by_state_population_tier, 'state_population_tier', STATE_POPULATION_TIER_ORDER),
+    [data.summary_by_state_population_tier],
+  )
+  const stateIncTableRows = useMemo(
+    () => stateBucketTableRows(data.summary_by_state_income_level, 'state_income_level', STATE_INCOME_TIER_ORDER),
+    [data.summary_by_state_income_level],
+  )
 
   return (
     <div className="jmq-main pb-16">
@@ -1101,62 +2087,50 @@ export default function EntityQualityDashboard({
           </div>
           <div className="jmq-hdr-sub hidden flex-wrap justify-end gap-2 lg:flex">
             <span className="rounded border border-[var(--jmq-border)] bg-[var(--jmq-surface2)] px-2 py-0.5 font-mono text-[10px]">
-              {hasAcs ? 'ACS in JSON' : 'ACS empty'}
+              {entity === 'state'
+                ? hasStateAcs
+                  ? `State ACS ${data.acs_vintage_year ?? ''}`.trim()
+                  : 'State ACS missing'
+                : hasAcs
+                  ? 'ACS in JSON'
+                  : 'ACS empty'}
             </span>
             <span className="rounded border border-[var(--jmq-border)] px-2 py-0.5 font-mono text-[10px] text-[var(--jmq-text-muted)]">
               Snapshot
             </span>
           </div>
         </div>
-        {entity !== 'state' ? (
-        <nav
-          className="mt-3 flex flex-wrap items-center gap-1 border-t border-[var(--jmq-border)] pt-3"
-          aria-label="Dashboard sections"
-        >
-          {(
-            [
-              ['overview', 'Overview'],
-              ['population', 'By population'],
-              ['income', 'By income'],
-            ] as const
-          ).map(([id, lbl]) => (
-            <button
-              key={id}
-              type="button"
-              onClick={() => {
-                setSection(id)
-                if (location.hash === '#state') {
-                  navigate({ pathname: location.pathname, search: location.search, hash: '' }, { replace: true })
-                }
-              }}
-              className={`rounded-t-md border border-b-0 px-3 py-2 text-xs font-medium ${
-                section === id
-                  ? 'border-[var(--jmq-border)] bg-[var(--jmq-surface)] text-[var(--jmq-teal)]'
-                  : 'border-transparent text-[var(--jmq-text-muted)] hover:text-[var(--jmq-text)]'
-              }`}
-            >
-              {lbl}
-            </button>
-          ))}
-          {entity === 'schools' && mappedIssues.length > 0 ? (
-            <button
-              type="button"
-              className="ml-auto self-center rounded border border-[var(--jmq-amber)] bg-[var(--jmq-amber-dim)] px-2 py-1 font-mono text-[11px] text-[#4d2d00]"
-              onClick={() => setMappedIssuesOpen(true)}
-            >
-              URL shape sample ({syntaxIssueRows.length})
-            </button>
-          ) : null}
-        </nav>
-        ) : null}
       </header>
 
-      {bucketDrill ? (
+      {bucketDrill?.mode === 'state_tier' ? (
+        <StateTierDrillPanel
+          tierLabel={bucketDrill.field === 'state_population_tier' ? 'state population' : 'state income'}
+          tierField={bucketDrill.field}
+          tierValue={bucketDrill.value}
+          states={stateQualityRows}
+          onClose={() => setBucketDrill(null)}
+          onDrillState={(s) => {
+            setBucketDrill(null)
+            setStateJurisDrill(s)
+          }}
+        />
+      ) : null}
+      {stateJurisDrill ? (
         <DrillPanel
-          rows={bucketUnmappedResult.rows}
+          rows={stateJurisDrillRows}
+          title="State without portal"
+          subtitle={`${stateJurisDrill.state_name} (${stateJurisDrill.state_code}) · state government`}
+          bannerExtra={statePortalDetailLines(stateJurisDrill).join(' · ')}
+          onClose={() => setStateJurisDrill(null)}
+        />
+      ) : null}
+      {bucketDrill?.mode === 'entity_acs' ? (
+        <DrillPanel
+          rows={entityAcsDrillResult.rows}
           title="Unmapped sample"
-          subtitle={`${ENTITY_META[entity].label} · ${bucketDrill.value} (${bucketDrill.field})`}
-          bannerExtra={bucketUnmappedResult.bannerExtra}
+          subtitle={`${ENTITY_META[bucketDrill.entityKey].label} · ${bucketDrill.value}`}
+          bannerExtra={entityAcsDrillResult.bannerExtra}
+          useBucketDrill={entityAcsDrillResult.useBucketDrill}
           onClose={() => setBucketDrill(null)}
         />
       ) : null}
@@ -1218,7 +2192,7 @@ export default function EntityQualityDashboard({
 
       <div className="mb-6 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">
         {(Object.keys(ENTITY_META) as EntityKey[]).map((ek) => {
-          const m = entityMetrics(ek, summaryByType, muniRows)
+          const m = ek === 'state' ? stateGovMetrics(stateQualityRows) : entityMetrics(ek, summaryByType, muniRows)
           const active = entity === ek
           return (
             <button
@@ -1226,11 +2200,11 @@ export default function EntityQualityDashboard({
               type="button"
               onClick={() => {
                 setEntity(ek)
+                setSection('overview')
                 if (ek === 'state') {
                   navigate({ pathname: location.pathname, search: location.search, hash: 'state' }, { replace: true })
                   return
                 }
-                setSection('overview')
                 if (location.hash === '#state') {
                   navigate({ pathname: location.pathname, search: location.search, hash: '' }, { replace: true })
                 }
@@ -1253,11 +2227,76 @@ export default function EntityQualityDashboard({
                   {m.pct.toFixed(1)}%
                 </span>
               </div>
-              <div className="mt-1 font-mono text-[10px] text-[var(--jmq-text-muted)]">coverage · {fmt(m.withUrl)} / {fmt(m.total)}</div>
+              <div className="mt-1 font-mono text-[10px] text-[var(--jmq-text-muted)]">
+                {ek === 'state' ? 'portals' : 'coverage'} · {fmt(m.withUrl)} / {fmt(m.total)}
+              </div>
             </button>
           )
         })}
       </div>
+
+      <nav
+        className="mb-5 flex flex-wrap items-center gap-1 border-b border-[var(--jmq-border)]"
+        aria-label={`${ENTITY_META[entity].label} sections`}
+      >
+        {(
+          [
+            ['overview', 'Overview'],
+            ['population', 'By population'],
+            ['income', 'By income'],
+          ] as const
+        ).map(([id, lbl]) => (
+          <button
+            key={id}
+            type="button"
+            onClick={() => setSection(id)}
+            className={`rounded-t-md border border-b-0 px-3 py-2 text-xs font-medium ${
+              section === id
+                ? 'border-[var(--jmq-border)] bg-[var(--jmq-surface)] text-[var(--jmq-teal)]'
+                : 'border-transparent text-[var(--jmq-text-muted)] hover:text-[var(--jmq-text)]'
+            }`}
+          >
+            {lbl}
+          </button>
+        ))}
+        {entity === 'schools' && mappedIssues.length > 0 ? (
+          <button
+            type="button"
+            className="ml-auto self-center rounded border border-[var(--jmq-amber)] bg-[var(--jmq-amber-dim)] px-2 py-1 font-mono text-[11px] text-[#4d2d00]"
+            onClick={() => setMappedIssuesOpen(true)}
+          >
+            URL shape sample ({syntaxIssueRows.length})
+          </button>
+        ) : null}
+      </nav>
+
+      {entity !== 'state' ? (
+        <div className="mb-4 flex flex-wrap items-center gap-2">
+          <label htmlFor="jmq-state-filter" className="font-mono text-[10px] font-semibold uppercase text-[var(--jmq-text-muted)]">
+            State filter
+          </label>
+          <select
+            id="jmq-state-filter"
+            value={stateFilter}
+            onChange={(e) => setStateFilter(e.target.value)}
+            className="min-w-[12rem] rounded-md border border-[var(--jmq-border)] bg-[var(--jmq-surface)] px-2 py-1.5 text-xs text-[var(--jmq-text)]"
+          >
+            <option value="">All states (national)</option>
+            {Object.keys(US_STATE_NAMES)
+              .sort()
+              .map((sc) => (
+                <option key={sc} value={sc}>
+                  {sc} — {US_STATE_NAMES[sc]}
+                </option>
+              ))}
+          </select>
+          {stateFilter ? (
+            <span className="font-mono text-[10px] text-[var(--jmq-text-muted)]">
+              Scoping KPIs, insight, and drills to {US_STATE_NAMES[stateFilter] ?? stateFilter}
+            </span>
+          ) : null}
+        </div>
+      ) : null}
 
       <div className="mb-5 grid grid-cols-2 gap-2 sm:grid-cols-5">
         {[
@@ -1280,35 +2319,133 @@ export default function EntityQualityDashboard({
         † Among rows with a primary URL: jurisdictions failing static syntax vs counted “syntax OK” in summary tables.
       </p>
 
-      {entity === 'state' ? (
+      {entity === 'state' && section === 'overview' ? (
         <div className="space-y-4">
           <div className="grid gap-3 lg:grid-cols-[1fr_200px]">
             <div className="rounded-lg border border-[var(--jmq-teal)]/30 bg-[var(--jmq-teal-dim)] px-4 py-3 text-sm leading-relaxed text-[var(--jmq-text)]">
               <span className="font-bold text-[var(--jmq-teal)]">Insight · </span>
               {insight}
             </div>
-            <div className="jmq-card !py-3">
-              <div className="mb-2 font-mono text-[10px] font-semibold uppercase text-[var(--jmq-text-muted)]">Sources touched (combined)</div>
-              <div className="flex flex-col gap-1">
-                {ENTITY_META.state.sourceKeys.map((s) => (
-                  <span key={s} className={sourceBadgeClass(s)}>
-                    {s}
-                  </span>
-                ))}
+            <TypicalStatePortalSourcesCard row={sourceRateRow} total={metrics.total} withUrl={metrics.withUrl} />
+          </div>
+          {!hasStateAcs ? (
+            <div className="rounded-lg border border-[var(--jmq-amber)]/40 bg-[var(--jmq-amber-dim)] px-4 py-3 text-sm text-[#4d2d00]">
+              State ACS parquets missing. Run{' '}
+              <code className="text-[11px]">download_census_acs_data.py --geography state --state &apos;*&apos;</code> then
+              re-export mapping quality JSON.
+            </div>
+          ) : null}
+          <div className="grid gap-3 lg:grid-cols-3">
+            <div className="jmq-card">
+              <div className="jmq-card-title">By state population (ACS)</div>
+              <p className="jmq-card-sub">State B01003 tiers · % of state governments with a primary portal.</p>
+              <div className="h-48">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={statePopChartData} margin={{ top: 8, right: 8, bottom: 28, left: 12 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="var(--jmq-border)" />
+                    <XAxis dataKey="bucket" tick={{ fontSize: 8, fill: 'var(--jmq-text-muted)' }} angle={-20} textAnchor="end" interval={0} height={48} />
+                    <YAxis domain={[0, 100]} tickFormatter={(v) => `${v}%`} tick={{ fontSize: 9, fill: 'var(--jmq-text-muted)' }} width={44} />
+                    <Tooltip formatter={(v: number) => [`${v.toFixed(1)}%`, AXIS_LABEL_PCT_WITH_PRIMARY_URL]} />
+                    <Bar dataKey="pct" radius={[3, 3, 0, 0]}>
+                      {statePopChartData.map((d, i) => (
+                        <Cell key={i} fill={barColor(d.pct)} fillOpacity={0.85} />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
               </div>
             </div>
+            <div className="jmq-card">
+              <div className="jmq-card-title">By state income (ACS)</div>
+              <p className="jmq-card-sub">State B19013 median household income tiers.</p>
+              <div className="h-48">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={stateIncChartData} margin={{ top: 8, right: 8, bottom: 8, left: 12 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="var(--jmq-border)" />
+                    <XAxis dataKey="bucket" tick={{ fontSize: 9, fill: 'var(--jmq-text-muted)' }} />
+                    <YAxis tickFormatter={(v) => `${v}%`} tick={{ fontSize: 9, fill: 'var(--jmq-text-muted)' }} width={44} />
+                    <Tooltip formatter={(v: number) => [`${v.toFixed(1)}%`, AXIS_LABEL_PCT_WITH_PRIMARY_URL]} />
+                    <Bar dataKey="pct" radius={[3, 3, 0, 0]}>
+                      {stateIncChartData.map((d, i) => (
+                        <Cell key={i} fill={barColor(d.pct)} fillOpacity={0.85} />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+            <div className="jmq-card">
+              <div className="jmq-card-title">{sourceMappingChartCopy(entity).title}</div>
+              <p className="jmq-card-sub">{sourceMappingChartCopy(entity).sub}</p>
+              <SourceMappingBarChart row={sourceRateRow} total={metrics.total} withUrl={metrics.withUrl} entity={entity} />
+            </div>
           </div>
+          <SourceMappingRatesCard row={sourceRateRow} total={metrics.total} withUrl={metrics.withUrl} entity={entity} />
           {rollup.length === 0 ? (
             <div className="jmq-placeholder">
               <strong>No state rollup in JSON</strong>
-              Re-run <code>export_jurisdiction_mapping_quality_json.py</code> after updating the repo to populate{' '}
-              <code>entity_state_rollup</code>.
+              Re-run <code>export_jurisdiction_mapping_quality_json.py</code> after updating the repo.
             </div>
           ) : (
-            <StateAnalysisSection entity={entity} rollup={rollup} unmapped={unmapped} />
+            <StateAnalysisSection rollup={rollup} unmapped={unmapped} stateQuality={stateQualityRows} />
           )}
         </div>
-      ) : (
+      ) : null}
+      {entity === 'state' && section === 'population' ? (
+        <div className="space-y-4">
+          <SourceMappingRatesCard row={sourceRateRow} total={metrics.total} withUrl={metrics.withUrl} entity={entity} compact />
+        <div className="jmq-card">
+          <div className="jmq-card-title">State population buckets</div>
+          <p className="jmq-card-sub">
+            ACS state population tiers. Counts are state governments with a primary portal — not cities or counties in those states.
+          </p>
+          {!hasStateAcs ? (
+            <div className="mb-3 rounded-lg border border-[var(--jmq-amber)]/40 bg-[var(--jmq-amber-dim)] px-3 py-2 text-sm text-[#4d2d00]">
+              State ACS is missing from <code>jurisdiction_mapping_quality.json</code>. Re-run the export (it can
+              fetch Census state B01003/B19013 automatically) or download parquets first — steps under Refresh.
+            </div>
+          ) : null}
+          <SectionTable
+            variant="state_portal"
+            rows={statePopTableRows}
+            onDrillMissing={({ tierValue }) =>
+              setBucketDrill({
+                mode: 'state_tier',
+                field: 'state_population_tier',
+                value: tierValue ?? '',
+              })
+            }
+          />
+        </div>
+        </div>
+      ) : null}
+      {entity === 'state' && section === 'income' ? (
+        <div className="space-y-4">
+          <SourceMappingRatesCard row={sourceRateRow} total={metrics.total} withUrl={metrics.withUrl} entity={entity} compact />
+        <div className="jmq-card">
+          <div className="jmq-card-title">State income buckets</div>
+          <p className="jmq-card-sub">ACS state median income tiers. Counts are state governments with a mapped portal.</p>
+          {!hasStateAcs ? (
+            <div className="mb-3 rounded-lg border border-[var(--jmq-amber)]/40 bg-[var(--jmq-amber-dim)] px-3 py-2 text-sm text-[#4d2d00]">
+              State ACS is missing from the export. Re-run{' '}
+              <code className="text-[11px]">export_jurisdiction_mapping_quality_json.py</code> (see Refresh).
+            </div>
+          ) : null}
+          <SectionTable
+            variant="state_portal"
+            rows={stateIncTableRows}
+            onDrillMissing={({ tierValue }) =>
+              setBucketDrill({
+                mode: 'state_tier',
+                field: 'state_income_level',
+                value: tierValue ?? '',
+              })
+            }
+          />
+        </div>
+        </div>
+      ) : null}
+      {entity !== 'state' ? (
         <>
       {section === 'overview' && (
         <div className="space-y-4">
@@ -1316,6 +2453,13 @@ export default function EntityQualityDashboard({
             <div className="rounded-lg border border-[var(--jmq-teal)]/30 bg-[var(--jmq-teal-dim)] px-4 py-3 text-sm leading-relaxed text-[var(--jmq-text)]">
               <span className="font-bold text-[var(--jmq-teal)]">Insight · </span>
               {insight}
+              {rollup.length > 0 ? (
+                <p className="mt-2 font-mono text-[11px]">
+                  <a href="#jmq-missing-by-state" className="font-semibold text-[var(--jmq-teal)] underline-offset-2 hover:underline">
+                    ↓ Drill missing URLs by state
+                  </a>
+                </p>
+              ) : null}
             </div>
             <div className="jmq-card !py-3">
               <div className="mb-2 font-mono text-[10px] font-semibold uppercase text-[var(--jmq-text-muted)]">Sources touched</div>
@@ -1331,7 +2475,13 @@ export default function EntityQualityDashboard({
           <div className="grid gap-3 lg:grid-cols-3">
             <div className="jmq-card">
               <div className="jmq-card-title">By population (ACS)</div>
-              <p className="jmq-card-sub">{acsJurisdictionFilter === 'municipality' ? 'All municipalities — not split by city vs town in ACS mart.' : ''}</p>
+              <p className="jmq-card-sub">
+                {entityAcsSlice
+                  ? `${ENTITY_META[entity].label} only.`
+                  : entity === 'cities' || entity === 'towns'
+                    ? 'All municipalities in ACS mart — use Cities / Towns for place-kind splits.'
+                    : ''}
+              </p>
               <div className="h-48">
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={popChartData} margin={{ top: 8, right: 8, bottom: 28, left: 12 }}>
@@ -1395,44 +2545,92 @@ export default function EntityQualityDashboard({
               </div>
             </div>
             <div className="jmq-card">
-              <div className="jmq-card-title">Directory reach (distinct jurisdictions)</div>
-              <p className="jmq-card-sub">Global candidate rows — not per-entity exclusive</p>
-              <div className="h-48">
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie data={pieData} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius={40} outerRadius={68} paddingAngle={2}>
-                      {pieData.map((_, i) => (
-                        <Cell key={i} fill={pieData[i].fill} />
-                      ))}
-                    </Pie>
-                    <Tooltip />
-                    <Legend wrapperStyle={{ fontSize: 10 }} />
-                  </PieChart>
-                </ResponsiveContainer>
-              </div>
+              <div className="jmq-card-title">{sourceMappingChartCopy(entity).title}</div>
+              <p className="jmq-card-sub">{sourceMappingChartCopy(entity).sub}</p>
+              <SourceMappingBarChart row={sourceRateRow} total={metrics.total} withUrl={metrics.withUrl} entity={entity} />
             </div>
           </div>
+          <SourceMappingRatesCard row={sourceRateRow} total={metrics.total} withUrl={metrics.withUrl} entity={entity} />
+          {rollup.length === 0 ? (
+            <div className="jmq-placeholder">
+              <strong>No per-state rollup in JSON</strong>
+              Re-run <code>export_jurisdiction_mapping_quality_json.py</code> so <code>entity_state_rollup</code> is populated.
+            </div>
+          ) : (
+            <EntityStateRollupSection
+              entity={entity}
+              rollup={rollup}
+              unmapped={unmapped}
+              stateQuality={stateQualityRows}
+            />
+          )}
         </div>
       )}
 
       {section === 'population' && (
+        <div className="space-y-4">
+          <SourceMappingRatesCard row={sourceRateRow} total={metrics.total} withUrl={metrics.withUrl} entity={entity} compact />
         <div className="jmq-card">
           <div className="jmq-card-title">Population buckets</div>
-          <p className="jmq-card-sub">Drill uses capped unmapped list filtered by ACS tier when present.</p>
-          <SectionTable rows={popTableRows} onDrillMissing={(b) => setBucketDrill({ field: 'acs_population_tier', value: b })} />
+          <p className="jmq-card-sub">
+            {entity === 'cities'
+              ? 'Incorporated cities only — each city’s ACS population size.'
+              : entity === 'towns'
+                ? 'Towns, villages, and CDPs only.'
+                : entity === 'counties'
+                  ? 'Counties only.'
+                  : 'School districts only.'}{' '}
+            State tiers (Very Large, Large, …) are on the <strong>State</strong> tile.
+          </p>
+          <SectionTable
+            rows={popTableRows}
+            onDrillMissing={({ tierValue, missing }) =>
+              setBucketDrill({
+                mode: 'entity_acs',
+                entityKey: entity,
+                field: 'acs_population_tier',
+                value: tierValue ?? '',
+                expectedMissing: missing,
+              })
+            }
+          />
+        </div>
         </div>
       )}
 
       {section === 'income' && (
+        <div className="space-y-4">
+          <SourceMappingRatesCard row={sourceRateRow} total={metrics.total} withUrl={metrics.withUrl} entity={entity} compact />
         <div className="jmq-card">
           <div className="jmq-card-title">Income buckets</div>
-          <p className="jmq-card-sub">Drill uses capped unmapped list filtered by ACS income when present.</p>
-          <SectionTable rows={incTableRows} onDrillMissing={(b) => setBucketDrill({ field: 'acs_income_level', value: b })} />
+          <p className="jmq-card-sub">
+            {entity === 'cities'
+              ? 'Incorporated cities only.'
+              : entity === 'towns'
+                ? 'Towns, villages, and CDPs only.'
+                : entity === 'counties'
+                  ? 'Counties only.'
+                  : 'School districts only.'}{' '}
+            State income tiers are on the <strong>State</strong> tile.
+          </p>
+          <SectionTable
+            rows={incTableRows}
+            onDrillMissing={({ tierValue, missing }) =>
+              setBucketDrill({
+                mode: 'entity_acs',
+                entityKey: entity,
+                field: 'acs_income_level',
+                value: tierValue ?? '',
+                expectedMissing: missing,
+              })
+            }
+          />
+        </div>
         </div>
       )}
 
         </>
-      )}
+      ) : null}
 
       <div className="jmq-refresh mt-10">
         <button
@@ -1452,6 +2650,14 @@ export default function EntityQualityDashboard({
                 <li>
                   Build marts:{' '}
                   <code className="text-[11px]">./scripts/dbt.sh run --select jurisdiction_mapping_analysis+</code>
+                </li>
+                <li>
+                  State ACS (needs <code className="text-[11px]">CENSUS_API_KEY</code> in .env):{' '}
+                  <code className="text-[11px]">
+                    .venv/bin/python scripts/datasources/census/download_census_acs_data.py --geography state --state
+                    &apos;*&apos; --year 2022
+                  </code>
+                  — or re-export below (auto-fetches B01003/B19013 when parquets are absent).
                 </li>
                 <li>
                   Export:{' '}

@@ -15,7 +15,7 @@ function tabCls({ isActive }: { isActive: boolean }) {
 }
 
 export default function DataExplorerLayout() {
-  const { pathname, hash } = useLocation()
+  const { pathname } = useLocation()
   const onMap = pathname.startsWith(`${DATA_EXPLORER_MAP_BASE}/`) || pathname === DATA_EXPLORER_MAP_BASE
   const onScorecard = pathname.startsWith(DATA_EXPLORER_SCORECARD)
   const onJurisdictionQuality =
@@ -50,23 +50,9 @@ export default function DataExplorerLayout() {
             <NavLink
               to={DATA_EXPLORER_JURISDICTION_QUALITY}
               end
-              className={({ isActive }) =>
-                `${tabCls({
-                  isActive: isActive && pathname === DATA_EXPLORER_JURISDICTION_QUALITY && hash !== '#state',
-                })} shrink-0 whitespace-nowrap`
-              }
+              className={({ isActive }) => `${tabCls({ isActive })} shrink-0 whitespace-nowrap`}
             >
               Data quality
-            </NavLink>
-            <NavLink
-              to={`${DATA_EXPLORER_JURISDICTION_QUALITY}#state`}
-              className={() =>
-                `${tabCls({
-                  isActive: pathname === DATA_EXPLORER_JURISDICTION_QUALITY && hash === '#state',
-                })} shrink-0 whitespace-nowrap`
-              }
-            >
-              By state
             </NavLink>
           </nav>
           {(onMap || onScorecard || onJurisdictionQuality) && (

@@ -24,6 +24,13 @@ Usage:
 
     # Quick test — stop after 500k entities (~2-3 min)
     .venv/bin/python scripts/datasources/wikidata/wikidata_fips_gnis_extract_local.py --limit 500000
+
+    # Unreliable Wi‑Fi / WSL: resumable download, then extract from disk
+    mkdir -p data/cache/wikidata/dumps
+    wget -c -O data/cache/wikidata/dumps/latest-all.json.bz2 \\
+      https://dumps.wikimedia.org/wikidatawiki/entities/latest-all.json.bz2
+    .venv/bin/python scripts/datasources/wikidata/wikidata_fips_gnis_extract_local.py \\
+      --dump-file data/cache/wikidata/dumps/latest-all.json.bz2
 """
 
 import argparse
@@ -45,10 +52,21 @@ from dotenv import load_dotenv
 load_dotenv(ROOT / ".env")
 
 DUMP_URL     = "https://dumps.wikimedia.org/wikidatawiki/entities/latest-all.json.bz2"
+DEFAULT_DUMP_FILE = Path(
+    os.getenv("WIKIDATA_DUMP_FILE", ROOT / "data/cache/wikidata/dumps/latest-all.json.bz2")
+)
 OUTPUT_DIR   = Path(os.getenv("WIKIDATA_CACHE_DIR", ROOT / "data/cache/wikidata"))
 PARQUET_PATH = OUTPUT_DIR / "fips_gnis_map.parquet"
 CHECKPOINT_PATH = OUTPUT_DIR / "fips_gnis_map_checkpoint.parquet"
 STATE_PATH   = OUTPUT_DIR / "fips_gnis_map_state.json"   # tracks entities_scanned for resume
+
+# https://meta.wikimedia.org/wiki/User-Agent_policy
+DUMP_HEADERS = {
+    "User-Agent": os.getenv(
+        "WIKIDATA_USER_AGENT",
+        "OpenNavigator-fips-gnis-extract/1.0 (+https://github.com/getcommunityone/open-navigator)",
+    ),
+}
 
 LOG_EVERY    = 100_000
 FLUSH_EVERY  = 500_000   # checkpoint this often (entities)
@@ -92,54 +110,105 @@ def extract_claim_values(entity: dict, prop: str) -> list[str]:
     return values
 
 
-def stream_wikidata_dump(url: str, skip: int = 0, limit: int = 0):
-    """
-    Stream the bz2 Wikidata dump line by line. Yields parsed entity dicts.
-
-    skip  — fast-forward past this many entities before yielding (for resume)
-    limit — stop after yielding this many entities (0 = no limit)
-    """
-    logger.info(f"Streaming dump from {url}")
+def _yield_entities_from_bz2_lines(
+    line_source,
+    *,
+    skip: int = 0,
+    limit: int = 0,
+    source_label: str = "dump",
+):
+    """Parse newline-delimited JSON entities from a bz2 byte line iterator."""
     if skip:
         logger.info(f"Fast-forwarding past {skip:,} already-scanned entities…")
 
     scanned = 0
     yielded = 0
 
-    with requests.get(url, stream=True, timeout=300) as resp:
+    for raw_line in line_source:
+        line = raw_line.strip() if isinstance(raw_line, bytes) else raw_line.strip().encode("utf-8")
+        if not line or line in (b"[", b"]"):
+            continue
+        line = line.rstrip(b",")
+        try:
+            entity = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+
+        scanned += 1
+
+        if scanned <= skip:
+            if skip and scanned % LOG_EVERY == 0:
+                logger.info(f"Fast-forward: {scanned:,}/{skip:,} ({100 * scanned / skip:.0f}%)")
+            continue
+
+        yield entity
+        yielded += 1
+
+        if limit and yielded >= limit:
+            logger.info(f"--limit {limit} reached, stopping.")
+            return
+
+    logger.debug(f"Finished reading {source_label}: scanned={scanned:,} yielded={yielded:,}")
+
+
+def _iter_bz2_lines_from_http(url: str):
+    """Yield raw lines from a remote .json.bz2 dump (may drop on long flaky links)."""
+    with requests.get(url, stream=True, timeout=(30, 600), headers=DUMP_HEADERS) as resp:
         resp.raise_for_status()
         decompressor = bz2.BZ2Decompressor()
         buffer = b""
-
         for chunk in resp.iter_content(chunk_size=CHUNK_SIZE):
             buffer += decompressor.decompress(chunk)
             lines = buffer.split(b"\n")
             buffer = lines[-1]
-
             for line in lines[:-1]:
-                line = line.strip()
-                if not line or line in (b"[", b"]"):
-                    continue
-                line = line.rstrip(b",")
-                try:
-                    entity = json.loads(line)
-                except json.JSONDecodeError:
-                    continue
+                yield line
 
-                scanned += 1
 
-                # Fast-forward: count but don't yield
-                if scanned <= skip:
-                    if scanned % LOG_EVERY == 0:
-                        logger.info(f"Fast-forward: {scanned:,}/{skip:,} ({100*scanned/skip:.0f}%)")
-                    continue
+def _iter_bz2_lines_from_file(path: Path):
+    """Yield raw lines from a local .json.bz2 dump (use wget -c for resumable download)."""
+    with bz2.open(path, "rb") as fh:
+        for line in fh:
+            yield line
 
-                yield entity
-                yielded += 1
 
-                if limit and yielded >= limit:
-                    logger.info(f"--limit {limit} reached, stopping.")
-                    return
+def stream_wikidata_dump(
+    url: str,
+    skip: int = 0,
+    limit: int = 0,
+    dump_file: Path | None = None,
+):
+    """
+    Stream the bz2 Wikidata dump line by line. Yields parsed entity dicts.
+
+    skip      — fast-forward past this many entities before yielding (for resume)
+    limit     — stop after yielding this many entities (0 = no limit)
+    dump_file — if set, read from local .bz2 (recommended when HTTP streams drop)
+    """
+    if dump_file is not None:
+        dump_file = dump_file.resolve()
+        if not dump_file.is_file():
+            raise FileNotFoundError(
+                f"Dump file not found: {dump_file}\n"
+                "Download with:\n"
+                f"  mkdir -p {dump_file.parent}\n"
+                f"  wget -c -O {dump_file} {url}"
+            )
+        logger.info(f"Reading dump from local file: {dump_file} ({dump_file.stat().st_size / 1e9:.1f} GB)")
+        line_iter = _iter_bz2_lines_from_file(dump_file)
+        source_label = str(dump_file)
+    else:
+        logger.info(f"Streaming dump from {url}")
+        logger.info(
+            "Tip: if you see ChunkedEncodingError/IncompleteRead, download the .bz2 with "
+            "wget -c and re-run with --dump-file (see script docstring)."
+        )
+        line_iter = _iter_bz2_lines_from_http(url)
+        source_label = url
+
+    yield from _yield_entities_from_bz2_lines(
+        line_iter, skip=skip, limit=limit, source_label=source_label
+    )
 
 
 def entity_to_records(entity: dict) -> list[dict]:
@@ -269,6 +338,12 @@ def main():
     ap.add_argument("--resume",   action="store_true",
                     help="Resume a previous interrupted run — skips already-scanned entities and keeps found records")
     ap.add_argument("--url",      default=DUMP_URL, help="Override dump URL")
+    ap.add_argument(
+        "--dump-file",
+        default=None,
+        help=f"Local .json.bz2 path (default env WIKIDATA_DUMP_FILE: {DEFAULT_DUMP_FILE}). "
+        "Use after wget -c; avoids ChunkedEncodingError on long HTTP streams.",
+    )
     args = ap.parse_args()
 
     output_path = Path(args.output)
@@ -305,7 +380,10 @@ def main():
     logger.info("Starting Wikidata FIPS/GNIS extraction (local — no Databricks needed)")
     logger.info(f"Output: {'Postgres' if args.postgres else output_path}")
 
-    for entity in stream_wikidata_dump(args.url, skip=skip_entities, limit=args.limit):
+    dump_file = Path(args.dump_file) if args.dump_file else None
+    for entity in stream_wikidata_dump(
+        args.url, skip=skip_entities, limit=args.limit, dump_file=dump_file
+    ):
         entity_count += 1
         records.extend(entity_to_records(entity))
 

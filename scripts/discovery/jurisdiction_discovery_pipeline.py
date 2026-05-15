@@ -3,7 +3,7 @@ Jurisdiction discovery pipeline (merged)
 
 Combines:
 - **Postgres bronze** inputs: ``bronze.bronze_jurisdictions_{states,municipalities,counties,school_districts}``
-- **Homepage seeds** from dbt ``intermediate.int_jurisdiction_websites`` only (GSA/USCM/NCES/NACO union
+- **Homepage seeds** from dbt ``intermediate.int_jurisdiction_websites`` only (GSA/USCM/league/NCES/NACO union
   built in the warehouse). No pattern-guessed ``.gov`` URLs and no Wikidata **website** backfill.
 - **Deep discovery** from ``ComprehensiveDiscoveryPipeline``: crawl that seed URL for YouTube, social,
   meeting platforms, agenda links, etc. (derived links are from scraping the allowed homepage.)
@@ -94,10 +94,10 @@ WEBSITE_SOURCE_PRIORITY_ORDER_SQL = (
     # ``%%`` so psycopg2 does not treat ``county_%`` as a printf-style placeholder when this
     # fragment is embedded next to ``%s`` parameters (e.g. meetings ``--from-db`` queries).
     "CASE WHEN jurisdiction_id LIKE 'county_%%' THEN "
-    "CASE website_source WHEN 'override' THEN 0 WHEN 'naco' THEN 1 WHEN 'gsa' THEN 2 WHEN 'uscm' THEN 3 "
-    "WHEN 'nces_directory' THEN 4 ELSE 5 END ELSE "
-    "CASE website_source WHEN 'override' THEN 0 WHEN 'gsa' THEN 1 WHEN 'uscm' THEN 2 WHEN 'nces_directory' THEN 3 "
-    "WHEN 'naco' THEN 4 ELSE 5 END END"
+    "CASE website_source WHEN 'override' THEN 0 WHEN 'naco' THEN 1 WHEN 'gsa' THEN 2 WHEN 'league' THEN 3 "
+    "WHEN 'uscm' THEN 4 WHEN 'nces_directory' THEN 5 ELSE 6 END ELSE "
+    "CASE website_source WHEN 'override' THEN 0 WHEN 'gsa' THEN 1 WHEN 'league' THEN 2 WHEN 'uscm' THEN 3 "
+    "WHEN 'nces_directory' THEN 4 WHEN 'naco' THEN 5 ELSE 6 END END"
 )
 
 _SCRAPED_DDL_PATH = Path(__file__).resolve().parent / "sql" / "bronze_jurisdictions_scraped.sql"

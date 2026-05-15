@@ -15,8 +15,15 @@ Also writes capped **drill-down** lists from ``public.jurisdiction_mapping_analy
   ``school_district``. Each value is a list of
   ``{ state_code, total_jurisdictions, with_primary_website, pct_with_primary_website }``.
 
+- ``states`` — one row per U.S. state/territory in the ACS list: state-level ACS tiers plus whether the
+  **state government** row (``jurisdiction_type = 'state'``) has a primary URL — not a rollup of cities,
+  counties, or districts in that state.
+  Also ``summary_by_state_population_tier`` and ``summary_by_state_income_level`` (counts of state
+  governments with / without portals in each ACS tier).
+
 Optional env caps (defaults in parentheses): ``JURIS_MAPPING_QUALITY_UNMAPPED_CAP`` (2500),
-``JURIS_MAPPING_QUALITY_MAPPED_ISSUES_CAP`` (800).
+``JURIS_MAPPING_QUALITY_MAPPED_ISSUES_CAP`` (800),
+``JURIS_MAPPING_QUALITY_BUCKET_DRILL_CAP`` (500 per ACS bucket for ``entity_acs_unmapped_drill``).
 
 Requires dbt mart tables built:
   ./scripts/dbt.sh run --select jurisdiction_mapping_analysis jurisdiction_mapping_analysis_sources \\
@@ -25,6 +32,10 @@ Requires dbt mart tables built:
     jurisdiction_mapping_quality_summary_by_acs_income_level
 
 Usage (repo root):
+
+  # State ACS parquets (once per vintage):
+  .venv/bin/python scripts/datasources/census/download_census_acs_data.py --geography state --state '*' --year 2022
+
   .venv/bin/python scripts/datasources/jurisdictions/export_jurisdiction_mapping_quality_json.py
 """
 
@@ -42,11 +53,114 @@ from psycopg2.extras import RealDictCursor
 from dotenv import load_dotenv
 
 ROOT = Path(__file__).resolve().parents[3]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
 OUT = ROOT / "frontend" / "public" / "data" / "jurisdiction_mapping_quality.json"
+
+from scripts.datasources.jurisdictions.state_acs_mapping_quality import build_states_payload
 
 # Capped lists for dashboard drill-down (keep JSON size reasonable; raise via env if needed).
 _UNMAPPED_CAP = int(os.environ.get("JURIS_MAPPING_QUALITY_UNMAPPED_CAP", "2500"))
 _MAPPED_ISSUES_CAP = int(os.environ.get("JURIS_MAPPING_QUALITY_MAPPED_ISSUES_CAP", "800"))
+_BUCKET_DRILL_CAP = int(os.environ.get("JURIS_MAPPING_QUALITY_BUCKET_DRILL_CAP", "500"))
+
+_UNMAPPED_ROW_SELECT = """
+    SELECT jurisdiction_id::text AS jurisdiction_id,
+           name::text AS name,
+           state_code::text AS state_code,
+           jurisdiction_type::text AS jurisdiction_type,
+           geoid::text AS geoid,
+           municipality_place_kind::text AS municipality_place_kind,
+           COALESCE(n_website_candidate_rows, 0)::bigint AS n_website_candidate_rows,
+           COALESCE(has_naco_source, FALSE) AS has_naco_source,
+           COALESCE(has_uscm_source, FALSE) AS has_uscm_source,
+           COALESCE(has_nces_directory_source, FALSE) AS has_nces_directory_source,
+           COALESCE(has_gsa_source, FALSE) AS has_gsa_source,
+           COALESCE(has_league_source, FALSE) AS has_league_source,
+           COALESCE(has_override_source, FALSE) AS has_override_source,
+           acs_population_tier::text AS acs_population_tier,
+           acs_income_level::text AS acs_income_level
+"""
+
+_SUMMARY_PRIMARY_FROM_COLS = """
+                       primary_from_naco,
+                       primary_from_uscm,
+                       primary_from_nces_directory,
+                       primary_from_gsa,
+                       primary_from_league,
+                       primary_from_override"""
+
+_ENTITY_ACS_WHERE: dict[str, str] = {
+    "cities": (
+        "jurisdiction_type = 'municipality' AND municipality_place_kind = 'incorporated_city'"
+    ),
+    "towns": (
+        "jurisdiction_type = 'municipality' AND municipality_place_kind IN ("
+        "'incorporated_other', 'unknown', 'census_designated_place'"
+        ")"
+    ),
+    "counties": "jurisdiction_type = 'county'",
+    "schools": "jurisdiction_type = 'school_district'",
+}
+
+
+def _row_dicts(cur) -> list[dict[str, object]]:
+    return [{k: _jsonify_value(v) for k, v in dict(r).items()} for r in cur.fetchall()]
+
+
+def _fetch_unmapped_bucket_rows(
+    cur,
+    *,
+    where_clause: str,
+    tier_col: str,
+    bucket: str,
+    limit: int,
+) -> list[dict[str, object]]:
+    cur.execute(
+        f"""
+        {_UNMAPPED_ROW_SELECT}
+        FROM public.jurisdiction_mapping_analysis
+        WHERE NOT COALESCE(has_primary_website, FALSE)
+          AND ({where_clause})
+          AND {tier_col}::text = %s
+        ORDER BY state_code, name
+        LIMIT %s
+        """,
+        (bucket, limit),
+    )
+    return _row_dicts(cur)
+
+
+def _build_entity_acs_unmapped_drill(
+    cur, entity_acs_by_slice: dict[str, dict[str, list[dict[str, object]]]]
+) -> dict[str, dict[str, dict[str, list[dict[str, object]]]]]:
+    """Per-entity ACS bucket lists — matches table missing counts (capped per bucket)."""
+    out: dict[str, dict[str, dict[str, list[dict[str, object]]]]] = {}
+    for slice_key, where in _ENTITY_ACS_WHERE.items():
+        slice_data = entity_acs_by_slice.get(slice_key) or {}
+        out[slice_key] = {"by_population_tier": {}, "by_income_level": {}}
+        for list_key, tier_col in (
+            ("by_population_tier", "acs_population_tier"),
+            ("by_income_level", "acs_income_level"),
+        ):
+            for row in slice_data.get(list_key) or []:
+                total = int(row.get("total_jurisdictions") or 0)
+                with_url = int(row.get("with_primary_website") or 0)
+                missing = max(0, total - with_url)
+                if missing <= 0:
+                    continue
+                bucket = str(row.get("bucket") or "")
+                if not bucket:
+                    continue
+                limit = min(_BUCKET_DRILL_CAP, missing)
+                out[slice_key][list_key][bucket] = _fetch_unmapped_bucket_rows(
+                    cur,
+                    where_clause=where,
+                    tier_col=tier_col,
+                    bucket=bucket,
+                    limit=limit,
+                )
+    return out
 
 
 def _jsonify_value(v: object) -> object:
@@ -84,7 +198,7 @@ def main() -> int:
     try:
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
             cur.execute(
-                """
+                f"""
                 SELECT jurisdiction_type::text AS jurisdiction_type,
                        total_jurisdictions,
                        with_primary_website,
@@ -100,7 +214,9 @@ def main() -> int:
                        jurisdictions_touching_uscm,
                        jurisdictions_touching_nces,
                        jurisdictions_touching_gsa,
+                       jurisdictions_touching_league,
                        jurisdictions_touching_override,
+                       {_SUMMARY_PRIMARY_FROM_COLS},
                        summary_generated_at::text AS summary_generated_at
                 FROM public.jurisdiction_mapping_quality_summary
                 ORDER BY jurisdiction_type
@@ -111,7 +227,7 @@ def main() -> int:
             ]
 
             cur.execute(
-                """
+                f"""
                 SELECT municipality_place_kind::text AS municipality_place_kind,
                        total_jurisdictions,
                        with_primary_website,
@@ -127,7 +243,9 @@ def main() -> int:
                        jurisdictions_touching_uscm,
                        jurisdictions_touching_nces,
                        jurisdictions_touching_gsa,
+                       jurisdictions_touching_league,
                        jurisdictions_touching_override,
+                       {_SUMMARY_PRIMARY_FROM_COLS},
                        summary_generated_at::text AS summary_generated_at
                 FROM public.jurisdiction_mapping_quality_summary_municipality_places
                 ORDER BY
@@ -145,7 +263,7 @@ def main() -> int:
             ]
 
             cur.execute(
-                """
+                f"""
                 SELECT jurisdiction_type::text AS jurisdiction_type,
                        acs_population_tier::text AS acs_population_tier,
                        total_jurisdictions,
@@ -162,7 +280,9 @@ def main() -> int:
                        jurisdictions_touching_uscm,
                        jurisdictions_touching_nces,
                        jurisdictions_touching_gsa,
+                       jurisdictions_touching_league,
                        jurisdictions_touching_override,
+                       {_SUMMARY_PRIMARY_FROM_COLS},
                        summary_generated_at::text AS summary_generated_at
                 FROM public.jurisdiction_mapping_quality_summary_by_acs_population_tier
                 ORDER BY
@@ -182,7 +302,7 @@ def main() -> int:
             ]
 
             cur.execute(
-                """
+                f"""
                 SELECT jurisdiction_type::text AS jurisdiction_type,
                        acs_income_level::text AS acs_income_level,
                        total_jurisdictions,
@@ -199,7 +319,9 @@ def main() -> int:
                        jurisdictions_touching_uscm,
                        jurisdictions_touching_nces,
                        jurisdictions_touching_gsa,
+                       jurisdictions_touching_league,
                        jurisdictions_touching_override,
+                       {_SUMMARY_PRIMARY_FROM_COLS},
                        summary_generated_at::text AS summary_generated_at
                 FROM public.jurisdiction_mapping_quality_summary_by_acs_income_level
                 ORDER BY
@@ -259,21 +381,8 @@ def main() -> int:
             mapped_url_issues_total = int(_jsonify_value(cur.fetchone()["n"]))
 
             cur.execute(
-                """
-                SELECT jurisdiction_id::text AS jurisdiction_id,
-                       name::text AS name,
-                       state_code::text AS state_code,
-                       jurisdiction_type::text AS jurisdiction_type,
-                       geoid::text AS geoid,
-                       municipality_place_kind::text AS municipality_place_kind,
-                       COALESCE(n_website_candidate_rows, 0)::bigint AS n_website_candidate_rows,
-                       COALESCE(has_naco_source, FALSE) AS has_naco_source,
-                       COALESCE(has_uscm_source, FALSE) AS has_uscm_source,
-                       COALESCE(has_nces_directory_source, FALSE) AS has_nces_directory_source,
-                       COALESCE(has_gsa_source, FALSE) AS has_gsa_source,
-                       COALESCE(has_override_source, FALSE) AS has_override_source,
-                       acs_population_tier::text AS acs_population_tier,
-                       acs_income_level::text AS acs_income_level
+                f"""
+                {_UNMAPPED_ROW_SELECT}
                 FROM public.jurisdiction_mapping_analysis
                 WHERE NOT COALESCE(has_primary_website, FALSE)
                 ORDER BY jurisdiction_type, state_code, name
@@ -281,7 +390,7 @@ def main() -> int:
                 """,
                 (_UNMAPPED_CAP,),
             )
-            unmapped_sample = [{k: _jsonify_value(v) for k, v in dict(r).items()} for r in cur.fetchall()]
+            unmapped_sample = _row_dicts(cur)
 
             cur.execute(
                 """
@@ -353,8 +462,129 @@ def main() -> int:
                 "school_district": _state_rollup("jurisdiction_type = 'school_district'"),
             }
 
+            def _state_government_mapping() -> list[dict[str, object]]:
+                """One row per state government in ``jurisdiction_mapping_analysis`` (portal mapped or not)."""
+                cur.execute(
+                    """
+                    SELECT state_code::text AS state_code,
+                           jurisdiction_id::text AS jurisdiction_id,
+                           1::bigint AS total_jurisdictions,
+                           CASE
+                               WHEN COALESCE(has_primary_website, FALSE) THEN 1
+                               ELSE 0
+                           END::bigint AS with_primary_website,
+                           CASE
+                               WHEN COALESCE(has_primary_website, FALSE) THEN 100.0
+                               ELSE 0.0
+                           END AS pct_with_primary_website,
+                           primary_website_url::text AS primary_website_url,
+                           primary_website_source::text AS primary_website_source,
+                           COALESCE(n_website_candidate_rows, 0)::bigint AS n_website_candidate_rows,
+                           COALESCE(has_gsa_source, FALSE) AS has_gsa_source,
+                           COALESCE(has_override_source, FALSE) AS has_override_source
+                    FROM public.jurisdiction_mapping_analysis
+                    WHERE jurisdiction_type = 'state'
+                    ORDER BY state_code
+                    """
+                )
+                rows = [{k: _jsonify_value(v) for k, v in dict(r).items()} for r in cur.fetchall()]
+
+                cur.execute(
+                    """
+                    SELECT jurisdiction_id::text AS jurisdiction_id,
+                           website_source::text AS website_source,
+                           website_url::text AS website_url
+                    FROM public.jurisdiction_mapping_analysis_sources
+                    WHERE jurisdiction_type = 'state'
+                      AND website_url IS NOT NULL
+                      AND BTRIM(website_url) <> ''
+                    ORDER BY jurisdiction_id, website_source, website_url
+                    """
+                )
+                candidates_by_jid: dict[str, list[dict[str, str]]] = {}
+                for r in cur.fetchall():
+                    jid = str(r["jurisdiction_id"])
+                    candidates_by_jid.setdefault(jid, []).append(
+                        {
+                            "source": str(r["website_source"]),
+                            "url": str(r["website_url"]),
+                        }
+                    )
+
+                for row in rows:
+                    jid = str(row.get("jurisdiction_id") or "")
+                    row["website_candidates"] = candidates_by_jid.get(jid, [])
+                return rows
+
+            mapping_state_governments = _state_government_mapping()
+
+            def _acs_buckets_for_where(where_clause: str) -> dict[str, list[dict[str, object]]]:
+                pop_order = """
+                    CASE acs_population_tier
+                        WHEN 'Very Large (1M+)' THEN 1
+                        WHEN 'Large (250k-1M)' THEN 2
+                        WHEN 'Mid (50k-250k)' THEN 3
+                        WHEN 'Small (15k-50k)' THEN 4
+                        WHEN 'Very Small (<15k)' THEN 5
+                        ELSE 99
+                    END
+                """
+                inc_order = """
+                    CASE acs_income_level
+                        WHEN 'High Earner' THEN 1
+                        WHEN 'Middle Class' THEN 2
+                        WHEN 'Lower Middle' THEN 3
+                        WHEN 'Low Income' THEN 4
+                        ELSE 99
+                    END
+                """
+
+                def _rollup(tier_col: str, order_sql: str) -> list[dict[str, object]]:
+                    cur.execute(
+                        f"""
+                        SELECT {tier_col}::text AS bucket,
+                               COUNT(*)::bigint AS total_jurisdictions,
+                               COUNT(*) FILTER (WHERE COALESCE(has_primary_website, FALSE))::bigint
+                                   AS with_primary_website,
+                               CASE
+                                   WHEN COUNT(*) = 0 THEN NULL
+                                   ELSE ROUND(
+                                       (100.0 * COUNT(*) FILTER (WHERE COALESCE(has_primary_website, FALSE)))
+                                       / COUNT(*)::numeric,
+                                       1
+                                   )
+                               END AS pct_with_primary_website,
+                               COUNT(*) FILTER (WHERE COALESCE(has_primary_website, FALSE) AND primary_website_source = 'naco')::bigint AS primary_from_naco,
+                               COUNT(*) FILTER (WHERE COALESCE(has_primary_website, FALSE) AND primary_website_source = 'uscm')::bigint AS primary_from_uscm,
+                               COUNT(*) FILTER (WHERE COALESCE(has_primary_website, FALSE) AND primary_website_source = 'nces_directory')::bigint AS primary_from_nces_directory,
+                               COUNT(*) FILTER (WHERE COALESCE(has_primary_website, FALSE) AND primary_website_source = 'gsa')::bigint AS primary_from_gsa,
+                               COUNT(*) FILTER (WHERE COALESCE(has_primary_website, FALSE) AND primary_website_source = 'league')::bigint AS primary_from_league,
+                               COUNT(*) FILTER (WHERE COALESCE(has_primary_website, FALSE) AND primary_website_source = 'override')::bigint AS primary_from_override
+                        FROM public.jurisdiction_mapping_analysis
+                        WHERE ({where_clause}) AND {tier_col} IS NOT NULL
+                        GROUP BY {tier_col}
+                        ORDER BY {order_sql}
+                        """
+                    )
+                    return [{k: _jsonify_value(v) for k, v in dict(r).items()} for r in cur.fetchall()]
+
+                return {
+                    "by_population_tier": _rollup("acs_population_tier", pop_order),
+                    "by_income_level": _rollup("acs_income_level", inc_order),
+                }
+
+            entity_acs_by_slice = {
+                "cities": _acs_buckets_for_where(_ENTITY_ACS_WHERE["cities"]),
+                "towns": _acs_buckets_for_where(_ENTITY_ACS_WHERE["towns"]),
+                "counties": _acs_buckets_for_where(_ENTITY_ACS_WHERE["counties"]),
+                "schools": _acs_buckets_for_where(_ENTITY_ACS_WHERE["schools"]),
+            }
+            entity_acs_unmapped_drill = _build_entity_acs_unmapped_drill(cur, entity_acs_by_slice)
+
     finally:
         conn.close()
+
+    state_acs_block = build_states_payload(mapping_state_governments)
 
     payload = {
         "generated_at": datetime.now(timezone.utc).isoformat(),
@@ -370,9 +600,20 @@ def main() -> int:
             "uscm": "Municipal directory / U.S. Conference of Mayors–style seed (USCM bronze)",
             "nces_directory": "NCES Common Core of Data school district directory",
             "gsa": "GSA .gov domain registry (local agencies)",
+            "league": "State municipal league city directories (League of Cities cache)",
             "override": "Curated seed jurisdiction_website_url_overrides",
         },
         "entity_state_rollup": entity_state_rollup,
+        "entity_acs_by_slice": entity_acs_by_slice,
+        "entity_acs_unmapped_drill": entity_acs_unmapped_drill,
+        "entity_acs_bucket_drill_cap": _BUCKET_DRILL_CAP,
+        "acs_vintage_year": state_acs_block.get("acs_vintage_year"),
+        "acs_source": state_acs_block.get("acs_source"),
+        "states": state_acs_block.get("states"),
+        "summary_by_state_population_tier": state_acs_block.get("summary_by_state_population_tier"),
+        "summary_by_state_income_level": state_acs_block.get("summary_by_state_income_level"),
+        "state_population_tiers_explained": state_acs_block.get("state_population_tiers_explained"),
+        "state_income_levels_explained": state_acs_block.get("state_income_levels_explained"),
         "drilldown": {
             "unmapped_total": unmapped_total,
             "unmapped_sample_limit": _UNMAPPED_CAP,

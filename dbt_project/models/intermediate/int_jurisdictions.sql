@@ -343,6 +343,33 @@ townships AS (
     LEFT JOIN jurisdiction_zip jz ON t.geoid = jz.geoid
 ),
 
+-- ── State governments (Census Gazetteer) ───────────────────────────────────
+-- GEOID = 2-digit Census state FIPS (e.g. 01, 06). One row per state / DC / PR.
+states AS (
+    SELECT
+        LPAD(TRIM(geoid), 2, '0')       AS geoid,
+        LPAD(TRIM(geoid), 2, '0')       AS fips_code,
+        LPAD(TRIM(geoid), 2, '0')       AS state_fips_code,
+        UPPER(TRIM(usps))               AS state_code,
+        TRIM(name)                      AS name,
+        'state'                         AS jurisdiction_type,
+        ansicode,
+        NULL::VARCHAR(5)                AS lsad,
+        NULL::VARCHAR(1)                AS funcstat,
+        NULL::VARCHAR(5)                AS lograde,
+        NULL::VARCHAR(5)                AS higrade,
+        aland_sqmi                      AS area_sq_miles,
+        intptlat                        AS latitude,
+        intptlong                       AS longitude,
+        NULL::VARCHAR(5)                AS zip,
+        ingestion_date
+    FROM {{ source('bronze', 'bronze_jurisdictions_states') }}
+    WHERE geoid IS NOT NULL
+      AND TRIM(geoid) <> ''
+      AND usps IS NOT NULL
+      AND TRIM(usps) <> ''
+),
+
 unioned AS (
     SELECT * FROM counties
     UNION ALL
@@ -351,12 +378,13 @@ unioned AS (
     SELECT * FROM school_districts
     UNION ALL
     SELECT * FROM townships
+    UNION ALL
+    SELECT * FROM states
 )
 
 SELECT
     -- Singleton primary key: type-prefixed GEOID guarantees uniqueness across
-    -- all four jurisdiction types (municipality and school_district share 7-digit
-    -- GEOID namespace and DO have collisions in practice)
+    -- jurisdiction types (municipality and school_district share 7-digit GEOID namespace).
     u.jurisdiction_type || '_' || u.geoid               AS jurisdiction_id,
     osc.open_states_jurisdiction_id,
     osc.open_states_jurisdiction_id                     AS openstates_id,

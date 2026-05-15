@@ -15,6 +15,11 @@ per-official rows into one record per city. If that endpoint returns an empty bo
 bot rules), it falls back to the first HTML page via WP REST ``/wp-json/wp/v2/pages?slug=member-directory``,
 which yields only a partial directory; use ``--min-cities 2`` for smoke tests in that case.
 
+California (CA) uses the DNN member portal at ``https://my.calcities.org/Directories/City-Directory``
+(``lawtype=2`` charter cities, ``lawtype=1`` general-law cities). The public ``www.calcities.org`` site
+is not crawled for CA — it only yields stray nav links. Grid paging uses ASP.NET ``__doPostBack`` when
+present; as of 2026 each law-type filter returns the full grid on one page.
+
 This is a best-effort static HTML pass (no headless browser). JavaScript-only
 directories will yield few or zero rows; the manifest records page counts and errors.
 
@@ -171,7 +176,19 @@ EXTRA_DIRECTORY_SEEDS_BY_USPS: dict[str, tuple[str, ...]] = {
     "AR": (
         "https://www.armunileague.org/member-directory/",
     ),
+    # Cal Cities member portal (DNN grid); www.calcities.org marketing site is not the directory.
+    "CA": (
+        "https://my.calcities.org/Directories/City-Directory?lawtype=2",
+        "https://my.calcities.org/Directories/City-Directory?lawtype=1",
+    ),
 }
+
+# Hosts treated as the same league for link expansion (marketing site + member portal).
+RELATED_LEAGUE_HOSTS_BY_USPS: dict[str, frozenset[str]] = {
+    "CA": frozenset({"calcities.org", "my.calcities.org"}),
+}
+
+CALCITIES_CITY_DIRECTORY_URL = "https://my.calcities.org/Directories/City-Directory"
 
 SKIP_EXTENSIONS = (
     ".pdf",
@@ -261,7 +278,21 @@ def same_league_site(base_url: str, target_url: str) -> bool:
     if not b or not u:
         return False
     bk, uk = host_key(b), host_key(u)
-    return uk == bk or uk.endswith("." + bk) or bk.endswith("." + uk)
+    if uk == bk or uk.endswith("." + bk) or bk.endswith("." + uk):
+        return True
+    for aliases in RELATED_LEAGUE_HOSTS_BY_USPS.values():
+        if bk in aliases and uk in aliases:
+            return True
+    return False
+
+
+def is_calcities_city_directory_url(url: str) -> bool:
+    """League of California Cities DNN city grid (member portal)."""
+    p = urlparse(url.lower())
+    hk = host_key(p.netloc)
+    if hk not in RELATED_LEAGUE_HOSTS_BY_USPS.get("CA", frozenset()):
+        return False
+    return "city-directory" in p.path.replace("_", "-")
 
 
 def is_vendor_associate_page(url: str) -> bool:
@@ -475,6 +506,269 @@ def is_armunileague_member_directory_url(url: str) -> bool:
     """Arkansas Municipal League wpDataTables member directory (per-official rows)."""
     p = urlparse(url.lower())
     return host_key(p.netloc).endswith("armunileague.org") and "/member-directory" in p.path
+
+
+def _calcities_directory_seed_urls() -> tuple[str, ...]:
+    """Charter (lawtype=2) then general-law (lawtype=1) — full incorporated city list."""
+    return tuple(EXTRA_DIRECTORY_SEEDS_BY_USPS.get("CA", ()))
+
+
+def _collect_aspnet_form_fields(soup: BeautifulSoup) -> dict[str, str]:
+    """Hidden fields + selected dropdown values for DNN / WebForms postbacks."""
+    fields: dict[str, str] = {}
+    for inp in soup.find_all("input"):
+        name = inp.get("name")
+        if not name:
+            continue
+        typ = (inp.get("type") or "text").lower()
+        if typ in ("checkbox", "radio", "button", "image", "file", "reset"):
+            continue
+        fields[name] = inp.get("value") or ""
+    for sel in soup.find_all("select"):
+        name = sel.get("name")
+        if not name:
+            continue
+        opt = sel.find("option", selected=True) or sel.find("option")
+        fields[name] = (opt.get("value") if opt else "") or ""
+    return fields
+
+
+def _calcities_grid_page_postback_targets(soup: BeautifulSoup) -> list[str]:
+    """Numeric pager links on the ``grvRecords`` grid (skip column-sort postbacks)."""
+    targets: list[str] = []
+    for a in soup.find_all("a", href=True):
+        href = a.get("href", "")
+        m = re.search(r"__doPostBack\('([^']+)'", href)
+        if not m:
+            continue
+        target = m.group(1)
+        if "Page$" not in target or "grvRecords" not in target:
+            continue
+        label = a.get_text(" ", strip=True)
+        if label.isdigit():
+            targets.append(target)
+    return list(dict.fromkeys(targets))
+
+
+def _post_calcities_directory(
+    client: httpx.Client,
+    url: str,
+    fields: dict[str, str],
+    event_target: str,
+    timeout: float,
+) -> tuple[int | None, bytes]:
+    data = dict(fields)
+    data["__EVENTTARGET"] = event_target
+    data.setdefault("__EVENTARGUMENT", "")
+    try:
+        r = client.post(
+            url,
+            data=data,
+            timeout=timeout,
+            follow_redirects=True,
+            headers={
+                "Content-Type": "application/x-www-form-urlencoded",
+                "Referer": url,
+            },
+        )
+        return r.status_code, r.content
+    except Exception as e:
+        logger.warning("Cal Cities directory POST failed {}: {}", url, e)
+        return None, b""
+
+
+def _find_calcities_directory_table(soup: BeautifulSoup) -> Tag | None:
+    """Largest table whose header row includes City + Website columns."""
+    best: Tag | None = None
+    best_rows = 0
+    for table in soup.find_all("table"):
+        trs = table.find_all("tr")
+        if len(trs) < 3:
+            continue
+        header_cells = [c.get_text(" ", strip=True).lower() for c in trs[0].find_all(["th", "td"])]
+        if not header_cells:
+            continue
+        if not any("city" in h for h in header_cells[:2]):
+            continue
+        if not any("website" in h for h in header_cells):
+            continue
+        if len(trs) > best_rows:
+            best_rows = len(trs)
+            best = table
+    return best
+
+
+def _calcities_column_index(headers_lower: list[str], *needles: str) -> int | None:
+    for i, h in enumerate(headers_lower):
+        if any(n in h for n in needles):
+            return i
+    return None
+
+
+def extract_calcities_city_directory_from_soup(soup: BeautifulSoup, page_url: str) -> list[dict[str, Any]]:
+    """Parse the DNN ``grvRecords`` city grid on my.calcities.org."""
+    table = _find_calcities_directory_table(soup)
+    if not table:
+        return []
+    trs = table.find_all("tr")
+    header_cells = [c.get_text(" ", strip=True) for c in trs[0].find_all(["th", "td"])]
+    lowered = [h.lower() for h in header_cells]
+    i_city = _calcities_column_index(lowered, "city") or 0
+    i_addr = _calcities_column_index(lowered, "address")
+    i_inc = _calcities_column_index(lowered, "incorporat")
+    i_law = _calcities_column_index(lowered, "law")
+    i_pop = _calcities_column_index(lowered, "population", "pop")
+    i_phone = _calcities_column_index(lowered, "phone")
+    i_web = _calcities_column_index(lowered, "website")
+
+    out: list[dict[str, Any]] = []
+    for ri, tr in enumerate(trs[1:], start=2):
+        tds = tr.find_all("td", recursive=False)
+        if len(tds) < 3:
+            continue
+        if i_city >= len(tds):
+            continue
+        name_cell = tds[i_city]
+        name = name_cell.get_text(" ", strip=True)
+        if not looks_like_city_name(name):
+            continue
+        cells = [td.get_text(" ", strip=True) for td in tds]
+
+        def _cell(idx: int | None) -> str | None:
+            if idx is None or idx >= len(cells):
+                return None
+            v = cells[idx].strip()
+            return v or None
+
+        rec: dict[str, Any] = {
+            "name": name,
+            "population": _cell(i_pop),
+            "county": None,
+            "mayor": None,
+            "website": None,
+            "phone": _cell(i_phone),
+            "email": None,
+            "address": _cell(i_addr),
+            "municipality_type": _cell(i_law),
+            "source_url": page_url,
+            "source_kind": "calcities_city_directory",
+            "source_detail": f"grid_row_{ri}",
+            "raw_row": cells,
+        }
+        if i_web is not None and i_web < len(tds):
+            rec["website"] = official_url_from_website_cell(tds[i_web], page_url)
+        if not rec["website"]:
+            rec["website"] = municipality_site_from_cells(cells, page_url)
+        if i_inc is not None and i_inc < len(cells) and cells[i_inc].strip():
+            rec["source_detail"] = f"grid_row_{ri};incorporated={cells[i_inc].strip()}"
+        out.append(rec)
+    return out
+
+
+def _crawl_calcities_directory_pages(
+    client: httpx.Client,
+    url: str,
+    *,
+    timeout: float,
+    pause: Any,
+    save_html: bool,
+    cache_usps: Path,
+    page_index: int,
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]], list[str]]:
+    """GET one law-type URL and follow numeric grid postbacks when the site paginates."""
+    errors: list[str] = []
+    pages_meta: list[dict[str, Any]] = []
+    st, ct, raw = fetch_html(client, url, timeout)
+    pause()
+    if st != 200 or not raw:
+        errors.append(f"calcities_http_{st}:{url}")
+        return [], pages_meta, errors
+
+    html_text = raw.decode("utf-8", errors="replace")
+    soup = BeautifulSoup(raw, "html.parser")
+    if save_html:
+        snap_dir = cache_usps / "snapshots"
+        snap_dir.mkdir(parents=True, exist_ok=True)
+        slug = re.sub(r"[^\w.\-]+", "_", urlparse(url).path + urlparse(url).query)[:100]
+        (snap_dir / f"calcities_{page_index:02d}_{slug}.html").write_text(html_text, encoding="utf-8")
+
+    all_rows: list[dict[str, Any]] = []
+    seen_keys: set[str] = set()
+
+    def _ingest(psoup: BeautifulSoup, page_label: str) -> None:
+        for row in extract_calcities_city_directory_from_soup(psoup, url):
+            key = normalize_city_name(row["name"])
+            if not key or key in seen_keys:
+                continue
+            seen_keys.add(key)
+            all_rows.append(row)
+
+    _ingest(soup, "initial")
+    pending = _calcities_grid_page_postback_targets(soup)
+    fields = _collect_aspnet_form_fields(soup)
+    visited: set[str] = set()
+    post_idx = 0
+    while pending:
+        target = pending.pop(0)
+        if target in visited:
+            continue
+        visited.add(target)
+        pst, praw = _post_calcities_directory(client, url, fields, target, timeout)
+        pause()
+        if pst != 200 or not praw:
+            errors.append(f"calcities_postback_{pst}:{target[:60]}")
+            break
+        post_idx += 1
+        psoup = BeautifulSoup(praw.decode("utf-8", errors="replace"), "html.parser")
+        before = len(all_rows)
+        _ingest(psoup, f"page_{post_idx}")
+        if len(all_rows) == before:
+            continue
+        fields = _collect_aspnet_form_fields(psoup)
+        for t in _calcities_grid_page_postback_targets(psoup):
+            if t not in visited:
+                pending.append(t)
+
+    pages_meta.append(
+        {
+            "url": url,
+            "http_status": st,
+            "bytes": len(raw),
+            "content_type": ct,
+            "rows_extracted": len(all_rows),
+            "postback_pages": post_idx,
+        }
+    )
+    return all_rows, pages_meta, errors
+
+
+def crawl_calcities_city_directory(
+    client: httpx.Client,
+    *,
+    timeout: float,
+    save_html: bool,
+    cache_usps: Path,
+    pause: Any,
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]], list[str]]:
+    """All CA cities from my.calcities.org (charter + general-law filters)."""
+    all_rows: list[dict[str, Any]] = []
+    pages_meta: list[dict[str, Any]] = []
+    errors: list[str] = []
+    for i, url in enumerate(_calcities_directory_seed_urls()):
+        rows, meta, errs = _crawl_calcities_directory_pages(
+            client,
+            url,
+            timeout=timeout,
+            pause=pause,
+            save_html=save_html,
+            cache_usps=cache_usps,
+            page_index=i,
+        )
+        all_rows.extend(rows)
+        pages_meta.extend(meta)
+        errors.extend(errs)
+    logger.info("Cal Cities directory: {} rows from {} seed URLs", len(all_rows), len(_calcities_directory_seed_urls()))
+    return all_rows, pages_meta, errors
 
 
 # wpDataTables / DataTables column binding for AR member directory (see table_1_desc on page).
@@ -1110,7 +1404,15 @@ def merge_city_records(records: list[dict[str, Any]], state_usps: str) -> list[d
             by_key[key] = dict(r)
             continue
         # merge: prefer non-null fields from either; prefer table over list_item
-        rank = {"table": 3, "dl": 2, "list_item": 1, "akml_pdf_directory": 3, "ar_member_directory": 3, "ar_member_directory_rest": 2}
+        rank = {
+            "table": 3,
+            "dl": 2,
+            "list_item": 1,
+            "akml_pdf_directory": 3,
+            "ar_member_directory": 3,
+            "ar_member_directory_rest": 2,
+            "calcities_city_directory": 4,
+        }
         pr, rr = rank.get(prev.get("source_kind"), 0), rank.get(r.get("source_kind"), 0)
         base, other = (prev, r) if pr >= rr else (r, prev)
         merged = dict(base)
@@ -1252,6 +1554,16 @@ def crawl_state_league(
             "errors": all_errs,
             "pages": pages_meta_in,
         }
+
+    if usps == "CA":
+        ca_rows, ca_pages, ca_err = crawl_calcities_city_directory(
+            client,
+            timeout=timeout,
+            save_html=save_html,
+            cache_usps=cache_usps,
+            pause=pause,
+        )
+        return finalize(ca_rows, ca_pages, ca_err)
 
     if status != 200 or not body:
         errors.append(f"homepage_http_{status}")

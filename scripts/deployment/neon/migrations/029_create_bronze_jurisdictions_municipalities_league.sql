@@ -70,4 +70,4 @@ COMMENT ON COLUMN bronze.bronze_jurisdictions_municipalities_league.raw_row IS
     'Source table row as JSON array (scraper-native order); not folded into raw_city_json.';
 
 COMMENT ON COLUMN bronze.bronze_jurisdictions_municipalities_league.jurisdiction_match_method IS
-    'place_name_exact | place_name_normalized | alternate_name_exact | unmatched (or NULL if not attempted).';
+    'place_name_exact | place_name_normalized | place_name_fuzzy_* | website_url_state | alternate_* | unmatched (or NULL if not attempted).';

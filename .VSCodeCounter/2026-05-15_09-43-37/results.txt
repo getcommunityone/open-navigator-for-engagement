@@ -1,24 +1,24 @@
-Date : 2026-05-12 18:08:19
+Date : 2026-05-15 09:43:37
 Directory : /home/developer/projects/open-navigator
-Total : 905 files,  238032 codes, 31102 comments, 42714 blanks, all 311848 lines
+Total : 969 files,  248375 codes, 32879 comments, 43499 blanks, all 324753 lines
 
 Languages
 +--------------------+------------+------------+------------+------------+------------+
 | language           | files      | code       | comment    | blank      | total      |
 +--------------------+------------+------------+------------+------------+------------+
-| Markdown           |        303 |     77,389 |          2 |     24,189 |    101,580 |
-| Python             |        301 |     69,660 |     27,174 |     14,035 |    110,869 |
-| JSON               |         14 |     46,965 |          0 |          9 |     46,974 |
-| TypeScript JSX     |         52 |     20,712 |        907 |      1,416 |     23,035 |
-| MS SQL             |         74 |      7,046 |      1,480 |      1,057 |      9,583 |
+| Markdown           |        307 |     77,769 |          2 |     24,324 |    102,095 |
+| Python             |        314 |     74,262 |     28,617 |     14,333 |    117,212 |
+| JSON               |         14 |     46,969 |          0 |         10 |     46,979 |
+| TypeScript JSX     |         57 |     23,486 |        901 |      1,561 |     25,948 |
+| MS SQL             |         98 |      8,879 |      1,690 |      1,212 |     11,781 |
+| Shell Script       |         83 |      4,499 |        895 |        997 |      6,391 |
 | JavaScript JSX     |         18 |      4,378 |        186 |        205 |      4,769 |
-| Shell Script       |         70 |      4,287 |        813 |        945 |      6,045 |
-| TypeScript         |         16 |      2,694 |        318 |        241 |      3,253 |
-| YAML               |         15 |      2,094 |         38 |        223 |      2,355 |
-| HTML               |          9 |        833 |         20 |         98 |        951 |
+| TypeScript         |         19 |      2,803 |        353 |        262 |      3,418 |
+| YAML               |         17 |      1,880 |         49 |        181 |      2,110 |
+| PostCSS            |          7 |      1,098 |         40 |        107 |      1,245 |
+| HTML               |          9 |        843 |         18 |         98 |        959 |
 | XML                |         12 |        634 |         34 |         69 |        737 |
-| PostCSS            |          7 |        481 |         36 |         87 |        604 |
-| JavaScript         |          5 |        292 |          1 |         26 |        319 |
+| JavaScript         |          5 |        308 |          1 |         26 |        335 |
 | Makefile           |          1 |        145 |          0 |         25 |        170 |
 | Properties         |          2 |        129 |         18 |         25 |        172 |
 | R                  |          1 |        126 |         24 |         22 |        172 |
@@ -31,45 +31,45 @@ Directories
 +------------------------------------------------------------------------------------------------------------------------------------------+------------+------------+------------+------------+------------+
 | path                                                                                                                                     | files      | code       | comment    | blank      | total      |
 +------------------------------------------------------------------------------------------------------------------------------------------+------------+------------+------------+------------+------------+
-| .                                                                                                                                        |        905 |    238,032 |     31,102 |     42,714 |    311,848 |
-| . (Files)                                                                                                                                |         19 |      3,539 |        135 |        849 |      4,523 |
+| .                                                                                                                                        |        969 |    248,375 |     32,879 |     43,499 |    324,753 |
+| . (Files)                                                                                                                                |         22 |      3,610 |        144 |        869 |      4,623 |
 | .claude                                                                                                                                  |          1 |         12 |          0 |          1 |         13 |
 | .github                                                                                                                                  |          3 |        769 |          8 |        195 |        972 |
 | .github (Files)                                                                                                                          |          1 |        599 |          0 |        159 |        758 |
 | .github/workflows                                                                                                                        |          2 |        170 |          8 |         36 |        214 |
 | .huggingface                                                                                                                             |          4 |        247 |         26 |         63 |        336 |
-| agents                                                                                                                                   |         14 |      3,853 |      1,130 |        797 |      5,780 |
+| agents                                                                                                                                   |         13 |      2,348 |        844 |        474 |      3,666 |
 | alerts                                                                                                                                   |          1 |        344 |        146 |         78 |        568 |
-| api                                                                                                                                      |         30 |      6,003 |      4,143 |      1,099 |     11,245 |
+| api                                                                                                                                      |         30 |      5,960 |      4,270 |      1,087 |     11,317 |
 | api (Files)                                                                                                                              |          7 |      1,723 |        752 |        304 |      2,779 |
-| api/routes                                                                                                                               |         13 |      3,551 |      3,331 |        683 |      7,565 |
-| api/static                                                                                                                               |          8 |        704 |         22 |         92 |        818 |
-| api/static (Files)                                                                                                                       |          6 |        481 |         22 |         70 |        573 |
-| api/static/assets                                                                                                                        |          2 |        223 |          0 |         22 |        245 |
+| api/routes                                                                                                                               |         13 |      3,502 |      3,459 |        671 |      7,632 |
+| api/static                                                                                                                               |          8 |        710 |         21 |         92 |        823 |
+| api/static (Files)                                                                                                                       |          6 |        486 |         21 |         70 |        577 |
+| api/static/assets                                                                                                                        |          2 |        224 |          0 |         22 |        246 |
 | api/utils                                                                                                                                |          2 |         25 |         38 |         20 |         83 |
 | config                                                                                                                                   |          2 |         82 |         25 |         25 |        132 |
 | databricks                                                                                                                               |          5 |      1,187 |        604 |        220 |      2,011 |
 | databricks (Files)                                                                                                                       |          4 |      1,135 |        342 |        204 |      1,681 |
 | databricks/notebooks                                                                                                                     |          1 |         52 |        262 |         16 |        330 |
-| dbt_project                                                                                                                              |         60 |      6,856 |        833 |        962 |      8,651 |
-| dbt_project (Files)                                                                                                                      |         10 |      1,059 |         34 |        327 |      1,420 |
+| dbt_project                                                                                                                              |         67 |      7,265 |        907 |        937 |      9,109 |
+| dbt_project (Files)                                                                                                                      |         10 |      1,059 |         36 |        328 |      1,423 |
 | dbt_project/analyses                                                                                                                     |          4 |         78 |         10 |          8 |         96 |
-| dbt_project/macros                                                                                                                       |          5 |         85 |         30 |          8 |        123 |
-| dbt_project/models                                                                                                                       |         36 |      5,528 |        735 |        599 |      6,862 |
+| dbt_project/macros                                                                                                                       |          7 |        101 |         30 |         10 |        141 |
+| dbt_project/models                                                                                                                       |         41 |      5,921 |        807 |        571 |      7,299 |
 | dbt_project/models/bronze                                                                                                                |          8 |        611 |        131 |         78 |        820 |
-| dbt_project/models/intermediate                                                                                                          |         16 |      2,679 |        344 |        248 |      3,271 |
-| dbt_project/models/marts                                                                                                                 |          8 |      1,202 |        203 |        174 |      1,579 |
-| dbt_project/models/staging                                                                                                               |          4 |      1,036 |         57 |         99 |      1,192 |
+| dbt_project/models/intermediate                                                                                                          |         16 |      2,927 |        364 |        257 |      3,548 |
+| dbt_project/models/marts                                                                                                                 |         13 |      1,308 |        255 |        135 |      1,698 |
+| dbt_project/models/staging                                                                                                               |          4 |      1,075 |         57 |        101 |      1,233 |
 | dbt_project/scripts                                                                                                                      |          3 |         50 |         14 |         12 |         76 |
 | dbt_project/scripts (Files)                                                                                                              |          2 |         30 |         12 |          9 |         51 |
 | dbt_project/scripts/discovery                                                                                                            |          1 |         20 |          2 |          3 |         25 |
 | dbt_project/seeds                                                                                                                        |          1 |         20 |          0 |          3 |         23 |
 | dbt_project/tests                                                                                                                        |          1 |         36 |         10 |          5 |         51 |
-| docs                                                                                                                                     |         55 |     14,398 |          0 |      4,796 |     19,194 |
+| docs                                                                                                                                     |         56 |     14,473 |          0 |      4,815 |     19,288 |
 | examples                                                                                                                                 |          1 |        365 |          0 |        114 |        479 |
 | extraction                                                                                                                               |          6 |      1,615 |        795 |        330 |      2,740 |
-| frontend                                                                                                                                 |        100 |     50,249 |      1,290 |      2,014 |     53,553 |
-| frontend (Files)                                                                                                                         |         10 |      5,757 |         15 |         61 |      5,833 |
+| frontend                                                                                                                                 |        107 |     53,742 |      1,316 |      2,195 |     57,253 |
+| frontend (Files)                                                                                                                         |         10 |      5,777 |         14 |         61 |      5,852 |
 | frontend/policy-dashboards                                                                                                               |         25 |     22,111 |        191 |        299 |     22,601 |
 | frontend/policy-dashboards (Files)                                                                                                       |          3 |     17,667 |          0 |         80 |     17,747 |
 | frontend/policy-dashboards/public                                                                                                        |          2 |         30 |          5 |          6 |         41 |
@@ -79,30 +79,33 @@ Directories
 | frontend/policy-dashboards/src/components (Files)                                                                                        |         10 |      2,353 |        112 |        112 |      2,577 |
 | frontend/policy-dashboards/src/components/shared                                                                                         |          7 |        748 |         44 |         44 |        836 |
 | frontend/public                                                                                                                          |          5 |        358 |         12 |         61 |        431 |
-| frontend/src                                                                                                                             |         60 |     22,023 |      1,072 |      1,593 |     24,688 |
-| frontend/src (Files)                                                                                                                     |          4 |        255 |         12 |         28 |        295 |
-| frontend/src/components                                                                                                                  |         14 |      2,884 |        154 |        248 |      3,286 |
-| frontend/src/contexts                                                                                                                    |          2 |        200 |         15 |         38 |        253 |
+| frontend/src                                                                                                                             |         67 |     25,496 |      1,099 |      1,774 |     28,369 |
+| frontend/src (Files)                                                                                                                     |          4 |        878 |         16 |         48 |        942 |
+| frontend/src/components                                                                                                                  |         17 |      3,553 |        166 |        298 |      4,017 |
+| frontend/src/contexts                                                                                                                    |          2 |        199 |         16 |         38 |        253 |
 | frontend/src/lib                                                                                                                         |          1 |        123 |         16 |         26 |        165 |
-| frontend/src/pages                                                                                                                       |         28 |     16,733 |        623 |      1,066 |     18,422 |
-| frontend/src/utils                                                                                                                       |         11 |      1,828 |        252 |        187 |      2,267 |
+| frontend/src/pages                                                                                                                       |         30 |     18,833 |        604 |      1,161 |     20,598 |
+| frontend/src/pages (Files)                                                                                                               |         29 |     16,281 |        587 |      1,047 |     17,915 |
+| frontend/src/pages/jurisdiction-quality                                                                                                  |          1 |      2,552 |         17 |        114 |      2,683 |
+| frontend/src/utils                                                                                                                       |         13 |      1,910 |        281 |        203 |      2,394 |
 | models                                                                                                                                   |          1 |        220 |         71 |         51 |        342 |
 | notebooks                                                                                                                                |          2 |        177 |        227 |        116 |        520 |
 | output                                                                                                                                   |          3 |        496 |          0 |         62 |        558 |
 | output (Files)                                                                                                                           |          2 |         92 |          0 |         62 |        154 |
 | output/tuscaloosa                                                                                                                        |          1 |        404 |          0 |          0 |        404 |
 | pipeline                                                                                                                                 |         10 |      2,222 |        954 |        563 |      3,739 |
-| prompts                                                                                                                                  |          4 |        932 |          0 |        114 |      1,046 |
-| scripts                                                                                                                                  |        388 |     71,558 |     20,326 |     14,695 |    106,579 |
-| scripts (Files)                                                                                                                          |          7 |      1,171 |        228 |        240 |      1,639 |
+| prompts                                                                                                                                  |          5 |        953 |          0 |        135 |      1,088 |
+| scripts                                                                                                                                  |        432 |     79,159 |     22,146 |     15,529 |    116,834 |
+| scripts (Files)                                                                                                                          |          8 |      1,177 |        238 |        241 |      1,656 |
 | scripts/database                                                                                                                         |          1 |         18 |          9 |          6 |         33 |
-| scripts/datasources                                                                                                                      |        200 |     42,344 |     12,041 |      8,457 |     62,842 |
+| scripts/datasources                                                                                                                      |        232 |     49,104 |     13,706 |      9,184 |     71,994 |
 | scripts/datasources (Files)                                                                                                              |          2 |        106 |          0 |         41 |        147 |
 | scripts/datasources/ballotpedia                                                                                                          |          2 |        365 |        215 |        108 |        688 |
 | scripts/datasources/cdp                                                                                                                  |          4 |        648 |        136 |        185 |        969 |
 | scripts/datasources/census                                                                                                               |         32 |      5,788 |      1,923 |      1,202 |      8,913 |
 | scripts/datasources/cityscrapers                                                                                                         |          2 |        339 |         85 |        120 |        544 |
 | scripts/datasources/dbpedia                                                                                                              |          2 |        230 |        167 |         28 |        425 |
+| scripts/datasources/dot                                                                                                                  |          4 |        839 |         87 |        119 |      1,045 |
 | scripts/datasources/fec                                                                                                                  |          8 |      2,342 |        563 |        595 |      3,500 |
 | scripts/datasources/gemini                                                                                                               |         22 |      4,417 |        975 |        995 |      6,387 |
 | scripts/datasources/gemini (Files)                                                                                                       |         13 |      3,215 |        685 |        733 |      4,633 |
@@ -115,7 +118,8 @@ Directories
 | scripts/datasources/hifld                                                                                                                |          4 |        541 |        125 |        157 |        823 |
 | scripts/datasources/hud                                                                                                                  |          1 |        151 |         22 |         40 |        213 |
 | scripts/datasources/irs                                                                                                                  |          7 |      1,476 |        378 |        445 |      2,299 |
-| scripts/datasources/jurisdictions                                                                                                        |          3 |        435 |         73 |         88 |        596 |
+| scripts/datasources/jurisdictions                                                                                                        |          5 |      1,114 |        347 |        152 |      1,613 |
+| scripts/datasources/leagueofcities                                                                                                       |          3 |      2,067 |        566 |        194 |      2,827 |
 | scripts/datasources/localview                                                                                                            |          8 |      1,696 |        526 |        411 |      2,633 |
 | scripts/datasources/localview (Files)                                                                                                    |          5 |        961 |        222 |        219 |      1,402 |
 | scripts/datasources/localview/archive                                                                                                    |          3 |        735 |        304 |        192 |      1,231 |
@@ -129,23 +133,27 @@ Directories
 | scripts/datasources/osf                                                                                                                  |          5 |        760 |        117 |        204 |      1,081 |
 | scripts/datasources/social_media                                                                                                         |          1 |        238 |        137 |         59 |        434 |
 | scripts/datasources/uscm                                                                                                                 |          7 |        817 |        138 |        156 |      1,111 |
+| scripts/datasources/vendorsearch                                                                                                         |          2 |        308 |         25 |         71 |        404 |
 | scripts/datasources/voter_data                                                                                                           |          2 |        173 |        143 |         54 |        370 |
-| scripts/datasources/wikidata                                                                                                             |         20 |      6,496 |      2,461 |        661 |      9,618 |
-| scripts/datasources/youtube                                                                                                              |         14 |      5,350 |        956 |        699 |      7,005 |
+| scripts/datasources/wikidata                                                                                                             |         20 |      6,500 |      2,461 |        662 |      9,623 |
+| scripts/datasources/youtube                                                                                                              |         35 |      8,213 |      1,669 |        977 |     10,859 |
+| scripts/datasources/youtube (Files)                                                                                                      |         34 |      8,189 |      1,663 |        972 |     10,824 |
+| scripts/datasources/youtube/sql                                                                                                          |          1 |         24 |          6 |          5 |         35 |
 | scripts/dbt                                                                                                                              |          4 |        788 |         45 |        158 |        991 |
-| scripts/deployment                                                                                                                       |         47 |      4,830 |      1,206 |      1,125 |      7,161 |
+| scripts/deployment                                                                                                                       |         55 |      4,983 |      1,245 |      1,167 |      7,395 |
 | scripts/deployment (Files)                                                                                                               |          9 |        565 |         74 |        129 |        768 |
-| scripts/deployment/neon                                                                                                                  |         38 |      4,265 |      1,132 |        996 |      6,393 |
+| scripts/deployment/neon                                                                                                                  |         46 |      4,418 |      1,171 |      1,038 |      6,627 |
 | scripts/deployment/neon (Files)                                                                                                          |         17 |      2,900 |        787 |        689 |      4,376 |
-| scripts/deployment/neon/migrations                                                                                                       |         21 |      1,365 |        345 |        307 |      2,017 |
-| scripts/development                                                                                                                      |          3 |        158 |         30 |         55 |        243 |
-| scripts/discovery                                                                                                                        |         22 |      7,080 |      1,705 |      1,097 |      9,882 |
-| scripts/discovery (Files)                                                                                                                |         19 |      6,194 |      1,548 |        943 |      8,685 |
+| scripts/deployment/neon/migrations                                                                                                       |         29 |      1,518 |        384 |        349 |      2,251 |
+| scripts/development                                                                                                                      |          4 |        303 |         66 |         77 |        446 |
+| scripts/discovery                                                                                                                        |         22 |      7,562 |      1,768 |      1,135 |     10,465 |
+| scripts/discovery (Files)                                                                                                                |         19 |      6,676 |      1,611 |        981 |      9,268 |
 | scripts/discovery/archive                                                                                                                |          2 |        797 |        148 |        144 |      1,089 |
 | scripts/discovery/sql                                                                                                                    |          1 |         89 |          9 |         10 |        108 |
 | scripts/enrichment                                                                                                                       |         23 |      4,150 |      1,421 |        883 |      6,454 |
 | scripts/enrichment_ai                                                                                                                    |         16 |      2,441 |      1,537 |        541 |      4,519 |
 | scripts/examples                                                                                                                         |         10 |      1,800 |        420 |        490 |      2,710 |
+| scripts/frontend                                                                                                                         |          2 |         55 |          7 |          4 |         66 |
 | scripts/huggingface                                                                                                                      |         22 |      2,823 |        790 |        699 |      4,312 |
 | scripts/localview                                                                                                                        |          7 |      1,241 |        264 |        349 |      1,854 |
 | scripts/maintenance                                                                                                                      |         12 |        699 |        143 |        183 |      1,025 |
@@ -154,24 +162,25 @@ Directories
 | scripts/migrations                                                                                                                       |          2 |        433 |         38 |         81 |        552 |
 | scripts/utils                                                                                                                            |          4 |        103 |         53 |         34 |        190 |
 | scripts/wikicommons                                                                                                                      |          3 |        519 |         28 |         68 |        615 |
-| tests                                                                                                                                    |          2 |        172 |         27 |         60 |        259 |
+| tests                                                                                                                                    |          3 |        192 |         28 |         66 |        286 |
 | visualization                                                                                                                            |          2 |        235 |        165 |         37 |        437 |
-| website                                                                                                                                  |        192 |     72,501 |        197 |     15,473 |     88,171 |
-| website (Files)                                                                                                                          |          8 |     21,796 |         49 |         93 |     21,938 |
+| website                                                                                                                                  |        193 |     72,702 |        203 |     15,537 |     88,442 |
+| website (Files)                                                                                                                          |          8 |     21,810 |         51 |         96 |     21,957 |
 | website/blog                                                                                                                             |          5 |        310 |          0 |        108 |        418 |
-| website/docs                                                                                                                             |        163 |     48,899 |          2 |     15,145 |     64,046 |
-| website/docs (Files)                                                                                                                     |          9 |      1,994 |          0 |        695 |      2,689 |
+| website/docs                                                                                                                             |        163 |     49,073 |          2 |     15,204 |     64,279 |
+| website/docs (Files)                                                                                                                     |          9 |      1,997 |          0 |        701 |      2,698 |
 | website/docs/case-studies                                                                                                                |          3 |      1,474 |          0 |        467 |      1,941 |
-| website/docs/data-sources                                                                                                                |         24 |     12,059 |          0 |      3,093 |     15,152 |
+| website/docs/data-sources                                                                                                                |         24 |     12,162 |          0 |      3,127 |     15,289 |
 | website/docs/dbt                                                                                                                         |          5 |      1,033 |          0 |        304 |      1,337 |
 | website/docs/deployment                                                                                                                  |         21 |      5,304 |          0 |      1,849 |      7,153 |
 | website/docs/development                                                                                                                 |         39 |      9,122 |          0 |      2,801 |     11,923 |
 | website/docs/families                                                                                                                    |          5 |      1,552 |          0 |        420 |      1,972 |
-| website/docs/guides                                                                                                                      |         35 |     10,467 |          0 |      3,525 |     13,992 |
-| website/docs/integrations                                                                                                                |         13 |      3,496 |          0 |      1,143 |      4,639 |
+| website/docs/guides                                                                                                                      |         35 |     10,473 |          0 |      3,531 |     14,004 |
+| website/docs/integrations                                                                                                                |         13 |      3,558 |          0 |      1,156 |      4,714 |
 | website/docs/legal                                                                                                                       |          8 |      2,348 |          2 |        821 |      3,171 |
 | website/docs/resources                                                                                                                   |          1 |         50 |          0 |         27 |         77 |
-| website/src                                                                                                                              |         10 |      1,100 |        141 |        119 |      1,360 |
+| website/src                                                                                                                              |         11 |      1,113 |        145 |        121 |      1,379 |
+| website/src/clientModules                                                                                                                |          1 |         13 |          4 |          2 |         19 |
 | website/src/components                                                                                                                   |          5 |        389 |          7 |         39 |        435 |
 | website/src/components (Files)                                                                                                           |          1 |        101 |          4 |          5 |        110 |
 | website/src/components/HomepageFeatures                                                                                                  |          2 |         77 |          0 |          7 |         84 |
@@ -196,7 +205,7 @@ Files
 | /home/developer/projects/open-navigator/.huggingface/nginx.conf                                                                          | Properties         |        103 |         18 |         22 |        143 |
 | /home/developer/projects/open-navigator/.huggingface/start.sh                                                                            | Shell Script       |         44 |          8 |         10 |         62 |
 | /home/developer/projects/open-navigator/.huggingface/supervisord.conf                                                                    | Properties         |         26 |          0 |          3 |         29 |
-| /home/developer/projects/open-navigator/CITATIONS.md                                                                                     | Markdown           |      1,756 |          0 |        351 |      2,107 |
+| /home/developer/projects/open-navigator/CITATIONS.md                                                                                     | Markdown           |      1,765 |          0 |        354 |      2,119 |
 | /home/developer/projects/open-navigator/CODE_OF_CONDUCT.md                                                                               | Markdown           |         28 |          0 |         20 |         48 |
 | /home/developer/projects/open-navigator/CONTRIBUTING.md                                                                                  | Markdown           |         72 |          0 |         28 |        100 |
 | /home/developer/projects/open-navigator/Dockerfile                                                                                       | Docker             |         49 |         21 |         21 |         91 |
@@ -214,7 +223,6 @@ Files
 | /home/developer/projects/open-navigator/agents/orchestrator.py                                                                           | Python             |        154 |         81 |         35 |        270 |
 | /home/developer/projects/open-navigator/agents/parser.py                                                                                 | Python             |        123 |         47 |         30 |        200 |
 | /home/developer/projects/open-navigator/agents/policy_reasoning_analyzer.py                                                              | Python             |        370 |         91 |         42 |        503 |
-| /home/developer/projects/open-navigator/agents/scraper.py                                                                                | Python             |      1,505 |        286 |        323 |      2,114 |
 | /home/developer/projects/open-navigator/agents/scraper_undetected.py                                                                     | Python             |        173 |         46 |         43 |        262 |
 | /home/developer/projects/open-navigator/agents/sentiment.py                                                                              | Python             |        248 |         73 |         61 |        382 |
 | /home/developer/projects/open-navigator/agents/test_policy_analyzer.py                                                                   | Python             |         72 |         14 |         27 |        113 |
@@ -237,13 +245,13 @@ Files
 | /home/developer/projects/open-navigator/api/routes/search_postgres.py                                                                    | Python             |        338 |        647 |         41 |      1,026 |
 | /home/developer/projects/open-navigator/api/routes/social.py                                                                             | Python             |        393 |         43 |        109 |        545 |
 | /home/developer/projects/open-navigator/api/routes/stats.py                                                                              | Python             |        167 |        379 |         17 |        563 |
-| /home/developer/projects/open-navigator/api/routes/stats_neon.py                                                                         | Python             |        274 |         67 |         44 |        385 |
+| /home/developer/projects/open-navigator/api/routes/stats_neon.py                                                                         | Python             |        225 |        195 |         32 |        452 |
 | /home/developer/projects/open-navigator/api/routes/trending.py                                                                           | Python             |        157 |         42 |         43 |        242 |
-| /home/developer/projects/open-navigator/api/static/assets/index-C3eFljBF.css                                                             | PostCSS            |          1 |          0 |          1 |          2 |
-| /home/developer/projects/open-navigator/api/static/assets/index-ih9K7org.js                                                              | JavaScript         |        222 |          0 |         21 |        243 |
+| /home/developer/projects/open-navigator/api/static/assets/index-BqWDe_X1.css                                                             | PostCSS            |          1 |          0 |          1 |          2 |
+| /home/developer/projects/open-navigator/api/static/assets/index-CQteqSZT.js                                                              | JavaScript         |        223 |          0 |         21 |        244 |
 | /home/developer/projects/open-navigator/api/static/communityone_logo.svg                                                                 | XML                |         13 |          5 |          5 |         23 |
 | /home/developer/projects/open-navigator/api/static/google6934fc6e3618949f.html                                                           | HTML               |          1 |          0 |          0 |          1 |
-| /home/developer/projects/open-navigator/api/static/index.html                                                                            | HTML               |        123 |         10 |          9 |        142 |
+| /home/developer/projects/open-navigator/api/static/index.html                                                                            | HTML               |        128 |          9 |          9 |        146 |
 | /home/developer/projects/open-navigator/api/static/privacyfacebook.html                                                                  | HTML               |        244 |          0 |         33 |        277 |
 | /home/developer/projects/open-navigator/api/static/sitemap-app.xml                                                                       | XML                |         89 |          5 |         19 |        113 |
 | /home/developer/projects/open-navigator/api/static/sitemap.xml                                                                           | XML                |         11 |          2 |          4 |         17 |
@@ -259,6 +267,7 @@ Files
 | /home/developer/projects/open-navigator/databricks/deployment.py                                                                         | Python             |        193 |        108 |         44 |        345 |
 | /home/developer/projects/open-navigator/databricks/evaluation.py                                                                         | Python             |        162 |        146 |         36 |        344 |
 | /home/developer/projects/open-navigator/databricks/notebooks/01_agent_bricks_quickstart.py                                               | Python             |         52 |        262 |         16 |        330 |
+| /home/developer/projects/open-navigator/dbt_project.yml                                                                                  | YAML               |         46 |          9 |         15 |         70 |
 | /home/developer/projects/open-navigator/dbt_project/.user.yml                                                                            | YAML               |          1 |          0 |          1 |          2 |
 | /home/developer/projects/open-navigator/dbt_project/MIGRATION_PYTHON_TO_DBT.md                                                           | Markdown           |        214 |          0 |         60 |        274 |
 | /home/developer/projects/open-navigator/dbt_project/QUICK_REFERENCE.md                                                                   | Markdown           |        230 |          0 |         77 |        307 |
@@ -268,9 +277,11 @@ Files
 | /home/developer/projects/open-navigator/dbt_project/analyses/audit_gsa_domain_types_not_in_map.sql                                       | MS SQL             |         38 |          3 |          2 |         43 |
 | /home/developer/projects/open-navigator/dbt_project/analyses/audit_gsa_mapping_summary_by_state.sql                                      | MS SQL             |          9 |          2 |          2 |         13 |
 | /home/developer/projects/open-navigator/dbt_project/analyses/audit_gsa_unmapped_domains.sql                                              | MS SQL             |         12 |          3 |          2 |         17 |
-| /home/developer/projects/open-navigator/dbt_project/dbt_project.yml                                                                      | YAML               |         45 |         20 |         15 |         80 |
+| /home/developer/projects/open-navigator/dbt_project/dbt_project.yml                                                                      | YAML               |         45 |         22 |         16 |         83 |
 | /home/developer/projects/open-navigator/dbt_project/macros/calculate_confidence.sql                                                      | MS SQL             |         11 |          8 |          1 |         20 |
 | /home/developer/projects/open-navigator/dbt_project/macros/generate_schema_name.sql                                                      | MS SQL             |          8 |          0 |          4 |         12 |
+| /home/developer/projects/open-navigator/dbt_project/macros/jurisdiction_acs_exists.sql                                                   | MS SQL             |          8 |          0 |          1 |          9 |
+| /home/developer/projects/open-navigator/dbt_project/macros/jurisdiction_mapping_primary_from_source_columns.sql                          | MS SQL             |          8 |          0 |          1 |          9 |
 | /home/developer/projects/open-navigator/dbt_project/macros/normalize_bill_number.sql                                                     | MS SQL             |         14 |         11 |          1 |         26 |
 | /home/developer/projects/open-navigator/dbt_project/macros/normalize_jurisdiction_label_for_match.sql                                    | MS SQL             |         41 |          0 |          1 |         42 |
 | /home/developer/projects/open-navigator/dbt_project/macros/normalize_name.sql                                                            | MS SQL             |         11 |         11 |          1 |         23 |
@@ -282,12 +293,12 @@ Files
 | /home/developer/projects/open-navigator/dbt_project/models/bronze/bronze_financial_items_from_ai.sql                                     | MS SQL             |         75 |         14 |          8 |         97 |
 | /home/developer/projects/open-navigator/dbt_project/models/bronze/bronze_organizations_from_ai.sql                                       | MS SQL             |        109 |         19 |          9 |        137 |
 | /home/developer/projects/open-navigator/dbt_project/models/bronze/bronze_topics_from_ai.sql                                              | MS SQL             |         71 |         14 |          8 |         93 |
-| /home/developer/projects/open-navigator/dbt_project/models/intermediate/_intermediate.yml                                                | YAML               |        471 |          0 |         27 |        498 |
-| /home/developer/projects/open-navigator/dbt_project/models/intermediate/int_events_channels.sql                                          | MS SQL             |        138 |         21 |         23 |        182 |
+| /home/developer/projects/open-navigator/dbt_project/models/intermediate/_intermediate.yml                                                | YAML               |        494 |          0 |         27 |        521 |
+| /home/developer/projects/open-navigator/dbt_project/models/intermediate/int_events_channels.sql                                          | MS SQL             |        160 |         32 |         25 |        217 |
 | /home/developer/projects/open-navigator/dbt_project/models/intermediate/int_events_channels_enriched.sql                                 | MS SQL             |         61 |         19 |         12 |         92 |
 | /home/developer/projects/open-navigator/dbt_project/models/intermediate/int_events_localview.sql                                         | MS SQL             |         24 |          8 |          3 |         35 |
-| /home/developer/projects/open-navigator/dbt_project/models/intermediate/int_jurisdiction_websites.sql                                    | MS SQL             |        619 |         25 |         32 |        676 |
-| /home/developer/projects/open-navigator/dbt_project/models/intermediate/int_jurisdictions.sql                                            | MS SQL             |        350 |         25 |         14 |        389 |
+| /home/developer/projects/open-navigator/dbt_project/models/intermediate/int_jurisdiction_websites.sql                                    | MS SQL             |        796 |         33 |         38 |        867 |
+| /home/developer/projects/open-navigator/dbt_project/models/intermediate/int_jurisdictions.sql                                            | MS SQL             |        376 |         26 |         15 |        417 |
 | /home/developer/projects/open-navigator/dbt_project/models/intermediate/int_jurisdictions_clean.sql                                      | MS SQL             |         74 |         27 |         21 |        122 |
 | /home/developer/projects/open-navigator/dbt_project/models/intermediate/int_jurisdictions_linked.sql                                     | MS SQL             |         71 |         25 |         13 |        109 |
 | /home/developer/projects/open-navigator/dbt_project/models/intermediate/int_jurisdictions_scraped_discoveries.sql                        | MS SQL             |         89 |          8 |         13 |        110 |
@@ -298,15 +309,20 @@ Files
 | /home/developer/projects/open-navigator/dbt_project/models/intermediate/int_nonprofits_nccs_with_zcta.sql                                | MS SQL             |         66 |         40 |         14 |        120 |
 | /home/developer/projects/open-navigator/dbt_project/models/intermediate/int_nonprofits_with_county_fips.sql                              | MS SQL             |        104 |         51 |         10 |        165 |
 | /home/developer/projects/open-navigator/dbt_project/models/intermediate/int_trending_causes_by_jurisdiction.sql                          | MS SQL             |         83 |         17 |         14 |        114 |
-| /home/developer/projects/open-navigator/dbt_project/models/marts/_marts.yml                                                              | YAML               |        338 |          0 |         62 |        400 |
-| /home/developer/projects/open-navigator/dbt_project/models/marts/events_channels_search.sql                                              | MS SQL             |         53 |         27 |         13 |         93 |
+| /home/developer/projects/open-navigator/dbt_project/models/marts/events_channels_search.sql                                              | MS SQL             |         57 |         27 |         13 |         97 |
 | /home/developer/projects/open-navigator/dbt_project/models/marts/events_search.sql                                                       | MS SQL             |        113 |         29 |         13 |        155 |
 | /home/developer/projects/open-navigator/dbt_project/models/marts/events_text_search.sql                                                  | MS SQL             |         90 |         17 |          8 |        115 |
+| /home/developer/projects/open-navigator/dbt_project/models/marts/jurisdiction_mapping_analysis.sql                                       | MS SQL             |        214 |         18 |          8 |        240 |
+| /home/developer/projects/open-navigator/dbt_project/models/marts/jurisdiction_mapping_analysis_sources.sql                               | MS SQL             |         20 |          4 |          3 |         27 |
+| /home/developer/projects/open-navigator/dbt_project/models/marts/jurisdiction_mapping_quality_summary.sql                                | MS SQL             |         50 |          9 |          3 |         62 |
+| /home/developer/projects/open-navigator/dbt_project/models/marts/jurisdiction_mapping_quality_summary_by_acs_income_level.sql            | MS SQL             |         52 |          5 |          3 |         60 |
+| /home/developer/projects/open-navigator/dbt_project/models/marts/jurisdiction_mapping_quality_summary_by_acs_population_tier.sql         | MS SQL             |         52 |          5 |          3 |         60 |
+| /home/developer/projects/open-navigator/dbt_project/models/marts/jurisdiction_mapping_quality_summary_municipality_places.sql            | MS SQL             |         52 |         11 |          3 |         66 |
 | /home/developer/projects/open-navigator/dbt_project/models/marts/jurisdictions.sql                                                       | MS SQL             |         49 |         32 |         16 |         97 |
 | /home/developer/projects/open-navigator/dbt_project/models/marts/organizations_nonprofit_search.sql                                      | MS SQL             |        148 |         16 |          6 |        170 |
 | /home/developer/projects/open-navigator/dbt_project/models/marts/organizations_nonprofits.sql                                            | MS SQL             |        143 |         38 |         27 |        208 |
 | /home/developer/projects/open-navigator/dbt_project/models/marts/stats_aggregates.sql                                                    | MS SQL             |        268 |         44 |         29 |        341 |
-| /home/developer/projects/open-navigator/dbt_project/models/staging/_staging.yml                                                          | YAML               |        887 |          0 |         53 |        940 |
+| /home/developer/projects/open-navigator/dbt_project/models/staging/_staging.yml                                                          | YAML               |        926 |          0 |         55 |        981 |
 | /home/developer/projects/open-navigator/dbt_project/models/staging/stg_bronze_decisions.sql                                              | MS SQL             |         40 |         14 |         13 |         67 |
 | /home/developer/projects/open-navigator/dbt_project/models/staging/stg_bronze_events_cdp.sql                                             | MS SQL             |         62 |         23 |         17 |        102 |
 | /home/developer/projects/open-navigator/dbt_project/models/staging/stg_bronze_events_text_ai.sql                                         | MS SQL             |         47 |         20 |         16 |         83 |
@@ -340,7 +356,7 @@ Files
 | /home/developer/projects/open-navigator/docs/DEBATE_GRADER_GUIDE.md                                                                      | Markdown           |        241 |          0 |         67 |        308 |
 | /home/developer/projects/open-navigator/docs/EBOARD_AUTOMATED_SOLUTIONS.md                                                               | Markdown           |        304 |          0 |         98 |        402 |
 | /home/developer/projects/open-navigator/docs/EBOARD_COOKIE_GUIDE.md                                                                      | Markdown           |        184 |          0 |         63 |        247 |
-| /home/developer/projects/open-navigator/docs/EBOARD_MANUAL_DOWNLOAD.md                                                                   | Markdown           |         95 |          0 |         31 |        126 |
+| /home/developer/projects/open-navigator/docs/EBOARD_MANUAL_DOWNLOAD.md                                                                   | Markdown           |        159 |          0 |         46 |        205 |
 | /home/developer/projects/open-navigator/docs/ENHANCEMENT_OFFICIAL_SOURCES.md                                                             | Markdown           |        175 |          0 |         79 |        254 |
 | /home/developer/projects/open-navigator/docs/FAST_ENRICHMENT_STRATEGY.md                                                                 | Markdown           |        247 |          0 |         77 |        324 |
 | /home/developer/projects/open-navigator/docs/FRONTEND_INTEGRATION_GUIDE.md                                                               | Markdown           |        332 |          0 |        113 |        445 |
@@ -377,6 +393,7 @@ Files
 | /home/developer/projects/open-navigator/docs/VIDEO_SOURCES_COMPLETE.md                                                                   | Markdown           |        313 |          0 |        125 |        438 |
 | /home/developer/projects/open-navigator/docs/VIDEO_URL_SOURCES.md                                                                        | Markdown           |        371 |          0 |         93 |        464 |
 | /home/developer/projects/open-navigator/docs/YOUTUBE_DISCOVERY_IMPROVEMENTS.md                                                           | Markdown           |        337 |          0 |        102 |        439 |
+| /home/developer/projects/open-navigator/docs/meetings_scrape_big_timber_tuscaloosa_inventory.md                                          | Markdown           |         11 |          0 |          4 |         15 |
 | /home/developer/projects/open-navigator/examples/README.md                                                                               | Markdown           |        365 |          0 |        114 |        479 |
 | /home/developer/projects/open-navigator/extraction/accountability_dashboards.py                                                          | Python             |        391 |        137 |         87 |        615 |
 | /home/developer/projects/open-navigator/extraction/budget_analyzer.py                                                                    | Python             |        155 |        202 |         23 |        380 |
@@ -386,7 +403,7 @@ Files
 | /home/developer/projects/open-navigator/extraction/universal_extractor.py                                                                | Python             |        248 |         65 |         71 |        384 |
 | /home/developer/projects/open-navigator/frontend/.eslintrc.cjs                                                                           | JavaScript         |         18 |          0 |          1 |         19 |
 | /home/developer/projects/open-navigator/frontend/README.md                                                                               | Markdown           |        126 |          0 |         41 |        167 |
-| /home/developer/projects/open-navigator/frontend/index.html                                                                              | HTML               |        122 |         10 |          9 |        141 |
+| /home/developer/projects/open-navigator/frontend/index.html                                                                              | HTML               |        127 |          9 |          9 |        145 |
 | /home/developer/projects/open-navigator/frontend/package-lock.json                                                                       | JSON               |      5,336 |          0 |          1 |      5,337 |
 | /home/developer/projects/open-navigator/frontend/package.json                                                                            | JSON               |         49 |          0 |          1 |         50 |
 | /home/developer/projects/open-navigator/frontend/policy-dashboards/README.md                                                             | Markdown           |        174 |          0 |         78 |        252 |
@@ -420,42 +437,46 @@ Files
 | /home/developer/projects/open-navigator/frontend/public/privacyfacebook.html                                                             | HTML               |        244 |          0 |         33 |        277 |
 | /home/developer/projects/open-navigator/frontend/public/sitemap-app.xml                                                                  | XML                |         89 |          5 |         19 |        113 |
 | /home/developer/projects/open-navigator/frontend/public/sitemap.xml                                                                      | XML                |         11 |          2 |          4 |         17 |
-| /home/developer/projects/open-navigator/frontend/src/App.tsx                                                                             | TypeScript JSX     |        127 |          6 |          9 |        142 |
-| /home/developer/projects/open-navigator/frontend/src/components/AddressLookup.tsx                                                        | TypeScript JSX     |        583 |         30 |         59 |        672 |
-| /home/developer/projects/open-navigator/frontend/src/components/CensusRaceBarChart.tsx                                                   | TypeScript JSX     |        335 |         17 |         21 |        373 |
-| /home/developer/projects/open-navigator/frontend/src/components/DataExplorerLayout.tsx                                                   | TypeScript JSX     |         46 |          1 |          5 |         52 |
+| /home/developer/projects/open-navigator/frontend/src/App.tsx                                                                             | TypeScript JSX     |        133 |          6 |          9 |        148 |
+| /home/developer/projects/open-navigator/frontend/src/components/AddressLookup.tsx                                                        | TypeScript JSX     |        614 |         28 |         62 |        704 |
+| /home/developer/projects/open-navigator/frontend/src/components/CensusRaceBarChart.tsx                                                   | TypeScript JSX     |        336 |         17 |         21 |        374 |
+| /home/developer/projects/open-navigator/frontend/src/components/DataExplorerLayout.tsx                                                   | TypeScript JSX     |         71 |          1 |          5 |         77 |
+| /home/developer/projects/open-navigator/frontend/src/components/ExploreQuickNavSidebarPanel.tsx                                          | TypeScript JSX     |         14 |          5 |          2 |         21 |
 | /home/developer/projects/open-navigator/frontend/src/components/FollowButton.tsx                                                         | TypeScript JSX     |        147 |          4 |         10 |        161 |
 | /home/developer/projects/open-navigator/frontend/src/components/GiniInequalityReadout.tsx                                                | TypeScript JSX     |         44 |          2 |          3 |         49 |
+| /home/developer/projects/open-navigator/frontend/src/components/HeroLicensePlateBadge.tsx                                                | TypeScript JSX     |        251 |          2 |         22 |        275 |
+| /home/developer/projects/open-navigator/frontend/src/components/HomeExploreQuickNav.tsx                                                  | TypeScript JSX     |        276 |          8 |         19 |        303 |
 | /home/developer/projects/open-navigator/frontend/src/components/InfoHelpTrigger.tsx                                                      | TypeScript JSX     |         34 |          6 |          4 |         44 |
 | /home/developer/projects/open-navigator/frontend/src/components/JurisdictionDiscovery.tsx                                                | TypeScript JSX     |        239 |         13 |         17 |        269 |
-| /home/developer/projects/open-navigator/frontend/src/components/Layout.tsx                                                               | TypeScript JSX     |        511 |         16 |         22 |        549 |
+| /home/developer/projects/open-navigator/frontend/src/components/Layout.tsx                                                               | TypeScript JSX     |        558 |         16 |         24 |        598 |
 | /home/developer/projects/open-navigator/frontend/src/components/MultiSelect.tsx                                                          | TypeScript JSX     |        128 |          2 |          8 |        138 |
 | /home/developer/projects/open-navigator/frontend/src/components/RegistrationModal.tsx                                                    | TypeScript JSX     |        192 |          7 |         18 |        217 |
-| /home/developer/projects/open-navigator/frontend/src/components/ScorecardTrendAndGiniLegend.tsx                                          | TypeScript JSX     |         49 |          4 |          3 |         56 |
+| /home/developer/projects/open-navigator/frontend/src/components/ScorecardTrendAndGiniLegend.tsx                                          | TypeScript JSX     |         73 |          3 |          5 |         81 |
 | /home/developer/projects/open-navigator/frontend/src/components/ScrollToTop.tsx                                                          | TypeScript JSX     |          9 |          4 |          4 |         17 |
 | /home/developer/projects/open-navigator/frontend/src/components/SocialStats.tsx                                                          | TypeScript JSX     |        106 |          2 |         14 |        122 |
 | /home/developer/projects/open-navigator/frontend/src/components/USMap.tsx                                                                | TypeScript JSX     |        461 |         46 |         60 |        567 |
 | /home/developer/projects/open-navigator/frontend/src/contexts/AuthContext.tsx                                                            | TypeScript JSX     |        122 |          9 |         19 |        150 |
-| /home/developer/projects/open-navigator/frontend/src/contexts/LocationContext.tsx                                                        | TypeScript JSX     |         78 |          6 |         19 |        103 |
-| /home/developer/projects/open-navigator/frontend/src/index.css                                                                           | PostCSS            |         85 |          4 |         13 |        102 |
+| /home/developer/projects/open-navigator/frontend/src/contexts/LocationContext.tsx                                                        | TypeScript JSX     |         77 |          7 |         19 |        103 |
+| /home/developer/projects/open-navigator/frontend/src/index.css                                                                           | PostCSS            |        702 |          8 |         33 |        743 |
 | /home/developer/projects/open-navigator/frontend/src/lib/api.ts                                                                          | TypeScript         |        123 |         16 |         26 |        165 |
 | /home/developer/projects/open-navigator/frontend/src/main.tsx                                                                            | TypeScript JSX     |         37 |          0 |          3 |         40 |
 | /home/developer/projects/open-navigator/frontend/src/pages/AdvocacyTopics.tsx                                                            | TypeScript JSX     |        217 |          5 |          8 |        230 |
 | /home/developer/projects/open-navigator/frontend/src/pages/Analytics.tsx                                                                 | TypeScript JSX     |        204 |         32 |         14 |        250 |
 | /home/developer/projects/open-navigator/frontend/src/pages/BillDetail.tsx                                                                | TypeScript JSX     |        248 |          7 |         15 |        270 |
-| /home/developer/projects/open-navigator/frontend/src/pages/CensusMapPage.tsx                                                             | TypeScript JSX     |      3,530 |         37 |        202 |      3,769 |
+| /home/developer/projects/open-navigator/frontend/src/pages/CensusMapPage.tsx                                                             | TypeScript JSX     |      3,626 |         45 |        207 |      3,878 |
 | /home/developer/projects/open-navigator/frontend/src/pages/Dashboard.tsx                                                                 | TypeScript JSX     |        183 |          6 |         13 |        202 |
-| /home/developer/projects/open-navigator/frontend/src/pages/DataExplorerScorecardPage.tsx                                                 | TypeScript JSX     |      1,297 |          0 |         72 |      1,369 |
+| /home/developer/projects/open-navigator/frontend/src/pages/DataExplorerScorecardPage.tsx                                                 | TypeScript JSX     |      1,353 |          7 |         82 |      1,442 |
 | /home/developer/projects/open-navigator/frontend/src/pages/DebateGrader.tsx                                                              | TypeScript JSX     |        245 |          8 |         22 |        275 |
 | /home/developer/projects/open-navigator/frontend/src/pages/Developers.tsx                                                                | TypeScript JSX     |        182 |          8 |         11 |        201 |
 | /home/developer/projects/open-navigator/frontend/src/pages/Documents.tsx                                                                 | TypeScript JSX     |        216 |          5 |         13 |        234 |
 | /home/developer/projects/open-navigator/frontend/src/pages/Events.tsx                                                                    | TypeScript JSX     |        105 |          6 |          6 |        117 |
-| /home/developer/projects/open-navigator/frontend/src/pages/Explore.tsx                                                                   | TypeScript JSX     |        390 |          3 |         18 |        411 |
+| /home/developer/projects/open-navigator/frontend/src/pages/Explore.tsx                                                                   | TypeScript JSX     |        472 |          0 |         25 |        497 |
 | /home/developer/projects/open-navigator/frontend/src/pages/FactChecking.tsx                                                              | TypeScript JSX     |        252 |          6 |         11 |        269 |
 | /home/developer/projects/open-navigator/frontend/src/pages/Hackathons.tsx                                                                | TypeScript JSX     |        199 |          9 |         11 |        219 |
-| /home/developer/projects/open-navigator/frontend/src/pages/Heatmap.tsx                                                                   | TypeScript JSX     |        158 |          4 |         13 |        175 |
-| /home/developer/projects/open-navigator/frontend/src/pages/Home.tsx                                                                      | TypeScript JSX     |      2,359 |        127 |        142 |      2,628 |
-| /home/developer/projects/open-navigator/frontend/src/pages/HomeModern.tsx                                                                | TypeScript JSX     |      1,350 |         76 |         83 |      1,509 |
+| /home/developer/projects/open-navigator/frontend/src/pages/Heatmap.tsx                                                                   | TypeScript JSX     |        159 |          4 |         13 |        176 |
+| /home/developer/projects/open-navigator/frontend/src/pages/Home.tsx                                                                      | TypeScript JSX     |      1,697 |         80 |         96 |      1,873 |
+| /home/developer/projects/open-navigator/frontend/src/pages/HomeModern.tsx                                                                | TypeScript JSX     |      1,263 |         75 |         80 |      1,418 |
+| /home/developer/projects/open-navigator/frontend/src/pages/JurisdictionMappingQualityPage.tsx                                            | TypeScript JSX     |         62 |          0 |          8 |         70 |
 | /home/developer/projects/open-navigator/frontend/src/pages/JurisdictionsSearch.tsx                                                       | TypeScript JSX     |        684 |         33 |         51 |        768 |
 | /home/developer/projects/open-navigator/frontend/src/pages/Nonprofits.tsx                                                                | TypeScript JSX     |        286 |          6 |         24 |        316 |
 | /home/developer/projects/open-navigator/frontend/src/pages/NonprofitsHF.tsx                                                              | TypeScript JSX     |        354 |         26 |         29 |        409 |
@@ -468,19 +489,22 @@ Files
 | /home/developer/projects/open-navigator/frontend/src/pages/Services.tsx                                                                  | TypeScript JSX     |        136 |         10 |         10 |        156 |
 | /home/developer/projects/open-navigator/frontend/src/pages/Settings.tsx                                                                  | TypeScript JSX     |        279 |         15 |         23 |        317 |
 | /home/developer/projects/open-navigator/frontend/src/pages/UnifiedSearch.tsx                                                             | TypeScript JSX     |      1,531 |         85 |        109 |      1,725 |
-| /home/developer/projects/open-navigator/frontend/src/utils/censusDataDictionary.ts                                                       | TypeScript         |        239 |         17 |         16 |        272 |
+| /home/developer/projects/open-navigator/frontend/src/pages/jurisdiction-quality/EntityQualityDashboard.tsx                               | TypeScript JSX     |      2,552 |         17 |        114 |      2,683 |
+| /home/developer/projects/open-navigator/frontend/src/utils/censusDataDictionary.ts                                                       | TypeScript         |        253 |         22 |         19 |        294 |
 | /home/developer/projects/open-navigator/frontend/src/utils/censusMapNarrative.ts                                                         | TypeScript         |        400 |         22 |         39 |        461 |
 | /home/developer/projects/open-navigator/frontend/src/utils/censusMapTransforms.ts                                                        | TypeScript         |        267 |         40 |         25 |        332 |
-| /home/developer/projects/open-navigator/frontend/src/utils/censusMapValueMode.ts                                                         | TypeScript         |        173 |         14 |         14 |        201 |
+| /home/developer/projects/open-navigator/frontend/src/utils/censusMapValueMode.ts                                                         | TypeScript         |        192 |         20 |         16 |        228 |
 | /home/developer/projects/open-navigator/frontend/src/utils/censusRegions.ts                                                              | TypeScript         |         70 |          2 |          4 |         76 |
-| /home/developer/projects/open-navigator/frontend/src/utils/dataExplorerPaths.ts                                                          | TypeScript         |         23 |          3 |          6 |         32 |
+| /home/developer/projects/open-navigator/frontend/src/utils/communityLocationLabel.ts                                                     | TypeScript         |         11 |          1 |          2 |         14 |
+| /home/developer/projects/open-navigator/frontend/src/utils/dataExplorerPaths.ts                                                          | TypeScript         |         24 |          4 |          7 |         35 |
 | /home/developer/projects/open-navigator/frontend/src/utils/dataExplorerScorecardHelpers.ts                                               | TypeScript         |        300 |         13 |         27 |        340 |
 | /home/developer/projects/open-navigator/frontend/src/utils/formatters.ts                                                                 | TypeScript         |         26 |         10 |          6 |         42 |
 | /home/developer/projects/open-navigator/frontend/src/utils/giniLetterGrade.ts                                                            | TypeScript         |         96 |          9 |          8 |        113 |
 | /home/developer/projects/open-navigator/frontend/src/utils/huggingface.ts                                                                | TypeScript         |        161 |        107 |         35 |        303 |
-| /home/developer/projects/open-navigator/frontend/src/utils/stateMapping.ts                                                               | TypeScript         |         73 |         15 |          7 |         95 |
+| /home/developer/projects/open-navigator/frontend/src/utils/stateMapping.ts                                                               | TypeScript         |         90 |         19 |          9 |        118 |
+| /home/developer/projects/open-navigator/frontend/src/utils/wikicommonsLicensePlate.ts                                                    | TypeScript         |         20 |         12 |          6 |         38 |
 | /home/developer/projects/open-navigator/frontend/src/vite-env.d.ts                                                                       | TypeScript         |          6 |          2 |          3 |         11 |
-| /home/developer/projects/open-navigator/frontend/tailwind.config.js                                                                      | JavaScript         |         36 |          1 |          1 |         38 |
+| /home/developer/projects/open-navigator/frontend/tailwind.config.js                                                                      | JavaScript         |         51 |          1 |          1 |         53 |
 | /home/developer/projects/open-navigator/frontend/tsconfig.json                                                                           | JSON with Comments |         21 |          2 |          3 |         26 |
 | /home/developer/projects/open-navigator/frontend/tsconfig.node.json                                                                      | JSON               |         10 |          0 |          1 |         11 |
 | /home/developer/projects/open-navigator/frontend/vite.config.ts                                                                          | TypeScript         |         33 |          2 |          2 |         37 |
@@ -491,6 +515,8 @@ Files
 | /home/developer/projects/open-navigator/output/TUSCALOOSA_ADVOCACY_BRIEF.md                                                              | Markdown           |         83 |          0 |         62 |        145 |
 | /home/developer/projects/open-navigator/output/tuscaloosa/suiteonemedia_20260503_041932.json                                             | JSON               |        404 |          0 |          0 |        404 |
 | /home/developer/projects/open-navigator/output/tuscaloosa_accountability_dashboards.json                                                 | JSON               |          9 |          0 |          0 |          9 |
+| /home/developer/projects/open-navigator/package-lock.yml                                                                                 | YAML               |         11 |          0 |          1 |         12 |
+| /home/developer/projects/open-navigator/packages.yml                                                                                     | YAML               |          5 |          0 |          1 |          6 |
 | /home/developer/projects/open-navigator/pipeline/__init__.py                                                                             | Python             |          2 |          1 |          2 |          5 |
 | /home/developer/projects/open-navigator/pipeline/create_campaigns_gold_tables.py                                                         | Python             |        359 |        133 |         91 |        583 |
 | /home/developer/projects/open-navigator/pipeline/create_contacts_gold_tables.py                                                          | Python             |        339 |        127 |        107 |        573 |
@@ -501,6 +527,7 @@ Files
 | /home/developer/projects/open-navigator/pipeline/delta_lake.py                                                                           | Python             |        274 |         75 |          7 |        356 |
 | /home/developer/projects/open-navigator/pipeline/delta_lake_queries.py                                                                   | Python             |         84 |        122 |          2 |        208 |
 | /home/developer/projects/open-navigator/pipeline/huggingface_publisher.py                                                                | Python             |        226 |        137 |         79 |        442 |
+| /home/developer/projects/open-navigator/prompts/applying_wicked_to_communityone.md                                                       | Markdown           |         21 |          0 |         21 |         42 |
 | /home/developer/projects/open-navigator/prompts/polcy_analysis_readable.md                                                               | Markdown           |        228 |          0 |         44 |        272 |
 | /home/developer/projects/open-navigator/prompts/policy_analysis.md                                                                       | Markdown           |        548 |          0 |         52 |        600 |
 | /home/developer/projects/open-navigator/prompts/policy_analysis_concsie.md                                                               | Markdown           |        146 |          0 |         18 |        164 |
@@ -553,6 +580,10 @@ Files
 | /home/developer/projects/open-navigator/scripts/datasources/cityscrapers/city_scrapers_urls.py                                           | Python             |        170 |         85 |         59 |        314 |
 | /home/developer/projects/open-navigator/scripts/datasources/dbpedia/README.md                                                            | Markdown           |          4 |          0 |          4 |          8 |
 | /home/developer/projects/open-navigator/scripts/datasources/dbpedia/dbpedia_integration.py                                               | Python             |        226 |        167 |         24 |        417 |
+| /home/developer/projects/open-navigator/scripts/datasources/dot/build_dot_unified_events.py                                              | Python             |        248 |         23 |         31 |        302 |
+| /home/developer/projects/open-navigator/scripts/datasources/dot/download_state_dot_public_pages.py                                       | Python             |        273 |         29 |         36 |        338 |
+| /home/developer/projects/open-navigator/scripts/datasources/dot/extract_dot_event_candidates_from_cache.py                               | Python             |        197 |         23 |         33 |        253 |
+| /home/developer/projects/open-navigator/scripts/datasources/dot/load_dot_unified_events_to_postgres.py                                   | Python             |        121 |         12 |         19 |        152 |
 | /home/developer/projects/open-navigator/scripts/datasources/fec/POLITICAL_FINANCE_QUICK_START.md                                         | Markdown           |        308 |          0 |         94 |        402 |
 | /home/developer/projects/open-navigator/scripts/datasources/fec/POLITICAL_INFLUENCE_INTEGRATION.md                                       | Markdown           |        384 |          0 |         91 |        475 |
 | /home/developer/projects/open-navigator/scripts/datasources/fec/README.md                                                                | Markdown           |        205 |          0 |         51 |        256 |
@@ -606,9 +637,14 @@ Files
 | /home/developer/projects/open-navigator/scripts/datasources/irs/load_irs_bmf.py                                                          | Python             |        339 |        142 |         88 |        569 |
 | /home/developer/projects/open-navigator/scripts/datasources/irs/manage_nonprofits.py                                                     | Python             |        189 |         46 |         69 |        304 |
 | /home/developer/projects/open-navigator/scripts/datasources/irs/nonprofit_discovery.py                                                   | Python             |        410 |        164 |        119 |        693 |
+| /home/developer/projects/open-navigator/scripts/datasources/jurisdictions/export_jurisdiction_mapping_quality_json.py                    | Python             |        370 |        253 |         22 |        645 |
 | /home/developer/projects/open-navigator/scripts/datasources/jurisdictions/load_counties_to_postgres.py                                   | Python             |        154 |         27 |         34 |        215 |
 | /home/developer/projects/open-navigator/scripts/datasources/jurisdictions/load_details_to_postgres.py                                    | Python             |        221 |         24 |         37 |        282 |
 | /home/developer/projects/open-navigator/scripts/datasources/jurisdictions/migrate_parquet_state_naming.py                                | Python             |         60 |         22 |         17 |         99 |
+| /home/developer/projects/open-navigator/scripts/datasources/jurisdictions/state_acs_mapping_quality.py                                   | Python             |        309 |         21 |         42 |        372 |
+| /home/developer/projects/open-navigator/scripts/datasources/leagueofcities/download_league_city_directories.py                           | Python             |      1,620 |         95 |        158 |      1,873 |
+| /home/developer/projects/open-navigator/scripts/datasources/leagueofcities/load_league_city_directories_to_bronze.py                     | Python             |        395 |        471 |         36 |        902 |
+| /home/developer/projects/open-navigator/scripts/datasources/leagueofcities/readme.md                                                     | Markdown           |         52 |          0 |          0 |         52 |
 | /home/developer/projects/open-navigator/scripts/datasources/localview/README.md                                                          | Markdown           |         19 |          0 |         11 |         30 |
 | /home/developer/projects/open-navigator/scripts/datasources/localview/archive/dataverse_client.py                                        | Python             |        345 |        189 |         91 |        625 |
 | /home/developer/projects/open-navigator/scripts/datasources/localview/archive/download_localview_data.py                                 | Python             |        316 |         99 |         79 |        494 |
@@ -673,6 +709,8 @@ Files
 | /home/developer/projects/open-navigator/scripts/datasources/uscm/scrape_mayor_elections.py                                               | Python             |        207 |         53 |         55 |        315 |
 | /home/developer/projects/open-navigator/scripts/datasources/uscm/scrape_meet_the_mayors.py                                               | Python             |          8 |          6 |          3 |         17 |
 | /home/developer/projects/open-navigator/scripts/datasources/uscm/state_names.py                                                          | Python             |         54 |          1 |          3 |         58 |
+| /home/developer/projects/open-navigator/scripts/datasources/vendorsearch/readme.md                                                       | Markdown           |         49 |          0 |         33 |         82 |
+| /home/developer/projects/open-navigator/scripts/datasources/vendorsearch/vendor_meeting_portal_search.py                                 | Python             |        259 |         25 |         38 |        322 |
 | /home/developer/projects/open-navigator/scripts/datasources/voter_data/README.md                                                         | Markdown           |          4 |          0 |          4 |          8 |
 | /home/developer/projects/open-navigator/scripts/datasources/voter_data/voter_data_integration.py                                         | Python             |        169 |        143 |         50 |        362 |
 | /home/developer/projects/open-navigator/scripts/datasources/wikidata/README.md                                                           | Markdown           |         73 |          0 |         32 |        105 |
@@ -683,7 +721,7 @@ Files
 | /home/developer/projects/open-navigator/scripts/datasources/wikidata/geography_qid_cache.py                                              | Python             |        129 |          8 |         23 |        160 |
 | /home/developer/projects/open-navigator/scripts/datasources/wikidata/load_channels.py                                                    | Python             |        498 |        195 |         48 |        741 |
 | /home/developer/projects/open-navigator/scripts/datasources/wikidata/load_jurisdictions_wikidata.py                                      | Python             |      2,265 |      1,445 |        138 |      3,848 |
-| /home/developer/projects/open-navigator/scripts/datasources/wikidata/load_jurisdictions_wikidata_colab.ipynb                             | JSON               |        464 |          0 |          0 |        464 |
+| /home/developer/projects/open-navigator/scripts/datasources/wikidata/load_jurisdictions_wikidata_colab.ipynb                             | JSON               |        468 |          0 |          1 |        469 |
 | /home/developer/projects/open-navigator/scripts/datasources/wikidata/materialize_bronze_jurisdictions_wikidata_tables.py                 | Python             |        289 |         39 |         38 |        366 |
 | /home/developer/projects/open-navigator/scripts/datasources/wikidata/run_load_jurisdictions_wikidata.sh                                  | Shell Script       |          8 |          3 |          4 |         15 |
 | /home/developer/projects/open-navigator/scripts/datasources/wikidata/run_wikidata_happy_path.sh                                          | Shell Script       |          8 |         11 |          4 |         23 |
@@ -700,16 +738,38 @@ Files
 | /home/developer/projects/open-navigator/scripts/datasources/youtube/CHANNEL_SANITY_CHECK.md                                              | Markdown           |        179 |          0 |         45 |        224 |
 | /home/developer/projects/open-navigator/scripts/datasources/youtube/README_AUDIO_DOWNLOAD.md                                             | Markdown           |        142 |          0 |         38 |        180 |
 | /home/developer/projects/open-navigator/scripts/datasources/youtube/analyze_channels.py                                                  | Python             |         73 |        125 |         18 |        216 |
+| /home/developer/projects/open-navigator/scripts/datasources/youtube/audit_ga_jurisdiction_youtube_gaps.sql                               | MS SQL             |        103 |         19 |          9 |        131 |
+| /home/developer/projects/open-navigator/scripts/datasources/youtube/audit_ga_jurisdiction_youtube_gaps_minimal.sql                       | MS SQL             |         29 |          4 |          4 |         37 |
+| /home/developer/projects/open-navigator/scripts/datasources/youtube/audit_ga_youtube_download_filters.sql                                | MS SQL             |        255 |         23 |          9 |        287 |
+| /home/developer/projects/open-navigator/scripts/datasources/youtube/audit_localview_youtube_bronze_overlap.sql                           | MS SQL             |         80 |         17 |         13 |        110 |
+| /home/developer/projects/open-navigator/scripts/datasources/youtube/audit_youtube_jurisdiction_coverage.sql                              | MS SQL             |        327 |         18 |         25 |        370 |
+| /home/developer/projects/open-navigator/scripts/datasources/youtube/backfill_bronze_youtube_publish_dates.py                             | Python             |        484 |         53 |         46 |        583 |
 | /home/developer/projects/open-navigator/scripts/datasources/youtube/backfill_transcripts.py                                              | Python             |        333 |         47 |         82 |        462 |
+| /home/developer/projects/open-navigator/scripts/datasources/youtube/channel_about_links.py                                               | Python             |        573 |        196 |         81 |        850 |
 | /home/developer/projects/open-navigator/scripts/datasources/youtube/download_audio_colab.ipynb                                           | JSON               |      1,191 |          0 |          0 |      1,191 |
 | /home/developer/projects/open-navigator/scripts/datasources/youtube/download_audio_colab_example.py                                      | Python             |         24 |         68 |         28 |        120 |
-| /home/developer/projects/open-navigator/scripts/datasources/youtube/download_audio_to_drive.py                                           | Python             |        583 |        335 |         41 |        959 |
-| /home/developer/projects/open-navigator/scripts/datasources/youtube/load_youtube_channels_bronze.py                                      | Python             |        283 |         53 |         66 |        402 |
+| /home/developer/projects/open-navigator/scripts/datasources/youtube/download_audio_to_drive.py                                           | Python             |      1,081 |        521 |         56 |      1,658 |
+| /home/developer/projects/open-navigator/scripts/datasources/youtube/download_youtube_audio_al.sh                                         | Shell Script       |          6 |          5 |          1 |         12 |
+| /home/developer/projects/open-navigator/scripts/datasources/youtube/download_youtube_audio_ga.sh                                         | Shell Script       |          6 |          8 |          1 |         15 |
+| /home/developer/projects/open-navigator/scripts/datasources/youtube/download_youtube_audio_in.sh                                         | Shell Script       |          6 |          5 |          1 |         12 |
+| /home/developer/projects/open-navigator/scripts/datasources/youtube/download_youtube_audio_mt.sh                                         | Shell Script       |          6 |          4 |          1 |         11 |
+| /home/developer/projects/open-navigator/scripts/datasources/youtube/link_youtube_bronze_from_localview_apply.sql                         | MS SQL             |         86 |          6 |          8 |        100 |
+| /home/developer/projects/open-navigator/scripts/datasources/youtube/link_youtube_bronze_from_localview_preview.sql                       | MS SQL             |         91 |          6 |          6 |        103 |
+| /home/developer/projects/open-navigator/scripts/datasources/youtube/load_youtube_channels_bronze.py                                      | Python             |        356 |         45 |         65 |        466 |
 | /home/developer/projects/open-navigator/scripts/datasources/youtube/load_youtube_events_colab.ipynb                                      | JSON               |        775 |          0 |          1 |        776 |
-| /home/developer/projects/open-navigator/scripts/datasources/youtube/load_youtube_events_to_postgres.py                                   | Python             |      1,089 |        189 |        207 |      1,485 |
+| /home/developer/projects/open-navigator/scripts/datasources/youtube/load_youtube_events_to_postgres.py                                   | Python             |      1,113 |        208 |        208 |      1,529 |
+| /home/developer/projects/open-navigator/scripts/datasources/youtube/run_audit_ga_jurisdiction_youtube_gaps.sh                            | Shell Script       |         34 |          3 |          8 |         45 |
+| /home/developer/projects/open-navigator/scripts/datasources/youtube/run_audit_ga_youtube_download_filters.sh                             | Shell Script       |         17 |         10 |          6 |         33 |
+| /home/developer/projects/open-navigator/scripts/datasources/youtube/run_audit_localview_youtube_bronze_overlap.sh                        | Shell Script       |         21 |          4 |          7 |         32 |
+| /home/developer/projects/open-navigator/scripts/datasources/youtube/run_audit_youtube_jurisdiction_coverage.sh                           | Shell Script       |         23 |          6 |          9 |         38 |
+| /home/developer/projects/open-navigator/scripts/datasources/youtube/run_backfill_bronze_youtube_publish_dates.sh                         | Shell Script       |          9 |         12 |          5 |         26 |
+| /home/developer/projects/open-navigator/scripts/datasources/youtube/run_link_youtube_bronze_from_localview.sh                            | Shell Script       |         23 |          8 |          8 |         39 |
 | /home/developer/projects/open-navigator/scripts/datasources/youtube/setup_channels_bronze.sh                                             | Shell Script       |         49 |          8 |          9 |         66 |
+| /home/developer/projects/open-navigator/scripts/datasources/youtube/sql/preview_bronze_youtube_blank_publish_dates.sql                   | MS SQL             |         24 |          6 |          5 |         35 |
+| /home/developer/projects/open-navigator/scripts/datasources/youtube/sync_bronze_youtube_from_localview.py                                | Python             |         65 |        103 |         10 |        178 |
 | /home/developer/projects/open-navigator/scripts/datasources/youtube/youtube_channel_discovery.py                                         | Python             |        385 |        131 |         92 |        608 |
-| /home/developer/projects/open-navigator/scripts/dbt.sh                                                                                   | Shell Script       |          4 |          6 |          1 |         11 |
+| /home/developer/projects/open-navigator/scripts/dbt-root.sh                                                                              | Shell Script       |          5 |          8 |          1 |         14 |
+| /home/developer/projects/open-navigator/scripts/dbt.sh                                                                                   | Shell Script       |          5 |          8 |          1 |         14 |
 | /home/developer/projects/open-navigator/scripts/dbt/README.md                                                                            | Markdown           |        265 |          0 |         83 |        348 |
 | /home/developer/projects/open-navigator/scripts/dbt/export_stats_to_open_navigator.py                                                    | Python             |        108 |         21 |         29 |        158 |
 | /home/developer/projects/open-navigator/scripts/dbt/rebuild_stats_aggregates_fixed.py                                                    | Python             |        201 |         12 |         22 |        235 |
@@ -747,6 +807,14 @@ Files
 | /home/developer/projects/open-navigator/scripts/deployment/neon/migrations/018_create_bronze_events_meetings_scraped.sql                 | MS SQL             |         71 |          3 |         12 |         86 |
 | /home/developer/projects/open-navigator/scripts/deployment/neon/migrations/019_recreate_bronze_events_meetings_scraped_granular.sql      | MS SQL             |        109 |          3 |         13 |        125 |
 | /home/developer/projects/open-navigator/scripts/deployment/neon/migrations/020_recreate_bronze_events_meetings_scraped_link_document.sql | MS SQL             |        123 |          2 |         13 |        138 |
+| /home/developer/projects/open-navigator/scripts/deployment/neon/migrations/021_create_bronze_dot_public_events.sql                       | MS SQL             |         24 |          2 |          5 |         31 |
+| /home/developer/projects/open-navigator/scripts/deployment/neon/migrations/022_add_channel_description.sql                               | MS SQL             |          4 |          2 |          4 |         10 |
+| /home/developer/projects/open-navigator/scripts/deployment/neon/migrations/023_drop_channel_view_count.sql                               | MS SQL             |          4 |          2 |          4 |         10 |
+| /home/developer/projects/open-navigator/scripts/deployment/neon/migrations/024_add_view_count_bronze_events_channels.sql                 | MS SQL             |          4 |          2 |          4 |         10 |
+| /home/developer/projects/open-navigator/scripts/deployment/neon/migrations/025_bronze_events_youtube_video_id_unique.sql                 | MS SQL             |         11 |         11 |          7 |         29 |
+| /home/developer/projects/open-navigator/scripts/deployment/neon/migrations/029_create_bronze_jurisdictions_municipalities_league.sql     | MS SQL             |         50 |         13 |         11 |         74 |
+| /home/developer/projects/open-navigator/scripts/deployment/neon/migrations/030_league_bronze_columns_raw_row.sql                         | MS SQL             |         33 |          4 |          5 |         42 |
+| /home/developer/projects/open-navigator/scripts/deployment/neon/migrations/031_rename_league_state_columns.sql                           | MS SQL             |         23 |          3 |          2 |         28 |
 | /home/developer/projects/open-navigator/scripts/deployment/neon/regenerate_bills_map.py                                                  | Python             |         73 |         13 |         18 |        104 |
 | /home/developer/projects/open-navigator/scripts/deployment/neon/run_bronze_jurisdictions_to_cloud.sh                                     | Shell Script       |         15 |         13 |          7 |         35 |
 | /home/developer/projects/open-navigator/scripts/deployment/neon/run_jurisdiction_id_migration.sh                                         | Shell Script       |         82 |         29 |         15 |        126 |
@@ -764,13 +832,14 @@ Files
 | /home/developer/projects/open-navigator/scripts/development/README.md                                                                    | Markdown           |         11 |          0 |          9 |         20 |
 | /home/developer/projects/open-navigator/scripts/development/debug_eboard.py                                                              | Python             |         89 |         15 |         30 |        134 |
 | /home/developer/projects/open-navigator/scripts/development/export_chrome_cookies.py                                                     | Python             |         58 |         15 |         16 |         89 |
+| /home/developer/projects/open-navigator/scripts/development/try_scrape_with_cookies.py                                                   | Python             |        145 |         36 |         22 |        203 |
 | /home/developer/projects/open-navigator/scripts/discovery/README.md                                                                      | Markdown           |        113 |          0 |         40 |        153 |
 | /home/developer/projects/open-navigator/scripts/discovery/__init__.py                                                                    | Python             |          0 |         14 |          1 |         15 |
 | /home/developer/projects/open-navigator/scripts/discovery/archive/comprehensive_discovery_pipeline.py                                    | Python             |        771 |        139 |        138 |      1,048 |
 | /home/developer/projects/open-navigator/scripts/discovery/archive/discovery_pipeline.py                                                  | Python             |         26 |          9 |          6 |         41 |
 | /home/developer/projects/open-navigator/scripts/discovery/batch_processor.py                                                             | Python             |        352 |        115 |         78 |        545 |
 | /home/developer/projects/open-navigator/scripts/discovery/comprehensive_discovery_pipeline.py                                            | Python             |          1 |          1 |          1 |          3 |
-| /home/developer/projects/open-navigator/scripts/discovery/comprehensive_discovery_pipeline_meetings.py                                   | Python             |      1,351 |        335 |        144 |      1,830 |
+| /home/developer/projects/open-navigator/scripts/discovery/comprehensive_discovery_pipeline_meetings.py                                   | Python             |      1,762 |        384 |        176 |      2,322 |
 | /home/developer/projects/open-navigator/scripts/discovery/contact_extract_from_html.py                                                   | Python             |         92 |         14 |         17 |        123 |
 | /home/developer/projects/open-navigator/scripts/discovery/curated_sources.py                                                             | Python             |        173 |        163 |         68 |        404 |
 | /home/developer/projects/open-navigator/scripts/discovery/discover_oral_health_states.sh                                                 | Shell Script       |         35 |          6 |         13 |         54 |
@@ -778,8 +847,8 @@ Files
 | /home/developer/projects/open-navigator/scripts/discovery/external_url_datasets.py                                                       | Python             |        362 |         74 |         64 |        500 |
 | /home/developer/projects/open-navigator/scripts/discovery/fix_scraped_meetings_manifest_years.py                                         | Python             |         81 |         15 |         17 |        113 |
 | /home/developer/projects/open-navigator/scripts/discovery/jurisdiction_discovery_pipeline.py                                             | Python             |        702 |        351 |         58 |      1,111 |
-| /home/developer/projects/open-navigator/scripts/discovery/load_scraped_meetings_manifests_to_bronze.py                                   | Python             |        578 |         23 |         81 |        682 |
-| /home/developer/projects/open-navigator/scripts/discovery/meetings_platform_heuristics.py                                                | Python             |        759 |         98 |        122 |        979 |
+| /home/developer/projects/open-navigator/scripts/discovery/load_scraped_meetings_manifests_to_bronze.py                                   | Python             |        587 |         29 |         81 |        697 |
+| /home/developer/projects/open-navigator/scripts/discovery/meetings_platform_heuristics.py                                                | Python             |        821 |        106 |        128 |      1,055 |
 | /home/developer/projects/open-navigator/scripts/discovery/meetings_playwright_fetch.py                                                   | Python             |        329 |         51 |         51 |        431 |
 | /home/developer/projects/open-navigator/scripts/discovery/meetings_sitemap_discovery.py                                                  | Python             |        757 |         34 |         86 |        877 |
 | /home/developer/projects/open-navigator/scripts/discovery/platform_detector.py                                                           | Python             |        202 |         98 |         37 |        337 |
@@ -836,6 +905,8 @@ Files
 | /home/developer/projects/open-navigator/scripts/examples/tuscaloosa_accountability_report.py                                             | Python             |        491 |        168 |        117 |        776 |
 | /home/developer/projects/open-navigator/scripts/examples/tuscaloosa_decision_analysis.py                                                 | Python             |        162 |         29 |         46 |        237 |
 | /home/developer/projects/open-navigator/scripts/examples/tuscaloosa_political_economy.py                                                 | Python             |        282 |         78 |        107 |        467 |
+| /home/developer/projects/open-navigator/scripts/frontend/sync_state_symbols_to_public.sh                                                 | Shell Script       |          8 |          3 |          1 |         12 |
+| /home/developer/projects/open-navigator/scripts/frontend/sync_wikicommons_plates_public.sh                                               | Shell Script       |         47 |          4 |          3 |         54 |
 | /home/developer/projects/open-navigator/scripts/huggingface/README.md                                                                    | Markdown           |        101 |          0 |         39 |        140 |
 | /home/developer/projects/open-navigator/scripts/huggingface/check-hf-vars.py                                                             | Python             |         40 |          9 |          9 |         58 |
 | /home/developer/projects/open-navigator/scripts/huggingface/delete_and_publish_all_datasets.py                                           | Python             |        147 |         42 |         48 |        237 |
@@ -898,6 +969,7 @@ Files
 | /home/developer/projects/open-navigator/start-all.sh                                                                                     | Shell Script       |        156 |         26 |         37 |        219 |
 | /home/developer/projects/open-navigator/stop-all.sh                                                                                      | Shell Script       |         41 |          6 |         13 |         60 |
 | /home/developer/projects/open-navigator/tests/test_agents.py                                                                             | Python             |         57 |         16 |         24 |         97 |
+| /home/developer/projects/open-navigator/tests/test_state_acs_mapping_quality.py                                                          | Python             |         20 |          1 |          6 |         27 |
 | /home/developer/projects/open-navigator/tests/test_wikidata_entity_search.py                                                             | Python             |        115 |         11 |         36 |        162 |
 | /home/developer/projects/open-navigator/visualization/__init__.py                                                                        | Python             |          6 |          3 |          3 |         12 |
 | /home/developer/projects/open-navigator/visualization/heatmap.py                                                                         | Python             |        229 |        162 |         34 |        425 |
@@ -919,7 +991,7 @@ Files
 | /home/developer/projects/open-navigator/website/docs/data-sources/census-data.md                                                         | Markdown           |         72 |          0 |         33 |        105 |
 | /home/developer/projects/open-navigator/website/docs/data-sources/census-shapefiles.md                                                   | Markdown           |        270 |          0 |         99 |        369 |
 | /home/developer/projects/open-navigator/website/docs/data-sources/charity-navigator.md                                                   | Markdown           |        297 |          0 |        102 |        399 |
-| /home/developer/projects/open-navigator/website/docs/data-sources/citations.md                                                           | Markdown           |      2,129 |          0 |        512 |      2,641 |
+| /home/developer/projects/open-navigator/website/docs/data-sources/citations.md                                                           | Markdown           |      2,232 |          0 |        546 |      2,778 |
 | /home/developer/projects/open-navigator/website/docs/data-sources/council-data-project-compatibility.md                                  | Markdown           |        165 |          0 |         53 |        218 |
 | /home/developer/projects/open-navigator/website/docs/data-sources/data-model-erd.md                                                      | Markdown           |      3,236 |          0 |        403 |      3,639 |
 | /home/developer/projects/open-navigator/website/docs/data-sources/factcheck-sources.md                                                   | Markdown           |        522 |          0 |        127 |        649 |
@@ -1006,7 +1078,7 @@ Files
 | /home/developer/projects/open-navigator/website/docs/families/service-requests.md                                                        | Markdown           |        380 |          0 |         91 |        471 |
 | /home/developer/projects/open-navigator/website/docs/families/training-education.md                                                      | Markdown           |        383 |          0 |        105 |        488 |
 | /home/developer/projects/open-navigator/website/docs/families/voter-registration.md                                                      | Markdown           |        380 |          0 |        111 |        491 |
-| /home/developer/projects/open-navigator/website/docs/for-advocates.md                                                                    | Markdown           |        153 |          0 |         70 |        223 |
+| /home/developer/projects/open-navigator/website/docs/for-advocates.md                                                                    | Markdown           |        156 |          0 |         76 |        232 |
 | /home/developer/projects/open-navigator/website/docs/for-developers.md                                                                   | Markdown           |        330 |          0 |        112 |        442 |
 | /home/developer/projects/open-navigator/website/docs/for-families.md                                                                     | Markdown           |        317 |          0 |         97 |        414 |
 | /home/developer/projects/open-navigator/website/docs/guides/accountability-strategy.md                                                   | Markdown           |        181 |          0 |         77 |        258 |
@@ -1018,7 +1090,7 @@ Files
 | /home/developer/projects/open-navigator/website/docs/guides/form-990-enrichment.md                                                       | Markdown           |        182 |          0 |         52 |        234 |
 | /home/developer/projects/open-navigator/website/docs/guides/gold-table-pipeline.md                                                       | Markdown           |        201 |          0 |         92 |        293 |
 | /home/developer/projects/open-navigator/website/docs/guides/google-colab-setup.md                                                        | Markdown           |        400 |          0 |        137 |        537 |
-| /home/developer/projects/open-navigator/website/docs/guides/hackathon-video-submission-ideas.md                                          | Markdown           |        105 |          0 |         94 |        199 |
+| /home/developer/projects/open-navigator/website/docs/guides/hackathon-video-submission-ideas.md                                          | Markdown           |        111 |          0 |        100 |        211 |
 | /home/developer/projects/open-navigator/website/docs/guides/handling-formats.md                                                          | Markdown           |        508 |          0 |        152 |        660 |
 | /home/developer/projects/open-navigator/website/docs/guides/huggingface-datasets.md                                                      | Markdown           |        400 |          0 |        105 |        505 |
 | /home/developer/projects/open-navigator/website/docs/guides/huggingface-features.md                                                      | Markdown           |        186 |          0 |         76 |        262 |
@@ -1048,7 +1120,7 @@ Files
 | /home/developer/projects/open-navigator/website/docs/integrations/dataverse.md                                                           | Markdown           |        334 |          0 |        112 |        446 |
 | /home/developer/projects/open-navigator/website/docs/integrations/eboard-automated.md                                                    | Markdown           |        304 |          0 |         98 |        402 |
 | /home/developer/projects/open-navigator/website/docs/integrations/eboard-cookies.md                                                      | Markdown           |        184 |          0 |         63 |        247 |
-| /home/developer/projects/open-navigator/website/docs/integrations/eboard-manual.md                                                       | Markdown           |         95 |          0 |         31 |        126 |
+| /home/developer/projects/open-navigator/website/docs/integrations/eboard-manual.md                                                       | Markdown           |        157 |          0 |         44 |        201 |
 | /home/developer/projects/open-navigator/website/docs/integrations/fec-campaign-finance.md                                                | Markdown           |        356 |          0 |        134 |        490 |
 | /home/developer/projects/open-navigator/website/docs/integrations/fec-integration-summary.md                                             | Markdown           |        172 |          0 |         55 |        227 |
 | /home/developer/projects/open-navigator/website/docs/integrations/fec-political-contributions.md                                         | Markdown           |        285 |          0 |         85 |        370 |
@@ -1071,10 +1143,11 @@ Files
 | /home/developer/projects/open-navigator/website/docs/quick-reference.md                                                                  | Markdown           |         93 |          0 |         29 |        122 |
 | /home/developer/projects/open-navigator/website/docs/quickstart.md                                                                       | Markdown           |        144 |          0 |         64 |        208 |
 | /home/developer/projects/open-navigator/website/docs/resources/nonprofit-resources.md                                                    | Markdown           |         50 |          0 |         27 |         77 |
-| /home/developer/projects/open-navigator/website/docusaurus.config.ts                                                                     | TypeScript         |        246 |         24 |         14 |        284 |
+| /home/developer/projects/open-navigator/website/docusaurus.config.ts                                                                     | TypeScript         |        263 |         26 |         17 |        306 |
 | /home/developer/projects/open-navigator/website/package-lock.json                                                                        | JSON               |     20,802 |          0 |          1 |     20,803 |
 | /home/developer/projects/open-navigator/website/package.json                                                                             | JSON               |         52 |          0 |          1 |         53 |
-| /home/developer/projects/open-navigator/website/sidebars.ts                                                                              | TypeScript         |        458 |         22 |          9 |        489 |
+| /home/developer/projects/open-navigator/website/sidebars.ts                                                                              | TypeScript         |        455 |         22 |          9 |        486 |
+| /home/developer/projects/open-navigator/website/src/clientModules/gtagSafeShim.ts                                                        | TypeScript         |         13 |          4 |          2 |         19 |
 | /home/developer/projects/open-navigator/website/src/components/HomepageFeatures/index.tsx                                                | TypeScript JSX     |         67 |          0 |          5 |         72 |
 | /home/developer/projects/open-navigator/website/src/components/HomepageFeatures/styles.module.css                                        | PostCSS            |         10 |          0 |          2 |         12 |
 | /home/developer/projects/open-navigator/website/src/components/StructuredData.tsx                                                        | TypeScript JSX     |        101 |          4 |          5 |        110 |
@@ -1093,5 +1166,5 @@ Files
 | /home/developer/projects/open-navigator/website/static/img/undraw_docusaurus_tree.svg                                                    | XML                |         40 |          0 |          1 |         41 |
 | /home/developer/projects/open-navigator/website/test-admonition.md                                                                       | Markdown           |         13 |          0 |          5 |         18 |
 | /home/developer/projects/open-navigator/website/tsconfig.json                                                                            | JSON with Comments |          9 |          3 |          1 |         13 |
-| Total                                                                                                                                    |                    |    238,032 |     31,102 |     42,714 |    311,848 |
+| Total                                                                                                                                    |                    |    248,375 |     32,879 |     43,499 |    324,753 |
 +------------------------------------------------------------------------------------------------------------------------------------------+--------------------+------------+------------+------------+------------+

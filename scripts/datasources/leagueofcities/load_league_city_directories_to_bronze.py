@@ -9,8 +9,10 @@ Table:
     bronze.bronze_jurisdictions_municipalities_league
 
 ``jurisdiction_id`` (and ``census_geoid``) are filled when a row matches
-``bronze.bronze_jurisdictions_municipalities`` on state + place name (exact
-case-insensitive, then normalized stripping common municipal suffixes).
+``bronze.bronze_jurisdictions_municipalities`` on state + place name (exact,
+normalized label, fuzzy prefix/ratio), or by matching the league ``website`` host
+to a municipality homepage already known in ``intermediate.int_jurisdiction_websites``
+(within the same state).
 
 Each city field from the JSON (name, contact fields, source_*, ``state_usps`` on
 the file / row for matching, ``alternate_names``, ``raw_row``, etc.) is stored in
@@ -23,6 +25,7 @@ Usage:
     ./.venv/bin/python scripts/datasources/leagueofcities/load_league_city_directories_to_bronze.py
     ./.venv/bin/python scripts/datasources/leagueofcities/load_league_city_directories_to_bronze.py --states AL TX
     ./.venv/bin/python scripts/datasources/leagueofcities/load_league_city_directories_to_bronze.py --truncate --dry-run
+    ./.venv/bin/python scripts/datasources/leagueofcities/load_league_city_directories_to_bronze.py --rematch-jurisdictions --states CA
 """
 from __future__ import annotations
 
@@ -33,6 +36,7 @@ import os
 import re
 import sys
 from collections import defaultdict
+from difflib import SequenceMatcher
 from pathlib import Path
 from typing import Any
 
@@ -246,14 +250,18 @@ UPSERT_SQL = f"""
 """
 
 _WS = re.compile(r"\s+")
+_NON_ALNUM = re.compile(r"[^a-z0-9]+")
+_ST_LEAD_RE = re.compile(r"^\s*st\.\s+", re.IGNORECASE)
+_ST_MID_RE = re.compile(r"(^|[^a-z])st\.\s+", re.IGNORECASE)
 _SUFFIX_RE = re.compile(
-    r"\s+(city|town|township|village|borough|municipality|cdp)\s*$",
+    r"\s+(city|town|township|village|borough|county|parish|municipality|cdp)\s*$",
     re.IGNORECASE,
 )
 _PREFIX_RE = re.compile(
-    r"^(town|city|village|borough)\s+of\s+",
+    r"^(city|town|village|borough|county|township|parish)\s+of\s+",
     re.IGNORECASE,
 )
+_FUZZY_RATIO_MIN = 0.92
 _JUNK_NAME_RE = re.compile(
     r"^\s*\d|^\s*\d+\s*\(|%\)|\d+\s*to\s*\d+\s*$|\(\s*\d+\s*%",
     re.IGNORECASE,
@@ -287,11 +295,30 @@ def _raw_row_json(city: dict[str, Any]) -> str:
 
 
 def _norm_placename(name: str) -> str:
+    """Align with dbt ``normalize_jurisdiction_label_for_match`` (St./Saint, parish, suffixes)."""
     s = name.strip().lower()
+    s = _ST_LEAD_RE.sub("saint ", s)
+    s = _ST_MID_RE.sub(r"\1saint ", s)
     s = _PREFIX_RE.sub("", s)
     s = _SUFFIX_RE.sub("", s)
+    s = re.sub(r"\s+parish$", " county", s, flags=re.IGNORECASE)
+    s = _NON_ALNUM.sub(" ", s)
     s = _WS.sub(" ", s).strip()
     return s
+
+
+def _website_origin_norm(url: str | None) -> str | None:
+    """Canonical https://host for URL ↔ jurisdiction matching (matches int_jurisdiction_websites)."""
+    u = (url or "").strip()
+    if not u:
+        return None
+    if not re.match(r"^https?://", u, re.I):
+        u = "https://" + u.lstrip("/")
+    low = re.sub(r"^http:", "https:", u.lower(), count=1)
+    low = re.sub(r"^https://www\.", "https://", low, count=1)
+    low = low.rstrip("/")
+    m = re.match(r"^(https://[^/?#]+)", low)
+    return m.group(1) if m else None
 
 
 def _row_key(
@@ -326,6 +353,7 @@ class CensusPlaceIndex:
     def __init__(self) -> None:
         self._by_exact: dict[tuple[str, str], list[tuple[str, str, str]]] = defaultdict(list)
         self._by_norm: dict[tuple[str, str], list[tuple[str, str, str]]] = defaultdict(list)
+        self._by_state: dict[str, list[tuple[str, str, str, str]]] = defaultdict(list)
 
     def add(self, usps: str, place_name: str, geoid: str, jurisdiction_id: str) -> None:
         u = usps.upper()
@@ -334,8 +362,16 @@ class CensusPlaceIndex:
         nn = _norm_placename(place_name)
         if nn:
             self._by_norm[(u, nn)].append((place_name, geoid, jurisdiction_id))
+            self._by_state[u].append((nn, place_name, geoid, jurisdiction_id))
 
-    def match(self, usps: str, league_name: str) -> tuple[str | None, str | None, str | None]:
+    def match(
+        self,
+        usps: str,
+        league_name: str,
+        *,
+        website: str | None = None,
+        url_idx: dict[tuple[str, str], list[tuple[str, str, str]]] | None = None,
+    ) -> tuple[str | None, str | None, str | None]:
         """
         Returns (jurisdiction_id, geoid, method) or (None, None, 'unmatched').
         """
@@ -353,23 +389,57 @@ class CensusPlaceIndex:
         if len(cands) > 1:
             return None, None, "ambiguous_exact"
 
-        # Alternate: normalized league name vs normalized Census names
         nn = _norm_placename(raw)
-        if not nn:
-            return None, None, "unmatched"
+        if nn:
+            nc = self._by_norm.get((u, nn), [])
+            if len(nc) == 1:
+                _pn, geoid, jid = nc[0]
+                return jid, geoid, "place_name_normalized"
+            if len(nc) > 1:
+                hits = [t for t in nc if t[0].strip().lower() == raw.lower()]
+                if len(hits) == 1:
+                    _pn, geoid, jid = hits[0]
+                    return jid, geoid, "place_name_normalized_disambiguated"
+                return None, None, "ambiguous_normalized"
 
-        nc = self._by_norm.get((u, nn), [])
-        if len(nc) == 1:
-            _pn, geoid, jid = nc[0]
-            return jid, geoid, "place_name_normalized"
+            prefix_hits: list[tuple[str, str, str]] = []
+            for j_norm, place_name, geoid, jid in self._by_state.get(u, []):
+                if j_norm == nn:
+                    continue
+                if j_norm.startswith(nn + " ") or nn.startswith(j_norm + " "):
+                    prefix_hits.append((place_name, geoid, jid))
+            if len(prefix_hits) == 1:
+                _pn, geoid, jid = prefix_hits[0]
+                return jid, geoid, "place_name_fuzzy_prefix"
+            if len(prefix_hits) > 1:
+                dis = [t for t in prefix_hits if t[0].strip().lower() == raw.lower()]
+                if len(dis) == 1:
+                    _pn, geoid, jid = dis[0]
+                    return jid, geoid, "place_name_fuzzy_prefix_disambiguated"
+                return None, None, "ambiguous_fuzzy_prefix"
 
-        if len(nc) > 1:
-            # Disambiguate: prefer Census row whose display name matches case-insensitive raw
-            hits = [t for t in nc if t[0].strip().lower() == raw.lower()]
-            if len(hits) == 1:
-                _pn, geoid, jid = hits[0]
-                return jid, geoid, "place_name_normalized_disambiguated"
-            return None, None, "ambiguous_normalized"
+            if len(nn) >= 4:
+                scored: list[tuple[float, str, str, str]] = []
+                for j_norm, place_name, geoid, jid in self._by_state.get(u, []):
+                    ratio = SequenceMatcher(None, nn, j_norm).ratio()
+                    if ratio >= _FUZZY_RATIO_MIN:
+                        scored.append((ratio, place_name, geoid, jid))
+                scored.sort(key=lambda t: (-t[0], t[1]))
+                if len(scored) == 1:
+                    _r, _pn, geoid, jid = scored[0]
+                    return jid, geoid, "place_name_fuzzy_ratio"
+                if len(scored) > 1 and scored[0][0] - scored[1][0] >= 0.04:
+                    _r, _pn, geoid, jid = scored[0]
+                    return jid, geoid, "place_name_fuzzy_ratio"
+
+        origin = _website_origin_norm(website)
+        if origin and url_idx is not None:
+            url_cands = url_idx.get((u, origin), [])
+            if len(url_cands) == 1:
+                jid, geoid = url_cands[0]
+                return jid, geoid, "website_url_state"
+            if len(url_cands) > 1:
+                return None, None, "ambiguous_website_url"
 
         return None, None, "unmatched"
 
@@ -391,6 +461,100 @@ def load_census_index(conn) -> CensusPlaceIndex:
     return idx
 
 
+def load_url_jurisdiction_index(conn) -> dict[tuple[str, str], list[tuple[str, str]]]:
+    """
+    (state_usps, https://host) → [(jurisdiction_id, geoid), …] from known municipality homepages.
+    """
+    idx: dict[tuple[str, str], list[tuple[str, str]]] = defaultdict(list)
+    sql_variants = (
+        """
+        SELECT DISTINCT
+            UPPER(TRIM(j.state_code)) AS state_code,
+            (regexp_match(
+                NULLIF(
+                    REGEXP_REPLACE(
+                        REGEXP_REPLACE(
+                            REGEXP_REPLACE(
+                                LOWER(
+                                    CASE
+                                        WHEN w.website_url ~* '^https?://' THEN TRIM(w.website_url)
+                                        ELSE 'https://' || TRIM(REGEXP_REPLACE(w.website_url, '^/+', ''))
+                                    END
+                                ),
+                                '^http:', 'https:', 'i'
+                            ),
+                            '^https://www\\.', 'https://', 'i'
+                        ),
+                        '/+$', '', 'g'
+                    ),
+                    ''
+                ),
+                '^(https://[^/?#]+)'
+            ))[1] AS origin_norm,
+            w.jurisdiction_id,
+            j.geoid
+        FROM intermediate.int_jurisdiction_websites w
+        INNER JOIN intermediate.int_jurisdictions j
+            ON j.jurisdiction_id = w.jurisdiction_id
+        WHERE j.jurisdiction_type = 'municipality'
+          AND w.jurisdiction_id IS NOT NULL
+          AND w.website_url IS NOT NULL
+          AND TRIM(w.website_url) <> ''
+        """,
+        """
+        SELECT DISTINCT
+            UPPER(TRIM(u.state_code)) AS state_code,
+            (regexp_match(
+                NULLIF(
+                    REGEXP_REPLACE(
+                        REGEXP_REPLACE(
+                            REGEXP_REPLACE(
+                                LOWER(
+                                    CASE
+                                        WHEN u.city_website ~* '^https?://' THEN TRIM(u.city_website)
+                                        ELSE 'https://' || TRIM(REGEXP_REPLACE(u.city_website, '^/+', ''))
+                                    END
+                                ),
+                                '^http:', 'https:', 'i'
+                            ),
+                            '^https://www\\.', 'https://', 'i'
+                        ),
+                        '/+$', '', 'g'
+                    ),
+                    ''
+                ),
+                '^(https://[^/?#]+)'
+            ))[1] AS origin_norm,
+            m.jurisdiction_id,
+            m.geoid
+        FROM bronze.bronze_jurisdictions_municipalities_uscm u
+        INNER JOIN bronze.bronze_jurisdictions_municipalities m
+            ON UPPER(TRIM(m.usps)) = UPPER(TRIM(u.state_code))
+           AND LOWER(TRIM(m.name)) = LOWER(TRIM(u.municipality_name))
+        WHERE u.city_website IS NOT NULL
+          AND TRIM(u.city_website) <> ''
+          AND m.jurisdiction_id IS NOT NULL
+        """,
+    )
+    with conn.cursor() as cur:
+        for sql in sql_variants:
+            try:
+                cur.execute(sql)
+            except Exception as e:
+                logger.debug(f"URL index query skipped: {e}")
+                continue
+            for state_code, origin, jid, geoid in cur.fetchall():
+                if not state_code or not origin or not jid or not geoid:
+                    continue
+                pair = (str(jid), str(geoid))
+                bucket = idx[(str(state_code).upper(), str(origin))]
+                if pair not in bucket:
+                    bucket.append(pair)
+            if idx:
+                break
+    return idx
+
+
 def iter_city_files(states: set[str] | None) -> list[Path]:
     if not CACHE_ROOT.is_dir():
         return []
@@ -408,6 +572,7 @@ def iter_city_files(states: set[str] | None) -> list[Path]:
 def parse_city_files(
     paths: list[Path],
     idx: CensusPlaceIndex,
+    url_idx: dict[tuple[str, str], list[tuple[str, str]]] | None = None,
 ) -> list[tuple[Any, ...]]:
     rows: list[tuple[Any, ...]] = []
     for path in paths:
@@ -451,8 +616,14 @@ def parse_city_files(
             jid: str | None = None
             geoid: str | None = None
             match_method: str | None = None
+            league_website = _str(c.get("website"))
             if _should_attempt_jurisdiction_match(muni):
-                jid, geoid, match_method = idx.match(match_usps, muni)
+                jid, geoid, match_method = idx.match(
+                    match_usps,
+                    muni,
+                    website=league_website,
+                    url_idx=url_idx,
+                )
                 if jid is None and match_method == "unmatched":
                     alts = c.get("alternate_names")
                     if isinstance(alts, list):
@@ -461,7 +632,12 @@ def parse_city_files(
                                 continue
                             if not _should_attempt_jurisdiction_match(alt):
                                 continue
-                            jid, geoid, mm = idx.match(match_usps, alt)
+                            jid, geoid, mm = idx.match(
+                                match_usps,
+                                alt,
+                                website=league_website,
+                                url_idx=url_idx,
+                            )
                             if jid and mm:
                                 match_method = f"alternate_{mm}"
                                 break
@@ -546,6 +722,93 @@ def load_to_postgres(
     }
 
 
+def rematch_bronze_jurisdiction_ids(
+    conn: PGConnection,
+    idx: CensusPlaceIndex,
+    url_idx: dict[tuple[str, str], list[tuple[str, str]]],
+    *,
+    states: set[str] | None,
+    dry_run: bool,
+) -> dict[str, int]:
+    where = ""
+    params: list[Any] = []
+    if states:
+        where = "WHERE state_code = ANY(%s)"
+        params.append(list(states))
+
+    with conn.cursor() as cur:
+        cur.execute(
+            f"""
+            SELECT row_key, state_code, municipality_name, website, alternate_names
+            FROM {BRONZE_TABLE}
+            {where}
+            """,
+            params or None,
+        )
+        rows = cur.fetchall()
+
+    updates: list[tuple[str | None, str | None, str | None, str]] = []
+    for row_key, state_code, muni, website, alts_json in rows:
+        match_usps = str(state_code or "").upper()[:2]
+        muni_s = str(muni or "").strip()
+        website_s = _str(website)
+        jid: str | None = None
+        geoid: str | None = None
+        method: str | None = None
+        if _should_attempt_jurisdiction_match(muni_s):
+            jid, geoid, method = idx.match(
+                match_usps,
+                muni_s,
+                website=website_s,
+                url_idx=url_idx,
+            )
+            if jid is None and method == "unmatched":
+                alts = alts_json if isinstance(alts_json, list) else []
+                if isinstance(alts_json, str):
+                    try:
+                        alts = json.loads(alts_json)
+                    except json.JSONDecodeError:
+                        alts = []
+                if isinstance(alts, list):
+                    for alt in alts:
+                        if not isinstance(alt, str) or not _should_attempt_jurisdiction_match(alt):
+                            continue
+                        jid, geoid, mm = idx.match(
+                            match_usps,
+                            alt,
+                            website=website_s,
+                            url_idx=url_idx,
+                        )
+                        if jid and mm:
+                            method = f"alternate_{mm}"
+                            break
+        updates.append((jid, geoid, method, str(row_key)))
+
+    if dry_run:
+        with_j = sum(1 for u in updates if u[0])
+        logger.info(f"Rematch dry-run: {len(updates):,} rows; would set jurisdiction_id on {with_j:,}")
+        return {"rows": len(updates), "with_jurisdiction_id": with_j}
+
+    with conn.cursor() as cur:
+        execute_batch(
+            cur,
+            f"""
+            UPDATE {BRONZE_TABLE}
+            SET jurisdiction_id = %s,
+                census_geoid = %s,
+                jurisdiction_match_method = %s,
+                ingestion_date = NOW()
+            WHERE row_key = %s
+            """,
+            updates,
+            page_size=2000,
+        )
+        conn.commit()
+    with_j = sum(1 for u in updates if u[0])
+    logger.success(f"Rematched {len(updates):,} bronze rows ({with_j:,} with jurisdiction_id)")
+    return {"rows": len(updates), "with_jurisdiction_id": with_j}
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(
         description="Load League city directory JSON into bronze_jurisdictions_municipalities_league"
@@ -557,6 +820,11 @@ def main() -> None:
     )
     parser.add_argument("--dry-run", action="store_true")
     parser.add_argument("--truncate", action="store_true")
+    parser.add_argument(
+        "--rematch-jurisdictions",
+        action="store_true",
+        help="Re-resolve jurisdiction_id on existing bronze rows (no JSON re-parse)",
+    )
     args = parser.parse_args()
 
     st_filter = None
@@ -564,7 +832,7 @@ def main() -> None:
         st_filter = {s.strip().upper() for s in args.states if len(s.strip()) == 2}
 
     paths = iter_city_files(st_filter)
-    if not paths:
+    if not paths and not args.rematch_jurisdictions:
         logger.error(
             f"No cities.json under {CACHE_ROOT} (states={st_filter or 'all'}). "
             "Run download_league_city_directories.py first."
@@ -577,7 +845,8 @@ def main() -> None:
     logger.info(
         f"Database: {_database_url_source_label()} → {DATABASE_URL.split('@')[-1]}"
     )
-    logger.info(f"Files: {len(paths)} (sample: {paths[0].relative_to(_ROOT)})")
+    if paths:
+        logger.info(f"Files: {len(paths)} (sample: {paths[0].relative_to(_ROOT)})")
 
     conn = psycopg2.connect(DATABASE_URL)
     conn.autocommit = False
@@ -593,8 +862,25 @@ def main() -> None:
         logger.info(
             f"Census index: {len(idx._by_exact):,} exact keys, {len(idx._by_norm):,} normalized keys"
         )
+        logger.info("Building URL → jurisdiction index …")
+        url_idx = load_url_jurisdiction_index(conn)
+        logger.info(f"URL index: {len(url_idx):,} (state, origin) keys")
 
-        records = parse_city_files(paths, idx)
+        if args.rematch_jurisdictions:
+            stats = rematch_bronze_jurisdiction_ids(
+                conn,
+                idx,
+                url_idx,
+                states=st_filter,
+                dry_run=args.dry_run,
+            )
+            logger.info("SUMMARY")
+            for k, v in stats.items():
+                logger.info(f"  {k}: {v:,}")
+            logger.success("Done.")
+            return
+
+        records = parse_city_files(paths, idx, url_idx)
         logger.info(f"Rows parsed for load: {len(records):,}")
 
         stats = load_to_postgres(

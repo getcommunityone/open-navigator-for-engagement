@@ -91,6 +91,7 @@ models:
 
       Jurisdiction website URLs from multiple bronze sources: GSA .gov registry (cisagov/dotgov-data),
       US Conference of Mayors city sites (bronze_jurisdictions_municipalities_uscm.city_website),
+      state municipal league directories (bronze_jurisdictions_municipalities_league.website),
       NCES CCD LEA directory (bronze_jurisdictions_school_districts_nces_directory.website),
       NACo county explorer (bronze_jurisdictions_counties_naco.website), plus optional
       **jurisdiction_website_url_overrides** (``website_source`` = ``override``). Federal agency .gov
@@ -100,18 +101,18 @@ models:
     columns:
       - name: website_record_key
         description: >
-          Stable unique key per row (e.g. gsa domain, uscm|ST|municipality, nces_directory|LEAID,
-          naco|county GEOID, override|jurisdiction_id|md5(url) when multiple curated URLs exist).
+          Stable unique key per row (e.g. gsa domain, uscm|ST|municipality, league|row_key,
+          nces_directory|LEAID, naco|county GEOID, override|jurisdiction_id|md5(url) when multiple curated URLs exist).
         tests:
           - unique
           - not_null
       - name: website_source
-        description: "Upstream lineage: gsa, uscm, nces_directory, naco, or override (seed)"
+        description: "Upstream lineage: gsa, uscm, league, nces_directory, naco, or override (seed)"
         tests:
           - not_null
           - accepted_values:
               arguments:
-                values: ['gsa', 'uscm', 'nces_directory', 'naco', 'override']
+                values: ['gsa', 'uscm', 'league', 'nces_directory', 'naco', 'override']
       - name: domain_name
         description: "Lowercase hostname when derivable from URL; for GSA rows the .gov domain"
       - name: website_url

@@ -468,6 +468,10 @@ body {
   background: rgba(17, 99, 41, 0.12);
   color: var(--jmq-green);
 }
+.jmq-src-badge--league {
+  background: rgba(130, 80, 223, 0.12);
+  color: #8250df;
+}
 .jmq-src-badge--override {
   background: var(--jmq-amber-dim);
   color: var(--jmq-amber);
@@ -693,10 +697,16 @@ body {
 }
 .jmq-pill:hover {
   background: #e6eaef;
+  color: var(--jmq-text);
 }
 .jmq-pill--active {
   background: var(--jmq-teal);
   border-color: var(--jmq-teal);
+  color: #fff;
+}
+.jmq-pill--active:hover {
+  background: #0e655e;
+  border-color: #0e655e;
   color: #fff;
 }
 .jmq-pill-row {
