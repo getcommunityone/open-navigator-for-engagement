@@ -100,8 +100,19 @@ MAX_GATEKEEPER_PDF_PAGES = 2                # triage never reads more than 2 pag
 DEFAULT_PDF_PAGES = 1                       # fast default; set env to 2 if needed
 DEFAULT_PDF_DPI = 120                       # gatekeeper only (demos use 200)
 DEFAULT_LARGE_PDF_BYTES = 1_500_000          # above this: 1 page @ 120 DPI on /tmp copy
+DEFAULT_TEXT_TRIAGE_MIN_CHARS = 80           # page-1 text layer ≥ this → skip image render
+DEFAULT_TEXT_TRIAGE_MAX_CHARS = 12_000       # cap excerpt sent to the model
 
 DEFAULT_TRIAGE_MAX_OUTPUT_TOKENS = 512      # strict JSON only — keep cheap
+
+
+def gatekeeper_text_first_enabled() -> bool:
+    """When true (default), use digital text from page 1 before rendering images."""
+    return os.environ.get("GOVERNANCE_GATEKEEPER_TEXT_FIRST", "1").strip().lower() not in (
+        "0",
+        "false",
+        "no",
+    )
 
 
 def clamp_gatekeeper_pdf_pages(pages: int) -> int:
@@ -484,6 +495,32 @@ def pdf_first_pages_to_png_bytes(
             im.save(buf, format="PNG")
             out.append(buf.getvalue())
         return out
+
+
+def extract_first_pages_text(
+    pdf_path: Path, *, pages: int = DEFAULT_PDF_PAGES, max_chars: int = DEFAULT_TEXT_TRIAGE_MAX_CHARS
+) -> str:
+    """
+    Read **only** the first 1–2 pages' digital text layer (no pixmap render).
+
+    Fast on large text PDFs; returns ``""`` when PyMuPDF is missing or pages are scanned.
+    """
+    n_pages = clamp_gatekeeper_pdf_pages(pages)
+    cap = int(os.environ.get("GOVERNANCE_GATEKEEPER_TEXT_MAX_CHARS", str(max_chars)))
+    with _local_pdf_copy(pdf_path) as local_pdf:
+        try:
+            import fitz
+        except ImportError:
+            return ""
+        try:
+            parts: List[str] = []
+            with fitz.open(local_pdf) as doc:
+                for i in range(min(n_pages, doc.page_count)):
+                    parts.append(doc.load_page(i).get_text("text") or "")
+            return "\n".join(parts).strip()[:cap]
+        except Exception as exc:
+            logger.warning("first-page text extract failed (%s)", exc)
+            return ""
 
 
 # ─────────────────────────────────────────────────────────────
@@ -980,6 +1017,40 @@ PDF_USER = (
     "meeting_instance_slug (snake_case slug distinguishing multiple meetings on the same date)."
 )
 
+PDF_TEXT_SYSTEM = (
+    "You are a document triage gatekeeper for a local-government open-data pipeline. "
+    "You classify pasted text from the first page(s) of a PDF as meeting agenda, "
+    "meeting minutes, or other. You return strict JSON only."
+)
+
+PDF_TEXT_USER = (
+    "The excerpt below is the digital text layer from the **first page(s)** of a PDF "
+    "(not the full document). Classify it as:\n"
+    "  • meeting_agenda — itemized agenda with body name, date, agenda items, Pledge / Adjournment;\n"
+    "  • meeting_minutes — minutes header, motions, votes, members present;\n"
+    "  • other — forms, financial tables, brochures, correspondence without meeting framing.\n\n"
+    "Only meeting_agenda and meeting_minutes count as governance meetings.\n\n"
+    "Return ONLY JSON with keys: is_governance_meeting, document_or_audio_type, "
+    "confidence_score, reasoning, meeting_date (YYYY-MM-DD or null), meeting_title, "
+    "meeting_instance_slug.\n\n"
+    "=== TEXT EXCERPT ===\n"
+    "{excerpt}\n"
+)
+
+
+def _fill_verdict_from_triage_call(
+    verdict: TriageVerdict, pdf_path: Path, parsed: Optional[dict], raw: Optional[str], t0: float
+) -> TriageVerdict:
+    is_m, doc_type, conf, reason = _verdict_from_json(parsed)
+    verdict.is_governance_meeting = is_m
+    verdict.document_or_audio_type = doc_type
+    verdict.confidence_score = conf
+    verdict.reasoning = reason
+    verdict.raw_model_text = raw[:4000] if raw else None
+    _apply_meeting_metadata(verdict, pdf_path, parsed)
+    verdict.elapsed_seconds = round(time.time() - t0, 2)
+    return verdict
+
 
 # ─────────────────────────────────────────────────────────────
 # Per-file triage
@@ -1009,6 +1080,42 @@ def triage_pdf(
     )
     pages, dpi = resolve_gatekeeper_render_opts(pdf_path, pages, dpi)
     t0 = time.time()
+
+    if gatekeeper_text_first_enabled():
+        min_chars = int(
+            os.environ.get("GOVERNANCE_GATEKEEPER_TEXT_MIN_CHARS", str(DEFAULT_TEXT_TRIAGE_MIN_CHARS))
+        )
+        excerpt = extract_first_pages_text(pdf_path, pages=pages)
+        if len(excerpt) >= min_chars:
+            logger.info(
+                "  text-only triage | %s | %d chars from page 1-%d (no image render)",
+                pdf_path.name,
+                len(excerpt),
+                pages,
+            )
+            flush_gatekeeper_logs()
+            try:
+                parsed, raw = call_gemma_triage(
+                    client=client,
+                    model=model,
+                    system_instruction=PDF_TEXT_SYSTEM,
+                    user_text=PDF_TEXT_USER.format(excerpt=excerpt),
+                    media=[],
+                    media_resolution_high=False,
+                    thinking_budget=0,
+                )
+            except Exception as e:
+                verdict.error = f"Gemma text triage failed: {e}"
+                verdict.elapsed_seconds = round(time.time() - t0, 2)
+                return verdict
+            return _fill_verdict_from_triage_call(verdict, pdf_path, parsed, raw, t0)
+        logger.info(
+            "  page text too short (%d chars) → visual render | %s",
+            len(excerpt),
+            pdf_path.name,
+        )
+        flush_gatekeeper_logs()
+
     logger.info(
         "  render START | %s | pages 1-%d only | dpi=%d",
         pdf_path.name,
@@ -1019,12 +1126,12 @@ def triage_pdf(
     try:
         page_bytes = pdf_first_pages_to_png_bytes(pdf_path, pages=pages, dpi=dpi)
     except Exception as e:
-        verdict.error = f"pdf2image failed: {e}"
+        verdict.error = f"PDF render failed: {e}"
         verdict.elapsed_seconds = round(time.time() - t0, 2)
         return verdict
 
     if not page_bytes:
-        verdict.error = "pdf2image returned no pages"
+        verdict.error = "PDF render returned no pages"
         verdict.elapsed_seconds = round(time.time() - t0, 2)
         return verdict
 
@@ -1046,15 +1153,7 @@ def triage_pdf(
         verdict.elapsed_seconds = round(time.time() - t0, 2)
         return verdict
 
-    is_m, doc_type, conf, reason = _verdict_from_json(parsed)
-    verdict.is_governance_meeting = is_m
-    verdict.document_or_audio_type = doc_type
-    verdict.confidence_score = conf
-    verdict.reasoning = reason
-    verdict.raw_model_text = raw[:4000] if raw else None
-    _apply_meeting_metadata(verdict, pdf_path, parsed)
-    verdict.elapsed_seconds = round(time.time() - t0, 2)
-    return verdict
+    return _fill_verdict_from_triage_call(verdict, pdf_path, parsed, raw, t0)
 
 
 def triage_audio(
