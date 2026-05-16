@@ -201,8 +201,10 @@ def load_gemma_hf(
     use_mm = needs_audio and _repo_supports_audio(repo_id)
     cache_key = (repo_id, use_mm)
     if cache_key in _CACHE:
+        logger.debug("HF cache hit %s (needs_audio=%s)", repo_id, use_mm)
         return _CACHE[cache_key]
 
+    logger.info("Loading HF weights for %s (needs_audio=%s)…", repo_id, use_mm)
     try:
         from transformers import AutoProcessor
     except ImportError as exc:
@@ -440,19 +442,54 @@ def call_gemma_hf_multimodal(
     return HFGenAIResult(text=text, thoughts=thoughts, raw_response=outputs)
 
 
+def hf_weights_cached(repo_id: Optional[str] = None) -> Tuple[bool, bool]:
+    """Return ``(image_text_loaded, audio_loaded)`` for the resolved repo."""
+    repo = resolve_hf_model_id(model_id or DEFAULT_HF_MODEL_ID)
+    return (repo, False) in _CACHE, (repo, True) in _CACHE
+
+
+def ensure_hf_ready_for_triage(
+    model_id: Optional[str] = None,
+    *,
+    kinds: Iterable[str] = ("pdf", "audio"),
+    skip_if_cached: bool = True,
+) -> str:
+    """
+    Load only the weight variants needed for Gatekeeper ``kinds`` (pdf → image+text only).
+
+    Skips disk/network reload when §3 already warmed the in-process cache.
+    """
+    repo = resolve_hf_model_id(model_id or DEFAULT_HF_MODEL_ID)
+    kinds_set = {str(k).strip().lower() for k in kinds if str(k).strip()}
+    need_audio = "audio" in kinds_set
+    loaded: List[str] = []
+
+    if not skip_if_cached or (repo, False) not in _CACHE:
+        load_gemma_hf(repo, needs_audio=False)
+        loaded.append("image+text")
+    if need_audio and _repo_supports_audio(repo):
+        if not skip_if_cached or (repo, True) not in _CACHE:
+            load_gemma_hf(repo, needs_audio=True)
+            loaded.append("audio")
+
+    if loaded:
+        logger.info("HF weights ready for %s — loaded: %s", repo, ", ".join(loaded))
+    else:
+        logger.info("HF weights already in memory for %s (cache hit, no reload)", repo)
+    return repo
+
+
 def preload_gemma_hf(
     model_id: Optional[str] = None,
     *,
     load_audio_variant: bool = True,
 ) -> str:
     """
-    Eager-load models for notebook startup. Returns the resolved ``repo_id``.
+    Eager-load models for notebook §3. Prefer :func:`ensure_hf_ready_for_triage` in Gatekeeper.
 
-    When ``load_audio_variant`` is True on E4B/E2B, also warms the MultimodalLM
-    weights used for gatekeeper audio triage.
+    Set ``load_audio_variant=False`` when triaging PDFs only to save ~minutes of load + VRAM.
     """
-    repo = resolve_hf_model_id(model_id or DEFAULT_HF_MODEL_ID)
-    load_gemma_hf(repo, needs_audio=False)
-    if load_audio_variant and _repo_supports_audio(repo):
-        load_gemma_hf(repo, needs_audio=True)
-    return repo
+    kinds = ("pdf", "audio") if load_audio_variant else ("pdf",)
+    return ensure_hf_ready_for_triage(
+        model_id, kinds=kinds, skip_if_cached=True
+    )

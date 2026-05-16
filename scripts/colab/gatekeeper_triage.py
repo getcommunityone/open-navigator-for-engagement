@@ -946,6 +946,7 @@ def run_triage(
     confidence_threshold: float = DEFAULT_CONFIDENCE_THRESHOLD,
     dry_run: bool = False,
     max_files: Optional[int] = None,
+    preload_models: bool = True,
 ) -> TriageReport:
     """Walk ``raw_root``, triage every PDF / audio, move failures under ``excluded_inputs/``."""
     if not raw_root.is_dir():
@@ -960,9 +961,12 @@ def run_triage(
     if dry_run:
         logger.info("(dry-run: no files will be moved)")
 
+    kinds_tuple = tuple(k.strip().lower() for k in kinds if str(k).strip())
+
     try:
         from gemma_hf_backend import (
-            preload_gemma_hf,
+            ensure_hf_ready_for_triage,
+            hf_weights_cached,
             print_hf_model_catalog,
             resolve_hf_model_id,
             use_huggingface,
@@ -973,7 +977,16 @@ def run_triage(
     if use_huggingface():
         print_hf_model_catalog(requested=(model,), role="Gatekeeper (Hugging Face)")
         model = resolve_hf_model_id(model)
-        preload_gemma_hf(model, load_audio_variant=True)
+        if preload_models:
+            ensure_hf_ready_for_triage(model, kinds=kinds_tuple, skip_if_cached=True)
+        else:
+            img_ok, aud_ok = hf_weights_cached(model)
+            if not img_ok or ("audio" in kinds_tuple and not aud_ok):
+                raise RuntimeError(
+                    "HF weights not loaded. Run notebook §3 once per session before §4 Gatekeeper, "
+                    "or call run_triage(..., preload_models=True)."
+                )
+            logger.info("Gatekeeper using in-memory HF weights (skipped reload)")
         client = None
     else:
         client = _build_genai_client(api_key)
