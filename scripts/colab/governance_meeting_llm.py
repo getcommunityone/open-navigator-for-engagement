@@ -571,6 +571,112 @@ def call_google_genai_multimodal(
 
 
 # ─────────────────────────────────────────────────────────────
+# Plain-transcription pass — provenance artifact for the Ledger of Influence.
+# Distinct from Demo 4's policy_analysis_v1 pass: this returns *only* the literal
+# transcribed text, with no analysis, no JSON, no chunk metadata. The output is
+# the citable raw audio-to-text that downstream demos / human reviewers can
+# anchor against.
+# ─────────────────────────────────────────────────────────────
+
+
+# Display name → BCP-47-ish language tag used in the output file suffix.
+TRANSCRIPTION_SUPPORTED_LANGUAGES: Dict[str, str] = {
+    "English": "en",
+    "Spanish": "es",
+}
+
+
+def _resolve_language_display(language: str) -> Tuple[str, str]:
+    """Accept ``"en"`` / ``"es"`` / ``"English"`` / ``"Spanish"`` (any case) and
+    return ``(display_name, short_tag)`` — display goes into the prompt, short
+    tag goes into the output file suffix."""
+    if not language:
+        raise ValueError("language is required (one of: en, es, English, Spanish)")
+    key = language.strip()
+    # Short tag → display
+    for display, tag in TRANSCRIPTION_SUPPORTED_LANGUAGES.items():
+        if key.lower() == tag.lower() or key.lower() == display.lower():
+            return display, tag
+    raise ValueError(
+        f"Unsupported transcription language {language!r}. "
+        f"Supported: {list(TRANSCRIPTION_SUPPORTED_LANGUAGES)} (or short tags en/es)."
+    )
+
+
+def transcribe_audio_with_gemma(
+    *,
+    api_key: str,
+    model: str,
+    audio_path: str | Path | bytes,
+    language: str = "English",
+    mime_type: Optional[str] = None,
+    max_output_tokens: int = 8192,
+) -> str:
+    """
+    Transcribe one audio file / chunk to literal text in ``language``.
+
+    Uses the exact prompt template requested for the 2026 Gemma 4 Good Hackathon:
+
+        Transcribe the following speech segment in {LANGUAGE} into {LANGUAGE} text.
+
+        Follow these specific instructions for formatting the answer:
+        *   Only output the transcription, with no newlines.
+        *   When transcribing numbers, write the digits, i.e. write 1.7 and not
+            one point seven, and write 3 instead of three.
+
+    ``language`` accepts ``"en"`` / ``"es"`` (short tag) or ``"English"`` /
+    ``"Spanish"`` (display name). ``audio_path`` accepts a path *or* raw bytes
+    (handy for piping the in-memory chunks ffmpeg already produced). Returns the
+    raw transcript string with any stray newlines collapsed to spaces (the model
+    is told not to emit newlines, but we enforce it defensively).
+    """
+    display, _tag = _resolve_language_display(language)
+
+    user_text = (
+        f"Transcribe the following speech segment in {display} into {display} text.\n\n"
+        "Follow these specific instructions for formatting the answer:\n"
+        "*   Only output the transcription, with no newlines.\n"
+        "*   When transcribing numbers, write the digits, i.e. write 1.7 and not "
+        "one point seven, and write 3 instead of three."
+    )
+
+    # System prompt is intentionally minimal: we want a literal transcription,
+    # not a political-science analysis layered on top.
+    system_instruction = (
+        "You are a precise speech-to-text transcriber. Return only the literal "
+        "spoken words, in the requested language, on a single line."
+    )
+
+    if isinstance(audio_path, (bytes, bytearray)):
+        media: List[Tuple[Any, str]] = [
+            (bytes(audio_path), mime_type or "audio/mpeg"),
+        ]
+    else:
+        p = Path(audio_path)
+        media = [(p, mime_type or mime_for(p))]
+
+    result = call_google_genai_multimodal(
+        api_key=api_key,
+        model=model,
+        system_instruction=system_instruction,
+        user_text=user_text,
+        media=media,
+        temperature=0.0,
+        max_output_tokens=max_output_tokens,
+        # Don't request thinking — transcription is mechanical, and Gemma 4 returns
+        # 400 INVALID_ARGUMENT if thinking_config is attached to non-thinking variants.
+        include_thoughts=False,
+        thinking_budget=None,
+    )
+
+    text = (result.text or "").strip()
+    # The prompt forbids newlines; collapse any the model still produced so the
+    # output file is a single-line transcript ready for downstream concat.
+    text = " ".join(text.split())
+    return text
+
+
+# ─────────────────────────────────────────────────────────────
 # EmbeddingGemma — semantic vectors for cross-jurisdiction clustering
 # ─────────────────────────────────────────────────────────────
 
@@ -1132,6 +1238,7 @@ __all__ = [
     "extract_pdf_digital_text", "is_scanned_pdf",
     "chunk_audio_ffmpeg",
     "call_google_genai_multimodal",
+    "transcribe_audio_with_gemma", "TRANSCRIPTION_SUPPORTED_LANGUAGES",
     "embed_text_with_gemma", "cosine_similarity_matrix",
     "shield_review_text", "SHIELD_HARM_CATEGORIES",
     "model_supports_thinking",

@@ -293,6 +293,97 @@ def _build_genai_client(api_key: str):
     return genai.Client(api_key=api_key)
 
 
+# Fallback chain used when the requested model id returns 404 NOT_FOUND.
+# Ordered roughly cheapest → heaviest; we keep Gemma 4 / Gemma 3n / Gemma 3
+# aliases since AI Studio projects roll out the Gemma 4 family unevenly.
+_GEMMA_TRIAGE_FALLBACKS = (
+    "gemma-4-e4b-it",
+    "gemma-4-e2b-it",
+    "gemma-4n-e4b-it",
+    "gemma-4n-e2b-it",
+    "gemma-3n-e4b-it",
+    "gemma-3n-e2b-it",
+    "gemma-3-4b-it",
+    "gemma-3-12b-it",
+)
+_GEMMA_HEAVY_FALLBACKS = (
+    "gemma-4-26b-a4b-it",
+    "gemma-4-31b-it",
+    "gemma-4-12b-it",
+    "gemma-3-27b-it",
+    "gemma-3-12b-it",
+)
+
+
+def _list_available_model_ids(client: Any) -> List[str]:
+    """Return SDK-visible model ids (best effort — empty list on any error)."""
+    try:
+        listed = client.models.list()
+    except Exception:
+        return []
+    ids: List[str] = []
+    for m in listed or []:
+        # SDK objects expose either ``name`` ("models/gemma-3-4b-it") or ``model``.
+        raw = getattr(m, "name", None) or getattr(m, "model", None) or ""
+        if not raw:
+            continue
+        ids.append(raw.split("/")[-1])
+    return ids
+
+
+def resolve_model_id(
+    client: Any,
+    requested: str,
+    *,
+    fallbacks: Iterable[str] = _GEMMA_TRIAGE_FALLBACKS,
+    role: str = "model",
+) -> str:
+    """
+    Resolve ``requested`` to an id the project's API actually serves.
+
+    Lists available models via the SDK; if ``requested`` is present, returns it
+    unchanged. Otherwise walks ``fallbacks`` and returns the first id that *is*
+    listed. Raises :class:`RuntimeError` with the listed Gemma ids when nothing
+    matches, so the user can copy a real alias into ``GOVERNANCE_GENAI_MODEL`` /
+    ``GOVERNANCE_GATEKEEPER_MODEL``.
+    """
+    requested = (requested or "").strip()
+    available = _list_available_model_ids(client)
+    if not available:
+        # Listing failed (offline, quota, older SDK) — assume the caller's id is
+        # correct and let the downstream generate_content call surface the error.
+        logger.warning(
+            "Could not list models for %s id resolution; using %s as-is.",
+            role, requested,
+        )
+        return requested
+
+    available_set = set(available)
+    if requested in available_set:
+        return requested
+
+    # Don't re-try the requested id in the fallback walk.
+    tried = [requested]
+    for candidate in fallbacks:
+        if candidate == requested or candidate in tried:
+            continue
+        tried.append(candidate)
+        if candidate in available_set:
+            logger.warning(
+                "%s id %r not available on this API key — falling back to %r.",
+                role, requested, candidate,
+            )
+            return candidate
+
+    gemma_ids = sorted(i for i in available if "gemma" in i.lower())
+    raise RuntimeError(
+        f"{role} id {requested!r} is not available on this API project, and none "
+        f"of the fallbacks {list(fallbacks)} are listed either. "
+        f"Gemma ids visible to this key: {gemma_ids or '(none — your project may need Gemma 4 access enabled)'}. "
+        f"Set GOVERNANCE_GATEKEEPER_MODEL / GOVERNANCE_GENAI_MODEL to one of those ids."
+    )
+
+
 def call_gemma_triage(
     *,
     client: Any,
@@ -742,6 +833,14 @@ def run_triage(
         logger.info("(dry-run: no files will be moved)")
 
     client = _build_genai_client(api_key)
+
+    # Resolve the requested model against the SDK's actual model list. This
+    # converts a 404 NOT_FOUND (e.g. "gemma-4-e4b-it" on a project that only
+    # serves gemma-3n / gemma-3) into either a working fallback or a clear
+    # error listing the Gemma ids the project actually has.
+    model = resolve_model_id(client, model, role="Gatekeeper triage model")
+    logger.info("Gatekeeper resolved model | model=%s", model)
+
     report = TriageReport(raw_root=str(raw_root), excluded_root=str(excluded_root))
 
     processed = 0
