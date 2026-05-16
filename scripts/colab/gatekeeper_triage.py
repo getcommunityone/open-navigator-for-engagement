@@ -340,13 +340,21 @@ def call_gemma_triage(
         if mr is not None:
             config_kwargs["media_resolution"] = mr
 
-    ThinkingConfig = getattr(types, "ThinkingConfig", None)
-    if ThinkingConfig is not None:
-        try:
-            config_kwargs["thinking_config"] = ThinkingConfig(thinking_budget=int(thinking_budget))
-        except TypeError:
-            # Older SDKs accept only include_thoughts; safe to omit.
-            pass
+    # Only attach thinking_config to models that accept it. Gemma 4 returns
+    # 400 INVALID_ARGUMENT: "Thinking budget is not supported for this model"
+    # even when budget is 0, so we have to omit the parameter entirely.
+    # Override with env GOVERNANCE_FORCE_THINKING=1 if your Gemma 4 variant
+    # actually supports it (e.g. the 31B Dense reasoning model).
+    _force = os.environ.get("GOVERNANCE_FORCE_THINKING", "0") == "1"
+    _is_gemma = (model or "").lower().startswith("gemma")
+    if _force or not _is_gemma:
+        ThinkingConfig = getattr(types, "ThinkingConfig", None)
+        if ThinkingConfig is not None:
+            try:
+                config_kwargs["thinking_config"] = ThinkingConfig(thinking_budget=int(thinking_budget))
+            except TypeError:
+                # Older SDKs accept only include_thoughts; safe to omit.
+                pass
 
     request_options: dict = {}
     if timeout_seconds:

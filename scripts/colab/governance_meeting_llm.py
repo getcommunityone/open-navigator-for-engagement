@@ -51,6 +51,24 @@ TOKEN_BUDGET_MEDIUM = "MEDIUM"
 TOKEN_BUDGET_LOW = "LOW"     # ~64 tokens per image — standard text-heavy minutes
 
 
+def model_supports_thinking(model: str) -> bool:
+    """Whether the model accepts ``thinking_config`` (``thinking_budget`` /
+    ``include_thoughts``).
+
+    The ``gemma-4-26b-a4b-it`` alias has been observed to return ``400
+    INVALID_ARGUMENT: Thinking budget is not supported for this model``,
+    so by default we skip ``thinking_config`` for any model whose id starts
+    with ``gemma``. Gemini 2.5+ accepts it.
+
+    Override with env ``GOVERNANCE_FORCE_THINKING=1`` if you've picked a Gemma 4
+    variant (e.g. 31B Dense) that supports thinking via the SDK config.
+    """
+    import os
+    if os.environ.get("GOVERNANCE_FORCE_THINKING", "0") == "1":
+        return True
+    return not (model or "").lower().startswith("gemma")
+
+
 # ─────────────────────────────────────────────────────────────
 # Basic text / JSON utilities (kept from the prior helper)
 # ─────────────────────────────────────────────────────────────
@@ -506,7 +524,7 @@ def call_google_genai_multimodal(
     if mr is not None:
         config_kwargs["media_resolution"] = mr
 
-    if include_thoughts or thinking_budget is not None:
+    if (include_thoughts or thinking_budget is not None) and model_supports_thinking(model):
         ThinkingConfig = getattr(types, "ThinkingConfig", None)
         if ThinkingConfig is not None:
             tc_kwargs: Dict[str, Any] = {}
@@ -515,6 +533,15 @@ def call_google_genai_multimodal(
             if thinking_budget is not None:
                 tc_kwargs["thinking_budget"] = thinking_budget
             config_kwargs["thinking_config"] = ThinkingConfig(**tc_kwargs)
+    elif include_thoughts or thinking_budget is not None:
+        # Model rejects thinking_config server-side (Gemma 4 returns 400
+        # INVALID_ARGUMENT: "Thinking budget is not supported for this model").
+        # Run the prompt as a normal generation; thoughts will come back empty.
+        print(
+            f"   ℹ️  Skipping thinking_config: {model!r} does not support it. "
+            "Demo 3's reasoning-trace output will be empty — use a Gemini 2.5+ model "
+            "(e.g. gemini-2.5-flash) via GOVERNANCE_GENAI_MODEL to see thinking output."
+        )
 
     response = client.models.generate_content(
         model=model,
@@ -541,6 +568,138 @@ def call_google_genai_multimodal(
         thoughts="\n".join(thought_bits).strip(),
         raw_response=response,
     )
+
+
+# ─────────────────────────────────────────────────────────────
+# EmbeddingGemma — semantic vectors for cross-jurisdiction clustering
+# ─────────────────────────────────────────────────────────────
+
+
+def embed_text_with_gemma(
+    *,
+    api_key: str,
+    model: str,
+    texts: List[str],
+    batch_size: int = 32,
+) -> List[List[float]]:
+    """Return one embedding vector per input string. Batches under the SDK limit."""
+    from google import genai
+
+    client = genai.Client(api_key=api_key)
+    out: List[List[float]] = []
+    for i in range(0, len(texts), batch_size):
+        chunk = texts[i:i + batch_size]
+        result = client.models.embed_content(model=model, contents=chunk)
+        for emb in getattr(result, "embeddings", None) or []:
+            values = getattr(emb, "values", None) or []
+            out.append(list(values))
+    return out
+
+
+def cosine_similarity_matrix(vectors: List[List[float]]) -> List[List[float]]:
+    """Pairwise cosine similarity. Small-N pure-Python implementation — fine for
+    the demo's hundreds-of-items scale; switch to numpy/sklearn for production."""
+    import math
+
+    norms = [math.sqrt(sum(x * x for x in v)) or 1.0 for v in vectors]
+    n = len(vectors)
+    out = [[0.0] * n for _ in range(n)]
+    for i in range(n):
+        for j in range(i, n):
+            dot = sum(a * b for a, b in zip(vectors[i], vectors[j]))
+            sim = dot / (norms[i] * norms[j])
+            out[i][j] = out[j][i] = sim
+    return out
+
+
+# ─────────────────────────────────────────────────────────────
+# ShieldGemma — safety / policy-violation review on free-text outputs
+# ─────────────────────────────────────────────────────────────
+
+
+SHIELD_HARM_CATEGORIES = (
+    "dangerous_content",
+    "harassment",
+    "hate_speech",
+    "sexually_explicit",
+)
+
+
+def shield_review_text(
+    *,
+    api_key: str,
+    model: str,
+    content: str,
+    user_prompt: str = "(none — automated pipeline output)",
+    harm_categories: Iterable[str] = SHIELD_HARM_CATEGORIES,
+) -> Dict[str, Any]:
+    """Run a ShieldGemma-style policy review on ``content``.
+
+    Returns a dict shaped like::
+
+        {
+          "flagged": bool,
+          "categories": {"hate_speech": "No", "harassment": "No", ...},
+          "raw": "<model output>"
+        }
+
+    The same pattern works against ShieldGemma proper and against general Gemma
+    instruction-tuned models — it's just a structured Yes/No prompt.
+    """
+    from google import genai
+    from google.genai import types
+
+    client = genai.Client(api_key=api_key)
+
+    category_blocks = []
+    for cat in harm_categories:
+        category_blocks.append(
+            f"- `{cat}`: does the chatbot response contain or promote {cat.replace('_', ' ')}?"
+        )
+    policy_prompt = (
+        "You are a policy reviewer for an automated municipal-records pipeline.\n"
+        "Decide whether the chatbot response below violates any of the safety policies "
+        "listed. Answer with strict JSON only — no prose, no markdown fences.\n\n"
+        f"Human question: {user_prompt}\n"
+        f"Chatbot response:\n<<<\n{content}\n>>>\n\n"
+        "Categories:\n"
+        + "\n".join(category_blocks)
+        + "\n\n"
+        'Return JSON: {"verdicts": {"<category>": "Yes" | "No"}, "rationale": "<one short sentence>"}'
+    )
+
+    response = client.models.generate_content(
+        model=model,
+        contents=[types.Content(role="user", parts=[types.Part.from_text(text=policy_prompt)])],
+        config=types.GenerateContentConfig(
+            temperature=0.0,
+            max_output_tokens=512,
+            response_mime_type="application/json",
+        ),
+    )
+
+    raw = ""
+    for cand in getattr(response, "candidates", None) or []:
+        for p in getattr(getattr(cand, "content", None), "parts", None) or []:
+            t = getattr(p, "text", None)
+            if t:
+                raw += t
+
+    import json as _json
+
+    try:
+        parsed = _json.loads(raw.strip().lstrip("`"))
+    except Exception:
+        parsed = {"verdicts": {}, "rationale": "(parse error)", "_raw": raw}
+
+    verdicts = parsed.get("verdicts", {}) or {}
+    flagged = any(str(v).strip().lower().startswith("y") for v in verdicts.values())
+    return {
+        "flagged": flagged,
+        "categories": verdicts,
+        "rationale": parsed.get("rationale", ""),
+        "raw": raw,
+    }
 
 
 # ─────────────────────────────────────────────────────────────
@@ -973,6 +1132,9 @@ __all__ = [
     "extract_pdf_digital_text", "is_scanned_pdf",
     "chunk_audio_ffmpeg",
     "call_google_genai_multimodal",
+    "embed_text_with_gemma", "cosine_similarity_matrix",
+    "shield_review_text", "SHIELD_HARM_CATEGORIES",
+    "model_supports_thinking",
     "policy_drift_summarize",
     "load_meeting_data_lookup", "load_contacts_lookup",
     "merge_meeting_data_by_jurisdiction", "merge_contacts_by_jurisdiction",
