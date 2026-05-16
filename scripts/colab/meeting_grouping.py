@@ -1,16 +1,17 @@
 """
-Group Gatekeeper-approved files into per-meeting folders and build text briefs for audio.
+Group meeting media into per-session folders and build agenda+minutes briefs for audio.
 
 Layout under each jurisdiction::
 
-    meetings/{YYYY-MM-DD}_{instance_slug}/
+    meetings/{YYYY_MM_DD_meeting}/          # first session that calendar day
+    meetings/{YYYY_MM_DD_meeting_2}/        # second session same day, etc.
         agenda/
         minutes/
-        audio/
         collateral/
+        audio/
 
-``instance_slug`` disambiguates multiple bodies/sessions on the same calendar day
-(e.g. ``city-council`` vs ``planning-commission``).
+Demo 4 prepends :func:`build_meeting_collateral_brief` (names, topics, title) to the
+audio analysis prompt via :func:`format_audio_analysis_prompt`.
 """
 from __future__ import annotations
 
@@ -27,6 +28,11 @@ from typing import Any, Dict, Iterable, List, Optional, Sequence, Tuple
 logger = logging.getLogger(__name__)
 
 MEETINGS_DIRNAME = "meetings"
+
+# ``2026_05_06_meeting`` or ``2026_05_06_meeting_2``
+_MEETING_FOLDER_RE = re.compile(
+    r"^(20\d{2})_(\d{2})_(\d{2})_meeting(?:_(\d+))?$"
+)
 
 _DOC_SUBDIR: Dict[str, str] = {
     "meeting_agenda": "agenda",
@@ -92,9 +98,36 @@ class MeetingInstanceGroup:
     files: List[Path] = field(default_factory=list)
     verdicts: List[Any] = field(default_factory=list)
 
+    folder_basename: str = ""
+
     @property
     def folder_name(self) -> str:
-        return f"{self.meeting_date}_{self.instance_slug}"
+        if self.folder_basename:
+            return self.folder_basename
+        return meeting_folder_basename(self.meeting_date, 1)
+
+
+def meeting_folder_basename(meeting_date: str, sequence: int = 1) -> str:
+    """``2026_05_06_meeting`` or ``2026_05_06_meeting_2`` when ``sequence`` > 1."""
+    d = (meeting_date or "undated").strip()
+    if d == "undated" or not re.fullmatch(r"\d{4}-\d{2}-\d{2}", d):
+        slug = "undated_meeting" if sequence <= 1 else f"undated_meeting_{sequence}"
+        return slug
+    underscored = d.replace("-", "_")
+    if sequence <= 1:
+        return f"{underscored}_meeting"
+    return f"{underscored}_meeting_{sequence}"
+
+
+def assign_meeting_folder_basenames(groups: List[MeetingInstanceGroup]) -> None:
+    """Same calendar day + jurisdiction → ``_meeting``, ``_meeting_2``, …"""
+    buckets: Dict[Tuple[str, str], List[MeetingInstanceGroup]] = {}
+    for g in groups:
+        buckets.setdefault((g.jurisdiction_prefix, g.meeting_date), []).append(g)
+    for items in buckets.values():
+        items.sort(key=lambda g: (g.instance_slug, g.meeting_title))
+        for seq, g in enumerate(items, start=1):
+            g.folder_basename = meeting_folder_basename(g.meeting_date, seq)
 
 
 def jurisdiction_prefix_from_relative(rel: str) -> str:
@@ -147,38 +180,132 @@ def group_proceed_verdicts(verdicts: Sequence[Any]) -> List[MeetingInstanceGroup
             )
         buckets[key].files.append(Path(getattr(v, "file_path", "")))
         buckets[key].verdicts.append(v)
-    return sorted(buckets.values(), key=lambda g: (g.jurisdiction_prefix, g.meeting_date, g.instance_slug))
+    groups = sorted(
+        buckets.values(),
+        key=lambda g: (g.jurisdiction_prefix, g.meeting_date, g.instance_slug),
+    )
+    assign_meeting_folder_basenames(groups)
+    return groups
+
+
+def doc_type_for_path(path: Path, raw_root: Path) -> str:
+    """Map a filesystem path to Gatekeeper-style document types for subfolders."""
+    try:
+        from meeting_date_scope import file_media_role, jurisdiction_prefix_from_path
+
+        role = file_media_role(path, raw_root)
+        if role == "audio":
+            return "meeting_audio"
+        jur = jurisdiction_prefix_from_path(path, raw_root)
+        if jur:
+            from meeting_date_scope import _lookup_manifest_row
+
+            row = _lookup_manifest_row(path, raw_root / Path(*jur.split("/")))
+            if row:
+                dt = (row.doc_type or "").lower()
+                if dt == "agenda":
+                    return "meeting_agenda"
+                if dt == "minutes":
+                    return "meeting_minutes"
+    except ImportError:
+        pass
+    stem = path.stem.lower()
+    if any(x in stem for x in (".mp3", ".mp4", ".wav", ".m4a")) or path.suffix.lower() in {
+        ".mp3",
+        ".wav",
+        ".m4a",
+        ".mp4",
+        ".webm",
+    }:
+        return "meeting_audio"
+    if "minutes" in stem:
+        return "meeting_minutes"
+    if "agenda" in stem:
+        return "meeting_agenda"
+    return "other_governance_document"
+
+
+def group_paths_for_organization(
+    paths: Sequence[Path], raw_root: Path
+) -> List[MeetingInstanceGroup]:
+    """Group loose files (post–date-scope inventory) into meeting instances."""
+    buckets: Dict[str, MeetingInstanceGroup] = {}
+    raw_root = raw_root.resolve()
+    for path in paths:
+        if not path.is_file():
+            continue
+        try:
+            rel = path.resolve().relative_to(raw_root)
+        except ValueError:
+            continue
+        if MEETINGS_DIRNAME in rel.parts and rel.parts.index(MEETINGS_DIRNAME) + 2 < len(rel.parts):
+            continue
+        doc_type = doc_type_for_path(path, raw_root)
+        inferred_date: Optional[str] = None
+        try:
+            from meeting_date_scope import infer_meeting_date_for_file, normalize_meeting_date
+
+            inferred_date = infer_meeting_date_for_file(path, raw_root)
+            inferred_date = normalize_meeting_date(inferred_date)
+        except ImportError:
+            inferred_date = infer_meeting_date_from_path(path)
+        key, date_s, slug, title = meeting_instance_key(
+            rel_path=rel.as_posix(),
+            doc_type=doc_type,
+            meeting_date=inferred_date,
+            meeting_title=None,
+            instance_slug=None,
+        )
+        if key not in buckets:
+            buckets[key] = MeetingInstanceGroup(
+                key=key,
+                meeting_date=date_s,
+                instance_slug=slug,
+                meeting_title=title,
+                jurisdiction_prefix=jurisdiction_prefix_from_relative(rel.as_posix()),
+            )
+        buckets[key].files.append(path)
+    groups = sorted(
+        buckets.values(),
+        key=lambda g: (g.jurisdiction_prefix, g.meeting_date, g.instance_slug),
+    )
+    assign_meeting_folder_basenames(groups)
+    return groups
 
 
 def _subdir_for_doc_type(doc_type: str) -> str:
     return _DOC_SUBDIR.get((doc_type or "").strip().lower(), "collateral")
 
 
-def organize_proceed_into_meeting_folders(
+def _move_into_meeting_groups(
     raw_root: Path,
-    verdicts: Sequence[Any],
+    groups: Sequence[MeetingInstanceGroup],
     *,
     dry_run: bool = False,
 ) -> List[Tuple[Path, Path]]:
-    """
-    Move each proceed file under ``…/meetings/{date}_{slug}/{agenda|minutes|audio|collateral}/``.
-
-    Returns list of ``(src, dest)`` pairs (dest is prospective when ``dry_run``).
-    """
+    """Shared mover for verdict- or path-grouped meetings."""
     raw_root = raw_root.resolve()
     moves: List[Tuple[Path, Path]] = []
-    for group in group_proceed_verdicts(verdicts):
+    for group in groups:
         meeting_root = (
-            raw_root
-            / group.jurisdiction_prefix
-            / MEETINGS_DIRNAME
-            / group.folder_name
+            raw_root / group.jurisdiction_prefix / MEETINGS_DIRNAME / group.folder_name
         )
-        for v in group.verdicts:
-            src = Path(getattr(v, "file_path", ""))
-            if not src.is_file():
-                continue
-            sub = _subdir_for_doc_type(getattr(v, "document_or_audio_type", "other"))
+        items: List[Tuple[Path, str]] = []
+        if group.verdicts:
+            for v in group.verdicts:
+                src = Path(getattr(v, "file_path", ""))
+                if not src.is_file():
+                    continue
+                sub = _subdir_for_doc_type(getattr(v, "document_or_audio_type", "other"))
+                items.append((src, sub))
+        else:
+            for src in group.files:
+                if not src.is_file():
+                    continue
+                doc_type = doc_type_for_path(src, raw_root)
+                sub = _subdir_for_doc_type(doc_type)
+                items.append((src, sub))
+        for src, sub in items:
             dest = meeting_root / sub / src.name
             moves.append((src, dest))
             if dry_run:
@@ -198,6 +325,64 @@ def organize_proceed_into_meeting_folders(
     return moves
 
 
+def organize_proceed_into_meeting_folders(
+    raw_root: Path,
+    verdicts: Sequence[Any],
+    *,
+    dry_run: bool = False,
+) -> List[Tuple[Path, Path]]:
+    """
+    Move Gatekeeper **proceed** files under ``…/meetings/{YYYY_MM_DD_meeting}/…``.
+    """
+    groups = group_proceed_verdicts(verdicts)
+    return _move_into_meeting_groups(raw_root, groups, dry_run=dry_run)
+
+
+def organize_paths_into_meeting_folders(
+    raw_root: Path,
+    paths: Sequence[Path],
+    *,
+    dry_run: bool = False,
+) -> List[Tuple[Path, Path]]:
+    """Organize flat inventory files (PDF + audio) into ``meetings/{date}_meeting/…``."""
+    groups = group_paths_for_organization(paths, raw_root)
+    return _move_into_meeting_groups(raw_root, groups, dry_run=dry_run)
+
+
+def apply_path_moves_to_inventories(
+    inventories: Sequence[Any], moves: Sequence[Tuple[Path, Path]]
+) -> None:
+    """Update ``MeetingInventory`` paths after :func:`organize_paths_into_meeting_folders`."""
+    mapping = {src.resolve(): dest for src, dest in moves}
+
+    def _map_list(paths: List[Path]) -> List[Path]:
+        out: List[Path] = []
+        for p in paths:
+            out.append(mapping.get(p.resolve(), p))
+        return out
+
+    for inv in inventories:
+        inv.pdfs = _map_list(list(inv.pdfs))
+        inv.audio = _map_list(list(inv.audio))
+
+
+def organize_inventory_into_meeting_folders(
+    raw_root: Path,
+    inventories: Sequence[Any],
+    *,
+    dry_run: bool = False,
+) -> List[Tuple[Path, Path]]:
+    """Organize all inventoried PDFs/audio; refresh inventory paths in place."""
+    paths: List[Path] = []
+    for inv in inventories:
+        paths.extend(inv.pdfs)
+        paths.extend(inv.audio)
+    moves = organize_paths_into_meeting_folders(raw_root, paths, dry_run=dry_run)
+    if not dry_run:
+        apply_path_moves_to_inventories(inventories, moves)
+    return moves
+
+
 def meeting_dir_for_media_file(media_path: Path, raw_root: Path) -> Optional[Path]:
     """If ``media_path`` lives under ``…/meetings/{folder}/…``, return that meeting folder."""
     try:
@@ -209,7 +394,52 @@ def meeting_dir_for_media_file(media_path: Path, raw_root: Path) -> Optional[Pat
     idx = rel.parts.index(MEETINGS_DIRNAME)
     if len(rel.parts) < idx + 2:
         return None
+    folder = rel.parts[idx + 1]
+    if not _MEETING_FOLDER_RE.match(folder) and not re.match(
+        r"^\d{4}-\d{2}-\d{2}_", folder
+    ):
+        return None
     return raw_root.joinpath(*rel.parts[: idx + 2])
+
+
+def resolve_meeting_dir(media_path: Path, raw_root: Path) -> Optional[Path]:
+    """
+    Meeting folder for brief + audio pairing.
+
+    Uses path if already under ``meetings/``; otherwise finds
+    ``meetings/{YYYY_MM_DD_meeting*}`` with matching calendar date and agenda/minutes.
+    """
+    direct = meeting_dir_for_media_file(media_path, raw_root)
+    if direct is not None:
+        return direct
+    try:
+        from meeting_date_scope import infer_meeting_date_for_file, jurisdiction_prefix_from_path
+    except ImportError:
+        infer_meeting_date_for_file = infer_meeting_date_from_path  # type: ignore
+        jurisdiction_prefix_from_path = lambda p, r: jurisdiction_prefix_from_relative(  # type: ignore
+            str(p.relative_to(r)) if p.is_relative_to(r) else ""
+        )
+
+    date_s = infer_meeting_date_for_file(media_path, raw_root)
+    if not date_s or date_s == "undated":
+        return None
+    jur = jurisdiction_prefix_from_path(media_path, raw_root)
+    if not jur:
+        return None
+    prefix = date_s.replace("-", "_") + "_meeting"
+    base = raw_root / Path(*jur.split("/")) / MEETINGS_DIRNAME
+    if not base.is_dir():
+        return None
+    candidates = [p for p in base.iterdir() if p.is_dir() and p.name.startswith(prefix)]
+    if not candidates:
+        return None
+
+    def _score(p: Path) -> Tuple[int, int, str]:
+        has_a = bool(list((p / "agenda").glob("*.pdf"))) if (p / "agenda").is_dir() else False
+        has_m = bool(list((p / "minutes").glob("*.pdf"))) if (p / "minutes").is_dir() else False
+        return (int(has_a and has_m), int(has_a or has_m), p.name)
+
+    return max(candidates, key=_score)
 
 
 def iter_meeting_dirs(raw_root: Path, jurisdiction_prefix: str) -> Iterable[Path]:
@@ -273,10 +503,20 @@ def build_meeting_collateral_brief(
     api_key: str,
     model: str,
     client: Any = None,
+    cache_path: Optional[Path] = None,
 ) -> str:
     """
-    Run text analysis on agenda + minutes PDFs; return a block to prepend to audio prompts.
+    Combine agenda + minutes PDF text → names, topics, meeting title for audio prompts.
+
+    Writes ``meeting_brief.txt`` under ``meeting_dir`` when extraction succeeds.
     """
+    if cache_path is None:
+        cache_path = meeting_dir / "meeting_brief.txt"
+    if cache_path.is_file():
+        cached = cache_path.read_text(encoding="utf-8").strip()
+        if cached:
+            return cached + "\n"
+
     agenda_text, minutes_text = _collect_pdf_texts(meeting_dir)
     if not agenda_text and not minutes_text:
         return ""
@@ -325,7 +565,12 @@ def build_meeting_collateral_brief(
         "When analyzing audio, align speaker references to these names when plausible."
     )
     lines.append("")
-    return "\n".join(lines)
+    brief = "\n".join(lines)
+    try:
+        cache_path.write_text(brief, encoding="utf-8")
+    except OSError as exc:
+        logger.warning("could not cache meeting brief: %s", exc)
+    return brief
 
 
 def _fallback_brief_from_text(agenda_text: str, minutes_text: str) -> str:

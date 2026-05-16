@@ -103,6 +103,10 @@ The triage layer:
 
 The same triage layer is exposed as **Step 0** inside `02_run_meeting_llm.ipynb`; set `GOVERNANCE_GATEKEEPER_ENABLED=0` to skip when running the notebook end-to-end.
 
+With `GOVERNANCE_ORGANIZE_MEETINGS=1` (default), kept/scoped files move under  
+`…/meetings/YYYY_MM_DD_meeting/` (or `…_meeting_2` for a second session that day) with  
+`agenda/`, `minutes/`, `collateral/`, and `audio/` subfolders. Demo 4 builds a text brief from agenda+minutes PDFs (names, topics, title) and prepends it to the audio policy prompt.
+
 ### 6) Run Gemma / LLM structured analysis — notebook **`02_run_meeting_llm.ipynb`**
 
 1. Open [`02_run_meeting_llm.ipynb`](02_run_meeting_llm.ipynb) (or the legacy [`03_run_meeting_llm.ipynb`](03_run_meeting_llm.ipynb) alias).
@@ -155,7 +159,9 @@ Scraped meetings mirror is **step 1** above ([`01_copy_scraped_meetings_cache_to
 | `GOVERNANCE_GATEKEEPER_PDF_PAGES` | First N PDF pages sent to triage (default `2`). |
 | `GOVERNANCE_GATEKEEPER_AUDIO_WINDOW` | Seconds of audio sent to triage (default `120`). |
 | `GOVERNANCE_GATEKEEPER_CONFIDENCE` | Minimum confidence to keep a file (default `0.6`). |
-| `GOVERNANCE_GATEKEEPER_MAX_FILES` | Cap total triaged files in a single sweep (unset = no cap). |
+| `GOVERNANCE_DEMO_MEETING_DATES` | In DEMO mode, keep only the last **N** meeting **dates** per jurisdiction (default **3**): pdfs, collateral, and audio with an inferred `YYYY-MM-DD`. |
+| `GOVERNANCE_DEMO_DATE_SCOPE` | Set `0` to disable date scope and fall back to count caps. |
+| `GOVERNANCE_GATEKEEPER_MAX_FILES` | Legacy count cap (newest N by mtime) when date scope is off. |
 | `GOVERNANCE_DEMO_MAX_PDFS_PER_JUR` | PDFs processed per jurisdiction in Demo 1 + 2 (default `3`). |
 | `GOVERNANCE_DEMO_MAX_PAGES_PER_PDF` | Pages processed per PDF in Demo 2 (default `8`). |
 | `GOVERNANCE_DEMO_MAX_AUDIO_PER_JUR` | Audio files processed per jurisdiction in Demo 4 (default `1`). |

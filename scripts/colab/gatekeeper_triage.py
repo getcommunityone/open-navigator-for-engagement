@@ -1073,6 +1073,77 @@ def count_triageable_files(
     return sum(1 for _ in iter_triageable_files(raw_root, kinds=kinds))
 
 
+def _triage_recency_key(path: Path) -> tuple[float, int, str]:
+    """Sort key: newest mtime first, then calendar folder year, then path."""
+    try:
+        mtime = path.stat().st_mtime
+    except OSError:
+        mtime = 0.0
+    year = 0
+    for part in path.parts:
+        if len(part) == 4 and part.isdigit() and part.startswith("20"):
+            year = max(year, int(part))
+    return (mtime, year, path.as_posix())
+
+
+def resolve_gatekeeper_max_files(explicit: Optional[int] = None) -> Optional[int]:
+    """
+    Legacy **count** cap (used only when date scope is off).
+
+    Prefer :func:`meeting_date_scope.resolve_demo_meeting_dates_limit` in DEMO mode.
+    """
+    if explicit is not None:
+        return explicit if explicit > 0 else None
+    env = os.environ.get("GOVERNANCE_GATEKEEPER_MAX_FILES", "").strip()
+    if env:
+        n = int(env)
+        return n if n > 0 else None
+    return None
+
+
+def select_triageable_files(
+    raw_root: Path,
+    *,
+    kinds: Iterable[str] = ("pdf", "audio"),
+    max_files: Optional[int] = None,
+    max_meeting_dates: Optional[int] = None,
+) -> tuple[list[Path], int, Optional[dict]]:
+    """
+    Choose Gatekeeper inputs.
+
+    When date scope is enabled (DEMO default: last **3** meeting dates per
+    jurisdiction, pdf + audio + collateral only), see
+    :mod:`meeting_date_scope`.
+
+    Otherwise applies optional **count** cap (newest N by mtime).
+
+    Returns ``(selected_paths, total_walk_candidates, allowed_dates_by_jurisdiction)``.
+    """
+    paths = list(iter_triageable_files(raw_root, kinds=kinds))
+    total = len(paths)
+
+    try:
+        from meeting_date_scope import (
+            filter_paths_by_recent_meeting_dates,
+            resolve_demo_meeting_dates_limit,
+        )
+
+        date_cap = resolve_demo_meeting_dates_limit(max_meeting_dates)
+        if date_cap is not None:
+            selected, _media_total, allowed = filter_paths_by_recent_meeting_dates(
+                paths, raw_root, max_dates=date_cap
+            )
+            return selected, total, allowed
+    except ImportError:
+        pass
+
+    paths.sort(key=_triage_recency_key)
+    cap = resolve_gatekeeper_max_files(max_files)
+    if cap is not None and len(paths) > cap:
+        paths = paths[-cap:]
+    return paths, total, None
+
+
 def iter_triageable_files(
     raw_root: Path, *, kinds: Iterable[str] = ("pdf", "audio")
 ) -> Iterable[Path]:
@@ -1197,19 +1268,48 @@ def run_triage(
 
     report = TriageReport(raw_root=str(raw_root), excluded_root=str(excluded_root))
 
+    try:
+        from meeting_date_scope import resolve_demo_meeting_dates_limit
+    except ImportError:
+        resolve_demo_meeting_dates_limit = lambda _=None: None  # type: ignore
+
+    date_cap = resolve_demo_meeting_dates_limit()
+    count_cap = resolve_gatekeeper_max_files(max_files)
+    triage_paths, total_candidates, allowed_dates = select_triageable_files(
+        raw_root, kinds=kinds, max_files=max_files
+    )
+    if allowed_dates:
+        logger.info(
+            "Gatekeeper date scope | candidates=%d | triaging=%d | last %d meeting date(s) per jurisdiction",
+            total_candidates,
+            len(triage_paths),
+            date_cap or 0,
+        )
+        for jur, dates in sorted(allowed_dates.items()):
+            logger.info("  %s → %s", jur, ", ".join(sorted(dates)))
+        for p in triage_paths[:20]:
+            rel, _ = relative_geography(p, raw_root)
+            logger.info("  selected: %s", rel)
+        if len(triage_paths) > 20:
+            logger.info("  … and %d more", len(triage_paths) - 20)
+    elif count_cap is not None and total_candidates > count_cap:
+        logger.info(
+            "Gatekeeper file selection | candidates=%d | triaging_newest=%d",
+            total_candidates,
+            len(triage_paths),
+        )
+        for p in triage_paths:
+            rel, _ = relative_geography(p, raw_root)
+            logger.info("  selected (newest): %s", rel)
+
     processed = 0
-    for path in iter_triageable_files(raw_root, kinds=kinds):
-        if max_files is not None and processed >= max_files:
-            logger.info("Reached --max-files=%d, stopping.", max_files)
-            if progress_stdout:
-                logger.info("Gatekeeper: reached max_files=%d, stopping.", max_files)
-            break
+    for path in triage_paths:
         processed += 1
         ext = path.suffix.lower()
         rel_str, geo = relative_geography(path, raw_root)
         if progress_stdout:
-            cap = f"/{max_files}" if max_files is not None else ""
-            logger.info("[Gatekeeper %d%s] %s", processed, cap, rel_str)
+            cap_label = f"/{len(triage_paths)}" if triage_paths else ""
+            logger.info("[Gatekeeper %d%s] %s", processed, cap_label, rel_str)
 
         try:
             if ext in PDF_EXTS:
