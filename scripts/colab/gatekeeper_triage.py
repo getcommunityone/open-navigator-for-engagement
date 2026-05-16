@@ -39,6 +39,7 @@ CLI::
 from __future__ import annotations
 
 import argparse
+from contextlib import contextmanager
 import json
 import logging
 import os
@@ -95,9 +96,47 @@ DEFAULT_MODEL = _default_gatekeeper_model()
 
 # Triage cost / latency caps.
 DEFAULT_AUDIO_WINDOW_SECONDS = 120          # send only the first N seconds for triage
-DEFAULT_PDF_PAGES = 2                       # first N PDF pages → image bytes
-DEFAULT_PDF_DPI = 200
+MAX_GATEKEEPER_PDF_PAGES = 2                # triage never reads more than 2 pages
+DEFAULT_PDF_PAGES = 1                       # fast default; set env to 2 if needed
+DEFAULT_PDF_DPI = 120                       # gatekeeper only (demos use 200)
+DEFAULT_LARGE_PDF_BYTES = 1_500_000          # above this: 1 page @ 120 DPI on /tmp copy
+
 DEFAULT_TRIAGE_MAX_OUTPUT_TOKENS = 512      # strict JSON only — keep cheap
+
+
+def clamp_gatekeeper_pdf_pages(pages: int) -> int:
+    """Gatekeeper triage: page 1 only, or pages 1–2 at most."""
+    return max(1, min(int(pages), MAX_GATEKEEPER_PDF_PAGES))
+
+
+def resolve_gatekeeper_render_opts(
+    pdf_path: Path, pages: int, dpi: int
+) -> tuple[int, int]:
+    """
+    Triage render settings. Large files on Drive get **1 page @ 120 DPI** by default.
+    """
+    pages = clamp_gatekeeper_pdf_pages(pages)
+    dpi = max(72, int(dpi))
+    threshold = int(
+        os.environ.get("GOVERNANCE_GATEKEEPER_LARGE_PDF_BYTES", str(DEFAULT_LARGE_PDF_BYTES))
+    )
+    try:
+        size = pdf_path.stat().st_size
+    except OSError:
+        return pages, dpi
+    if size < threshold:
+        return pages, dpi
+    large_pages = clamp_gatekeeper_pdf_pages(
+        int(os.environ.get("GOVERNANCE_GATEKEEPER_LARGE_PDF_PAGES", "1"))
+    )
+    large_dpi = int(os.environ.get("GOVERNANCE_GATEKEEPER_LARGE_PDF_DPI", str(DEFAULT_PDF_DPI)))
+    logger.info(
+        "  large PDF %.1f MB → triage page 1-%d @ %d DPI (not full document)",
+        size / (1024 * 1024),
+        large_pages,
+        large_dpi,
+    )
+    return min(pages, large_pages), min(dpi, large_dpi)
 DEFAULT_CONFIDENCE_THRESHOLD = 0.6
 
 # Triage JSON schema (also enforced via response_schema where the SDK supports it).
@@ -359,43 +398,92 @@ def clip_audio_window(audio_path: Path, seconds: int, out_path: Path) -> Path:
 
 
 # ─────────────────────────────────────────────────────────────
-# PDF → first-N-pages PNG bytes (pdf2image)
+# PDF → first-N-pages PNG bytes (PyMuPDF preferred)
 # ─────────────────────────────────────────────────────────────
+
+
+@contextmanager
+def _local_pdf_copy(pdf_path: Path):
+    """
+    Copy PDF to Colab ``/tmp`` when source is on Drive FUSE (random reads are very slow).
+    """
+    pdf_path = pdf_path.resolve()
+    use_tmp = os.environ.get("GOVERNANCE_GATEKEEPER_COPY_TO_TMP", "1").strip().lower() not in (
+        "0",
+        "false",
+        "no",
+    )
+    on_drive = "/content/drive" in pdf_path.as_posix()
+    if not use_tmp or not on_drive or not pdf_path.is_file():
+        yield pdf_path
+        return
+    size_mb = pdf_path.stat().st_size / (1024 * 1024)
+    logger.info("  copying %.1f MB to /tmp for fast page-1 render …", size_mb)
+    flush_gatekeeper_logs()
+    fd, tmp_name = tempfile.mkstemp(suffix=pdf_path.suffix or ".pdf")
+    os.close(fd)
+    tmp_path = Path(tmp_name)
+    try:
+        shutil.copy2(pdf_path, tmp_path)
+        logger.info("  copy done → %s", tmp_path)
+        flush_gatekeeper_logs()
+        yield tmp_path
+    finally:
+        tmp_path.unlink(missing_ok=True)
 
 
 def pdf_first_pages_to_png_bytes(
     pdf_path: Path, *, pages: int = DEFAULT_PDF_PAGES, dpi: int = DEFAULT_PDF_DPI
 ) -> List[bytes]:
     """
-    Convert the first ``pages`` pages of ``pdf_path`` to in-memory PNG bytes via
-    ``pdf2image``. Requires the ``poppler`` system package and the ``pdf2image``
-    Python wheel.
-    """
-    try:
-        from pdf2image import convert_from_path  # type: ignore
-    except ImportError as exc:
-        raise RuntimeError(
-            "pdf2image is required for PDF triage. Install with "
-            "`pip install pdf2image` and ensure poppler is on PATH "
-            "(Colab: pre-installed; Debian/Ubuntu: apt-get install -y poppler-utils; "
-            "macOS: brew install poppler)."
-        ) from exc
+    Convert **only** the first 1–2 pages of ``pdf_path`` to PNG bytes.
 
+    Uses PyMuPDF when available; copies to ``/tmp`` first on Colab Drive paths.
+    """
     import io
 
-    imgs = convert_from_path(
-        str(pdf_path),
-        dpi=dpi,
-        first_page=1,
-        last_page=max(1, int(pages)),
-        fmt="png",
-    )
-    out: List[bytes] = []
-    for im in imgs:
-        buf = io.BytesIO()
-        im.save(buf, format="PNG")
-        out.append(buf.getvalue())
-    return out
+    pages, dpi = resolve_gatekeeper_render_opts(pdf_path, pages, dpi)
+    n_pages = pages
+
+    with _local_pdf_copy(pdf_path) as local_pdf:
+        try:
+            import fitz  # PyMuPDF — Colab notebook installs this
+
+            out: List[bytes] = []
+            zoom = dpi / 72.0
+            matrix = fitz.Matrix(zoom, zoom)
+            with fitz.open(local_pdf) as doc:
+                for i in range(min(n_pages, doc.page_count)):
+                    pix = doc.load_page(i).get_pixmap(matrix=matrix, alpha=False)
+                    out.append(pix.tobytes("png"))
+            if out:
+                return out
+        except ImportError:
+            pass
+        except Exception as exc:
+            logger.warning("PyMuPDF first-pages render failed (%s); trying pdf2image", exc)
+
+        try:
+            from pdf2image import convert_from_path  # type: ignore
+        except ImportError as exc:
+            raise RuntimeError(
+                "PDF triage needs pymupdf or pdf2image+poppler. "
+                "`pip install pymupdf pdf2image` and apt-get install -y poppler-utils."
+            ) from exc
+
+        imgs = convert_from_path(
+            str(local_pdf),
+            dpi=dpi,
+            first_page=1,
+            last_page=n_pages,
+            fmt="png",
+        )
+        out = []
+        for im in imgs[:n_pages]:
+            buf = io.BytesIO()
+            im.save(buf, format="PNG")
+            out.append(buf.getvalue())
+        return out
 
 
 # ─────────────────────────────────────────────────────────────
@@ -919,8 +1007,14 @@ def triage_pdf(
         relative_path=rel_str,
         geography_label=geo,
     )
+    pages, dpi = resolve_gatekeeper_render_opts(pdf_path, pages, dpi)
     t0 = time.time()
-    logger.info("  pdf2image START | %s | pages=%d dpi=%d", pdf_path.name, pages, dpi)
+    logger.info(
+        "  render START | %s | pages 1-%d only | dpi=%d",
+        pdf_path.name,
+        pages,
+        dpi,
+    )
     flush_gatekeeper_logs()
     try:
         page_bytes = pdf_first_pages_to_png_bytes(pdf_path, pages=pages, dpi=dpi)
@@ -1243,6 +1337,13 @@ def run_triage(
         logger.info("(dry-run: no files will be moved)")
 
     kinds_tuple = tuple(k.strip().lower() for k in kinds if str(k).strip())
+    pdf_pages = clamp_gatekeeper_pdf_pages(pdf_pages)
+    logger.info(
+        "Gatekeeper PDF triage | first %d page(s) per file at %d DPI (max %d)",
+        pdf_pages,
+        pdf_dpi,
+        MAX_GATEKEEPER_PDF_PAGES,
+    )
 
     try:
         from gemma_hf_backend import (

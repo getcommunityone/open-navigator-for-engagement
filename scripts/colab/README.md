@@ -156,7 +156,7 @@ Scraped meetings mirror is **step 1** above ([`01_copy_scraped_meetings_cache_to
 | `GOVERNANCE_GATEKEEPER_ENABLED` | `0` to skip the triage step inside the notebook. |
 | `GOVERNANCE_GATEKEEPER_DRY_RUN` | `1` to log triage verdicts without moving files. |
 | `GOVERNANCE_GATEKEEPER_KINDS` | Comma-separated kinds — `pdf`, `audio`, or both (default both). |
-| `GOVERNANCE_GATEKEEPER_PDF_PAGES` | First N PDF pages sent to triage (default `2`). |
+| `GOVERNANCE_GATEKEEPER_PDF_PAGES` | First **1–2** pages only for PDF triage (hard cap `2`; default `2`). Uses PyMuPDF on Colab when available. |
 | `GOVERNANCE_GATEKEEPER_AUDIO_WINDOW` | Seconds of audio sent to triage (default `120`). |
 | `GOVERNANCE_GATEKEEPER_CONFIDENCE` | Minimum confidence to keep a file (default `0.6`). |
 | `GOVERNANCE_DEMO_MEETING_DATES` | In DEMO mode, keep only the last **N** meeting **dates** per jurisdiction (default **3**): pdfs, collateral, and audio with an inferred `YYYY-MM-DD`. |
