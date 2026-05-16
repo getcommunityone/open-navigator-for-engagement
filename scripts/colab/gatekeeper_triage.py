@@ -294,13 +294,14 @@ def _build_genai_client(api_key: str):
 
 
 # Fallback chain used when the requested model id returns 404 NOT_FOUND.
-# Ordered roughly cheapest → heaviest; we keep Gemma 4 / Gemma 3n / Gemma 3
-# aliases since AI Studio projects roll out the Gemma 4 family unevenly.
+# Ordered cheapest → heaviest. The only Gemma 4 ids AI Studio currently serves
+# via the public API are the 26B MoE and 31B dense checkpoints; the E2B/E4B
+# "effective N" edge models are documented on the model card but not yet
+# exposed as endpoints. We still keep Gemma 3 aliases at the tail for older
+# accounts whose projects haven't been migrated to Gemma 4 yet.
 _GEMMA_TRIAGE_FALLBACKS = (
-    "gemma-4-e4b-it",
-    "gemma-4-e2b-it",
-    "gemma-4n-e4b-it",
-    "gemma-4n-e2b-it",
+    "gemma-4-26b-a4b-it",
+    "gemma-4-31b-it",
     "gemma-3n-e4b-it",
     "gemma-3n-e2b-it",
     "gemma-3-4b-it",
@@ -309,7 +310,6 @@ _GEMMA_TRIAGE_FALLBACKS = (
 _GEMMA_HEAVY_FALLBACKS = (
     "gemma-4-26b-a4b-it",
     "gemma-4-31b-it",
-    "gemma-4-12b-it",
     "gemma-3-27b-it",
     "gemma-3-12b-it",
 )
