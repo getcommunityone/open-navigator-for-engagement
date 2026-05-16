@@ -154,6 +154,7 @@ Scraped meetings mirror is **step 1** above ([`01_copy_scraped_meetings_cache_to
 | `GOVERNANCE_RAW_INPUTS_ROOT` | Override the `01_raw_inputs/` location for the run notebook + Gatekeeper. |
 | `GOVERNANCE_GENAI_MODEL` | Gemma 4 model for demos 1–5 (default `gemma-4-26b-a4b-it` on AI Studio). |
 | `GOVERNANCE_GATEKEEPER_MODEL` | Cheaper Gemma for Gatekeeper triage only (default `gemma-4-e2b-it`; falls back via `models.list()`). |
+| `GOVERNANCE_GATEKEEPER_API_TIMEOUT_SECONDS` | Per-file Gemma triage timeout (default `120`). |
 | `GOVERNANCE_GATEKEEPER_ENABLED` | `0` to skip the triage step inside the notebook. |
 | `GOVERNANCE_GATEKEEPER_DRY_RUN` | `1` to log triage verdicts without moving files. |
 | `GOVERNANCE_GATEKEEPER_KINDS` | Comma-separated kinds — `pdf`, `audio`, or both (default both). |

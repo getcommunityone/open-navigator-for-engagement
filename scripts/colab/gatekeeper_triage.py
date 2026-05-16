@@ -728,7 +728,7 @@ def resolve_model_id(
             print("  (no Gemma ids returned — enable Gemma access in AI Studio)")
         print()
     else:
-        logger.warning("%s", msg)
+        logger.info("%s", msg)
 
     # Don't re-try the requested id in the fallback walk.
     tried = [requested]
@@ -737,8 +737,8 @@ def resolve_model_id(
             continue
         tried.append(candidate)
         if candidate in available_set:
-            logger.warning(
-                "%s id %r not available on this API key — falling back to %r.",
+            logger.info(
+                "%s: %r not on this API key — using %r (first listed fallback).",
                 role, requested, candidate,
             )
             return candidate
@@ -836,24 +836,36 @@ def call_gemma_triage(
                 # Older SDKs accept only include_thoughts; safe to omit.
                 pass
 
-    request_options: dict = {}
-    if timeout_seconds:
-        request_options["timeout"] = timeout_seconds * 1000  # SDK expects ms
+    def _generate() -> Any:
+        request_options: dict = {}
+        if timeout_seconds:
+            request_options["timeout"] = timeout_seconds * 1000  # SDK expects ms
+        try:
+            return client.models.generate_content(
+                model=model,
+                contents=[types.Content(role="user", parts=parts)],
+                config=types.GenerateContentConfig(**config_kwargs),
+                **({"request_options": request_options} if request_options else {}),
+            )
+        except TypeError:
+            # `request_options` kwarg not accepted by this SDK version — retry without.
+            return client.models.generate_content(
+                model=model,
+                contents=[types.Content(role="user", parts=parts)],
+                config=types.GenerateContentConfig(**config_kwargs),
+            )
 
-    try:
-        response = client.models.generate_content(
-            model=model,
-            contents=[types.Content(role="user", parts=parts)],
-            config=types.GenerateContentConfig(**config_kwargs),
-            **({"request_options": request_options} if request_options else {}),
-        )
-    except TypeError:
-        # `request_options` kwarg not accepted by this SDK version — retry without.
-        response = client.models.generate_content(
-            model=model,
-            contents=[types.Content(role="user", parts=parts)],
-            config=types.GenerateContentConfig(**config_kwargs),
-        )
+    from concurrent.futures import ThreadPoolExecutor, TimeoutError as FuturesTimeoutError
+
+    with ThreadPoolExecutor(max_workers=1) as pool:
+        future = pool.submit(_generate)
+        try:
+            response = future.result(timeout=timeout_seconds or None)
+        except FuturesTimeoutError as exc:
+            raise TimeoutError(
+                f"Gemma triage timed out after {timeout_seconds}s (model={model!r}). "
+                "Try GOVERNANCE_GATEKEEPER_MODEL=gemma-3n-e2b-it or a smaller listed id."
+            ) from exc
 
     raw_bits: List[str] = []
     for cand in getattr(response, "candidates", None) or []:
@@ -1094,6 +1106,14 @@ def triage_pdf(
                 len(excerpt),
                 pages,
             )
+            _timeout = int(
+                os.environ.get("GOVERNANCE_GATEKEEPER_API_TIMEOUT_SECONDS", "120")
+            )
+            logger.info(
+                "  gemma START (text-only) | model=%s | timeout=%ds — first call can take 1-3 min",
+                model,
+                _timeout,
+            )
             flush_gatekeeper_logs()
             try:
                 parsed, raw = call_gemma_triage(
@@ -1104,11 +1124,18 @@ def triage_pdf(
                     media=[],
                     media_resolution_high=False,
                     thinking_budget=0,
+                    timeout_seconds=_timeout,
                 )
             except Exception as e:
                 verdict.error = f"Gemma text triage failed: {e}"
                 verdict.elapsed_seconds = round(time.time() - t0, 2)
                 return verdict
+            logger.info(
+                "  gemma DONE (text-only) | %s | %.1fs",
+                pdf_path.name,
+                time.time() - t0,
+            )
+            flush_gatekeeper_logs()
             return _fill_verdict_from_triage_call(verdict, pdf_path, parsed, raw, t0)
         logger.info(
             "  page text too short (%d chars) → visual render | %s",
@@ -1137,7 +1164,14 @@ def triage_pdf(
         return verdict
 
     media = [(b, "image/png") for b in page_bytes]
-    logger.info("  gemma START | %s | %d page image(s)", pdf_path.name, len(page_bytes))
+    _timeout = int(os.environ.get("GOVERNANCE_GATEKEEPER_API_TIMEOUT_SECONDS", "120"))
+    logger.info(
+        "  gemma START (visual) | %s | %d page image(s) | model=%s | timeout=%ds",
+        pdf_path.name,
+        len(page_bytes),
+        model,
+        _timeout,
+    )
     flush_gatekeeper_logs()
     try:
         parsed, raw = call_gemma_triage(
@@ -1148,12 +1182,19 @@ def triage_pdf(
             media=media,
             media_resolution_high=True,
             thinking_budget=0,
+            timeout_seconds=_timeout,
         )
     except Exception as e:
         verdict.error = f"Gemma triage call failed: {e}"
         verdict.elapsed_seconds = round(time.time() - t0, 2)
         return verdict
 
+    logger.info(
+        "  gemma DONE (visual) | %s | %.1fs",
+        pdf_path.name,
+        time.time() - t0,
+    )
+    flush_gatekeeper_logs()
     return _fill_verdict_from_triage_call(verdict, pdf_path, parsed, raw, t0)
 
 
@@ -1205,6 +1246,14 @@ def triage_audio(
             return verdict
 
         media = [(audio_bytes, "audio/mpeg")]
+        _timeout = int(os.environ.get("GOVERNANCE_GATEKEEPER_API_TIMEOUT_SECONDS", "120"))
+        logger.info(
+            "  gemma START (audio) | %s | model=%s | timeout=%ds",
+            audio_path.name,
+            model,
+            _timeout,
+        )
+        flush_gatekeeper_logs()
         try:
             parsed, raw = call_gemma_triage(
                 client=client,
@@ -1214,11 +1263,19 @@ def triage_audio(
                 media=media,
                 media_resolution_high=False,  # audio is unaffected by image media_resolution
                 thinking_budget=0,
+                timeout_seconds=_timeout,
             )
         except Exception as e:
             verdict.error = f"Gemma triage call failed: {e}"
             verdict.elapsed_seconds = round(time.time() - t0, 2)
             return verdict
+
+        logger.info(
+            "  gemma DONE (audio) | %s | %.1fs",
+            audio_path.name,
+            time.time() - t0,
+        )
+        flush_gatekeeper_logs()
 
         is_m, doc_type, conf, reason = _verdict_from_json(parsed)
         verdict.is_governance_meeting = is_m
