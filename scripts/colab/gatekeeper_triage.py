@@ -582,6 +582,15 @@ _GEMMA_TRIAGE_FALLBACKS = (
     "gemma-3-4b-it",
     "gemma-3-12b-it",
 )
+# Gatekeeper on AI Studio: do not fall back to 26B/31B MoE (slow for yes/no triage).
+_GEMMA_GATEKEEPER_AI_FALLBACKS = (
+    "gemma-3n-e2b-it",
+    "gemma-4-e2b-it",
+    "gemma-4-e4b-it",
+    "gemma-3n-e4b-it",
+    "gemma-3-4b-it",
+    "gemma-3-12b-it",
+)
 _GEMMA_HEAVY_FALLBACKS = (
     "gemma-4-26b-a4b-it",
     "gemma-4-31b-it",
@@ -1588,7 +1597,12 @@ def run_triage(
         # converts a 404 NOT_FOUND (e.g. "gemma-4-e4b-it" on a project that only
         # serves gemma-3n / gemma-3) into either a working fallback or a clear
         # error listing the Gemma ids the project actually has.
-        model = resolve_model_id(client, model, role="Gatekeeper triage model")
+        model = resolve_model_id(
+            client,
+            model,
+            fallbacks=_GEMMA_GATEKEEPER_AI_FALLBACKS,
+            role="Gatekeeper triage model",
+        )
     logger.info("Gatekeeper resolved model | model=%s", model)
 
     report = TriageReport(raw_root=str(raw_root), excluded_root=str(excluded_root))
