@@ -114,6 +114,15 @@ logger = logging.getLogger("gatekeeper")
 _log_file_handle: Optional[Any] = None
 
 
+def log_llm_catalog_enabled() -> bool:
+    """When false (default), skip verbose ``models.list()`` / HF repo catalog output."""
+    return os.environ.get("GOVERNANCE_LOG_LLM_CATALOG", "0").strip().lower() in (
+        "1",
+        "true",
+        "yes",
+    )
+
+
 class _FlushingStreamHandler(logging.StreamHandler):
     """``StreamHandler`` that flushes the underlying stream after every log record."""
 
@@ -564,15 +573,19 @@ def resolve_model_id(
         return requested
 
     gemma_ids = sorted(i for i in available if "gemma" in i.lower())
-    print(
-        f"\n── {role}: {requested!r} not in models.list() — Gemma ids on this key ──"
+    msg = (
+        f"{role}: {requested!r} not in models.list() — Gemma ids on this key: "
+        f"{gemma_ids or '(none)'}; fallback order: {list(fallbacks)}"
     )
-    if gemma_ids:
+    if log_llm_catalog_enabled():
+        print(f"\n── {msg} ──")
         for gid in gemma_ids:
             print(f"  {gid}")
+        if not gemma_ids:
+            print("  (no Gemma ids returned — enable Gemma access in AI Studio)")
+        print()
     else:
-        print("  (no Gemma ids returned — enable Gemma access in AI Studio)")
-    print(f"  Fallback order: {list(fallbacks)}\n")
+        logger.warning("%s", msg)
 
     # Don't re-try the requested id in the fallback walk.
     tried = [requested]
@@ -1099,7 +1112,8 @@ def run_triage(
         use_huggingface = lambda: False  # type: ignore[assignment]
 
     if use_huggingface():
-        print_hf_model_catalog(requested=(model,), role="Gatekeeper (Hugging Face)")
+        if log_llm_catalog_enabled():
+            print_hf_model_catalog(requested=(model,), role="Gatekeeper (Hugging Face)")
         model = resolve_hf_model_id(model)
         if preload_models:
             ensure_hf_ready_for_triage(model, kinds=kinds_tuple, skip_if_cached=True)
@@ -1114,8 +1128,8 @@ def run_triage(
         client = None
     else:
         client = _build_genai_client(api_key)
-        # Show the live model list before any fallback so notebook / CLI runs are auditable.
-        print_available_models(client, requested=(model,), role="Gatekeeper triage")
+        if log_llm_catalog_enabled():
+            print_available_models(client, requested=(model,), role="Gatekeeper triage")
         # Resolve the requested model against the SDK's actual model list. This
         # converts a 404 NOT_FOUND (e.g. "gemma-4-e4b-it" on a project that only
         # serves gemma-3n / gemma-3) into either a working fallback or a clear
