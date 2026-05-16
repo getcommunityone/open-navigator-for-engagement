@@ -1,7 +1,9 @@
 """
 Detect people-style profile images in HTML, score “person + photo” pages, and download images.
 
-Filenames use the person’s name in lower snake_case (ASCII-folded); if missing, the title/role.
+Saved files use the contact’s name in lower snake_case. If the name is missing or not usable,
+the first file is ``unknown``, then ``unknown_2``, ``unknown_3``, and so on. Job rows still carry
+``title_or_role`` for context, but titles are not used in the filename.
 """
 
 from __future__ import annotations
@@ -49,24 +51,21 @@ _NON_PERSON_PHOTO_SUBJECT_RE = re.compile(
 )
 
 
-def person_image_filename_stem(person_name: Optional[str], title_or_role: Optional[str]) -> str:
+def contact_profile_image_stem_from_name(person_name: Optional[str]) -> Optional[str]:
     """
-    Lower snake_case stem for a saved image file (no extension).
+    Lower snake_case stem from the contact’s **name** only (no extension).
 
-    Uses ``person_name`` when it looks like a real label; otherwise ``title_or_role``;
-    otherwise ``unknown_contact``.
+    Returns ``None`` when there is no usable person name (caller saves as ``unknown``, ``unknown_2``, …).
     """
     raw = (person_name or "").strip()
     if len(raw) < 2 or not _NAMEISH.search(raw):
-        raw = (title_or_role or "").strip()
-    if len(raw) < 2:
-        raw = "unknown_contact"
+        return None
     nfkd = unicodedata.normalize("NFKD", raw)
     ascii_fold = nfkd.encode("ascii", "ignore").decode("ascii").lower()
     s = re.sub(r"[^a-z0-9]+", "_", ascii_fold)
     s = re.sub(r"_+", "_", s).strip("_")
     if not s:
-        s = "unknown_contact"
+        return None
     return s[:120]
 
 
@@ -144,6 +143,33 @@ def _profile_image_url_is_brand_or_chrome(url: str) -> bool:
     if re.search(r"\b(logo|wordmark|lockup|site-logo|header-logo)\b", base, re.I):
         return True
     return False
+
+
+def _img_looks_oversized_decorative(img: Any) -> bool:
+    """Skip site logos, group commission photos, and other non-headshot assets."""
+    try:
+        w = int(str(img.get("width") or "0"))
+        h = int(str(img.get("height") or "0"))
+    except ValueError:
+        w, h = 0, 0
+    if w >= 900 or h >= 900:
+        return True
+    u = (img.get("src") or img.get("data-src") or "").lower()
+    if any(tok in u for tok in ("commission_2024", "fbog_v01", "tuscco-logo", "favicon")):
+        return True
+    return False
+
+
+def _name_from_portrait_url(url: str) -> str:
+    """``stan-acker.webp`` → ``Stan Acker`` when the page has no ``h3``."""
+    base = (urlparse(url).path or "").rsplit("/", 1)[-1]
+    stem = base.rsplit(".", 1)[0] if "." in base else base
+    if not stem or stem.isdigit() or len(stem) < 4:
+        return ""
+    parts = [p for p in re.split(r"[-_]+", stem) if p and p.isalpha()]
+    if len(parts) < 2:
+        return ""
+    return " ".join(p.title() for p in parts)
 
 
 def _label_is_non_person_photo_subject(name: Optional[str], title: Optional[str]) -> bool:
@@ -281,6 +307,46 @@ def extract_profile_image_jobs(html: str, page_url: str, *, max_jobs: int = 80) 
         except (json.JSONDecodeError, TypeError, ValueError):
             continue
         _json_ld_collect_person_images(data, page_url, out, seen_url, max_jobs=max_jobs)
+
+    from scripts.discovery.contact_extract_from_html import (
+        _iter_elementor_official_bands,
+        _parse_elementor_official_band,
+    )
+
+    for band in _iter_elementor_official_bands(soup):
+        if len(out) >= max_jobs:
+            break
+        if not band.select(".elementor-widget-image img"):
+            continue
+        row = _parse_elementor_official_band(band)
+        if not row:
+            continue
+        name_guess = (row.get("person_name") or "").strip() or None
+        title_guess = (row.get("title_or_role") or "").strip() or None
+        for img in band.select(".elementor-widget-image img"):
+            if len(out) >= max_jobs:
+                break
+            if _img_looks_oversized_decorative(img):
+                continue
+            abs_u = img_best_abs_url(img, page_url)
+            if not abs_u or abs_u in seen_url or _SKIP_IMG_HOST.search(abs_u):
+                continue
+            if _profile_image_url_is_brand_or_chrome(abs_u):
+                continue
+            pname = name_guess or _name_from_portrait_url(abs_u)
+            if not pname and not title_guess:
+                continue
+            if _label_is_non_person_photo_subject(pname, title_guess):
+                continue
+            seen_url.add(abs_u)
+            out.append(
+                {
+                    "person_name": pname,
+                    "title_or_role": title_guess,
+                    "image_url": abs_u,
+                    "match_method": "elementor_official_row",
+                }
+            )
 
     for img in soup.find_all("img"):
         if len(out) >= max_jobs:
@@ -524,6 +590,33 @@ def _name_title_from_img_context(img: Any) -> Tuple[str, str]:
     return "", ""
 
 
+def normalize_profile_image_file_to_png(path: Path) -> str:
+    """
+    Ensure a saved profile image is PNG. Converts WebP, JPEG, GIF, etc. in place (deletes source).
+
+    Returns the final basename (always ``*.png`` when conversion succeeds).
+    """
+    if path.suffix.lower() == ".png":
+        return path.name
+    from PIL import Image
+
+    dest = path.with_suffix(".png")
+    with Image.open(path) as im:
+        im.load()
+        if im.mode in ("RGBA", "LA"):
+            pass
+        elif im.mode == "P" and "transparency" in im.info:
+            im = im.convert("RGBA")
+        else:
+            im = im.convert("RGB")
+        im.save(dest, format="PNG", optimize=True)
+    try:
+        path.unlink(missing_ok=True)
+    except OSError:
+        pass
+    return dest.name
+
+
 def _extension_from_response(url: str, content_type: str, body: bytes) -> str:
     ct = (content_type or "").lower()
     if "png" in ct:
@@ -557,14 +650,19 @@ async def download_profile_images(
     referer: str,
     max_images: int = 48,
     max_bytes: int = 6_000_000,
+    save_as_png: bool = True,
 ) -> List[Dict[str, Any]]:
     """
-    GET each ``image_url``; write ``{stem}{ext}`` under ``out_dir`` (stem from
-    :func:`person_image_filename_stem`). Returns manifest rows with ``saved_relative_path`` or ``error``.
+    GET each ``image_url``; write ``{stem}{ext}`` under ``out_dir``. Named contacts use
+    :func:`contact_profile_image_stem_from_name`; duplicates get ``_2``, ``_3``, ….
+    Contacts with no usable name use ``unknown``, then ``unknown_2``, ``unknown_3``, ….
+
+    Returns manifest rows with ``saved_filename`` or ``error``.
     """
     out_dir.mkdir(parents=True, exist_ok=True)
     results: List[Dict[str, Any]] = []
     stem_counts: Dict[str, int] = {}
+    unnamed_seq = 0
     n_ok = 0
     for job in jobs:
         if n_ok >= max_images:
@@ -572,10 +670,15 @@ async def download_profile_images(
         url = str(job.get("image_url") or "").strip()
         if not url:
             continue
-        stem_base = person_image_filename_stem(job.get("person_name"), job.get("title_or_role"))
-        n = stem_counts.get(stem_base, 0) + 1
-        stem_counts[stem_base] = n
-        stem = stem_base if n == 1 else f"{stem_base}_{n}"
+        named_stem = contact_profile_image_stem_from_name(job.get("person_name"))
+        if named_stem is None:
+            unnamed_seq += 1
+            stem = "unknown" if unnamed_seq == 1 else f"unknown_{unnamed_seq}"
+        else:
+            stem_base = named_stem
+            n = stem_counts.get(stem_base, 0) + 1
+            stem_counts[stem_base] = n
+            stem = stem_base if n == 1 else f"{stem_base}_{n}"
         try:
             r = await client.get(
                 url,
@@ -606,10 +709,16 @@ async def download_profile_images(
         dest = out_dir / f"{stem}{ext}"
         try:
             dest.write_bytes(body)
+            if save_as_png:
+                rel = normalize_profile_image_file_to_png(dest)
+            else:
+                rel = dest.name
         except OSError as exc:
             results.append({"image_url": url, "error": f"write:{exc!r}", "person_stem": stem})
             continue
-        rel = dest.name
+        except Exception as exc:
+            results.append({"image_url": url, "error": f"png_convert:{exc!r}", "person_stem": stem})
+            continue
         results.append(
             {
                 "image_url": url,

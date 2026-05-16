@@ -12,11 +12,12 @@ Pipeline folder layout under that root: [`scripts/utils/gdrive_paths.py`](../uti
 |---|------|------|----------------|
 | 1 | [`01_copy_scraped_meetings_cache_to_gdrive.py`](01_copy_scraped_meetings_cache_to_gdrive.py) | **Sync** | WSL / Linux: by default copies **only** four inventory folders under ``data/cache/scraped_meetings`` (Tuscaloosa county/city + Big Timber county/city) → ``My Drive/CommunityOne/hackathons/2026_Gemma_4_Good/01_raw_inputs``. Use ``--all-cache`` for the full tree. |
 | 2 | [`01_init_drive_layout.ipynb`](01_init_drive_layout.ipynb) | **Init** | Create `01_raw_inputs`, `02_reference_data/orbis_files`, `03_processed_outputs/…` → zone README stubs. **Colab or local** via `colab_paths.py`. |
-| 3 | [`02_run_meeting_llm.ipynb`](02_run_meeting_llm.ipynb) | **Run** | Load `prompts/policy_analysis.md` + transcript → remote LLM → JSON / summaries. **Colab or local**; API key from Colab Secrets or env `TOGETHER_API_KEY`. |
+| 3 | [`gatekeeper_triage.py`](gatekeeper_triage.py) | **Triage** | Walks `01_raw_inputs/` with `os.walk`, sends each PDF / audio to Gemma 4 for a strict-JSON verdict, and moves rejects under `01_raw_inputs/excluded_inputs/<STATE>/<scope>/<jurisdiction>/…` preserving geography. Runs standalone as a CLI or as **Demo step 0** inside the run notebook. |
+| 4 | [`02_run_meeting_llm.ipynb`](02_run_meeting_llm.ipynb) | **Run** | Five labeled Gemma 4 demo cells over every PDF / audio / contact image discovered under `01_raw_inputs`, mirroring outputs to `03_processed_outputs/02_gemma_json/<STATE>/<scope>/<jurisdiction>/…`. **Colab or local**; API key from Colab Secrets or env `GEMINI_API_KEY` / `GOOGLE_API_KEY`. |
 
-Legacy notebook names (old Colab links): [`02_init_drive_layout.ipynb`](02_init_drive_layout.ipynb) matches **step 2** but use **`01_init_…`** for new work; [`03_run_meeting_llm.ipynb`](03_run_meeting_llm.ipynb) matches **step 3** but prefer **`02_run_…`**.
+Legacy notebook names (old Colab links): [`02_init_drive_layout.ipynb`](02_init_drive_layout.ipynb) matches step **2** but use **`01_init_…`** for new work; [`03_run_meeting_llm.ipynb`](03_run_meeting_llm.ipynb) matches step **4** but prefer **`02_run_…`** — both are kept in sync by the builder so old Colab bookmarks still work.
 
-Python helper (not a notebook): [`governance_meeting_llm.py`](governance_meeting_llm.py) — parsing, chunking, Orbis merge (imported by **`02_run_meeting_llm.ipynb`**).
+Python helper (not a notebook): [`governance_meeting_llm.py`](governance_meeting_llm.py) — tree walker (`walk_raw_inputs`, `mirror_output_path`, `JurisdictionDir.jurisdiction_id`), multimodal Gemma client wrapper (`call_google_genai_multimodal` with `media_resolution` + `thinking_config`), PDF page rendering + token-budget classifier, audio chunking via `ffmpeg`, policy drift detector, Orbis merge by `jurisdiction_id`. Imported by **`02_run_meeting_llm.ipynb`** and (selectively) by `gatekeeper_triage.py`.
 
 ---
 
@@ -80,18 +81,42 @@ For the run notebook’s default input, add **`transcript.txt`** in that folder,
 
 ---
 
-### 5) Run Gemma / LLM structured analysis — notebook **`02_run_meeting_llm.ipynb`**
+### 5) Gatekeeper Triage — standalone CLI (optional but recommended)
+
+Run **before** the demo notebook to drop non-meeting files out of the queue:
+
+```bash
+# dry-run audit first
+python scripts/colab/gatekeeper_triage.py --dry-run --max-files 20 --verbose
+
+# real sweep, writes JSON report
+python scripts/colab/gatekeeper_triage.py --report-path /tmp/triage_report.json
+```
+
+The triage layer:
+- Walks `01_raw_inputs/<STATE>/<scope>/<jurisdiction>/...` with `os.walk`.
+- Visual PDF gate: first **1–2 pages** rendered with `pdf2image` at 200 DPI, sent to Gemma 4 at HIGH `media_resolution` (~1,120 image tokens) to decide `meeting_agenda` / `meeting_minutes` / `other`.
+- Multimodal audio gate: first **120 seconds** (`--audio-window-seconds`) clipped via `ffmpeg`, sent to Gemma 4 to listen for gavel / roll call / motion-vote cadence / public-comment turns.
+- Strict-JSON output: `{is_governance_meeting, document_or_audio_type, confidence_score, reasoning}` (uses `response_schema` when the SDK supports it).
+- **Geographic mirror on reject:** files that fail are moved under `01_raw_inputs/excluded_inputs/<STATE>/<scope>/<jurisdiction>/...` — the original geo subtree is replicated with `os.makedirs(..., exist_ok=True)` + `shutil.move()`. Re-runs are idempotent: the walker skips the exclusion bucket on subsequent sweeps.
+- **Robust:** every API call, ffmpeg clip, pdf2image render, and `shutil.move` is wrapped in `try/except`; a single bad file never aborts a batch sweep. Each line logs `KEEP | <STATE>/<scope>/<jurisdiction>/... | <file> | type=... conf=...` so the geographic origin is always visible.
+
+The same triage layer is exposed as **Step 0** inside `02_run_meeting_llm.ipynb`; set `GOVERNANCE_GATEKEEPER_ENABLED=0` to skip when running the notebook end-to-end.
+
+### 6) Run Gemma / LLM structured analysis — notebook **`02_run_meeting_llm.ipynb`**
 
 1. Open [`02_run_meeting_llm.ipynb`](02_run_meeting_llm.ipynb) (or the legacy [`03_run_meeting_llm.ipynb`](03_run_meeting_llm.ipynb) alias).
-2. **Bootstrap** — First code cells: repo discovery (`OPEN_NAVIGATOR_ROOT` or walk parents for `scripts/colab/colab_paths.py`), optional Drive mount in Colab only, `PATHS = setup_notebook_paths()`, then git + `GOVERNANCE_PIPELINE_DATA_ROOT` + imports (same pattern as **`01_init_drive_layout.ipynb`**).
-3. **`%pip install`** cell (OpenAI-compatible client).
-4. **Secrets / API** — Colab Secrets or `TOGETHER_API_KEY` in the environment; adjust `BASE_URL` / `MODEL` if not using Together + Gemma 2 27B.
-5. **Transcript + chunk** cell — confirms input and chunk count.
-6. **Run model** cell — writes per chunk:
-   - **`03_processed_outputs/02_gemma_json/`** — `.json`, `.raw.txt`, `.extra.md`
-   - **`03_processed_outputs/03_human_summaries/`** — `.summary.md`
-7. **Optional — Orbis** cell — expects **`02_reference_data/orbis_files/orbis_lookup_by_org_id.json`** (keys = `org_id` from the model). Writes enriched JSON back under `02_gemma_json/`.
-8. **Optional — Gemini** cell — commented example at the bottom.
+2. **Bootstrap** — repo discovery (`OPEN_NAVIGATOR_ROOT` or walk parents for `scripts/colab/colab_paths.py`), optional Drive mount in Colab only, `PATHS = setup_notebook_paths()`, then git + `GOVERNANCE_PIPELINE_DATA_ROOT` + imports (same pattern as **`01_init_drive_layout.ipynb`**).
+3. **`%pip install`** cell — `google-genai`, `pymupdf`, `pdf2image` (+ apt installs `poppler-utils` on Colab).
+4. **Secrets / API + caps** — Colab Secret `GEMINI_API_KEY` or env `GEMINI_API_KEY` / `GOOGLE_API_KEY`. Adjust `GOVERNANCE_GENAI_MODEL` if your AI Studio project lists a different Gemma 4 id. Demo caps in env: `GOVERNANCE_DEMO_MAX_PDFS_PER_JUR` (3), `GOVERNANCE_DEMO_MAX_PAGES_PER_PDF` (8), `GOVERNANCE_DEMO_MAX_AUDIO_PER_JUR` (1), `GOVERNANCE_DEMO_MAX_AUDIO_CHUNKS` (4), `GOVERNANCE_DEMO_MAX_IMAGES_PER_JUR` (12), `GOVERNANCE_DEMO_THINKING_BUDGET` (-1).
+5. **Step 0 — Gatekeeper** cell — runs `gatekeeper_triage.run_triage()` on the raw root. Skip with `GOVERNANCE_GATEKEEPER_ENABLED=0`; audit with `GOVERNANCE_GATEKEEPER_DRY_RUN=1`.
+6. **Walker** cell — `walk_raw_inputs(RAW_ROOT)` yields one `MeetingInventory` per `<STATE>/<scope>/<jurisdiction>` with PDFs, audio, and images. Prints the inventory and stores it in `INVENTORIES`.
+7. **Demo 1 — Native multimodality / visual document parsing.** For every PDF: probe digital-text layer with PyMuPDF, flag <200 chars as **scanned (dark data)**, then send to Gemma 4 for visual OCR. Output: `…/<mirrored>/<pdf>.visual_ocr.txt`.
+8. **Demo 2 — Adjustable visual token budget.** Render every PDF page to PNG, classify each (`scanned` / `financial_or_tabular` / `text_heavy`), route financial + scanned pages at **HIGH** (~1,120 image tokens), text-heavy pages at **LOW** (~64 tokens). One JSON per page + per-PDF `_token_budget_report.json`.
+9. **Demo 3 — Built-in thinking mode.** Pick a representative PDF per jurisdiction (priority for `demolition`/`minutes`/`council`/etc. filenames) and run `prompts/policy_analysis_v1.md` with `include_thoughts=True` and `thinking_budget=-1`. Writes `.thinking.json`, `.thinking.raw.txt`, `.thinking.thoughts.md`, `.thinking.summary.md`.
+10. **Demo 4 — Long-meeting chunking + Policy Drift Detector.** `ffmpeg`-split each audio into 15-minute chunks, run `policy_analysis_v1.md` per chunk, then run `policy_drift_summarize()` over the assembled chunk JSONs. Output: `…/<audio_stem>/chunk_<n>.json` + `policy_drift.json` + Mermaid `policy_drift.mmd`.
+11. **Demo 5 — Contact image enrichment.** For every image discovered (typically under `_contact_images/`): if it's a person, return perceived `age_range`, `race`, `gender`, `ethnicity`, `demeanor` (nullable, with confidence); otherwise return a brief `subject_tag`. Cap via `GOVERNANCE_DEMO_MAX_IMAGES_PER_JUR`.
+12. **Optional — Orbis enrichment.** Attaches the matching `02_reference_data/orbis_files/orbis_lookup_by_jurisdiction_id.json` row to every generated JSON, keyed by `jurisdiction_id` derived from the output's mirrored path. Legacy `orbis_lookup_by_org_id.json` is also merged for backwards compatibility.
 
 ---
 
@@ -109,7 +134,8 @@ Scraped meetings mirror is **step 1** above ([`01_copy_scraped_meetings_cache_to
 
 | File | Purpose |
 |------|---------|
-| [`governance_meeting_llm.py`](governance_meeting_llm.py) | Helpers for **`02_run_meeting_llm.ipynb`** (parse `---DOCUMENT_BREAK---`, chunk text, Orbis merge). |
+| [`governance_meeting_llm.py`](governance_meeting_llm.py) | Tree walker (`walk_raw_inputs`, `JurisdictionDir.jurisdiction_id`, `mirror_output_path`), Gemma client wrapper with `media_resolution` + `thinking_config`, PDF page rendering + per-page token-budget classifier, `ffmpeg` audio chunking, policy drift detector, Orbis merge by `jurisdiction_id`, `---DOCUMENT_BREAK---` parser. Imported by **`02_run_meeting_llm.ipynb`**. |
+| [`gatekeeper_triage.py`](gatekeeper_triage.py) | "Ledger of Influence" data gate. `os.walk` over `01_raw_inputs/`, multimodal Gemma triage on every PDF (first 1–2 pages at HIGH `media_resolution`) and audio (first 120 s clipped via `ffmpeg`). Rejects mirror geography under `01_raw_inputs/excluded_inputs/<STATE>/<scope>/<jurisdiction>/…` via `os.makedirs(..., exist_ok=True)` + `shutil.move()`. Standalone CLI or imported by the run notebook as Step 0. |
 | [`colab_paths.py`](colab_paths.py) | `in_colab`, `maybe_mount_google_drive`, `setup_notebook_paths` for init/run notebooks. |
 
 ---
@@ -121,6 +147,22 @@ Scraped meetings mirror is **step 1** above ([`01_copy_scraped_meetings_cache_to
 | `OPEN_NAVIGATOR_ROOT` | Absolute path to the `open-navigator` checkout when Jupyter cwd is not inside the repo (local + Colab). |
 | `GOVERNANCE_PIPELINE_DATA_ROOT` | Absolute path to pipeline root (recommended on Colab; optional locally — default is `data/governance_pipeline_data` in the repo). |
 | `GOVERNANCE_PIPELINE_GDRIVE_BASE` | Path under `LOG_GDRIVE_MOUNT` when `DATA_ROOT` is not set (default `CommunityOne/governance_pipeline_data`). |
+| `GOVERNANCE_RAW_INPUTS_ROOT` | Override the `01_raw_inputs/` location for the run notebook + Gatekeeper. |
+| `GOVERNANCE_GENAI_MODEL` | Gemma 4 model id (default `gemma-4-26b-a4b-it`). |
+| `GOVERNANCE_GATEKEEPER_ENABLED` | `0` to skip the triage step inside the notebook. |
+| `GOVERNANCE_GATEKEEPER_DRY_RUN` | `1` to log triage verdicts without moving files. |
+| `GOVERNANCE_GATEKEEPER_KINDS` | Comma-separated kinds — `pdf`, `audio`, or both (default both). |
+| `GOVERNANCE_GATEKEEPER_PDF_PAGES` | First N PDF pages sent to triage (default `2`). |
+| `GOVERNANCE_GATEKEEPER_AUDIO_WINDOW` | Seconds of audio sent to triage (default `120`). |
+| `GOVERNANCE_GATEKEEPER_CONFIDENCE` | Minimum confidence to keep a file (default `0.6`). |
+| `GOVERNANCE_GATEKEEPER_MAX_FILES` | Cap total triaged files in a single sweep (unset = no cap). |
+| `GOVERNANCE_DEMO_MAX_PDFS_PER_JUR` | PDFs processed per jurisdiction in Demo 1 + 2 (default `3`). |
+| `GOVERNANCE_DEMO_MAX_PAGES_PER_PDF` | Pages processed per PDF in Demo 2 (default `8`). |
+| `GOVERNANCE_DEMO_MAX_AUDIO_PER_JUR` | Audio files processed per jurisdiction in Demo 4 (default `1`). |
+| `GOVERNANCE_DEMO_MAX_AUDIO_CHUNKS` | 15-minute audio chunks processed per file in Demo 4 (default `4`). |
+| `GOVERNANCE_DEMO_MAX_IMAGES_PER_JUR` | Images processed per jurisdiction in Demo 5 (default `12`). |
+| `GOVERNANCE_DEMO_THINKING_BUDGET` | Thinking-token budget for Demo 3 (`-1` = unlimited). |
+| `GOVERNANCE_DRIFT_FOCUS` | Optional subject string to bias the policy drift detector. |
 | `LOG_GDRIVE_MOUNT` | Mounted Drive root (default `/mnt/g/My Drive`). |
 | `SCRAPED_MEETINGS_ROOT` | Local scraped meetings root when not using default `data/cache/scraped_meetings` (used by **01** / sync util default `--src-root`). |
 | `SCRAPED_MEETINGS_GDRIVE_MIRROR` | Absolute path to the Drive **mirror root** for scraped meetings (default: `<mount>/CommunityOne/hackathons/2026_Gemma_4_Good/01_raw_inputs`). |

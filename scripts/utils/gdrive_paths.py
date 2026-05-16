@@ -12,7 +12,7 @@ Path helpers shared with ``scripts/utils/log_sync.py`` and ``export_bronze_to_js
   (see ``scripts/colab/01_copy_scraped_meetings_cache_to_gdrive.py``). Override with
   ``SCRAPED_MEETINGS_GDRIVE_MIRROR`` (absolute path to the *mirror root* folder).
 - ``GovernancePipelinePaths`` — same numbered folder layout as
-  ``scripts/colab/02_init_drive_layout.ipynb`` (ingestion / Orbis / processed).
+  ``scripts/colab/02_init_drive_layout.ipynb`` (ingestion / reference data / processed).
   On **Google Colab**, set ``GOVERNANCE_PIPELINE_DATA_ROOT`` to e.g.
   ``/content/drive/MyDrive/CommunityOne/governance_pipeline_data`` before importing.
 """
@@ -147,7 +147,8 @@ class GovernancePipelinePaths:
 
     root: Path
     raw_inputs: Path
-    orbis_files: Path
+    meeting_data_by_jurisdiction_id: Path
+    contacts_by_jurisdiction_id: Path
     transcripts: Path
     gemma_json: Path
     human_summaries: Path
@@ -155,10 +156,12 @@ class GovernancePipelinePaths:
     @classmethod
     def resolve(cls) -> GovernancePipelinePaths:
         root = resolve_governance_pipeline_data_root()
+        reference = root / "02_reference_data"
         return cls(
             root=root,
             raw_inputs=root / "01_raw_inputs",
-            orbis_files=root / "02_reference_data" / "orbis_files",
+            meeting_data_by_jurisdiction_id=reference / "meeting_data_by_jurisdiction_id",
+            contacts_by_jurisdiction_id=reference / "contacts_by_jurisdiction_id",
             transcripts=root / "03_processed_outputs" / "01_transcripts",
             gemma_json=root / "03_processed_outputs" / "02_gemma_json",
             human_summaries=root / "03_processed_outputs" / "03_human_summaries",
@@ -168,7 +171,8 @@ class GovernancePipelinePaths:
         """Create all pipeline stage directories (idempotent)."""
         for p in (
             self.raw_inputs,
-            self.orbis_files,
+            self.meeting_data_by_jurisdiction_id,
+            self.contacts_by_jurisdiction_id,
             self.transcripts,
             self.gemma_json,
             self.human_summaries,

@@ -25,6 +25,7 @@ _BUILTIN: Dict[str, Tuple[str, ...]] = {
     ),
     # Tuscaloosa County, AL — commission / probate directory (WordPress; plain-text emails)
     "county_01125": (
+        "https://www.tuscco.com/county-officials/county-commission/",
         "https://www.tuscco.com/county-officials/",
         "https://www.tuscco.com/commission-agenda-minutes/",
     ),

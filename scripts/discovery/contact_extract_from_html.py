@@ -212,6 +212,25 @@ def extract_structured_contacts_from_html(
             continue
         _json_ld_walk(data, rows, page_url=page_url)
 
+    existing_keys = {_structured_contact_row_key(r) for r in rows}
+    emails_seen = {str(r.get("email") or "").lower() for r in rows if r.get("email")}
+
+    for er in extract_elementor_directory_contacts_from_html(
+        html, page_url, max_rows=max(0, max_rows - len(rows))
+    ):
+        em = str(er.get("email") or "").lower()
+        if em and em in emails_seen:
+            continue
+        if em:
+            emails_seen.add(em)
+        k = _structured_contact_row_key(er)
+        if k in existing_keys:
+            continue
+        existing_keys.add(k)
+        rows.append(er)
+        if len(rows) >= max_rows:
+            break
+
     for a in soup.select('a[href^="mailto:"]'):
         if len(rows) >= max_rows:
             break
@@ -222,6 +241,8 @@ def extract_structured_contacts_from_html(
         email = _clean_mailto(m.group(1))
         if not email or "@" not in email:
             continue
+        if email in emails_seen:
+            continue
         label = a.get_text(" ", strip=True)
         if "@" in label:
             label = ""
@@ -230,21 +251,24 @@ def extract_structured_contacts_from_html(
         if key in seen:
             continue
         seen.add(key)
-        rows.append(
-            {
-                "person_name": name_guess or None,
-                "title_or_role": None,
-                "department": None,
-                "email": email[:512],
-                "phone": None,
-                "mailing_address": None,
-                "profile_url": None,
-                "extraction_method": "mailto_anchor",
-                "raw_row": {"page_url": page_url, "href": href[:500]},
-            }
-        )
+        emails_seen.add(email)
+        row = {
+            "person_name": name_guess or None,
+            "title_or_role": None,
+            "department": None,
+            "email": email[:512],
+            "phone": None,
+            "mailing_address": None,
+            "profile_url": None,
+            "extraction_method": "mailto_anchor",
+            "raw_row": {"page_url": page_url, "href": href[:500]},
+        }
+        rk = _structured_contact_row_key(row)
+        if rk in existing_keys:
+            continue
+        existing_keys.add(rk)
+        rows.append(row)
 
-    existing_keys = {_structured_contact_row_key(r) for r in rows}
     for hr in extract_heading_section_contacts_from_html(html, page_url, max_rows=max(0, max_rows - len(rows))):
         k = _structured_contact_row_key(hr)
         if k in existing_keys:
@@ -291,11 +315,211 @@ def _tag_heading_level(tag: Any) -> int:
     return _HEADING_ORDER.get(tag.name, 99)
 
 
+def _looks_like_person_name_line(s: str) -> bool:
+    s = (s or "").strip()
+    if len(s) < 3 or len(s) > 140:
+        return False
+    if _line_is_contact_label(s):
+        return False
+    if re.search(r"\d{3}\s*[-.)]\s*\d{3}", s):
+        return False
+    if "@" in s:
+        return False
+    letters = re.sub(r"[^A-Za-z]", "", s)
+    if len(letters) < 4:
+        return False
+    return bool(re.search(r"[A-Za-z][A-Za-z][A-Za-z].*[A-Za-z]", s))
+
+
+def _line_is_contact_label(line: str) -> bool:
+    s = (line or "").strip()
+    if len(s) < 2:
+        return True
+    return bool(re.match(r"^(mailing\s+address|phone|email|fax|office|cell)\b", s, re.I))
+
+
+# Live pages wrap rows in <motion>; crawled HTML often drops that tag — never scope on ``motion``.
+_ELEMENTOR_OFFICIAL_ROW_SEL = "div.elementor-element.e-flex.e-con.e-child"
+
+
+def _mailto_from_anchor(a: Any) -> str | None:
+    """Prefer visible link text when ``href`` mailto does not match (common Elementor bug)."""
+    visible = re.sub(r"\s+", " ", (a.get_text(" ", strip=True) or "")).strip()
+    if visible and "@" in visible:
+        vm = _EMAIL_RE.search(visible)
+        if vm:
+            em = vm.group(0).strip().lower()
+            if not _BOGUS_EMAIL_SUFFIX.search(em):
+                return em
+    m = _MAILTO_RE.search(a.get("href") or "")
+    if not m:
+        return None
+    em = _clean_mailto(m.group(1))
+    return em if "@" in em and not _BOGUS_EMAIL_SUFFIX.search(em) else None
+
+
+def _iter_elementor_official_bands(soup: Any):
+    """
+    Elementor county-official rows: flex ``e-child`` containers with headings and mailto.
+
+    Do not scope with the custom ``<motion>`` tag — crawled HTML often omits it and
+    BeautifulSoup's CSS engine does not match ``motion`` descendants reliably.
+    """
+    from bs4 import Tag
+
+    for band in soup.select(_ELEMENTOR_OFFICIAL_ROW_SEL):
+        if not isinstance(band, Tag):
+            continue
+        if not band.select(".elementor-widget-heading"):
+            continue
+        if not band.select('a[href^="mailto:"]') and not band.select(".elementor-widget-text-editor"):
+            continue
+        yield band
+
+
+def _parse_elementor_official_band(band: Any) -> Optional[Dict[str, Any]]:
+    """
+    Elementor row: portrait column + ``h2`` role + ``h3`` name + text-editor (mailto / phones).
+
+    Headings are nested inside widget containers, so :func:`_heading_section_blob` on raw ``h2``
+    tags does not see the contact block.
+    """
+    from bs4 import Tag
+
+    if not isinstance(band, Tag):
+        return None
+    blob = band.get_text("\n", strip=True)
+    if len(blob) < 20:
+        return None
+    if not band.select('a[href^="mailto:"]') and not _EMAIL_RE.search(blob):
+        return None
+
+    role = ""
+    name = ""
+    for h in band.select(".elementor-widget-heading h2, .elementor-widget-heading h3"):
+        t = re.sub(r"\s+", " ", h.get_text(" ", strip=True) or "").strip()
+        if not t:
+            continue
+        if h.name == "h2" and _ROLE_HEADING_LINE.search(t):
+            role = t[:512]
+        elif h.name == "h3" and _looks_like_person_name_line(t):
+            name = t[:512]
+        elif h.name == "h2" and _looks_like_person_name_line(t) and not role:
+            name = t[:512]
+
+    email_pri = None
+    mailto_roots = band.select(".elementor-widget-text-editor") or [band]
+    for root in mailto_roots:
+        for a in root.select('a[href^="mailto:"]'):
+            email_pri = _mailto_from_anchor(a)
+            if email_pri:
+                break
+        if email_pri:
+            break
+    if not email_pri:
+        for m in _EMAIL_RE.finditer(blob):
+            em = m.group(0).strip().lower()
+            if "@" in em and not _BOGUS_EMAIL_SUFFIX.search(em):
+                email_pri = em
+                break
+
+    phones: List[str] = []
+    for a in band.select('a[href^="tel:"]'):
+        m = _TEL_RE.search(a.get("href") or "")
+        if m:
+            phones.append(_normalize_phone_display(m.group(1)))
+    if not phones:
+        for pm in _PHONE_RE.finditer(blob):
+            digits = re.sub(r"\D", "", pm.group(0))
+            if len(digits) >= 10:
+                phones.append(_normalize_phone_display(pm.group(0)))
+    phone = phones[0] if phones else None
+
+    if not email_pri and not phone:
+        return None
+    if not name and not role:
+        return None
+
+    maddr = None
+    mm = re.search(
+        r"Mailing\s+Address:\s*(.+?)(?=\n\s*(Phone|Cell|Email|Fax)\s*:|$)",
+        blob,
+        re.I | re.S,
+    )
+    if mm:
+        maddr = re.sub(r"\s+", " ", mm.group(1).strip())[:500] or None
+
+    return {
+        "person_name": name or None,
+        "title_or_role": role or None,
+        "department": None,
+        "email": email_pri[:512] if email_pri else None,
+        "phone": phone,
+        "mailing_address": maddr,
+        "profile_url": None,
+        "extraction_method": "elementor_official_row",
+        "raw_row": {"page_url": "", "role": role[:120], "name": (name or "")[:120]},
+    }
+
+
+def extract_elementor_directory_contacts_from_html(
+    html: str,
+    page_url: str,
+    *,
+    max_rows: int = 80,
+) -> List[Dict[str, Any]]:
+    """Official cards on Elementor flex rows (e.g. Tuscaloosa County Commission districts)."""
+    from bs4 import BeautifulSoup
+
+    out: List[Dict[str, Any]] = []
+    if not html or max_rows <= 0:
+        return out
+    soup = BeautifulSoup(html or "", "html.parser")
+    seen_emails: Set[str] = set()
+
+    for band in _iter_elementor_official_bands(soup):
+        if len(out) >= max_rows:
+            break
+        row = _parse_elementor_official_band(band)
+        if not row:
+            continue
+        em = str(row.get("email") or "").lower()
+        if em and em in seen_emails:
+            continue
+        if em:
+            seen_emails.add(em)
+        row["raw_row"] = {**row.get("raw_row", {}), "page_url": page_url}
+        out.append(row)
+
+    return out
+
+
 def _heading_section_blob(h: Any) -> str:
     from bs4 import NavigableString, Tag
 
     if not isinstance(h, Tag):
         return ""
+    widget = h.find_parent(class_=lambda c: c and "elementor-widget" in str(c))
+    if widget is not None:
+        head = re.sub(r"\s+", " ", h.get_text(" ", strip=True) or "").strip()
+        if not head:
+            return ""
+        lvl = _tag_heading_level(h)
+        chunks: List[str] = [head]
+        for sib in widget.find_next_siblings():
+            if not hasattr(sib, "get") or not hasattr(sib, "name"):
+                continue
+            if "elementor-widget-heading" in " ".join(sib.get("class") or []):
+                inner = sib.find(["h1", "h2", "h3", "h4", "h5", "h6"])
+                if inner is not None and _tag_heading_level(inner) <= lvl:
+                    break
+            if "elementor-widget" in " ".join(sib.get("class") or []):
+                body = sib.get_text("\n", strip=True)
+                body = re.sub(r"\s+", " ", body).strip()
+                if body:
+                    chunks.append(body)
+        return "\n".join(chunks)
+
     head = re.sub(r"\s+", " ", h.get_text(" ", strip=True) or "").strip()
     if not head:
         return ""

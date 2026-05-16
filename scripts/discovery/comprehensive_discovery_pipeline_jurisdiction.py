@@ -143,8 +143,11 @@ schema.org ``Person`` JSON-LD, ``mailto:`` anchors, Bootstrap-style ``div.card``
 database URL, rows are inserted into ``bronze.bronze_contacts_scraped`` (migration ``035``).
 
 **Profile images:** when ``SCRAPED_CONTACT_PROFILE_IMAGES`` is true (default), directory-flagged pages
-also download person photos into ``_contact_images/`` (filenames from name, else title; see
-``contact_profile_images.person_image_filename_stem``). Jobs come from JSON-LD ``Person`` ``image``,
+also download person photos into ``_contact_images/`` as **PNG** (WebP/JPEG/GIF sources are
+converted after download; disable with ``SCRAPED_CONTACT_PROFILE_IMAGES_PNG=false``). Each file is
+named from the contact’s **name** in snake_case (see ``contact_profile_images.contact_profile_image_stem_from_name`` and
+``download_profile_images``). Rows with no usable name get ``unknown``, then ``unknown_2``, ``unknown_3``, …
+Jobs come from JSON-LD ``Person`` ``image``,
 portrait-ish ``<img>`` tags (including ``data-src`` / ``srcset``), and WordPress ``figure`` blocks
 placed above an official ``h2``–``h6`` title. Nav links from high ``person_adjacent_image_score``
 pages are boosted when paths look board/council/officials-like (``SCRAPED_CONTACT_PHOTO_NAV_BOOST_MIN``).
@@ -1931,6 +1934,11 @@ def _contact_profile_image_max() -> int:
         return 48
 
 
+def _contact_profile_images_save_png() -> bool:
+    v = (os.getenv("SCRAPED_CONTACT_PROFILE_IMAGES_PNG") or "true").strip().lower()
+    return v not in ("0", "false", "no", "off")
+
+
 def _person_photo_nav_boost_min() -> int:
     try:
         return max(0, min(40, int((os.getenv("SCRAPED_CONTACT_PHOTO_NAV_BOOST_MIN") or "4").strip())))
@@ -1986,7 +1994,7 @@ class ComprehensiveDiscoveryPipelineJurisdiction:
         self,
         *,
         output_root: Optional[Path] = None,
-        max_pages: int = 40,
+        max_pages: int = 80,
         max_pdfs: int = 80,
         max_video_downloads: int = 24,
         timeout_s: float = 120.0,
@@ -2692,6 +2700,7 @@ class ComprehensiveDiscoveryPipelineJurisdiction:
                         structured_contact_rows_accum.append(prow)
 
                 if _contact_profile_images_enabled() and flagged:
+                    # One folder of headshots: file name = contact name in snake_case, or unknown, unknown_2, …
                     img_dir = base_dir / "_contact_images"
                     jobs = extract_profile_image_jobs(
                         html,
@@ -2720,6 +2729,7 @@ class ComprehensiveDiscoveryPipelineJurisdiction:
                                 img_dir,
                                 referer=page_ctx,
                                 max_images=_contact_profile_image_max(),
+                                save_as_png=_contact_profile_images_save_png(),
                             )
                             for dr in dl_rows:
                                 fn = dr.get("saved_filename")
@@ -3383,7 +3393,12 @@ def main() -> None:
         help=f"Load website_url from {INT_JURISDICTION_WEBSITES_TABLE} using derived jurisdiction_id",
     )
     parser.add_argument("--output-root", type=str, default="", help="Override SCRAPED_MEETINGS_ROOT")
-    parser.add_argument("--max-pages", type=int, default=40)
+    parser.add_argument(
+        "--max-pages",
+        type=int,
+        default=80,
+        help="Max distinct HTML pages per jurisdiction (default 80; raise for deep official directories)",
+    )
     parser.add_argument("--max-pdfs", type=int, default=80, help="Max PDF downloads per jurisdiction")
     parser.add_argument(
         "--resume",
