@@ -164,7 +164,8 @@ Scraped meetings mirror is **step 1** above ([`01_copy_scraped_meetings_cache_to
 | `GOVERNANCE_GATEKEEPER_LARGE_PDF_BYTES` | Files ≥ this size force 1 page @ 120 DPI on visual fallback (default `1500000`). |
 | `GOVERNANCE_GATEKEEPER_AUDIO_WINDOW` | Seconds of audio sent to triage (default `120`). |
 | `GOVERNANCE_GATEKEEPER_CONFIDENCE` | Minimum confidence to keep a file (default `0.6`). |
-| `GOVERNANCE_DEMO_MEETING_DATES` | In DEMO mode, keep only the last **N** meeting **dates** per jurisdiction (default **3**): pdfs, collateral, and audio with an inferred `YYYY-MM-DD`. |
+| `GOVERNANCE_DEMO_YEAR_SCOPE` | In DEMO mode, only descend into each jurisdiction's **newest** `20xx/` folder (default **on**). Skips older year trees during Gatekeeper walk. |
+| `GOVERNANCE_DEMO_MEETING_DATES` | After year filter, keep only the last **N** meeting **dates** per jurisdiction (default **3**): pdfs, collateral, and audio with an inferred `YYYY-MM-DD`. |
 | `GOVERNANCE_DEMO_DATE_SCOPE` | Set `0` to disable date scope and fall back to count caps. |
 | `GOVERNANCE_GATEKEEPER_MAX_FILES` | Legacy count cap (newest N by mtime) when date scope is off. |
 | `GOVERNANCE_DEMO_MAX_PDFS_PER_JUR` | PDFs processed per jurisdiction in Demo 1 + 2 (default `3`). |
