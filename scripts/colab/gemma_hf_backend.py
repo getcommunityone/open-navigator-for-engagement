@@ -223,42 +223,137 @@ def _move_batch_to_device(inputs: Any, device: Any) -> Any:
     return inputs
 
 
-def _assert_transformers_supports_gemma4() -> None:
-    """Gemma 4 Hub checkpoints use ``model_type=gemma4`` (transformers >= 5.5.0)."""
-    try:
-        import transformers
-    except ImportError as exc:
-        raise RuntimeError(
-            'Hugging Face backend needs transformers>=5.5.0. '
-            'Notebook §2: %pip install -q "transformers>=5.5.0" accelerate'
-        ) from exc
-
-    ver = getattr(transformers, "__version__", "0.0.0")
+def _transformers_version_ok(ver: str) -> bool:
     try:
         from packaging.version import Version
 
-        too_old = Version(ver) < Version("5.5.0")
+        return Version(ver) >= Version("5.5.0")
     except Exception:
-        too_old = ver < "5.5.0"
-    if too_old:
-        raise RuntimeError(
-            f"transformers {ver} is too old for Gemma 4 (needs >= 5.5.0 for model_type "
-            f"'gemma4'). Fix: run notebook §2 (pip install -U transformers>=5.5.0), then "
-            "Runtime → Restart session, then §3 again. Upgrading pip without restart leaves "
-            "this kernel on the old version (e.g. 5.0.0)."
-        )
+        return ver >= "5.5.0"
+
+
+def _gemma4_registered() -> bool:
     try:
         from transformers.models.auto.configuration_auto import CONFIG_MAPPING
 
-        if "gemma4" not in CONFIG_MAPPING:
-            raise RuntimeError(
-                f"transformers {ver} is installed but does not register 'gemma4'. "
-                'Upgrade: %pip install -q "transformers>=5.5.0" then restart the runtime.'
-            )
-    except RuntimeError:
-        raise
+        return "gemma4" in CONFIG_MAPPING
     except Exception:
-        pass
+        return False
+
+
+def _purge_transformers_modules() -> None:
+    import sys
+
+    for name in list(sys.modules):
+        if name == "transformers" or name.startswith("transformers."):
+            del sys.modules[name]
+
+
+def _transformers_probe_subprocess() -> Tuple[str, bool]:
+    """Fresh interpreter: (version, gemma4 in CONFIG_MAPPING)."""
+    import subprocess
+    import sys
+
+    try:
+        out = subprocess.check_output(
+            [
+                sys.executable,
+                "-c",
+                "import transformers as t\n"
+                "from transformers.models.auto.configuration_auto import CONFIG_MAPPING\n"
+                "print(t.__version__)\n"
+                "print('gemma4' in CONFIG_MAPPING)",
+            ],
+            text=True,
+        ).strip()
+    except subprocess.CalledProcessError:
+        return "0.0.0", False
+    lines = out.splitlines()
+    ver = lines[0].strip() if lines else "0.0.0"
+    has = (lines[1].strip().lower() == "true") if len(lines) > 1 else False
+    return ver, has
+
+
+def ensure_transformers_gemma4_ready(*, auto_install: bool = True) -> str:
+    """
+    Colab-friendly: ``pip install -U transformers>=5.5.0`` then reload modules in-process.
+
+    Returns the active ``transformers.__version__``. Raises :class:`SystemExit` if pip
+    upgraded on disk but this kernel cannot pick up >= 5.5.0 (restart required).
+    """
+    import subprocess
+    import sys
+
+    disk_ver, disk_ok = _transformers_probe_subprocess()
+
+    try:
+        import transformers
+
+        kernel_ver = transformers.__version__
+    except ImportError:
+        kernel_ver = "0.0.0"
+
+    kernel_ok = _transformers_version_ok(kernel_ver) and _gemma4_registered()
+
+    if disk_ok and kernel_ok:
+        return kernel_ver
+
+    if auto_install and not disk_ok:
+        logger.info("Installing transformers>=5.5.0 for Gemma 4 (gemma4)…")
+        subprocess.check_call(
+            [
+                sys.executable,
+                "-m",
+                "pip",
+                "install",
+                "-q",
+                "-U",
+                "transformers>=5.5.0",
+                "accelerate",
+            ]
+        )
+        disk_ver, disk_ok = _transformers_probe_subprocess()
+
+    if disk_ok and not kernel_ok:
+        logger.info(
+            "Reloading transformers in this kernel (was %s, pip has %s)…",
+            kernel_ver,
+            disk_ver,
+        )
+        _purge_transformers_modules()
+        import transformers  # noqa: F401
+
+        kernel_ver = transformers.__version__
+        kernel_ok = _transformers_version_ok(kernel_ver) and _gemma4_registered()
+
+    if kernel_ok:
+        logger.info("transformers %s ready (gemma4 registered)", kernel_ver)
+        return kernel_ver
+
+    if disk_ok and not kernel_ok:
+        raise SystemExit(
+            f"\n{'=' * 60}\n"
+            f"pip has transformers {disk_ver} with gemma4, but this Colab kernel still "
+            f"has {kernel_ver}.\n\n"
+            "Fix (required):\n"
+            "  1. Runtime → Restart session\n"
+            "  2. Re-run §2 (install) then §3 (config)\n"
+            f"{'=' * 60}\n"
+        )
+
+    raise SystemExit(
+        f"\n{'=' * 60}\n"
+        f"Could not install transformers>=5.5.0 (pip reports {disk_ver}).\n"
+        "Try in a new cell:\n"
+        "  !pip install -U 'transformers>=5.5.0' accelerate\n"
+        "Then Runtime → Restart session.\n"
+        f"{'=' * 60}\n"
+    )
+
+
+def _assert_transformers_supports_gemma4() -> None:
+    """Gemma 4 Hub checkpoints use ``model_type=gemma4`` (transformers >= 5.5.0)."""
+    ensure_transformers_gemma4_ready(auto_install=True)
 
 
 def load_gemma_hf(
