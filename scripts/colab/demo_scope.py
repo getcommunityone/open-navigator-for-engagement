@@ -31,23 +31,27 @@ class DemoScopePreset:
     parallel_states: int
     max_images_per_jur: int
     preferred_jurisdiction_slug: Optional[str] = None
+    pinned_meeting_date: Optional[str] = None  # YYYY-MM-DD — only this session
+    default_media_scope: Optional[str] = None  # all | pdf | audio | video
 
 
 PRESETS: Dict[str, DemoScopePreset] = {
     "fast": DemoScopePreset(
         key="fast",
-        label="Fast (1 state, 1 jurisdiction — Tuscaloosa County)",
-        eta="~45–75 min",
+        label="Tuscaloosa county — 2026-02-18 end-to-end (PDF + video)",
+        eta="~60–90 min",
         max_states=1,
         max_jurisdictions=1,
-        meeting_dates=2,
+        meeting_dates=1,
         max_pdfs_per_jur=6,
-        max_pages_per_pdf=12,  # full minutes packets in Demo 2 (not just first 4 pages)
-        max_audio_per_jur=2,  # one recording per meeting date (meeting_dates=2)
-        max_audio_chunks=2,
+        max_pages_per_pdf=12,
+        max_audio_per_jur=2,
+        max_audio_chunks=4,
         parallel_states=1,
         max_images_per_jur=0,
         preferred_jurisdiction_slug="county_01125",
+        pinned_meeting_date="2026-02-18",
+        default_media_scope="all",
     ),
     "medium": DemoScopePreset(
         key="medium",
@@ -129,6 +133,17 @@ def apply_preset_to_environ(preset: DemoScopePreset) -> None:
         os.environ["GOVERNANCE_DEMO_JURISDICTION_SLUG"] = preset.preferred_jurisdiction_slug
     else:
         os.environ.pop("GOVERNANCE_DEMO_JURISDICTION_SLUG", None)
+    if preset.pinned_meeting_date:
+        os.environ["GOVERNANCE_DEMO_MEETING_DATE_PIN"] = preset.pinned_meeting_date
+    else:
+        os.environ.pop("GOVERNANCE_DEMO_MEETING_DATE_PIN", None)
+    if preset.default_media_scope:
+        try:
+            from pipeline_media_scope import apply_media_scope_to_environ
+
+            apply_media_scope_to_environ(preset.default_media_scope)
+        except ImportError:
+            os.environ["GOVERNANCE_PIPELINE_MEDIA_SCOPE"] = preset.default_media_scope
     if not os.environ.get("GOVERNANCE_SAFETY_REVIEW", "").strip():
         os.environ["GOVERNANCE_SAFETY_REVIEW"] = "1"
 

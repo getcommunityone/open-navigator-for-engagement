@@ -1079,6 +1079,12 @@ def organize_inventory_into_meeting_folders(
     for inv in inventories:
         paths.extend(inv.pdfs)
         paths.extend(inv.audio)
+        try:
+            jur_root = getattr(getattr(inv, "jurisdiction", None), "root", None)
+            if jur_root is not None:
+                paths.extend(extra_paths_for_organize(jur_root, paths))
+        except Exception:
+            pass
     moves = organize_paths_into_meeting_folders(
         raw_root, paths, dry_run=dry_run, client=client, model=model
     )
@@ -1169,16 +1175,59 @@ def iter_meeting_dirs(raw_root: Path, jurisdiction_prefix: str) -> Iterable[Path
             yield p
 
 
-def _collect_pdf_texts(meeting_dir: Path) -> Tuple[str, str]:
+def _meeting_calendar_date_from_dir(meeting_dir: Path) -> Optional[str]:
+    """``YYYY-MM-DD`` from ``meetings/2026_05_06/…`` folder name."""
+    import re
+
+    for part in reversed(meeting_dir.parts):
+        m = re.match(r"^(20\d{2})_(\d{2})_(\d{2})$", part)
+        if m:
+            return f"{m.group(1)}-{m.group(2)}-{m.group(3)}"
+    return None
+
+
+def _flat_pdfs_for_meeting_dir(
+    meeting_dir: Path,
+    jurisdiction_root: Path,
+) -> Tuple[List[Path], List[Path]]:
+    """Agenda/minutes PDFs at jurisdiction root matching this session date."""
+    date_s = _meeting_calendar_date_from_dir(meeting_dir)
+    if not date_s or not jurisdiction_root.is_dir():
+        return [], []
+    underscored = date_s.replace("-", "_")
+    agenda: List[Path] = []
+    minutes: List[Path] = []
+    for p in sorted(jurisdiction_root.iterdir()):
+        if not p.is_file() or p.suffix.lower() != ".pdf":
+            continue
+        stem = p.stem.lower()
+        if underscored not in stem and date_s not in stem:
+            continue
+        if "minute" in stem:
+            minutes.append(p)
+        elif "agenda" in stem:
+            agenda.append(p)
+    return agenda, minutes
+
+
+def collect_meeting_pdf_texts(
+    meeting_dir: Path,
+    *,
+    jurisdiction_root: Optional[Path] = None,
+) -> Tuple[str, str]:
+    """
+    Agenda + minutes text for briefs / collateral.
+
+    Reads ``meetings/…/agenda|minutes/*.pdf`` and, when ``jurisdiction_root`` is set,
+    county-root PDFs (e.g. ``2026_02_18-Agenda.pdf``) that match the session date.
+    """
     from governance_meeting_llm import extract_pdf_digital_text
 
     agenda_parts: List[str] = []
     minutes_parts: List[str] = []
-    for sub, bucket in (("agenda", agenda_parts), ("minutes", minutes_parts)):
-        subdir = meeting_dir / sub
-        if not subdir.is_dir():
-            continue
-        for pdf in sorted(subdir.glob("*.pdf"))[:6]:
+
+    def _append_pdfs(pdfs: List[Path], bucket: List[str]) -> None:
+        for pdf in pdfs[:6]:
             try:
                 text = extract_pdf_digital_text(pdf).strip()
             except Exception as exc:
@@ -1186,7 +1235,59 @@ def _collect_pdf_texts(meeting_dir: Path) -> Tuple[str, str]:
                 continue
             if text:
                 bucket.append(f"### {pdf.name}\n{text[:12000]}")
+
+    for sub, bucket in (("agenda", agenda_parts), ("minutes", minutes_parts)):
+        subdir = meeting_dir / sub
+        if subdir.is_dir():
+            _append_pdfs(sorted(subdir.glob("*.pdf")), bucket)
+
+    if jurisdiction_root is not None:
+        flat_agenda, flat_minutes = _flat_pdfs_for_meeting_dir(meeting_dir, jurisdiction_root)
+        seen_agenda = {p.name.lower() for p in (meeting_dir / "agenda").glob("*.pdf")} if (meeting_dir / "agenda").is_dir() else set()
+        seen_min = {p.name.lower() for p in (meeting_dir / "minutes").glob("*.pdf")} if (meeting_dir / "minutes").is_dir() else set()
+        _append_pdfs([p for p in flat_agenda if p.name.lower() not in seen_agenda], agenda_parts)
+        _append_pdfs([p for p in flat_minutes if p.name.lower() not in seen_min], minutes_parts)
+
     return "\n\n".join(agenda_parts), "\n\n".join(minutes_parts)
+
+
+def _collect_pdf_texts(meeting_dir: Path) -> Tuple[str, str]:
+    return collect_meeting_pdf_texts(meeting_dir)
+
+
+def flat_pdfs_at_jurisdiction_root(jurisdiction_root: Path) -> List[Path]:
+    """Top-level ``*.pdf`` not yet under ``meetings/…`` (for organize + Demo 3)."""
+    root = jurisdiction_root.resolve()
+    if not root.is_dir():
+        return []
+    return sorted(
+        p
+        for p in root.iterdir()
+        if p.is_file() and p.suffix.lower() == ".pdf"
+    )
+
+
+def list_jurisdiction_pdf_paths(jurisdiction_root: Path) -> List[Path]:
+    """All agenda/minutes PDFs under a jurisdiction tree (flat or organized)."""
+    root = jurisdiction_root.resolve()
+    if not root.is_dir():
+        return []
+    return sorted(p for p in root.rglob("*.pdf") if p.is_file())
+
+
+def extra_paths_for_organize(
+    jurisdiction_root: Path,
+    already: Sequence[Path],
+) -> List[Path]:
+    """Include flat county PDFs when media scope dropped them from inventory."""
+    if os.environ.get("GOVERNANCE_ORGANIZE_INCLUDE_FLAT_PDFS", "1").strip().lower() in (
+        "0",
+        "false",
+        "no",
+    ):
+        return []
+    seen = {p.resolve() for p in already}
+    return [p for p in flat_pdfs_at_jurisdiction_root(jurisdiction_root) if p.resolve() not in seen]
 
 
 BRIEF_SYSTEM = (
@@ -1222,6 +1323,7 @@ def build_meeting_collateral_brief(
     model: str,
     client: Any = None,
     cache_path: Optional[Path] = None,
+    jurisdiction_root: Optional[Path] = None,
 ) -> str:
     """
     Combine agenda + minutes PDF text → names, topics, meeting title for audio prompts.
@@ -1235,7 +1337,10 @@ def build_meeting_collateral_brief(
         if cached:
             return cached + "\n"
 
-    agenda_text, minutes_text = _collect_pdf_texts(meeting_dir)
+    agenda_text, minutes_text = collect_meeting_pdf_texts(
+        meeting_dir,
+        jurisdiction_root=jurisdiction_root,
+    )
     if not agenda_text and not minutes_text:
         return ""
 

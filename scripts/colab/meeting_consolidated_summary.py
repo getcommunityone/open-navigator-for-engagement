@@ -210,7 +210,7 @@ def _gather_meeting_artifacts(
     rel = _rel_under(raw_root, meeting_dir)
     out: Dict[str, Any] = {
         "meeting_dir": rel,
-        "meeting_path": meeting_dir,
+        "meeting_path": meeting_dir.resolve(),
         "agenda_pdfs": [],
         "minutes_pdfs": [],
         "audio_video": [],
@@ -337,15 +337,254 @@ def _read_text(path: Path, *, max_chars: int) -> str:
     return body[:max_chars] + "\n\n… _(truncated)_"
 
 
-def build_consolidated_summary_markdown(artifacts: Dict[str, Any]) -> str:
-    max_body = int(os.environ.get("GOVERNANCE_CONSOLIDATED_MAX_CHARS", "80000"))
+def _parse_brief_txt(path: Path) -> Dict[str, str]:
+    fields: Dict[str, str] = {}
+    try:
+        for line in path.read_text(encoding="utf-8").splitlines():
+            if ":" not in line:
+                continue
+            key, val = line.split(":", 1)
+            key = key.strip().lower().replace(" ", "_")
+            val = val.strip()
+            if key and val:
+                fields[key] = val
+    except OSError:
+        pass
+    return fields
+
+
+def resolve_meeting_identity(
+    artifacts: Dict[str, Any],
+    *,
+    jurisdiction_label: str = "",
+) -> Dict[str, Any]:
+    """
+    Best available meeting title / body / date for the judge summary.
+
+    Priority: Demo 3 JSON → ``meeting_brief.txt`` → calendar folder name → audio JSON (flagged).
+    """
+    meeting_path = artifacts.get("meeting_path")
+    date_from_folder = (
+        _meeting_calendar_date(meeting_path) if isinstance(meeting_path, Path) else None
+    )
+    identity: Dict[str, Any] = {
+        "title": "",
+        "body": "",
+        "date": date_from_folder or "",
+        "location": jurisdiction_label.replace("/", ", ") if jurisdiction_label else "",
+        "source": "unknown",
+        "warnings": [],
+    }
+
+    for item in artifacts.get("demo3") or []:
+        analysis = item.get("analysis") or {}
+        meeting = analysis.get("meeting") if isinstance(analysis, dict) else {}
+        if not isinstance(meeting, dict) or not (
+            meeting.get("body_name") or meeting.get("meeting_title")
+        ):
+            continue
+        identity["body"] = str(meeting.get("body_name") or identity["body"] or "").strip()
+        identity["title"] = str(
+            meeting.get("meeting_title") or meeting.get("body_name") or identity["title"] or ""
+        ).strip()
+        identity["date"] = str(meeting.get("meeting_date") or identity["date"] or "").strip()
+        loc = meeting.get("location") or meeting.get("county") or meeting.get("city")
+        if loc:
+            identity["location"] = str(loc).strip()
+        identity["source"] = "agenda_minutes_analysis"
+        break
+
+    brief = artifacts.get("meeting_brief")
+    if isinstance(brief, Path) and brief.is_file():
+        fields = _parse_brief_txt(brief)
+        if identity["source"] != "agenda_minutes_analysis":
+            identity["title"] = fields.get("meeting_title") or identity["title"]
+            identity["body"] = fields.get("governing_body") or identity["body"]
+            identity["date"] = fields.get("meeting_date") or identity["date"]
+            if identity["title"] or identity["body"]:
+                identity["source"] = "meeting_brief"
+        elif not identity["title"]:
+            identity["title"] = fields.get("meeting_title") or identity["title"]
+
+    if not identity["title"] and identity["date"]:
+        identity["title"] = f"Meeting {identity['date']}"
+    if not identity["body"] and jurisdiction_label:
+        parts = jurisdiction_label.split("/")
+        if len(parts) >= 3:
+            identity["body"] = f"{parts[1].title()} — {parts[2].replace('_', ' ').title()}"
+
+    has_demo3 = bool(artifacts.get("demo3"))
+    has_audio = bool(artifacts.get("demo4_chunks"))
+    if has_audio and not has_demo3 and (artifacts.get("agenda_pdfs") or artifacts.get("minutes_pdfs")):
+        identity["warnings"].append(
+            "Agenda/minutes PDFs are on file but were not analyzed (Demo 3). "
+            "Names, body, and location below may be wrong if taken from audio only. "
+            "Re-run §6 with scope `all` or `GOVERNANCE_RUN_DEMO3_WITH_VIDEO=1` (default)."
+        )
+    elif has_audio and not has_demo3:
+        identity["warnings"].append(
+            "Audio analysis only — no agenda/minutes policy JSON. "
+            "Verify body name, officials, and location against source PDFs."
+        )
+
+    return identity
+
+
+def _collect_all_decisions(artifacts: Dict[str, Any]) -> List[Dict[str, Any]]:
+    seen: set[str] = set()
+    out: List[Dict[str, Any]] = []
+    for item in artifacts.get("demo3") or []:
+        analysis = item.get("analysis") or {}
+        for d in analysis.get("decisions") or []:
+            if not isinstance(d, dict):
+                continue
+            did = str(d.get("decision_id") or "")
+            key = did or str(d.get("topic") or len(out))
+            if key in seen:
+                continue
+            seen.add(key)
+            out.append(d)
+    for entry in artifacts.get("demo4_chunks") or []:
+        analysis = (entry.get("data") or {}).get("json_analysis")
+        if not isinstance(analysis, dict):
+            continue
+        for d in analysis.get("decisions") or []:
+            if not isinstance(d, dict):
+                continue
+            did = str(d.get("decision_id") or "")
+            key = f"audio:{did or d.get('topic') or len(out)}"
+            if key in seen:
+                continue
+            seen.add(key)
+            out.append(d)
+    return out
+
+
+def build_judge_summary_markdown(
+    artifacts: Dict[str, Any],
+    *,
+    jurisdiction_label: str = "",
+) -> str:
+    """Judge-facing narrative: no pipeline jargon or raw model chunk dumps."""
+    identity = resolve_meeting_identity(artifacts, jurisdiction_label=jurisdiction_label)
+    title = identity.get("title") or "Meeting summary"
+    body = identity.get("body") or "Governing body"
+    date_s = identity.get("date") or "Date unknown"
+    location = identity.get("location") or ""
 
     lines: List[str] = [
-        f"# Meeting summary — `{artifacts.get('meeting_dir', '')}`",
+        f"# {title}",
         "",
-        "Single file for judges: **people**, **decisions** (agenda + minutes + audio), "
-        "narrative summaries, and recording analysis. Re-run with "
-        "`GOVERNANCE_FORCE_REPROCESS=1` after prompt or scope changes.",
+        f"**{body}** · {date_s}"
+        + (f" · {location}" if location else ""),
+        "",
+    ]
+    for w in identity.get("warnings") or []:
+        lines.append(f"> ⚠ {w}")
+        lines.append("")
+
+    drift = (
+        read_json_file(artifacts["drift_json"])
+        if artifacts.get("drift_json")
+        else None
+    )
+    mls = (drift or {}).get("meeting_level_summary") or {} if isinstance(drift, dict) else {}
+    if mls.get("headline"):
+        lines.append("## At a glance")
+        lines.append("")
+        lines.append(f"**{mls['headline']}**")
+        lines.append("")
+    if mls.get("summary"):
+        lines.append(str(mls["summary"]).strip())
+        lines.append("")
+
+    all_decisions = _collect_all_decisions(artifacts)
+    meeting_meta: Dict[str, Any] = {}
+    all_people: List[Any] = []
+    for item in artifacts.get("demo3") or []:
+        analysis = item.get("analysis") or {}
+        meeting = analysis.get("meeting") if isinstance(analysis, dict) else {}
+        if isinstance(meeting, dict) and meeting and not meeting_meta:
+            meeting_meta = meeting
+        for p in analysis.get("people") or []:
+            if isinstance(p, dict):
+                all_people.append(p)
+
+    if all_decisions:
+        lines.append(format_theme_audit_markdown(audit_decision_themes(all_decisions)))
+        lines.append(
+            format_decisions_markdown(all_decisions, heading="Decisions (agenda, minutes, and recording)")
+        )
+    elif artifacts.get("audio_video"):
+        lines.append("## Decisions")
+        lines.append("")
+        lines.append(
+            "_No structured decisions in Demo 3/4 JSON yet. See technical manifest or re-run §6._"
+        )
+        lines.append("")
+
+    if meeting_meta or all_people:
+        lines.append(format_people_markdown(meeting_meta, all_people))
+    elif isinstance(artifacts.get("meeting_brief"), Path) and artifacts["meeting_brief"].is_file():
+        brief_fields = _parse_brief_txt(artifacts["meeting_brief"])
+        names = brief_fields.get("individual_names", "")
+        if names:
+            lines.append("## People (from agenda + minutes brief)")
+            lines.append("")
+            lines.append(names)
+            lines.append("")
+
+    subjects = []
+    if isinstance(drift, dict):
+        subjects = drift.get("subjects") or drift.get("drifted_subjects") or []
+    if subjects or mls.get("emergent_value_tensions"):
+        lines.append("## Themes across the recording")
+        lines.append("")
+        tensions = mls.get("emergent_value_tensions") or []
+        if tensions:
+            lines.append("- **Tensions:** " + "; ".join(str(t) for t in tensions[:12]))
+        for s in subjects[:12]:
+            if not isinstance(s, dict):
+                continue
+            label = s.get("subject_label") or s.get("subject_id") or "subject"
+            headline = (s.get("drift_headline") or s.get("drift_summary") or "").strip()
+            narrative = (s.get("narrative_summary") or s.get("summary") or "").strip()
+            text = headline or narrative
+            if text:
+                lines.append(f"- **{label}:** {text[:1200]}")
+        lines.append("")
+
+    doc_lines: List[str] = []
+    for p in artifacts.get("agenda_pdfs") or []:
+        doc_lines.append(f"- Agenda: `{p.name}`")
+    for p in artifacts.get("minutes_pdfs") or []:
+        doc_lines.append(f"- Minutes: `{p.name}`")
+    for p in artifacts.get("audio_video") or []:
+        doc_lines.append(f"- Recording: `{p.name}`")
+    if doc_lines:
+        lines.append("## Source documents")
+        lines.append("")
+        lines.extend(doc_lines)
+        lines.append("")
+
+    lines.append(
+        "_Pipeline status, chunk file paths, and troubleshooting: "
+        "see companion file `_meeting_summary_technical.md` in this folder._"
+    )
+    lines.append("")
+    return "\n".join(lines)
+
+
+def build_technical_manifest_markdown(artifacts: Dict[str, Any]) -> str:
+    """Operator-facing: counts, gaps, file paths, and full Demo 3/4 artifacts."""
+    max_body = int(os.environ.get("GOVERNANCE_CONSOLIDATED_MAX_CHARS", "80000"))
+    meeting_dir = artifacts.get("meeting_dir", "")
+
+    lines: List[str] = [
+        f"# Technical manifest — `{meeting_dir}`",
+        "",
+        "Pipeline inventory for this session. The judge-facing summary is "
+        "`_meeting_summary.md` in this folder.",
         "",
         "## Sources on disk",
         "",
@@ -354,15 +593,14 @@ def build_consolidated_summary_markdown(artifacts: Dict[str, Any]) -> str:
         f"- **Audio / video:** {len(artifacts.get('audio_video') or [])}",
         f"- **Demo 3 analyses:** {len(artifacts.get('demo3') or [])}",
         f"- **Demo 4 chunks:** {len(artifacts.get('demo4_chunks') or [])}",
-        f"- **Transcripts:** {len(artifacts.get('transcripts') or [])}",
+        f"- **Transcripts (Demo 4a / §9a):** {len(artifacts.get('transcripts') or [])}",
         "",
     ]
     n_flat = int(artifacts.get("pdfs_from_jurisdiction_root") or 0)
     if n_flat:
         lines.append(
-            f"- **Layout:** {n_flat} PDF(s) at county root "
-            f"(e.g. `2026_05_06-Agenda.pdf`) — included even when not under "
-            f"`meetings/…/session/agenda/`"
+            f"- **Layout:** {n_flat} PDF(s) still referenced from county root "
+            f"(organize moves them into `meetings/…/session/agenda|minutes/` on §6)"
         )
         lines.append("")
 
@@ -374,25 +612,36 @@ def build_consolidated_summary_markdown(artifacts: Dict[str, Any]) -> str:
     if artifacts.get("minutes_pdfs") and not any(
         (i.get("label") == "Minutes" for i in (artifacts.get("demo3") or []))
     ):
-        missing.append(
-            "minutes PDF present but no Demo 3 analysis — re-run Demo 3 "
-            "(per-meeting agenda+minutes is enabled in current code)"
-        )
+        missing.append("minutes PDF present but no Demo 3 analysis")
     if artifacts.get("audio_video") and not artifacts.get("demo4_chunks"):
-        missing.append(
-            "recording present but no Demo 4 chunks — set "
-            "`GOVERNANCE_DEMO4_MODEL` set to a model from §3 that accepts audio "
-            "(often `gemini-2.0-flash` when Gemma Edge is not on your key), restart runtime, "
-            "re-run §6; MP4→ffmpeg MP3 chunks (Opus conversion not required)"
-        )
+        missing.append("recording present but no Demo 4 chunk JSON")
     if artifacts.get("demo4_chunks") and not artifacts.get("drift_json"):
         missing.append("chunks exist but no `policy_drift.json`")
+    if artifacts.get("audio_video") and not artifacts.get("transcripts"):
+        missing.append(
+            "no `transcript.en.txt` — optional notebook §9a (Demo 4a); not run in §6"
+        )
     if missing:
         lines.append("## Gaps")
         lines.append("")
         for m in missing:
             lines.append(f"- ⚠ {m}")
         lines.append("")
+
+    return build_consolidated_summary_markdown(artifacts, _lines_prefix=lines, max_body=max_body)
+
+
+def build_consolidated_summary_markdown(
+    artifacts: Dict[str, Any],
+    *,
+    _lines_prefix: Optional[List[str]] = None,
+    max_body: Optional[int] = None,
+) -> str:
+    max_body = max_body if max_body is not None else int(
+        os.environ.get("GOVERNANCE_CONSOLIDATED_MAX_CHARS", "80000")
+    )
+
+    lines: List[str] = list(_lines_prefix or [])
 
     brief = artifacts.get("meeting_brief")
     if brief and isinstance(brief, Path) and brief.is_file():
@@ -512,10 +761,6 @@ def build_consolidated_summary_markdown(artifacts: Dict[str, Any]) -> str:
             idx = data.get("chunk_index", "?")
             lines.append(f"### Chunk {idx} — `{chunk_path.name if chunk_path else '?'}`")
             lines.append("")
-            summary = (data.get("summary") or "").strip()
-            if summary:
-                lines.append(summary)
-                lines.append("")
             analysis = data.get("json_analysis")
             if isinstance(analysis, dict):
                 ch_decisions = analysis.get("decisions") or []
@@ -584,6 +829,35 @@ def build_consolidated_summary_markdown(artifacts: Dict[str, Any]) -> str:
     return "\n".join(lines)
 
 
+def _ensure_meeting_brief(
+    meeting_dir: Path,
+    *,
+    jurisdiction_root: Optional[Path],
+    api_key: str,
+    genai_model: str,
+) -> None:
+    if not api_key or not genai_model:
+        return
+    brief_path = meeting_dir / "meeting_brief.txt"
+    if brief_path.is_file() and len(brief_path.read_text(encoding="utf-8").strip()) > 80:
+        return
+    try:
+        from meeting_grouping import build_meeting_collateral_brief, collect_meeting_pdf_texts
+    except ImportError:
+        return
+    agenda, minutes = collect_meeting_pdf_texts(
+        meeting_dir, jurisdiction_root=jurisdiction_root
+    )
+    if not agenda and not minutes:
+        return
+    build_meeting_collateral_brief(
+        meeting_dir,
+        api_key=api_key,
+        model=genai_model,
+        jurisdiction_root=jurisdiction_root,
+    )
+
+
 def write_meeting_consolidated_summary(
     meeting_dir: Path,
     *,
@@ -591,8 +865,17 @@ def write_meeting_consolidated_summary(
     gemma_json_root: Path,
     summaries_root: Path,
     jurisdiction_root: Optional[Path] = None,
+    jurisdiction_label: str = "",
+    api_key: str = "",
+    genai_model: str = "",
 ) -> Tuple[Path, Optional[Path]]:
-    """Write ``_meeting_summary.md`` (and optional copy beside raw meeting folder)."""
+    """Write judge ``_meeting_summary.md`` + operator ``_meeting_summary_technical.md``."""
+    _ensure_meeting_brief(
+        meeting_dir,
+        jurisdiction_root=jurisdiction_root,
+        api_key=api_key,
+        genai_model=genai_model,
+    )
     artifacts = _gather_meeting_artifacts(
         meeting_dir,
         raw_root=raw_root,
@@ -600,20 +883,27 @@ def write_meeting_consolidated_summary(
         summaries_root=summaries_root,
         jurisdiction_root=jurisdiction_root,
     )
-    body = build_consolidated_summary_markdown(artifacts)
+    judge_body = build_judge_summary_markdown(
+        artifacts, jurisdiction_label=jurisdiction_label
+    )
+    technical_body = build_technical_manifest_markdown(artifacts)
     rel = Path(artifacts["meeting_dir"])
     out_dir = summaries_root / rel
     out_dir.mkdir(parents=True, exist_ok=True)
     summary_path = out_dir / "_meeting_summary.md"
-    summary_path.write_text(body, encoding="utf-8")
+    technical_path = out_dir / "_meeting_summary_technical.md"
+    summary_path.write_text(judge_body, encoding="utf-8")
+    technical_path.write_text(technical_body, encoding="utf-8")
 
     if os.environ.get("GOVERNANCE_CONSOLIDATED_SUMMARY_IN_RAW", "1").strip().lower() not in (
         "0",
         "false",
         "no",
     ):
-        raw_summary = meeting_dir / "_meeting_summary.md"
-        raw_summary.write_text(body, encoding="utf-8")
+        (meeting_dir / "_meeting_summary.md").write_text(judge_body, encoding="utf-8")
+        (meeting_dir / "_meeting_summary_technical.md").write_text(
+            technical_body, encoding="utf-8"
+        )
 
     mmd_copy: Optional[Path] = None
     src_mmd = artifacts.get("drift_mmd")
@@ -636,6 +926,8 @@ def run_consolidated_summaries_for_jurisdiction(
     gemma_json_root: Path,
     summaries_root: Path,
     jurisdiction_prefix: str = "",
+    api_key: str = "",
+    genai_model: str = "",
 ) -> List[Path]:
     """Build one consolidated summary per ``meetings/{date}/{slug}/`` session."""
     if os.environ.get("GOVERNANCE_CONSOLIDATED_SUMMARY", "1").strip().lower() in (
@@ -671,13 +963,22 @@ def run_consolidated_summaries_for_jurisdiction(
             gemma_json_root=gemma_json_root,
             summaries_root=summaries_root,
             jurisdiction_root=jurisdiction_root,
+            jurisdiction_label=jur_prefix,
+            api_key=api_key,
+            genai_model=genai_model,
         )
         written.append(summary_path)
         raw_copy = meeting_dir / "_meeting_summary.md"
         dest = raw_copy if raw_copy.is_file() else summary_path
+        tech = meeting_dir / "_meeting_summary_technical.md"
         print(
-            f"  → consolidated summary: {dest.relative_to(raw_root)} "
+            f"  → judge summary: {dest.relative_to(raw_root)} "
             f"(mirror: {summary_path.relative_to(summaries_root)})",
             flush=True,
         )
+        if tech.is_file():
+            print(
+                f"  → technical manifest: {tech.relative_to(raw_root)}",
+                flush=True,
+            )
     return written

@@ -469,6 +469,22 @@ def run_governance_pipeline(
         flush=True,
     )
 
+    try:
+        from pipeline_output_links import print_pipeline_output_index
+
+        prefixes = [
+            inv.jurisdiction.relative_label.replace("\\", "/")
+            for inv in inventories
+        ]
+        print_pipeline_output_index(
+            pipe_root=ctx.pipe_root,
+            gemma_json_root=ctx.demo_ctx.gemma_json_root,
+            summaries_root=ctx.demo_ctx.summaries_root,
+            jurisdiction_prefixes=prefixes or None,
+        )
+    except ImportError:
+        pass
+
     if ctx.run_safety_review:
         try:
             from colab_safety_review import run_safety_review, safety_review_enabled

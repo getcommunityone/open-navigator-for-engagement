@@ -44,6 +44,11 @@ DEFAULT_DEMO4_HF_MODEL_ID = os.environ.get(
     "GOVERNANCE_DEMO4_HF_MODEL", "google/gemma-4-E2B-it"
 ).strip()
 
+# Demo 4a / plain transcription: E2B or E4B only (never 31B/26B MoE).
+DEFAULT_TRANSCRIPTION_HF_MODEL_ID = os.environ.get(
+    "GOVERNANCE_TRANSCRIPTION_HF_MODEL", "google/gemma-4-E2B-it"
+).strip()
+
 # Default Gatekeeper HF checkpoint when ``GOVERNANCE_GATEKEEPER_FORCE_HF=1``.
 _HF_GATEKEEPER_REPO_DEFAULT = "google/gemma-4-E2B-it"
 
@@ -95,6 +100,28 @@ def resolve_demo4_hf_model(requested: Optional[str] = None) -> str:
             DEFAULT_DEMO4_HF_MODEL_ID,
         )
         repo = resolve_hf_model_id(DEFAULT_DEMO4_HF_MODEL_ID)
+    return repo
+
+
+def resolve_transcription_hf_model(requested: Optional[str] = None) -> str:
+    """
+    Hugging Face repo for speech-to-text only (Demo 4a).
+
+    Restricted to Gemma 4 **E2B** / **E4B** edge checkpoints — never 31B/26B MoE.
+    """
+    raw = (
+        requested
+        or os.environ.get("GOVERNANCE_TRANSCRIPTION_HF_MODEL", "").strip()
+        or DEFAULT_TRANSCRIPTION_HF_MODEL_ID
+    )
+    repo = resolve_hf_model_id(raw)
+    if not _repo_supports_audio(repo):
+        logger.warning(
+            "Transcription model %r is not E2B/E4B — falling back to %s",
+            repo,
+            DEFAULT_TRANSCRIPTION_HF_MODEL_ID,
+        )
+        repo = resolve_hf_model_id(DEFAULT_TRANSCRIPTION_HF_MODEL_ID)
     return repo
 
 

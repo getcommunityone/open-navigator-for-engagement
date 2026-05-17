@@ -1862,9 +1862,23 @@ def transcribe_audio_with_gemma(
         p = Path(audio_path)
         media = [(p, mime_type or mime_for(p))]
 
+    use_hf = demo4_uses_huggingface()
+    tx_model = model
+    if use_hf:
+        try:
+            from gemma_hf_backend import resolve_transcription_hf_model
+
+            tx_model = resolve_transcription_hf_model()
+        except ImportError:
+            pass
+    else:
+        explicit = os.environ.get("GOVERNANCE_TRANSCRIPTION_MODEL", "").strip()
+        if explicit:
+            tx_model = explicit
+
     result = call_google_genai_multimodal(
         api_key=api_key,
-        model=model,
+        model=tx_model,
         system_instruction=system_instruction,
         user_text=user_text,
         media=media,
@@ -1874,6 +1888,7 @@ def transcribe_audio_with_gemma(
         # 400 INVALID_ARGUMENT if thinking_config is attached to non-thinking variants.
         include_thoughts=False,
         thinking_budget=None,
+        demo4=use_hf,
     )
 
     text = (result.text or "").strip()
@@ -2197,27 +2212,36 @@ def resolve_drift_model(
     thinking_model: str = "",
 ) -> Tuple[str, bool]:
     """
-    Model for policy drift (text-only). When Demo 4 used HF, drift stays on HF.
-    Never send ``google/gemma-4-E2B-it`` to Google AI Studio (invalid model id there).
+    Model for policy drift (text-only JSON merge).
+
+    Default: **thinking / reasoning** model on Google AI Studio (``GOVERNANCE_THINKING_MODEL``),
+    not E2B/E4B. Edge models are for transcription and native audio chunks only.
+    Set ``GOVERNANCE_DRIFT_USE_HF=1`` to run drift on local E2B weights.
     """
-    if demo4_uses_huggingface():
+    explicit = os.environ.get("GOVERNANCE_DRIFT_MODEL", "").strip()
+    if explicit:
+        try:
+            from gemma_hf_backend import use_huggingface_for_model
+
+            return explicit, use_huggingface_for_model(explicit, demo4=False)
+        except ImportError:
+            return explicit, False
+    if os.environ.get("GOVERNANCE_DRIFT_USE_HF", "0").strip().lower() in (
+        "1",
+        "true",
+        "yes",
+    ):
         try:
             from gemma_hf_backend import resolve_demo4_hf_model
 
             return resolve_demo4_hf_model(demo4_chunk_model), True
         except ImportError:
             pass
-    explicit = os.environ.get("GOVERNANCE_DRIFT_MODEL", "").strip()
-    if explicit:
-        return explicit, False
-    mid = (demo4_chunk_model or "").lower()
-    if mid.startswith("google/") or "e2b" in mid or "e4b" in mid:
-        tm = (
-            thinking_model
-            or os.environ.get("GOVERNANCE_THINKING_MODEL", "gemma-4-31b-it")
-        ).strip()
-        return tm, False
-    return (demo4_chunk_model or thinking_model or "gemma-4-31b-it").strip(), False
+    tm = (
+        thinking_model
+        or os.environ.get("GOVERNANCE_THINKING_MODEL", "gemma-4-31b-it")
+    ).strip()
+    return tm, False
 
 
 def policy_drift_summarize(

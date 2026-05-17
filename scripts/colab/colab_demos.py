@@ -7,6 +7,7 @@ Imported by ``jurisdiction_pipeline`` and optionally by ``02_run_meeting_llm.ipy
 from __future__ import annotations
 
 import json
+import os
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -503,6 +504,51 @@ def run_demo2(inv: MeetingInventory, ctx: DemoContext) -> List[Dict[str, Any]]:
     return report
 
 
+def supplemental_demo3_with_video_enabled() -> bool:
+    """When media scope is video/audio-only, still analyze agenda+minutes PDFs on disk."""
+    return os.environ.get("GOVERNANCE_RUN_DEMO3_WITH_VIDEO", "1").strip().lower() not in (
+        "0",
+        "false",
+        "no",
+    )
+
+
+def run_supplemental_demo3(inv: MeetingInventory, ctx: DemoContext) -> List[Dict[str, Any]]:
+    """Run Demo 3 on jurisdiction PDFs when scope skipped Demo 3 but PDFs exist."""
+    mscope = get_active_media_scope()
+    if mscope.run_demo3 or not supplemental_demo3_with_video_enabled():
+        return []
+    try:
+        from meeting_grouping import list_jurisdiction_pdf_paths
+    except ImportError:
+        return []
+    pdfs = list_jurisdiction_pdf_paths(inv.jurisdiction.root)
+    if not pdfs:
+        return []
+    picked = pick_demo3_pdfs_for_inventory(
+        pdfs,
+        ctx.raw_root,
+        max_per_meeting=2,
+        max_total=ctx.max_pdfs_per_jur,
+    )
+    if not picked:
+        return []
+    thinking_model = (ctx.thinking_model or ctx.genai_model).strip()
+    log_line(
+        f"\n— Demo 3 (PDFs with video scope) | {inv.jurisdiction.relative_label}: "
+        f"{len(picked)} PDF(s)  (model: {thinking_model})",
+        prefix="",
+    )
+    report: List[Dict[str, Any]] = []
+    from theme_audit import audit_decision_themes
+
+    for pdf in picked:
+        _run_demo3_one_pdf(
+            inv, ctx, pdf, thinking_model, report, audit_fn=audit_decision_themes
+        )
+    return report
+
+
 def run_demo3(inv: MeetingInventory, ctx: DemoContext) -> List[Dict[str, Any]]:
     from theme_audit import audit_decision_themes
 
@@ -861,7 +907,8 @@ def run_demo4(
                         brief_cache[mk] = build_meeting_collateral_brief(
                             meeting_dir,
                             api_key=ctx.api_key,
-                            model=demo4_model,
+                            model=ctx.genai_model,
+                            jurisdiction_root=j.root,
                         )
                     brief = brief_cache.get(mk) or ""
                 chunk_hint = (
@@ -1087,6 +1134,10 @@ def run_demos_for_jurisdiction(
                 progress_tick("Demo 3 complete")
         else:
             log_line(f"⊘ Demo 3 skipped (media scope: {mscope.key})")
+            sup = run_supplemental_demo3(inv, ctx)
+            if sup:
+                reports.demo3 = sup
+                progress_tick("Demo 3 (agenda+minutes PDFs) complete")
         if mscope.run_demo4:
             with timed_step(f"{demo4_step_label(mscope)} | {label}"):
                 reports.demo4 = run_demo4(inv, ctx, brief_cache=brief_cache)
@@ -1103,6 +1154,8 @@ def run_demos_for_jurisdiction(
                     gemma_json_root=ctx.gemma_json_root,
                     summaries_root=ctx.summaries_root,
                     jurisdiction_prefix=inv.jurisdiction.relative_label,
+                    api_key=ctx.api_key,
+                    genai_model=ctx.genai_model,
                 )
                 progress_tick("Consolidated summaries complete")
         except ImportError:
