@@ -994,6 +994,7 @@ def run_demo4(
                 chunk_jsons,
                 api_key=ctx.api_key,
                 model=chunk_model,
+                thinking_model=ctx.thinking_model,
                 focus_hint=ctx.drift_focus,
                 canonical_prompt_text=ctx.policy_prompt,
             )

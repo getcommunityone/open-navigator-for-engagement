@@ -477,13 +477,22 @@ def run_governance_pipeline(
             run_safety_review = None  # type: ignore[assignment,misc]
         if safety_review_enabled() and run_safety_review and ctx.shield_model:
             safety_root = ctx.pipe_root / "03_processed_outputs" / "05_safety_review"
-            run_safety_review(
-                api_key=ctx.api_key,
-                shield_model=ctx.shield_model,
-                gemma_json_root=ctx.demo_ctx.gemma_json_root,
-                safety_root=safety_root,
-                summaries_root=ctx.demo_ctx.summaries_root,
-            )
+            try:
+                with timed_step("ShieldGemma safety review (Google API)"):
+                    run_safety_review(
+                        api_key=ctx.api_key,
+                        shield_model=ctx.shield_model,
+                        gemma_json_root=ctx.demo_ctx.gemma_json_root,
+                        safety_root=safety_root,
+                        summaries_root=ctx.demo_ctx.summaries_root,
+                    )
+            except Exception as exc:
+                print(
+                    f"⚠️  Safety review skipped ({type(exc).__name__}: {exc}). "
+                    "Demo 4 outputs are still on Drive. "
+                    "Set GOVERNANCE_SAFETY_REVIEW=0 to silence, or fix Shield model / quota.",
+                    flush=True,
+                )
 
     return all_reports
 

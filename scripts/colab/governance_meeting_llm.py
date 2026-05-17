@@ -2175,11 +2175,41 @@ Return one JSON object. No markdown fences. No prose. No trailing commentary.
 """
 
 
+def resolve_drift_model(
+    demo4_chunk_model: str,
+    *,
+    thinking_model: str = "",
+) -> Tuple[str, bool]:
+    """
+    Model for policy drift (text-only). When Demo 4 used HF, drift stays on HF.
+    Never send ``google/gemma-4-E2B-it`` to Google AI Studio (invalid model id there).
+    """
+    if demo4_uses_huggingface():
+        try:
+            from gemma_hf_backend import resolve_demo4_hf_model
+
+            return resolve_demo4_hf_model(demo4_chunk_model), True
+        except ImportError:
+            pass
+    explicit = os.environ.get("GOVERNANCE_DRIFT_MODEL", "").strip()
+    if explicit:
+        return explicit, False
+    mid = (demo4_chunk_model or "").lower()
+    if mid.startswith("google/") or "e2b" in mid or "e4b" in mid:
+        tm = (
+            thinking_model
+            or os.environ.get("GOVERNANCE_THINKING_MODEL", "gemma-4-31b-it")
+        ).strip()
+        return tm, False
+    return (demo4_chunk_model or thinking_model or "gemma-4-31b-it").strip(), False
+
+
 def policy_drift_summarize(
     chunk_jsons: List[Dict[str, Any]],
     *,
     api_key: str,
     model: str,
+    thinking_model: str = "",
     focus_hint: Optional[str] = None,
     max_output_tokens: int = 8192,
     instruction_override: Optional[str] = None,
@@ -2229,9 +2259,18 @@ def policy_drift_summarize(
     )
     user_text = "\n\n".join(sections)
 
+    drift_model, use_hf = resolve_drift_model(model, thinking_model=thinking_model)
+    try:
+        from colab_timed_steps import log_line
+
+        backend = "Hugging Face" if use_hf else "Google AI Studio"
+        log_line(f"drift pass: {drift_model!r} ({backend})", prefix="    ")
+    except ImportError:
+        pass
+
     result = call_google_genai_multimodal(
         api_key=api_key,
-        model=model,
+        model=drift_model,
         system_instruction=(
             "You are a Policy Drift Detector. Honor the policy_analysis_v1.md "
             "schema exactly — preserve subject_id slug rules and the five "
@@ -2245,6 +2284,7 @@ def policy_drift_summarize(
         temperature=0.1,
         max_output_tokens=max_output_tokens,
         include_thoughts=False,
+        demo4=use_hf,
     )
     try:
         return json.loads(_extract_json_object(result.text))
