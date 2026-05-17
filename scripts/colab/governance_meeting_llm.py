@@ -2500,6 +2500,7 @@ __all__ = [
     "probe_google_gemma_studio",
     "print_probe_google_gemma_studio",
     "_demo4_allow_a4b_audio",
+    "resolve_drift_model",
     "policy_drift_summarize",
     "load_meeting_data_lookup", "load_contacts_lookup",
     "merge_meeting_data_by_jurisdiction", "merge_contacts_by_jurisdiction",

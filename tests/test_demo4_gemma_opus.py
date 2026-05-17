@@ -21,6 +21,7 @@ from governance_meeting_llm import (  # noqa: E402
     model_accepts_demo4_audio_chunks,
     pick_demo4_model_from_available,
     resolve_demo4_model,
+    resolve_drift_model,
 )
 
 
@@ -45,6 +46,20 @@ def test_allow_31b_when_prefer_gemma(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv("GOVERNANCE_DEMO4_ALLOW_31B_AUDIO", raising=False)
     assert _demo4_allow_31b_audio() is True
     assert model_accepts_demo4_audio_chunks("gemma-4-31b-it") is True
+
+
+def test_drift_model_stays_on_hf_when_demo4_hf(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("GOVERNANCE_DEMO4_USE_HF", "1")
+    model, use_hf = resolve_drift_model("google/gemma-4-E2B-it", thinking_model="gemma-4-31b-it")
+    assert use_hf is True
+    assert "E2B" in model
+
+
+def test_drift_model_not_hf_repo_on_google(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("GOVERNANCE_DEMO4_USE_HF", "0")
+    model, use_hf = resolve_drift_model("google/gemma-4-E2B-it", thinking_model="gemma-4-31b-it")
+    assert use_hf is False
+    assert model == "gemma-4-31b-it"
 
 
 def test_a4b_audio_when_try_flag(monkeypatch: pytest.MonkeyPatch) -> None:
