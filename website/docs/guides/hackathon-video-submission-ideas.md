@@ -272,6 +272,82 @@ Scrape → Gatekeeper → Gemma policy_analysis_v1 (JSON + media_citation)
 
 ---
 
+## Hackathon idea: Automated interactive annual report (resident edition)
+
+**Pitch hook:** *Your city publishes a 200-page PDF every year—what if residents got the same story LVMH gives shareholders: scrollable chapters, live charts, and one click to the source vote?*
+
+Corporate and state **interactive annual reports** are the UX benchmark. Open Navigator can **generate the data layer** from meetings + audits so you are not hand-keying charts each fiscal year.
+
+### What “best in class” interactive reports do (patterns to steal)
+
+These are **design patterns**, not endorsements—study structure and reuse the mechanics on **public** data.
+
+| Example | Format | What works | Steal for civic automation |
+| --- | --- | --- | --- |
+| [LVMH 2025 Interactive Annual Report](https://hosting.fluidbook.com/LVMH/2025interactiveannualreport/en/30-2025-Interactive-Annual-Report-LVMH.html) | Fluidbook / long scroll | Chapter per theme; KPI tiles; HR and capital side stories | One **scroll chapter per COFOG theme** or **meeting session** (`meetings/YYYY_MM_DD/session/`) |
+| [Patagonia — Work in Progress (2025)](https://www.patagonia.com/progress-report/) | Scroll + video + honest metrics | Founder letter, “we missed this target,” repair/grant totals | **Chair letter** = excerpt from `narrative_analysis`; **repairs** = capital `financial_items` vs. discussion in minutes |
+| [On — 2025 Impact Progress Report](https://press.on-running.com/ons-2025-impact-progress-report-on-shares-lessons-in-impact-from-its-15-year-journey) | Narrative + data split | Pillars (Decarbonization, Circularity, Social) with KPIs | Three pillars = **Fiscal health**, **Streets & capital**, **Trust & safety** (Shield summaries) |
+| [NYC Comptroller — Popular Annual Financial Report (PAFR)](https://comptroller.nyc.gov/newsroom/nyc-comptrollers-office-releases-fiscal-year-2025-popular-annual-financial-report/) | Plain-language + visuals | “Popular” companion to the technical ACFR | Auto **`_meeting_summary.md`** + one chart per chapter = PAFR for one county |
+| [NY State Comptroller — local government dashboards](https://www.osc.ny.gov/local-government/publications) / Open Book | Compare all entities in a class | Pick your county vs. peers | **Gapminder scatter** or bar rank: same metric, all counties in state |
+| [Multnomah County — Financial Condition Report (Tableau)](https://multco.us/info/financial-condition-report-2026) | Embedded dashboards | Revenue vs. expenditure drill-down | dbt rollups → **Looker Studio** or static embed from exported CSV |
+
+**Common thread:** **Story first**, numbers second, **drill-down** for skeptics, **download** for journalists.
+
+### Reusable interaction patterns (automate once, refresh quarterly)
+
+| Pattern | Resident question it answers | Open Navigator source |
+| --- | --- | --- |
+| **KPI hero cards** | “What changed this year?” | Sum `financial_items` by `category`; YoY compare on `fiscal_year` label |
+| **Scrolly chapter** | “What did council argue about?” | `_meeting_summary.md` sections + `decisions[].headline` |
+| **Receipt link** | “Show me the vote.” | `media_citation.playback_url` + `timestamp_start_seconds` |
+| **Drift timeline** | “How did their story on this issue shift?” | `policy_drift.mmd` / `policy_drift.json` from Demo 4 |
+| **Peer compare** | “Are we worse than neighbors?” | Warehouse by `state_code` + `scope`; fines % or accessibility count |
+| **Gapminder moment** | “How do we move vs. everyone else?” | Animated scatter by `jurisdiction_id` over `calendar_year` strings |
+| **Trust appendix** | “Was the AI summary safe?” | `05_safety_review/*.shield.json` aggregate |
+| **Download data** | “I want the spreadsheet.” | Bronze export / `02_gemma_json` / dbt `bronze_*` tables |
+
+### Automation pipeline (same stack as the Colab demo)
+
+```text
+Scrape agendas, minutes, ACFR PDFs, MP4
+  → Gatekeeper → Gemma (policy_analysis_v1)
+  → financial_items[] + decisions[] + narrative_analysis
+  → dbt bronze_decisions / bronze_financial_items (warehouse)
+  → rollup SQL: jurisdiction_id × fiscal_year × primary_theme
+  → static site OR Flourish/Looker embeds (refresh on schedule)
+  → optional: Gemma-generated “chair letter” prose per year from summaries
+```
+
+**Hackathon MVP (one weekend):**
+
+1. **Inputs:** Tuscaloosa `county_01125`, **2 meeting dates**, budget/minutes PDFs (`SCOPE=fast`).
+2. **Outputs:** Three “chapters” as markdown or a single-page site:
+   - **Revenue & fines** — fines % KPI + one decision quote + Governing national band callout.
+   - **Streets & capital** — top `financial_items` for paving/capital + potholes hook from minutes.
+   - **Trust** — Shield `_summary.json` + “how we review AI on public records.”
+3. **Wow chart:** Gapminder-style **AL counties** (or 600 jurisdictions from Open Book–style public data) with **your county highlighted**.
+4. **Refresh story:** “Re-run Colab §6 + dbt seed; charts update—no designer rebuilding from Word.”
+
+**Tools that fit hackathon time:** [MkDocs](https://www.mkdocs.org/) / Docusaurus page with embedded iframes; [Flourish](https://flourish.studio/) story; [Observable](https://observablehq.com/) notebook published to HTML; Google **Looker Studio** on a bronze CSV export.
+
+### How to say it on camera (15s + reveal)
+
+- **Problem:** “Annual reports are written for bond analysts, not for the person who got the ticket or the pothole.”
+- **Reveal:** Scroll one **auto-generated chapter** (not a PDF)—click a KPI → jump to **meeting video at 1:05:30** → show **Gapminder** dots for every county.
+- **Close:** “We don’t replace the audit—we **repackage** what meetings and budgets already say, every year, from the same pipeline.”
+
+### CTA copy (annual report track)
+
+Add to [Call to action slide](#call-to-action-slide-required-closing-beat):
+
+- **Headline:** Read your county’s **living annual report**
+- **Subline:** Meetings + budget → charts that update · Tuscaloosa pilot
+- **CTA:** Open `_meeting_summary.md` · Run Colab §6 · Embed the Flourish chart
+
+**Caveats:** Label **AI-assisted** sections; link to primary PDFs; separate **official ACFR** from **CommunityOne narrative**; animated charts need **source table** footnotes (audit year, fund).
+
+---
+
 ## Why this matters
 
 Judges and voters often decide from a **short demo**: problem clarity, human face, and a single **reveal** beat a long architecture tour. Treat the recording as a **pitch product**, not an afterthought.
@@ -318,15 +394,17 @@ Judges and voters often decide from a **short demo**: problem clarity, human fac
 
 Short talks, product stories, and case studies that show how **data + maps + humane design** change what people can *see* and *do* in civic life. Most clips are **under about seven minutes** (one TED talk runs slightly longer—called out below). Use them as **tone references** for your own demo: problem → insight → action.
 
-### 1. The Joy of Stats — 200 countries, 200 years in minutes
+### 1. The Joy of Stats — 200 countries, 200 years in minutes (Gapminder)
 
-**Video (≈4:47):** [Hans Rosling — *200 Countries, 200 Years, 4 Minutes* (BBC / Gapminder)](https://www.youtube.com/watch?v=jbkSRLYSojo)
+**Video (≈4:47):** [Hans Rosling — *200 Countries, 200 Years, 4 Minutes* (BBC / Gapminder)](https://www.youtube.com/watch?v=jbkSRLYSojo) · Live tool: [Gapminder Tools](https://www.gapminder.org/tools/)
 
 **The problem:** Global health and wealth are often framed through static, pessimistic narratives.
 
-**The tech:** Animated bubble charts (Gapminder-style) turn **~120,000 data points** into motion: income vs. life expectancy across countries and centuries.
+**The tech:** Animated bubble charts (Gapminder-style) turn **~120,000 data points** into motion: income vs. life expectancy across countries and centuries—**play/pause**, **trails**, and **time** on one canvas.
 
-**Why it’s inspirational:** Dry statistics become a **story of change**—a reminder that visualization can reframe what “the data says” about progress and inequality.
+**Why it’s inspirational:** Dry statistics become a **story of change**—the gold standard for a **reveal beat** in a hackathon video.
+
+**Reuse in CommunityOne (required beat for many tracks):** See [Gapminder-style reveal](#gapminder-style-reveal-use-this-chart-pattern) under the flagship fines hook—map **jurisdictions** instead of countries, **fines %** or **street spend** instead of GDP, **fiscal year** instead of century. Same emotional arc: “You thought you knew your town—watch the dot move.”
 
 ---
 
