@@ -8,7 +8,7 @@ Uses the same paths as ``scripts/colab/02_init_drive_layout.ipynb`` and
 Environment (optional):
   LOG_GDRIVE_MOUNT                 Drive mount root (default: /mnt/g/My Drive)
   GOVERNANCE_PIPELINE_DATA_ROOT    Absolute override for pipeline root
-  GOVERNANCE_PIPELINE_GDRIVE_BASE  Relative to mount (default: CommunityOne/governance_pipeline_data)
+  GOVERNANCE_PIPELINE_GDRIVE_BASE  Relative to mount (default: CommunityOne/hackathons/2026_Gemma_4_Good)
 
 From repo root:
   .venv/bin/python scripts/utils/ensure_governance_pipeline_drive_layout.py

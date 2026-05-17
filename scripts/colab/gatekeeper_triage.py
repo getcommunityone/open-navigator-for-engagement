@@ -2,7 +2,7 @@
 """
 Gatekeeper Triage — "The Ledger of Influence" data-gating layer (2026 Gemma 4 Good Hackathon).
 
-Walks ``<raw_root>/`` (default: ``My Drive/CommunityOne/governance_pipeline_data/01_raw_inputs/``)
+Walks ``<raw_root>/`` (default: ``My Drive/CommunityOne/hackathons/2026_Gemma_4_Good/01_raw_inputs/``)
 recursively with :func:`os.walk`, sends each PDF / audio file to a Gemma multimodal
 triage call, and routes the file based on the model's verdict:
 
@@ -28,7 +28,7 @@ origin (``AL/county/county_01125/2026/foo.pdf``) for live demos.
 
 CLI::
 
-    python scripts/colab/gatekeeper_triage.py --raw-root /content/drive/MyDrive/CommunityOne/governance_pipeline_data/01_raw_inputs
+    python scripts/colab/gatekeeper_triage.py --raw-root /content/drive/MyDrive/CommunityOne/hackathons/2026_Gemma_4_Good/01_raw_inputs
     python scripts/colab/gatekeeper_triage.py --raw-root /path --dry-run
     python scripts/colab/gatekeeper_triage.py --raw-root /path --kinds pdf
     python scripts/colab/gatekeeper_triage.py --raw-root /path --report-path /tmp/triage_report.json
@@ -2373,14 +2373,20 @@ def run_triage(
 
 
 def _default_raw_root() -> Path:
-    """Best-effort default: project pipeline path on Colab, else repo data root."""
+    """Best-effort default: hackathon ``01_raw_inputs`` on Colab Drive or in repo."""
+    try:
+        from scripts.utils.gdrive_paths import GovernancePipelinePaths
+
+        return GovernancePipelinePaths.resolve().raw_inputs
+    except Exception:
+        pass
     colab_default = Path(
-        "/content/drive/MyDrive/CommunityOne/governance_pipeline_data/01_raw_inputs"
+        "/content/drive/MyDrive/CommunityOne/hackathons/2026_Gemma_4_Good/01_raw_inputs"
     )
     if colab_default.is_dir():
         return colab_default
     repo_root = Path(__file__).resolve().parents[2]
-    return repo_root / "data" / "governance_pipeline_data" / "01_raw_inputs"
+    return repo_root / "data" / "hackathons" / "2026_Gemma_4_Good" / "01_raw_inputs"
 
 
 def _resolve_api_key(cli_value: Optional[str]) -> str:

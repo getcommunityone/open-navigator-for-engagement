@@ -1,8 +1,8 @@
 """
 Shared helpers for notebooks under ``scripts/colab/``.
 
-Supports **Google Colab** (Drive mount + ``CommunityOne/`` layout) and **local Jupyter /
-VS Code** (repo checkout on ``sys.path``, pipeline data under ``data/`` in the repo).
+Supports **Google Colab** (Drive mount + hackathon layout) and **local Jupyter /
+VS Code** (repo checkout on ``sys.path``, pipeline data under ``data/hackathons/``).
 """
 from __future__ import annotations
 
@@ -10,6 +10,9 @@ import glob
 import os
 from dataclasses import dataclass
 from pathlib import Path
+
+# Single hackathon pipeline root (must match ``scripts/utils/gdrive_paths.py``).
+HACKATHON_PIPELINE_ROOT_REL = Path("CommunityOne") / "hackathons" / "2026_Gemma_4_Good"
 
 
 def in_colab() -> bool:
@@ -26,15 +29,16 @@ def repo_root_from_this_file() -> Path:
     return Path(__file__).resolve().parents[2]
 
 
-# Drive-side candidate locations probed in Colab when GOVERNANCE_PIPELINE_DATA_ROOT is unset.
-# Order matters: the first directory that exists wins.
+def default_hackathon_pipeline_root_in_repo() -> Path:
+    return repo_root_from_this_file() / "data" / "hackathons" / "2026_Gemma_4_Good"
+
+
+# Colab: only ``CommunityOne/hackathons/2026_Gemma_4_Good`` (not ``governance_pipeline_data``).
 _COLAB_DRIVE_CANDIDATES_REL = (
-    "MyDrive/CommunityOne/hackathons/2026_Gemma_4_Good",
-    "MyDrive/CommunityOne/governance_pipeline_data",
+    "MyDrive/" + HACKATHON_PIPELINE_ROOT_REL.as_posix(),
 )
 _COLAB_SHARED_GLOBS_REL = (
-    "Shareddrives/*/CommunityOne/hackathons/2026_Gemma_4_Good",
-    "Shareddrives/*/CommunityOne/governance_pipeline_data",
+    "Shareddrives/*/" + HACKATHON_PIPELINE_ROOT_REL.as_posix(),
 )
 
 
@@ -53,7 +57,7 @@ class NotebookLayoutPaths:
 
     in_colab: bool
     project_path: Path
-    governance_pipeline_data: Path
+    governance_pipeline_data: Path  # pipeline root (hackathon folder on Drive or in repo)
 
 
 def setup_notebook_paths(mount_point: str = "/content/drive") -> NotebookLayoutPaths:
@@ -61,20 +65,12 @@ def setup_notebook_paths(mount_point: str = "/content/drive") -> NotebookLayoutP
     Resolve repo root and the governance pipeline data directory.
 
     - **project_path** — ``open-navigator`` root (prompts, ``scripts.utils.gdrive_paths``, etc.).
-      Taken from the location of this file (works when the notebook runs from the checkout).
-    - **governance_pipeline_data** — root containing ``01_raw_inputs``, ``02_reference_data``,
+    - **governance_pipeline_data** — hackathon root with ``01_raw_inputs``, ``02_reference_data``,
       ``03_processed_outputs``:
 
-      - **Colab**:
-
-        1. ``GOVERNANCE_PIPELINE_DATA_ROOT`` env var (absolute path) wins if set.
-        2. Otherwise probe ``/content/drive/MyDrive/CommunityOne/hackathons/2026_Gemma_4_Good``
-           and ``/content/drive/MyDrive/CommunityOne/governance_pipeline_data`` (in that order),
-           then matching ``Shareddrives/*/CommunityOne/…`` paths. First existing dir wins.
-        3. Fallback: the first candidate above (so callers get a clear "missing"
-           error referencing the expected Drive path, not a meaningless ``/content/`` sibling).
-      - **Local**: ``<repo>/data/governance_pipeline_data`` (under gitignored ``data/``),
-        unless ``GOVERNANCE_PIPELINE_DATA_ROOT`` is set to an absolute path.
+      - **Colab**: ``GOVERNANCE_PIPELINE_DATA_ROOT`` if set, else
+        ``/content/drive/MyDrive/CommunityOne/hackathons/2026_Gemma_4_Good``.
+      - **Local**: ``<repo>/data/hackathons/2026_Gemma_4_Good`` unless ``GOVERNANCE_PIPELINE_DATA_ROOT`` is set.
     """
     repo = repo_root_from_this_file()
     explicit = (os.getenv("GOVERNANCE_PIPELINE_DATA_ROOT") or "").strip()
@@ -85,24 +81,21 @@ def setup_notebook_paths(mount_point: str = "/content/drive") -> NotebookLayoutP
         for cand in candidates:
             if cand.is_dir():
                 return NotebookLayoutPaths(True, repo, cand)
-        # Refuse to fall back to /content/ — that's ephemeral Colab disk and any
-        # PIPE.ensure_dirs() call would silently create an empty shell that judges
-        # mistake for the real data root. Force the caller to fix the layout or set
-        # GOVERNANCE_PIPELINE_DATA_ROOT explicitly.
         probed = "\n".join(f"  · {c}" for c in candidates) or "  (no candidates)"
         raise RuntimeError(
-            "Could not locate the governance pipeline data root on Google Drive.\n"
-            f"Probed (in order):\n{probed}\n"
+            "Could not locate the hackathon pipeline root on Google Drive.\n"
+            f"Expected: .../CommunityOne/hackathons/2026_Gemma_4_Good\n"
+            f"Probed:\n{probed}\n"
             "Fix one of:\n"
-            "  1. Mount Drive (`drive.mount('/content/drive')`) and confirm one of the candidate "
-            "folders exists.\n"
-            "  2. Set os.environ['GOVERNANCE_PIPELINE_DATA_ROOT'] = '/content/drive/MyDrive/...' "
-            "BEFORE calling setup_notebook_paths().\n"
-            "  3. Stage your data into one of the candidate Drive paths."
+            "  1. Mount Drive and confirm that folder exists (run 01_init or copy script 01).\n"
+            "  2. Set os.environ['GOVERNANCE_PIPELINE_DATA_ROOT'] to the absolute hackathon path "
+            "BEFORE calling setup_notebook_paths()."
         )
     if explicit:
         return NotebookLayoutPaths(False, repo, Path(explicit).expanduser().resolve())
-    return NotebookLayoutPaths(False, repo, repo / "data" / "governance_pipeline_data")
+    return NotebookLayoutPaths(
+        False, repo, default_hackathon_pipeline_root_in_repo()
+    )
 
 
 def maybe_mount_google_drive(mount_point: str = "/content/drive") -> None:

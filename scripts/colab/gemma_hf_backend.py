@@ -679,9 +679,11 @@ def call_gemma_hf_multimodal(
     import torch
 
     media_list = list(media)
+    need_audio = _needs_multimodal_lm(media_list)
+    repo = resolve_demo4_hf_model(model) if need_audio else resolve_hf_model_id(model)
     bundle = load_gemma_hf(
-        model,
-        needs_audio=_needs_multimodal_lm(media_list),
+        repo,
+        needs_audio=need_audio,
     )
     messages, temp_paths = _build_messages(
         system_instruction=system_instruction,

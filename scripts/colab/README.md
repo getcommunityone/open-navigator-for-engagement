@@ -2,7 +2,7 @@
 
 Use this when you **do not** have a high-end local GPU: heavy work runs in Colab or remote APIs; artifacts live on **Google Drive** so WSL and Colab see the same folders after sync.
 
-**Colab vs local (notebooks):** [`colab_paths.py`](colab_paths.py) — `maybe_mount_google_drive()` (no-op locally), `setup_notebook_paths()` (Colab: pipeline data under `…/CommunityOne/governance_pipeline_data` next to your Drive clone; local: `<repo>/data/governance_pipeline_data` unless **`GOVERNANCE_PIPELINE_DATA_ROOT`** is set). Set **`OPEN_NAVIGATOR_ROOT`** if Jupyter’s cwd is not inside the repo.
+**Colab vs local (notebooks):** [`colab_paths.py`](colab_paths.py) — `maybe_mount_google_drive()` (no-op locally), `setup_notebook_paths()` (Colab + Drive: `…/CommunityOne/hackathons/2026_Gemma_4_Good`; local: `<repo>/data/hackathons/2026_Gemma_4_Good` unless **`GOVERNANCE_PIPELINE_DATA_ROOT`** is set). Set **`OPEN_NAVIGATOR_ROOT`** if Jupyter’s cwd is not inside the repo.
 
 Pipeline folder layout under that root: [`scripts/utils/gdrive_paths.py`](../utils/gdrive_paths.py) (`GovernancePipelinePaths`). Drive mount defaults for WSL are documented next to [`scripts/utils/log_sync.py`](../utils/log_sync.py).
 
@@ -25,9 +25,9 @@ Python helper (not a notebook): [`governance_meeting_llm.py`](governance_meeting
 
 1. **Repo for Colab** — Use **GitHub** (Colab “Open from GitHub”) or clone under Drive if you prefer. **Local Jupyter:** open the repo checkout and start the kernel with cwd at the repo root, or set **`OPEN_NAVIGATOR_ROOT`** so the bootstrap cell finds `scripts/colab/colab_paths.py`.
 2. **Scraped meetings on Drive (optional)** — Run **01** from WSL to mirror the **default four inventory** folders under ``data/cache/scraped_meetings`` → ``My Drive/CommunityOne/hackathons/2026_Gemma_4_Good/01_raw_inputs`` (use ``--all-cache`` only if you need the entire cache).
-3. **Pipeline root** — Default on Colab:  
-   `My Drive/CommunityOne/governance_pipeline_data`  
-   Override with env **`GOVERNANCE_PIPELINE_DATA_ROOT`** (absolute path) if you want a different root.
+3. **Pipeline root** — Default on Colab and Drive:  
+   `My Drive/CommunityOne/hackathons/2026_Gemma_4_Good`  
+   Override with env **`GOVERNANCE_PIPELINE_DATA_ROOT`** (absolute path) if needed.
 4. **WSL + Google Drive Desktop (optional)** — Same relative path appears under your mount, e.g.  
    `/mnt/g/My Drive/CommunityOne/...`  
    Set **`LOG_GDRIVE_MOUNT`** if your mount is not `/mnt/g/My Drive`.
@@ -149,8 +149,8 @@ Scraped meetings mirror is **step 1** above ([`01_copy_scraped_meetings_cache_to
 | Variable | Meaning |
 |----------|---------|
 | `OPEN_NAVIGATOR_ROOT` | Absolute path to the `open-navigator` checkout when Jupyter cwd is not inside the repo (local + Colab). |
-| `GOVERNANCE_PIPELINE_DATA_ROOT` | Absolute path to pipeline root (recommended on Colab; optional locally — default is `data/governance_pipeline_data` in the repo). |
-| `GOVERNANCE_PIPELINE_GDRIVE_BASE` | Path under `LOG_GDRIVE_MOUNT` when `DATA_ROOT` is not set (default `CommunityOne/governance_pipeline_data`). |
+| `GOVERNANCE_PIPELINE_DATA_ROOT` | Absolute path to pipeline root (Colab: `…/hackathons/2026_Gemma_4_Good`; local default: `data/hackathons/2026_Gemma_4_Good` in the repo). |
+| `GOVERNANCE_PIPELINE_GDRIVE_BASE` | Path under `LOG_GDRIVE_MOUNT` when `DATA_ROOT` is not set (default `CommunityOne/hackathons/2026_Gemma_4_Good`). |
 | `GOVERNANCE_RAW_INPUTS_ROOT` | Override the `01_raw_inputs/` location for the run notebook + Gatekeeper. |
 | `GOVERNANCE_LLM_BACKEND` | Default `google` (hybrid). Set `huggingface` to force all calls local. |
 | `GOVERNANCE_GENAI_MODEL` | Demos 1–5 on **AI Studio** (default `gemma-4-26b-a4b-it`). |

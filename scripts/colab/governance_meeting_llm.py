@@ -1483,6 +1483,14 @@ def _media_resolution_value(budget: Optional[str]):
     return mapping.get(budget)
 
 
+def _media_has_audio_or_video(media: Iterable[Tuple[str | Path | bytes, str]]) -> bool:
+    for _, mime in media:
+        mime_l = (mime or "").lower()
+        if mime_l.startswith("audio/") or mime_l.startswith("video/"):
+            return True
+    return False
+
+
 def call_google_genai_multimodal(
     *,
     api_key: str,
@@ -1514,6 +1522,10 @@ def call_google_genai_multimodal(
     ``gemma_hf_backend.model_requires_huggingface``). Set
     ``GOVERNANCE_LLM_BACKEND=huggingface`` to force all calls local.
     """
+    media_list = list(media)
+    if not demo4 and demo4_uses_huggingface() and _media_has_audio_or_video(media_list):
+        demo4 = True
+
     try:
         from gemma_hf_backend import call_gemma_hf_multimodal, use_huggingface_for_model
 

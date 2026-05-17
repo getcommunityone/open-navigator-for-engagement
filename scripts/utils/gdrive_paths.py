@@ -14,7 +14,7 @@ Path helpers shared with ``scripts/utils/log_sync.py`` and ``export_bronze_to_js
 - ``GovernancePipelinePaths`` — same numbered folder layout as
   ``scripts/colab/02_init_drive_layout.ipynb`` (ingestion / reference data / processed).
   On **Google Colab**, set ``GOVERNANCE_PIPELINE_DATA_ROOT`` to e.g.
-  ``/content/drive/MyDrive/CommunityOne/governance_pipeline_data`` before importing.
+  ``/content/drive/MyDrive/CommunityOne/hackathons/2026_Gemma_4_Good`` before importing.
 """
 from __future__ import annotations
 
@@ -98,8 +98,11 @@ def hackathon_scraped_meetings_inventory_dirs(
     return tuple(root / rel for rel in HACKATHON_SCRAPED_MEETINGS_INVENTORY_REL)
 
 
+# Hackathon pipeline root on Drive (``01_raw_inputs``, ``03_processed_outputs``, …).
+HACKATHON_PIPELINE_ROOT_REL = Path("CommunityOne") / "hackathons" / "2026_Gemma_4_Good"
+
 # Default mirror location under ``My Drive`` when ``SCRAPED_MEETINGS_GDRIVE_MIRROR`` is unset.
-SCRAPED_MEETINGS_GDRIVE_REL = Path("CommunityOne") / "hackathons" / "2026_Gemma_4_Good" / "01_raw_inputs"
+SCRAPED_MEETINGS_GDRIVE_REL = HACKATHON_PIPELINE_ROOT_REL / "01_raw_inputs"
 
 
 def scraped_meetings_gdrive_mirror_root() -> Path:
@@ -142,6 +145,11 @@ def resolve_scraped_meetings_output_root() -> Path:
     return default_scraped_meetings_data_cache()
 
 
+def default_hackathon_pipeline_root_in_repo() -> Path:
+    """Local Jupyter/WSL default: ``<repo>/data/hackathons/2026_Gemma_4_Good``."""
+    return _REPO_ROOT / "data" / "hackathons" / "2026_Gemma_4_Good"
+
+
 def resolve_governance_pipeline_data_root() -> Path:
     """
     Root folder for governance hackathon / Gemma pipeline data on Drive (or any disk).
@@ -149,18 +157,22 @@ def resolve_governance_pipeline_data_root() -> Path:
     Resolution order:
 
     1. ``GOVERNANCE_PIPELINE_DATA_ROOT`` — absolute path (use this on **Colab**:
-       ``/content/drive/MyDrive/CommunityOne/governance_pipeline_data``).
-    2. ``resolved_gdrive_mount_path()`` / ``GOVERNANCE_PIPELINE_GDRIVE_BASE`` — default base
-       ``CommunityOne/governance_pipeline_data`` (WSL + Google Drive Desktop: ``/mnt/g/My Drive/...``).
+       ``/content/drive/MyDrive/CommunityOne/hackathons/2026_Gemma_4_Good``).
+    2. ``resolved_gdrive_mount_path()`` / ``GOVERNANCE_PIPELINE_GDRIVE_BASE`` — default
+       ``CommunityOne/hackathons/2026_Gemma_4_Good`` (WSL + Google Drive Desktop).
+    3. Repo checkout: ``data/hackathons/2026_Gemma_4_Good`` when no Drive mount.
     """
     explicit = (os.getenv("GOVERNANCE_PIPELINE_DATA_ROOT") or "").strip()
     if explicit:
         return Path(explicit).expanduser()
     rel = os.getenv(
         "GOVERNANCE_PIPELINE_GDRIVE_BASE",
-        "CommunityOne/governance_pipeline_data",
+        HACKATHON_PIPELINE_ROOT_REL.as_posix(),
     ).strip()
-    return resolved_gdrive_mount_path() / rel
+    mounted = resolved_gdrive_mount_path() / rel
+    if mounted.is_dir():
+        return mounted
+    return default_hackathon_pipeline_root_in_repo()
 
 
 @dataclass(frozen=True)
