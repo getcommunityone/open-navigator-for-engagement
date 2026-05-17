@@ -139,25 +139,9 @@ def run_gatekeeper_for_jurisdiction(
     dry_run = os.environ.get("GOVERNANCE_GATEKEEPER_DRY_RUN", "0") == "1"
     jur_root = inv.jurisdiction.root
     label = inv.jurisdiction.relative_label
-
-    total = gatekeeper_triage.count_triageable_files(
-        ctx.raw_root, kinds=kinds, jurisdiction_root=jur_root
-    )
-    triage_paths, _n, allowed_dates, _years = gatekeeper_triage.select_triageable_files(
-        ctx.raw_root,
-        kinds=kinds,
-        max_files=ctx.gatekeeper_max_files,
-        jurisdiction_root=jur_root,
-    )
-    print(
-        f"  Gatekeeper | {label} | candidates={total} | will_triage={len(triage_paths)}",
-        flush=True,
-    )
-    if allowed_dates and label in allowed_dates:
-        print(f"    dates: {', '.join(sorted(allowed_dates[label]))}", flush=True)
-
     slug = _log_slug(label)
     log_path = logs_dir / f"gatekeeper_{slug}_{stamp}.log"
+    print(f"  Gatekeeper log (tail on Drive): {log_path}", flush=True)
 
     with _gatekeeper_log_lock:
         gatekeeper_triage.configure_logging(
@@ -165,6 +149,25 @@ def run_gatekeeper_for_jurisdiction(
             log_path=log_path,
             console=True,
         )
+        triage_paths, total, allowed_dates, _years = gatekeeper_triage.select_triageable_files(
+            ctx.raw_root,
+            kinds=kinds,
+            max_files=ctx.gatekeeper_max_files,
+            jurisdiction_root=jur_root,
+            progress_stdout=True,
+        )
+        print(
+            f"  Gatekeeper | {label} | candidates={total} | will_triage={len(triage_paths)}",
+            flush=True,
+        )
+        if allowed_dates and label in allowed_dates:
+            print(f"    dates: {', '.join(sorted(allowed_dates[label]))}", flush=True)
+        if triage_paths:
+            print(
+                f"  Gatekeeper | starting API triage for {len(triage_paths)} file(s) "
+                f"(~1–3 min each on AI Studio) …",
+                flush=True,
+            )
         try:
             report = gatekeeper_triage.run_triage(
                 raw_root=ctx.raw_root,
@@ -188,6 +191,7 @@ def run_gatekeeper_for_jurisdiction(
                 organize_meetings=ctx.organize_meetings
                 and os.environ.get("GOVERNANCE_ORGANIZE_MEETINGS", "1") == "1",
                 jurisdiction_root=jur_root,
+                preselected_paths=triage_paths,
             )
         finally:
             gatekeeper_triage.close_gatekeeper_logging()

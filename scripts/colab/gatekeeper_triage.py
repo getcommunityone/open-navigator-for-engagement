@@ -51,7 +51,7 @@ import tempfile
 import time
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
-from typing import Any, Iterable, List, Optional, Tuple
+from typing import Any, Iterable, List, Optional, Sequence, Tuple
 
 # ─────────────────────────────────────────────────────────────
 # Constants
@@ -279,6 +279,28 @@ logger = logging.getLogger("gatekeeper")
 
 # Opened by :func:`configure_logging` when ``log_path`` is set; closed by :func:`close_gatekeeper_logging`.
 _log_file_handle: Optional[Any] = None
+
+
+def gatekeeper_progress_stdout_enabled() -> bool:
+    """Notebook-friendly step prints during slow Drive walks (default on)."""
+    return os.environ.get("GOVERNANCE_GATEKEEPER_PROGRESS", "1").strip().lower() not in (
+        "0",
+        "false",
+        "no",
+    )
+
+
+def _gatekeeper_progress(msg: str) -> None:
+    """Print to the Colab cell (not only the log file) so long Drive scans are visible."""
+    if gatekeeper_progress_stdout_enabled():
+        print(msg, flush=True)
+
+
+def _gatekeeper_progress_interval() -> int:
+    try:
+        return max(5, int(os.environ.get("GOVERNANCE_GATEKEEPER_PROGRESS_EVERY", "25")))
+    except ValueError:
+        return 25
 
 
 def log_llm_catalog_enabled() -> bool:
@@ -1570,6 +1592,7 @@ def select_triageable_files(
     max_files: Optional[int] = None,
     max_meeting_dates: Optional[int] = None,
     jurisdiction_root: Optional[Path] = None,
+    progress_stdout: Optional[bool] = None,
 ) -> tuple[list[Path], int, Optional[dict], Optional[dict]]:
     """
     Choose Gatekeeper inputs.
@@ -1582,6 +1605,19 @@ def select_triageable_files(
 
     Returns ``(selected_paths, total_walk_candidates, allowed_dates_by_jurisdiction, allowed_year_folders)``.
     """
+    show_progress = (
+        gatekeeper_progress_stdout_enabled()
+        if progress_stdout is None
+        else progress_stdout
+    )
+    every = _gatekeeper_progress_interval()
+    jur_label = ""
+    if jurisdiction_root is not None:
+        try:
+            jur_label = jurisdiction_root.resolve().relative_to(raw_root.resolve()).as_posix()
+        except ValueError:
+            jur_label = str(jurisdiction_root)
+
     allowed_year_folders: Optional[dict] = None
     try:
         from meeting_date_scope import (
@@ -1591,7 +1627,14 @@ def select_triageable_files(
         )
 
         if resolve_demo_year_folder_scope():
-            allowed_year_folders = discover_most_recent_year_folder_per_jurisdiction(raw_root)
+            if show_progress:
+                _gatekeeper_progress(
+                    "  Gatekeeper | resolving newest 20xx/ folder"
+                    + (f" for {jur_label} …" if jur_label else " per jurisdiction …")
+                )
+            allowed_year_folders = discover_most_recent_year_folder_per_jurisdiction(
+                raw_root, jurisdiction_root=jurisdiction_root
+            )
             if allowed_year_folders:
                 logger.info(
                     "Gatekeeper walk | DEMO year-folder scope (skip older 20xx/ trees)"
@@ -1601,15 +1644,31 @@ def select_triageable_files(
     except ImportError:
         pass
 
-    paths = list(
+    if show_progress:
+        where = f" under {jur_label}" if jur_label else f" under {raw_root}"
+        _gatekeeper_progress(
+            f"  Gatekeeper | walking Drive for pdf/audio{where} (can take several minutes) …"
+        )
+
+    paths: List[Path] = []
+    for n, path in enumerate(
         iter_triageable_files(
             raw_root,
             kinds=kinds,
             allowed_year_folders=allowed_year_folders,
             jurisdiction_root=jurisdiction_root,
-        )
-    )
+        ),
+        1,
+    ):
+        paths.append(path)
+        if show_progress and n % every == 0:
+            _gatekeeper_progress(f"  Gatekeeper | … found {n} pdf/audio file(s) on Drive so far")
+
     total = len(paths)
+    if show_progress:
+        _gatekeeper_progress(
+            f"  Gatekeeper | walk done — {total} pdf/audio path(s); classifying agendas/minutes …"
+        )
 
     # Gatekeeper must see agenda/minutes candidates *before* dates are known.
     # Demo meeting-date caps apply to post-triage demos (filter_inventory_media), not here.
@@ -1619,7 +1678,15 @@ def select_triageable_files(
             file_media_role,
         )
 
-        candidates = [p for p in paths if file_media_role(p, raw_root) is not None]
+        candidates: List[Path] = []
+        for i, p in enumerate(paths, 1):
+            if file_media_role(p, raw_root) is not None:
+                candidates.append(p)
+            if show_progress and (i % every == 0 or i == total):
+                _gatekeeper_progress(
+                    f"  Gatekeeper | … classified {i}/{total} paths | "
+                    f"meeting-media candidates: {len(candidates)}"
+                )
         if not candidates and paths:
             logger.warning(
                 "Gatekeeper: %d pdf/audio path(s) on disk but 0 meeting-media roles "
@@ -1631,6 +1698,11 @@ def select_triageable_files(
         cap = resolve_gatekeeper_max_files(max_files)
         if cap is not None and len(candidates) > cap:
             candidates = candidates[-cap:]
+        if show_progress:
+            _gatekeeper_progress(
+                f"  Gatekeeper | selection done — will_triage={len(candidates)} "
+                f"(from {total} on disk)"
+            )
         return candidates, total, None, allowed_year_folders
     except ImportError:
         pass
@@ -1718,11 +1790,15 @@ def run_triage(
     flush_log_each_file: bool = True,
     organize_meetings: bool = False,
     jurisdiction_root: Optional[Path] = None,
+    preselected_paths: Optional[Sequence[Path]] = None,
 ) -> TriageReport:
     """Walk ``raw_root``, triage every PDF / audio; optionally move rejects (see env).
 
     When ``jurisdiction_root`` is set, only files under that directory are triaged
     (paths still use ``raw_root`` for geography / excluded_inputs layout).
+
+    Pass ``preselected_paths`` when the caller already ran :func:`select_triageable_files`
+    (avoids a second Drive walk).
     """
     if not raw_root.is_dir():
         raise FileNotFoundError(f"Raw inputs root not found: {raw_root}")
@@ -1812,18 +1888,29 @@ def run_triage(
 
     date_cap = resolve_demo_meeting_dates_limit()
     count_cap = resolve_gatekeeper_max_files(max_files)
-    logger.info(
-        "Gatekeeper: scanning %s (DEMO = newest year folder, then last meeting dates) …",
-        raw_root,
-    )
+    if preselected_paths is not None:
+        triage_paths = list(preselected_paths)
+        total_candidates = len(triage_paths)
+        allowed_dates = None
+        allowed_years = None
+        logger.info(
+            "Gatekeeper: using %d pre-selected path(s) (skip re-walk)",
+            len(triage_paths),
+        )
+    else:
+        logger.info(
+            "Gatekeeper: scanning %s (DEMO = newest year folder, then last meeting dates) …",
+            raw_root,
+        )
+        flush_gatekeeper_logs(fsync=_fsync_logs)
+        triage_paths, total_candidates, allowed_dates, allowed_years = select_triageable_files(
+            raw_root,
+            kinds=kinds,
+            max_files=max_files,
+            jurisdiction_root=jurisdiction_root,
+            progress_stdout=progress_stdout,
+        )
     flush_gatekeeper_logs(fsync=_fsync_logs)
-
-    triage_paths, total_candidates, allowed_dates, allowed_years = select_triageable_files(
-        raw_root,
-        kinds=kinds,
-        max_files=max_files,
-        jurisdiction_root=jurisdiction_root,
-    )
     if jurisdiction_root is not None:
         try:
             jur_label = jurisdiction_root.resolve().relative_to(raw_root.resolve()).as_posix()

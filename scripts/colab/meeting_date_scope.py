@@ -145,15 +145,49 @@ def calendar_year_folder_in_path(path: Path, raw_root: Path) -> Optional[str]:
     return max(years) if years else None
 
 
-def discover_most_recent_year_folder_per_jurisdiction(raw_root: Path) -> Dict[str, str]:
+def _newest_year_folder_for_jur_dir(jur_dir: Path) -> Optional[str]:
+    years: Set[str] = set()
+    for child in jur_dir.iterdir():
+        if child.is_dir() and is_calendar_year_folder(child.name):
+            years.add(child.name)
+    gomeet = jur_dir / "_gomeet_downloads"
+    if gomeet.is_dir():
+        for child in gomeet.iterdir():
+            if child.is_dir() and is_calendar_year_folder(child.name):
+                years.add(child.name)
+    return max(years) if years else None
+
+
+def discover_most_recent_year_folder_per_jurisdiction(
+    raw_root: Path,
+    *,
+    jurisdiction_root: Optional[Path] = None,
+) -> Dict[str, str]:
     """
     Scan jurisdiction roots only (no deep file walk) for the newest ``20xx/`` folder.
 
     Includes ``_gomeet_downloads/20xx`` when present.
+    When ``jurisdiction_root`` is set, only that directory is scanned (faster single-jur runs).
     """
     raw_root = raw_root.resolve()
     allowed: Dict[str, str] = {}
     if not raw_root.is_dir():
+        return allowed
+
+    if jurisdiction_root is not None:
+        jur_dir = jurisdiction_root.resolve()
+        if not jur_dir.is_dir():
+            return allowed
+        try:
+            rel = jur_dir.relative_to(raw_root)
+        except ValueError:
+            return allowed
+        parts = rel.parts
+        if len(parts) >= 3:
+            jur = "/".join(parts[:3])
+            year = _newest_year_folder_for_jur_dir(jur_dir)
+            if year:
+                allowed[jur] = year
         return allowed
 
     skip_names = {"excluded_inputs", "__pycache__"}
@@ -170,17 +204,9 @@ def discover_most_recent_year_folder_per_jurisdiction(raw_root: Path) -> Dict[st
                 if not jur_dir.is_dir() or jur_dir.name.startswith("_"):
                     continue
                 jur = f"{state_dir.name}/{scope_dir.name}/{jur_dir.name}"
-                years: Set[str] = set()
-                for child in jur_dir.iterdir():
-                    if child.is_dir() and is_calendar_year_folder(child.name):
-                        years.add(child.name)
-                gomeet = jur_dir / "_gomeet_downloads"
-                if gomeet.is_dir():
-                    for child in gomeet.iterdir():
-                        if child.is_dir() and is_calendar_year_folder(child.name):
-                            years.add(child.name)
-                if years:
-                    allowed[jur] = max(years)
+                year = _newest_year_folder_for_jur_dir(jur_dir)
+                if year:
+                    allowed[jur] = year
     return allowed
 
 
@@ -531,8 +557,14 @@ def file_media_role(path: Path, raw_root: Path) -> Optional[str]:
         return "pdf"
     if "agenda" in stem or "minutes" in stem:
         return "pdf"
-    if path.suffix.lower() == ".pdf" and _pdf_excerpt_suggests_meeting_agenda(path):
-        return "pdf"
+    if path.suffix.lower() == ".pdf":
+        skip_probe = os.environ.get("GOVERNANCE_GATEKEEPER_SKIP_PDF_PROBE", "").strip().lower() in (
+            "1",
+            "true",
+            "yes",
+        )
+        if not skip_probe and _pdf_excerpt_suggests_meeting_agenda(path):
+            return "pdf"
     if "meetings" in parts_lower and (
         "agenda" in parts_lower or "minutes" in parts_lower or "audio" in parts_lower
     ):
