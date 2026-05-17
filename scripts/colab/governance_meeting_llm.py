@@ -105,13 +105,23 @@ def model_supports_audio_video_input(model: str) -> bool:
     return False
 
 
-def _demo4_allow_31b_audio() -> bool:
-    """31B is for Demo 3 PDFs; most AI Studio keys reject its audio modality."""
-    return os.environ.get("GOVERNANCE_DEMO4_ALLOW_31B_AUDIO", "0").strip().lower() in (
-        "1",
-        "true",
-        "yes",
+def demo4_prefer_gemma_for_audio() -> bool:
+    """Prefer Gemma (incl. 31B) for meeting audio per Gemma multimodal docs; Gemini as fallback."""
+    return os.environ.get("GOVERNANCE_DEMO4_PREFER_GEMMA_AUDIO", "1").strip().lower() not in (
+        "0",
+        "false",
+        "no",
     )
+
+
+def _demo4_allow_31b_audio() -> bool:
+    """31B handles Demo 3 PDFs; also used for Demo 4 Opus when Gemma audio is preferred."""
+    raw = os.environ.get("GOVERNANCE_DEMO4_ALLOW_31B_AUDIO", "").strip().lower()
+    if raw in ("0", "false", "no"):
+        return False
+    if raw in ("1", "true", "yes"):
+        return True
+    return demo4_prefer_gemma_for_audio()
 
 
 def model_accepts_demo4_audio_chunks(model: str) -> bool:
@@ -129,7 +139,190 @@ def model_supports_video_input(model: str) -> bool:
     mid = (model or "").lower()
     if mid.startswith("gemini"):
         return True
+    try:
+        from gemma_hf_backend import _repo_supports_audio, resolve_hf_model_id
+
+        repo = resolve_hf_model_id(model or "")
+        if _repo_supports_audio(repo):
+            return True
+    except ImportError:
+        pass
     return False
+
+
+def demo4_uses_huggingface() -> bool:
+    try:
+        from gemma_hf_backend import demo4_use_huggingface
+
+        return demo4_use_huggingface()
+    except ImportError:
+        return False
+
+
+def resolve_demo4_model(
+    genai_model: str,
+    *,
+    gatekeeper_model: str = "",
+    thinking_model: str = "",
+    client: Any = None,
+    api_key: str = "",
+) -> str:
+    """Demo 4 model: Hugging Face E2B/E4B by default, else Google AI Studio."""
+    if demo4_uses_huggingface():
+        try:
+            from gemma_hf_backend import resolve_demo4_hf_model
+
+            return resolve_demo4_hf_model()
+        except ImportError as exc:
+            raise RuntimeError(
+                "Demo 4 requires gemma_hf_backend (transformers>=5.5.0). "
+                "Re-run notebook §4 install, then Runtime → Restart session."
+            ) from exc
+    return resolve_demo4_genai_model(
+        genai_model,
+        gatekeeper_model=gatekeeper_model,
+        thinking_model=thinking_model,
+        client=client,
+        api_key=api_key,
+    )
+
+
+def demo4_media_work_dir(scratch_root: Path, raw_root: Path, source_path: Path) -> Path:
+    """Drive-backed ffmpeg / Opus cache for one source file (reused across runs)."""
+    rel = source_path.resolve().relative_to(raw_root.resolve())
+    work = (scratch_root / rel).with_suffix("")
+    work.mkdir(parents=True, exist_ok=True)
+    return work
+
+
+def resolve_scraped_opus_for_media(
+    source_path: Path,
+    *,
+    min_bytes: int = 1024,
+) -> Optional[Path]:
+    """
+    Reuse scrape Opus without re-transcoding: sibling ``.opus`` or ``_video_assets`` sidecar.
+    """
+    source_path = source_path.resolve()
+    sibling = source_path.with_suffix(".opus")
+    if sibling.is_file() and sibling.stat().st_size >= min_bytes:
+        return sibling.resolve()
+
+    root = source_path.parent
+    assets = root / VIDEO_ASSETS_DIRNAME
+    if not assets.is_dir():
+        return None
+
+    source_name = source_path.name
+    for meta_path in sorted(assets.glob("*.asset.json")):
+        try:
+            data = json.loads(meta_path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            continue
+        if not isinstance(data, dict):
+            continue
+        rel = (data.get("opus_relative_path") or "").strip()
+        if not rel:
+            continue
+        opus_path = (root / rel).resolve()
+        try:
+            opus_path.relative_to(root.resolve())
+        except ValueError:
+            continue
+        if not opus_path.is_file() or opus_path.stat().st_size < min_bytes:
+            continue
+        mp4_rel = (data.get("mp4_relative_path") or "").strip()
+        if mp4_rel and (root / mp4_rel).resolve() == source_path.resolve():
+            return opus_path
+    return None
+
+
+def _demo4_model_preference_order(
+    available: Optional[set[str]] = None,
+    *,
+    thinking_model: str = "",
+) -> List[str]:
+    """Gemma first when ``GOVERNANCE_DEMO4_PREFER_GEMMA_AUDIO=1`` (default); else Gemini first."""
+    try:
+        from gatekeeper_triage import (
+            _GEMINI_DEMO4_AUDIO_FALLBACKS,
+            _GEMMA_DEMO4_AUDIO_FALLBACKS,
+        )
+    except ImportError:
+        return ["gemma-4-31b-it", "gemini-2.0-flash"]
+
+    order: List[str] = []
+    if demo4_prefer_gemma_for_audio():
+        tm = (thinking_model or os.environ.get("GOVERNANCE_THINKING_MODEL", "")).strip()
+        if tm:
+            order.append(tm)
+        order.append("gemma-4-31b-it")
+        order.extend(_GEMMA_DEMO4_AUDIO_FALLBACKS)
+        order.extend(_GEMINI_DEMO4_AUDIO_FALLBACKS)
+    else:
+        order.extend(_GEMINI_DEMO4_AUDIO_FALLBACKS)
+        order.extend(_GEMMA_DEMO4_AUDIO_FALLBACKS)
+        if thinking_model.strip():
+            order.append(thinking_model.strip())
+        order.append("gemma-4-31b-it")
+    if available:
+        for gid in sorted(available):
+            low = gid.lower()
+            if gid not in order and (
+                low.startswith("gemini") or "gemma" in low
+            ):
+                order.append(gid)
+    return order
+
+
+def pick_demo4_model_from_available(
+    available: Iterable[str],
+    *,
+    thinking_model: str = "",
+) -> Optional[str]:
+    """First audio-capable id on this API key (from ``models.list()``)."""
+    avail = {str(a).strip() for a in available if str(a).strip()}
+    explicit = os.environ.get("GOVERNANCE_DEMO4_MODEL", "").strip()
+    if explicit and explicit in avail and model_accepts_demo4_audio_chunks(explicit):
+        return explicit
+    for mid in _demo4_model_preference_order(avail, thinking_model=thinking_model):
+        if mid in avail and model_accepts_demo4_audio_chunks(mid):
+            return mid
+    return None
+
+
+def format_demo4_no_audio_model_error(available: Iterable[str]) -> str:
+    avail = sorted({str(a).strip() for a in available if str(a).strip()})
+    gemini = [m for m in avail if m.lower().startswith("gemini")]
+    gemma = [m for m in avail if "gemma" in m.lower()]
+    return (
+        "Demo 4: no audio-capable model on this API key. "
+        f"Gemma ids on key: {gemma or '(none)'}. "
+        f"Gemini ids on key: {gemini or '(none)'}. "
+        "Set GOVERNANCE_DEMO4_MODEL to gemma-4-31b-it (Opus slices) or a Gemini Flash id, "
+        "or GOVERNANCE_DEMO4_PREFER_GEMMA_AUDIO=0 to prefer Gemini, "
+        "or GOVERNANCE_LLM_BACKEND=huggingface for local audio."
+    )
+
+
+def list_demo4_capable_models_on_key(
+    api_key: str,
+    *,
+    thinking_model: str = "",
+) -> List[str]:
+    """Ids on this key that Demo 4 may use for meeting audio (for §3 printout)."""
+    try:
+        from gatekeeper_triage import _build_genai_client, _list_available_model_ids
+
+        client = _build_genai_client(api_key)
+        available = set(_list_available_model_ids(client))
+    except Exception:
+        return []
+    return [
+        m
+        for m in _demo4_model_preference_order(available, thinking_model=thinking_model)
+        if m in available and model_accepts_demo4_audio_chunks(m)
+    ]
 
 
 def resolve_demo4_genai_model(
@@ -141,18 +334,13 @@ def resolve_demo4_genai_model(
     api_key: str = "",
 ) -> str:
     """
-    Model for Demo 4 audio chunks.
+    Model for Demo 4 meeting audio/video chunks.
 
-    Resolves against ``models.list()`` when ``client`` / ``api_key`` is set.
-    Default: ``GOVERNANCE_DEMO4_MODEL`` → gatekeeper id → ``gemma-4-e4b-it`` / E2B.
-    Never ``gemma-4-31b-it`` unless ``GOVERNANCE_DEMO4_ALLOW_31B_AUDIO=1``.
+    Picks from ``models.list()``: **Gemma** (31B / Edge) when
+    ``GOVERNANCE_DEMO4_PREFER_GEMMA_AUDIO=1`` (default), else Gemini first.
+    Override with ``GOVERNANCE_DEMO4_MODEL``. Set ``GOVERNANCE_DEMO4_ALLOW_31B_AUDIO=0``
+    to block 31B for audio.
     """
-    explicit = os.environ.get("GOVERNANCE_DEMO4_MODEL", "").strip()
-    gk = (gatekeeper_model or os.environ.get("GOVERNANCE_GATEKEEPER_MODEL", "")).strip()
-    requested = explicit or gk or "gemma-4-e4b-it"
-    if not model_accepts_demo4_audio_chunks(requested):
-        requested = "gemma-4-e2b-it"
-
     if client is None and api_key:
         try:
             from gatekeeper_triage import _build_genai_client
@@ -163,37 +351,30 @@ def resolve_demo4_genai_model(
 
     if client is not None:
         try:
-            from gatekeeper_triage import (
-                _GEMMA_DEMO4_AUDIO_FALLBACKS,
-                _list_available_model_ids,
-                resolve_model_id,
-            )
+            from gatekeeper_triage import _list_available_model_ids
 
-            resolved = resolve_model_id(
-                client,
-                requested,
-                fallbacks=_GEMMA_DEMO4_AUDIO_FALLBACKS,
-                role="Demo 4 audio",
+            available = set(_list_available_model_ids(client))
+            picked = pick_demo4_model_from_available(
+                available, thinking_model=thinking_model
             )
-            if model_accepts_demo4_audio_chunks(resolved):
-                return resolved
-            # resolve_model_id may fall through to 31B when Edge ids missing from list().
-            for cand in _GEMMA_DEMO4_AUDIO_FALLBACKS:
-                if cand in _list_available_model_ids(client) and model_accepts_demo4_audio_chunks(
-                    cand
-                ):
-                    return cand
+            if picked:
+                return picked
+            raise RuntimeError(format_demo4_no_audio_model_error(available))
+        except RuntimeError:
+            raise
         except Exception:
             pass
 
-    for cand in (requested, *_GEMMA_DEMO4_AUDIO_FALLBACKS, gk):
-        c = (cand or "").strip()
-        if c and model_accepts_demo4_audio_chunks(c):
-            return c
+    explicit = os.environ.get("GOVERNANCE_DEMO4_MODEL", "").strip()
+    if explicit and model_accepts_demo4_audio_chunks(explicit):
+        return explicit
     env_fb = os.environ.get("GOVERNANCE_DEMO4_FALLBACK_MODEL", "").strip()
-    if env_fb and model_supports_audio_video_input(env_fb):
+    if env_fb and model_accepts_demo4_audio_chunks(env_fb):
         return env_fb
-    return gk or "gemma-4-e2b-it"
+    tm = (thinking_model or os.environ.get("GOVERNANCE_THINKING_MODEL", "")).strip()
+    if demo4_prefer_gemma_for_audio() and tm and model_accepts_demo4_audio_chunks(tm):
+        return tm
+    return "gemini-2.0-flash"
 
 
 def _genai_error_text(exc: BaseException) -> str:
@@ -204,15 +385,24 @@ def is_audio_modality_rejected(exc: BaseException) -> bool:
     return "audio input modality" in _genai_error_text(exc)
 
 
-def demo4_models_to_try(primary: str, *, api_key: str = "") -> List[str]:
-    """Ordered models for Demo 4 when the primary id rejects audio on this key."""
+def demo4_models_to_try(
+    primary: str,
+    *,
+    api_key: str = "",
+    thinking_model: str = "",
+    chunk_mime: str = "",
+) -> List[str]:
+    """Ordered models for Demo 4 retries (HF: single E2B/E4B; Google: ids on API key)."""
+    if demo4_uses_huggingface():
+        try:
+            from gemma_hf_backend import resolve_demo4_hf_model
+
+            return [resolve_demo4_hf_model(primary)]
+        except ImportError:
+            return [primary] if primary else []
+
     try:
-        from gatekeeper_triage import (
-            _DEMO4_EDGE_TRY_ALWAYS,
-            _GEMMA_DEMO4_AUDIO_FALLBACKS,
-            _build_genai_client,
-            _list_available_model_ids,
-        )
+        from gatekeeper_triage import _build_genai_client, _list_available_model_ids
     except ImportError:
         return [primary] if primary and model_accepts_demo4_audio_chunks(primary) else []
 
@@ -223,17 +413,26 @@ def demo4_models_to_try(primary: str, *, api_key: str = "") -> List[str]:
         except Exception:
             available = set()
 
+    if not available:
+        return [primary] if primary and model_accepts_demo4_audio_chunks(primary) else []
+
+    prefer_gemma = demo4_prefer_gemma_for_audio() or "opus" in (chunk_mime or "").lower()
     ordered: List[str] = []
-    # Edge ids first (even if models.list omitted them — try API before giving up).
-    for mid in (*_DEMO4_EDGE_TRY_ALWAYS, primary, *_GEMMA_DEMO4_AUDIO_FALLBACKS):
-        m = (mid or "").strip()
-        if not m or m in ordered:
-            continue
-        if not model_accepts_demo4_audio_chunks(m):
-            continue
-        if available and m not in available and m not in _DEMO4_EDGE_TRY_ALWAYS:
-            continue
-        ordered.append(m)
+    if primary and primary in available and model_accepts_demo4_audio_chunks(primary):
+        ordered.append(primary)
+    if prefer_gemma:
+        tm = (thinking_model or os.environ.get("GOVERNANCE_THINKING_MODEL", "")).strip()
+        for mid in (tm, "gemma-4-31b-it"):
+            if (
+                mid
+                and mid in available
+                and mid not in ordered
+                and model_accepts_demo4_audio_chunks(mid)
+            ):
+                ordered.append(mid)
+    for mid in _demo4_model_preference_order(available, thinking_model=thinking_model):
+        if mid in available and mid not in ordered and model_accepts_demo4_audio_chunks(mid):
+            ordered.append(mid)
     return ordered
 
 
@@ -776,11 +975,16 @@ def demo4_use_video_chunks() -> bool:
 
 
 def find_existing_demo4_chunks(scratch_dir: Path, *, video: bool) -> List[Path]:
-    """Reuse ffmpeg segment files (``.mp4`` or ``.mp3``) under a scratch dir."""
+    """Reuse ffmpeg segment files under scratch (``.opus`` / ``.mp3`` / ``.mp4``)."""
     if not scratch_dir.is_dir():
         return []
-    ext = "mp4" if video else "mp3"
-    return sorted(scratch_dir.glob(f"*_chunk_*.{ext}"))
+    if video:
+        return sorted(scratch_dir.glob("*_chunk_*.mp4"))
+    for ext in ("opus", "mp3", "m4a", "aac"):
+        found = sorted(scratch_dir.glob(f"*_chunk_*.{ext}"))
+        if found:
+            return found
+    return []
 
 
 def _chunk_video_ffmpeg(
@@ -827,45 +1031,130 @@ def _chunk_video_ffmpeg(
     raise RuntimeError(f"ffmpeg could not segment video: {video_path.name}")
 
 
+def demo4_prefer_opus_chunks() -> bool:
+    """When true (default), MP4/WebM → full Opus transcode → 15‑min ``.opus`` slices before MP3."""
+    return os.environ.get("GOVERNANCE_DEMO4_PREFER_OPUS", "1").strip().lower() not in (
+        "0",
+        "false",
+        "no",
+        "mp3_only",
+    )
+
+
+def _chunk_audio_segments(
+    source_path: Path,
+    *,
+    out_dir: Path,
+    chunk_minutes: int,
+    fmt: str,
+) -> List[Tuple[Path, str]]:
+    paths = chunk_audio_ffmpeg(
+        source_path,
+        out_dir=out_dir,
+        chunk_minutes=chunk_minutes,
+        fmt=fmt,
+    )
+    return [(p, mime_for(p)) for p in paths]
+
+
+def iter_demo4_ingest_strategies(
+    source_path: Path,
+    *,
+    out_dir: Path,
+    chunk_minutes: int = 15,
+    prefer_video: Optional[bool] = None,
+    demo4_model: str = "",
+) -> Iterator[Tuple[str, List[Tuple[Path, str]]]]:
+    """
+    Yield ``(strategy_label, [(path, mime), …])`` until one produces API JSON.
+
+    Order: **Opus slices first** (MP4→Opus→segment; matches ``_video_assets/*.opus``) →
+    optional ``video/mp4`` (Gemini only) → MP3 slices.
+    """
+    source_path = source_path.resolve()
+    out_dir.mkdir(parents=True, exist_ok=True)
+    use_video = (
+        demo4_use_video_chunks()
+        if prefer_video is None
+        else bool(prefer_video)
+    )
+    is_video_container = source_path.suffix.lower() in VIDEO_EXTS
+    is_opus_file = source_path.suffix.lower() == ".opus"
+
+    if demo4_prefer_opus_chunks() and (is_video_container or is_opus_file):
+        try:
+            chunks = _chunk_audio_segments(
+                source_path,
+                out_dir=out_dir / "opus_seg",
+                chunk_minutes=chunk_minutes,
+                fmt="opus",
+            )
+            if chunks:
+                label = "opus_file" if is_opus_file else "opus_15min"
+                yield label, chunks
+        except Exception as exc:
+            print(
+                f"   ℹ️  {source_path.name}: Opus slice failed ({exc}) — "
+                "trying video/mp4 or MP3.",
+                flush=True,
+            )
+
+    if (
+        is_video_container
+        and use_video
+        and model_supports_video_input(demo4_model)
+    ):
+        try:
+            paths = _chunk_video_ffmpeg(
+                source_path, out_dir=out_dir / "video_seg", chunk_minutes=chunk_minutes
+            )
+            if paths:
+                yield "video_mp4", [(p, "video/mp4") for p in paths]
+        except RuntimeError as exc:
+            print(
+                f"   ℹ️  {source_path.name}: video/mp4 segment failed ({exc}) — "
+                "trying MP3 audio slices.",
+                flush=True,
+            )
+
+    chunks = _chunk_audio_segments(
+        source_path,
+        out_dir=out_dir / "mp3_seg",
+        chunk_minutes=chunk_minutes,
+        fmt="mp3",
+    )
+    if chunks:
+        yield "mp3_15min", chunks
+
+
 def chunk_meeting_media_for_demo4(
     source_path: Path,
     *,
     out_dir: Path,
     chunk_minutes: int = 15,
     prefer_video: Optional[bool] = None,
+    demo4_model: str = "",
 ) -> List[Tuple[Path, str]]:
-    """
-    Return ``(path, mime_type)`` segments for Demo 4.
+    """First ingest strategy only (prefer :func:`iter_demo4_ingest_strategies` for fallbacks)."""
+    for _label, media in iter_demo4_ingest_strategies(
+        source_path,
+        out_dir=out_dir,
+        chunk_minutes=chunk_minutes,
+        prefer_video=prefer_video,
+        demo4_model=demo4_model,
+    ):
+        return media
+    return []
 
-    MP4/WebM may use ``video/mp4`` segments when enabled; on ffmpeg failure,
-    falls back to extracted **audio/mp3** chunks (required for Gemma 3n / E2B).
-    """
-    source_path = source_path.resolve()
-    use_video = (
-        demo4_use_video_chunks()
-        if prefer_video is None
-        else bool(prefer_video)
-    )
-    if source_path.suffix.lower() in VIDEO_EXTS and use_video:
-        try:
-            paths = _chunk_video_ffmpeg(
-                source_path, out_dir=out_dir, chunk_minutes=chunk_minutes
-            )
-            return [(p, "video/mp4") for p in paths]
-        except RuntimeError as exc:
-            print(
-                f"   ℹ️  {source_path.name}: video segment failed ({exc}) — "
-                "using audio/mp3 chunks instead.",
-                flush=True,
-            )
-    paths = chunk_audio_ffmpeg(
-        source_path, out_dir=out_dir, chunk_minutes=chunk_minutes, fmt="mp3"
-    )
-    out: List[Tuple[Path, str]] = []
-    for p in paths:
-        mime = "audio/mpeg" if p.suffix.lower() == ".mp3" else mime_for(p)
-        out.append((p, mime))
-    return out
+
+def discover_demo4_chunk_media(
+    scratch_dir: Path,
+    *,
+    video: bool,
+) -> List[Tuple[Path, str]]:
+    """Reuse ffmpeg segments under scratch (opus before mp3 when not video)."""
+    paths = find_existing_demo4_chunks(scratch_dir, video=video)
+    return [(p, mime_for(p)) for p in paths]
 
 
 # ─────────────────────────────────────────────────────────────
@@ -1051,9 +1340,9 @@ def prepare_meeting_audio_for_processing(
     if source_path.suffix.lower() not in VIDEO_EXTS:
         return source_path
 
-    sibling_opus = source_path.with_suffix(".opus")
-    if sibling_opus.is_file() and sibling_opus.stat().st_size >= min_opus_bytes:
-        return sibling_opus.resolve()
+    scraped = resolve_scraped_opus_for_media(source_path, min_bytes=min_opus_bytes)
+    if scraped is not None:
+        return scraped
 
     work_dir.mkdir(parents=True, exist_ok=True)
     cached = (work_dir / f"{source_path.stem}.opus").resolve()
@@ -1088,12 +1377,19 @@ def chunk_audio_ffmpeg(
     stem = audio_path.stem
     pattern = out_dir / f"{stem}_chunk_%03d.{fmt}"
     seconds = max(60, int(chunk_minutes * 60))
+    fmt_l = (fmt or "mp3").lower().lstrip(".")
+    if fmt_l == "opus":
+        codec = "copy" if audio_path.suffix.lower() == ".opus" else "libopus"
+    elif fmt_l == "mp3":
+        codec = "libmp3lame"
+    else:
+        codec = "copy"
     cmd = [
         "ffmpeg", "-y", "-hide_banner", "-loglevel", "error",
         "-i", str(audio_path),
         *_ffmpeg_audio_only_output_flags(audio_path),
         "-f", "segment", "-segment_time", str(seconds),
-        "-c:a", "libmp3lame" if fmt == "mp3" else "copy",
+        "-c:a", codec,
         str(pattern),
     ]
     subprocess.run(cmd, check=True)
@@ -1143,6 +1439,7 @@ def call_google_genai_multimodal(
     media_resolution: Optional[str] = None,
     include_thoughts: bool = False,
     thinking_budget: Optional[int] = None,
+    demo4: bool = False,
 ) -> GenAIResult:
     """
     Single-turn Gemma 4 / Gemini call with optional thinking and visual token budget.
@@ -1164,7 +1461,7 @@ def call_google_genai_multimodal(
     try:
         from gemma_hf_backend import call_gemma_hf_multimodal, use_huggingface_for_model
 
-        if use_huggingface_for_model(model):
+        if use_huggingface_for_model(model, demo4=demo4):
             hf = call_gemma_hf_multimodal(
                 model=model,
                 system_instruction=system_instruction,
@@ -1972,6 +2269,10 @@ __all__ = [
     "model_supports_audio_video_input",
     "model_supports_video_input",
     "resolve_demo4_genai_model",
+    "resolve_demo4_model",
+    "demo4_uses_huggingface",
+    "demo4_media_work_dir",
+    "resolve_scraped_opus_for_media",
     "policy_drift_summarize",
     "load_meeting_data_lookup", "load_contacts_lookup",
     "merge_meeting_data_by_jurisdiction", "merge_contacts_by_jurisdiction",
@@ -1988,6 +2289,10 @@ __all__ = [
     "find_existing_audio_chunks",
     "demo4_use_video_chunks",
     "find_existing_demo4_chunks",
+    "discover_demo4_chunk_media",
+    "demo4_prefer_opus_chunks",
+    "demo4_prefer_gemma_for_audio",
+    "iter_demo4_ingest_strategies",
     "chunk_meeting_media_for_demo4",
     "OpenAICompatibleConfig", "call_openai_compatible_chat",
 ]

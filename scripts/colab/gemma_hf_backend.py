@@ -39,6 +39,11 @@ DEFAULT_HF_MODEL_ID = os.environ.get(
     "GOVERNANCE_HF_MODEL_ID", "google/gemma-4-E2B-it"
 ).strip()
 
+# Demo 4: native audio/video on Gemma 4 Edge (E2B / E4B) — not AI Studio 31B/26B.
+DEFAULT_DEMO4_HF_MODEL_ID = os.environ.get(
+    "GOVERNANCE_DEMO4_HF_MODEL", "google/gemma-4-E2B-it"
+).strip()
+
 # Default Gatekeeper HF checkpoint when ``GOVERNANCE_GATEKEEPER_FORCE_HF=1``.
 _HF_GATEKEEPER_REPO_DEFAULT = "google/gemma-4-E2B-it"
 
@@ -60,6 +65,53 @@ def llm_backend() -> str:
 def use_huggingface() -> bool:
     """True when every LLM call should use local Hugging Face weights."""
     return llm_backend() in ("huggingface", "hf", "local")
+
+
+def demo4_use_huggingface() -> bool:
+    """
+    Demo 4 meeting audio/video uses local Gemma 4 E2B/E4B (native multimodal audio).
+
+    Default **on** (``GOVERNANCE_DEMO4_USE_HF=1``). AI Studio only exposes audio on
+    Edge models that are often absent from ``models.list()``; E2B/E4B on Hugging Face
+    match the Gemma 4 docs. Set ``GOVERNANCE_DEMO4_USE_HF=0`` to try Google API instead.
+    """
+    if use_huggingface():
+        return True
+    return os.environ.get("GOVERNANCE_DEMO4_USE_HF", "1").strip().lower() not in (
+        "0",
+        "false",
+        "no",
+    )
+
+
+def resolve_demo4_hf_model(requested: Optional[str] = None) -> str:
+    """Hugging Face repo for Demo 4 (must be E2B or E4B for audio)."""
+    raw = (requested or os.environ.get("GOVERNANCE_DEMO4_MODEL", "").strip() or DEFAULT_DEMO4_HF_MODEL_ID)
+    repo = resolve_hf_model_id(raw)
+    if not _repo_supports_audio(repo):
+        logger.warning(
+            "Demo 4 HF model %r has no native audio — falling back to %s",
+            repo,
+            DEFAULT_DEMO4_HF_MODEL_ID,
+        )
+        repo = resolve_hf_model_id(DEFAULT_DEMO4_HF_MODEL_ID)
+    return repo
+
+
+def configure_hf_hub_cache(cache_dir: Path) -> Path:
+    """
+    Point Hugging Face / transformers caches at ``cache_dir`` (e.g. Drive-backed).
+
+    Uses ``setdefault`` so an explicit Colab/Drive env wins. Call once in notebook §2.
+    """
+    root = cache_dir.resolve()
+    root.mkdir(parents=True, exist_ok=True)
+    hub = root / "hub"
+    hub.mkdir(parents=True, exist_ok=True)
+    os.environ.setdefault("HF_HOME", str(root))
+    os.environ.setdefault("TRANSFORMERS_CACHE", str(root))
+    os.environ.setdefault("HUGGINGFACE_HUB_CACHE", str(hub))
+    return root
 
 
 def gatekeeper_use_huggingface() -> bool:
@@ -98,10 +150,15 @@ def model_requires_huggingface(model: str) -> bool:
 
 
 def use_huggingface_for_model(
-    model: Optional[str] = None, *, gatekeeper: bool = False
+    model: Optional[str] = None,
+    *,
+    gatekeeper: bool = False,
+    demo4: bool = False,
 ) -> bool:
     """Route a call to HF (local weights)."""
     if use_huggingface():
+        return True
+    if demo4 and demo4_use_huggingface():
         return True
     if gatekeeper:
         return gatekeeper_use_huggingface()
@@ -652,8 +709,21 @@ def call_gemma_hf_multimodal(
 
 def hf_weights_cached(repo_id: Optional[str] = None) -> Tuple[bool, bool]:
     """Return ``(image_text_loaded, audio_loaded)`` for the resolved repo."""
-    repo = resolve_hf_model_id(model_id or DEFAULT_HF_MODEL_ID)
+    repo = resolve_hf_model_id(repo_id or DEFAULT_HF_MODEL_ID)
     return (repo, False) in _CACHE, (repo, True) in _CACHE
+
+
+def ensure_demo4_hf_ready(model_id: Optional[str] = None) -> str:
+    """Load E2B/E4B multimodal weights (audio+video) for Demo 4; return resolved repo id."""
+    ensure_hf_token()
+    repo = resolve_demo4_hf_model(model_id)
+    ensure_hf_ready_for_triage(repo, kinds=("audio",), skip_if_cached=True)
+    return repo
+
+
+def preload_demo4_hf(model_id: Optional[str] = None) -> str:
+    """Notebook §3 eager load for Demo 4 (same as :func:`ensure_demo4_hf_ready`)."""
+    return ensure_demo4_hf_ready(model_id)
 
 
 def ensure_hf_ready_for_triage(

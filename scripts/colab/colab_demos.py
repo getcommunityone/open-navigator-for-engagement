@@ -10,7 +10,7 @@ import json
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 from media_playback_links import (
     enrich_policy_analysis_media_links,
@@ -54,7 +54,8 @@ from governance_meeting_llm import (
     VIDEO_EXTS,
     MeetingInventory,
     call_google_genai_multimodal,
-    chunk_meeting_media_for_demo4,
+    discover_demo4_chunk_media,
+    iter_demo4_ingest_strategies,
     demo2_page_output_complete,
     demo2_pdf_outputs_complete,
     demo3_thinking_json_complete,
@@ -70,7 +71,9 @@ from governance_meeting_llm import (
     policy_drift_summarize,
     read_json_file,
     render_pdf_pages,
-    resolve_demo4_genai_model,
+    demo4_media_work_dir,
+    demo4_uses_huggingface,
+    resolve_demo4_model,
     select_demo4_media,
     demo4_models_to_try,
     is_audio_modality_rejected,
@@ -697,22 +700,33 @@ def run_demo4(
     j = inv.jurisdiction
     from governance_meeting_llm import model_accepts_demo4_audio_chunks
 
-    # Always resolve at run time — do not trust notebook ctx.demo4_model if it is stale 31B.
-    demo4_model = resolve_demo4_genai_model(
-        ctx.genai_model,
-        gatekeeper_model=ctx.gatekeeper_model,
-        api_key=ctx.api_key,
-    )
+    report: List[Dict[str, Any]] = []
+
+    if demo4_uses_huggingface():
+        try:
+            from gemma_hf_backend import ensure_demo4_hf_ready
+
+            demo4_model = ensure_demo4_hf_ready(ctx.demo4_model or None)
+            log_line(f"Demo 4: Hugging Face {demo4_model!r} (native audio/video)")
+        except Exception as e:
+            log_line(f"! Demo 4 skipped: {e}")
+            return report
+    else:
+        try:
+            demo4_model = resolve_demo4_model(
+                ctx.genai_model,
+                gatekeeper_model=ctx.gatekeeper_model,
+                thinking_model=ctx.thinking_model,
+                api_key=ctx.api_key,
+            )
+        except RuntimeError as e:
+            log_line(f"! Demo 4 skipped: {e}")
+            return report
     stale = (ctx.demo4_model or "").strip()
     if stale and stale != demo4_model:
         log_line(
             f"Demo 4 model: using {demo4_model!r} "
             f"(ignoring stale demo_ctx.demo4_model={stale!r})"
-        )
-    if not model_accepts_demo4_audio_chunks(demo4_model):
-        log_line(
-            f"⚠ Demo 4 model {demo4_model!r} is not an audio-chunk model. "
-            f"Set os.environ['GOVERNANCE_DEMO4_MODEL']='gemma-4-e2b-it' and restart runtime."
         )
     elif demo4_model != ctx.genai_model:
         print(
@@ -727,7 +741,6 @@ def run_demo4(
         ctx.raw_root,
         max_files=ctx.max_audio_per_jur,
     )
-    report: List[Dict[str, Any]] = []
     if not audios:
         return report
     log_line(f"\n— Demo 4 | {j.relative_label}: {len(audios)} media file(s)", prefix="")
@@ -749,168 +762,209 @@ def run_demo4(
             suffix="",
         )
         per_audio_dir.mkdir(parents=True, exist_ok=True)
-        rel = audio.resolve().relative_to(ctx.raw_root.resolve())
-        scratch = ctx.scratch_audio_root / rel.with_suffix("")
-        scratch.mkdir(parents=True, exist_ok=True)
+        scratch = demo4_media_work_dir(ctx.scratch_audio_root, ctx.raw_root, audio)
         drift_out = per_audio_dir / "policy_drift.json"
         existing_chunks = find_existing_demo4_chunks(scratch, video=use_video)
         if existing_chunks and not force:
-            chunk_media = [(p, "video/mp4" if use_video else mime_for(p)) for p in existing_chunks]
-            print(f"    reuse {len(chunk_media)} ffmpeg chunk(s) from scratch")
+            ingest_plans: List[Tuple[str, List[Tuple[Path, str]]]] = [
+                ("cached", discover_demo4_chunk_media(scratch, video=use_video)),
+            ]
+            log_line(f"reuse {len(existing_chunks)} ffmpeg chunk(s) from scratch")
         else:
-            try:
-                chunk_media = chunk_meeting_media_for_demo4(
+            ingest_plans = list(
+                iter_demo4_ingest_strategies(
                     audio,
                     out_dir=scratch,
                     chunk_minutes=15,
                     prefer_video=use_video,
+                    demo4_model=demo4_model,
                 )
-            except Exception as e:
-                print(f"    ! ffmpeg chunking failed: {e}")
+            )
+            if not ingest_plans:
+                log_line("! ffmpeg could not produce any audio slices (Opus or MP3)")
                 continue
-        chunk_media = chunk_media[: ctx.max_audio_chunks]
-        print(f"    {len(chunk_media)} chunk(s) (cap {ctx.max_audio_chunks})")
+
         chunk_jsons: List[Dict[str, Any]] = []
         chunks_regenerated = False
         chunk_model = demo4_model
-        for idx, (chunk_path, chunk_mime) in enumerate(chunk_media):
-            chunk_out = per_audio_dir / f"chunk_{idx:03d}.json"
-            if not force and policy_chunk_output_complete(chunk_out):
-                data = read_json_file(chunk_out) or {}
-                chunk_jsons.append(data.get("json_analysis") or {})
-                print(f"    chunk {idx}: reuse existing JSON")
+        ingest_succeeded = False
+
+        for strategy_label, chunk_media in ingest_plans:
+            chunk_media = chunk_media[: ctx.max_audio_chunks]
+            if not chunk_media:
                 continue
-            chunks_regenerated = True
-            geo_hint = (
-                f"Geography hint: state_code={j.state_code}, scope={j.scope}, "
-                f"fips_or_place_id={j.fips or 'unknown'}. chunk_index={idx} of {len(chunk_media)}."
+            mime_hint = chunk_media[0][1] if chunk_media else "?"
+            log_line(
+                f"ingest {strategy_label}: {len(chunk_media)} chunk(s) "
+                f"({mime_hint}, cap {ctx.max_audio_chunks})"
             )
-            primary_media = resolve_media_for_input_file(audio, j.root)
-            all_media = list_media_sources(j.root)
-            modality = "video_recording" if use_video else "audio_recording"
-            media_hint = format_media_context_hint(
-                primary=primary_media,
-                all_sources=all_media,
-                input_modality=modality,
-                chunk_index=idx,
-                chunk_minutes=15,
-                local_file=chunk_path,
-            )
-            meeting_dir = (
-                resolve_meeting_dir(audio, ctx.raw_root)
-                if resolve_meeting_dir and build_meeting_collateral_brief
-                else None
-            )
-            brief = ""
-            if meeting_dir and build_meeting_collateral_brief:
-                mk = str(meeting_dir)
-                if mk not in brief_cache:
-                    brief_cache[mk] = build_meeting_collateral_brief(
-                        meeting_dir,
-                        api_key=ctx.api_key,
-                        model=demo4_model,
-                    )
-                brief = brief_cache.get(mk) or ""
-            chunk_hint = (
-                "The attached audio is one 15-minute slice of a longer governance meeting. "
-                "Apply the deconstruction prompt to what is audible. Use the chunk_index "
-                "to anchor the timeline and assign consistent subject_id slugs across chunks."
-            )
-            if brief and format_audio_analysis_prompt and build_meeting_collateral_brief:
-                user_text = format_audio_analysis_prompt(
-                    policy_prompt=ctx.policy_prompt,
-                    meeting_brief=brief,
-                    geo_hint=geo_hint,
-                    chunk_hint=chunk_hint,
+            strategy_jsons: List[Dict[str, Any]] = []
+            strategy_regenerated = False
+
+            for idx, (chunk_path, chunk_mime) in enumerate(chunk_media):
+                chunk_out = per_audio_dir / f"chunk_{idx:03d}.json"
+                if not force and policy_chunk_output_complete(chunk_out):
+                    data = read_json_file(chunk_out) or {}
+                    strategy_jsons.append(data.get("json_analysis") or {})
+                    print(f"    chunk {idx}: reuse existing JSON")
+                    continue
+                strategy_regenerated = True
+                chunks_regenerated = True
+                geo_hint = (
+                    f"Geography hint: state_code={j.state_code}, scope={j.scope}, "
+                    f"fips_or_place_id={j.fips or 'unknown'}. chunk_index={idx} of {len(chunk_media)}."
                 )
-                user_text = f"{media_hint}\n{user_text}"
-            else:
-                user_text = f"{media_hint}\n{ctx.policy_prompt}\n\n---\n{geo_hint}\n\n{chunk_hint}"
-            result = None
-            chunk_model = demo4_model
-            log_line(
-                f"chunk {idx}: calling {demo4_model} — "
-                f"{describe_demo4_file(chunk_path, demo4_model=demo4_model)} "
-                f"(often 2–5 min; 429 retries add time)…",
-                prefix="    ",
-            )
-            t_chunk = time.perf_counter()
-            for try_model in demo4_models_to_try(demo4_model, api_key=ctx.api_key):
-                try:
-                    result = call_google_genai_multimodal(
-                        api_key=ctx.api_key,
-                        model=try_model,
-                        system_instruction=DEMO4_SYSTEM,
-                        user_text=user_text,
-                        media=[(chunk_path, chunk_mime)],
-                        temperature=0.1,
-                        max_output_tokens=8192,
-                    )
-                    chunk_model = try_model
-                    if try_model != demo4_model:
-                        print(
-                            f"    chunk {idx}: audio via {try_model!r} "
-                            f"({demo4_model!r} rejects audio on this key)",
-                            flush=True,
-                        )
-                    break
-                except Exception as e:
-                    if is_audio_modality_rejected(e):
-                        continue
-                    print(f"    ! chunk {idx} failed: {e}")
-                    genai_inter_call_pause(None)
-                    result = None
-                    break
-            if result is None:
-                tried = demo4_models_to_try(demo4_model, api_key=ctx.api_key)
-                if not tried:
-                    log_line(
-                        f"! chunk {idx} failed: no audio-capable model on this API key "
-                        f"(enable gemma-4-e2b-it or gemma-4-e4b-it in AI Studio)",
-                        prefix="    ",
-                    )
-                else:
-                    log_line(
-                        f"! chunk {idx} failed: audio rejected by {tried!r}. "
-                        f"Set GOVERNANCE_DEMO4_MODEL=gemma-4-e2b-it in §2 "
-                        f"(31B is for Demo 3 PDFs, not meeting audio on most keys).",
-                        prefix="    ",
-                    )
-                genai_inter_call_pause(None)
-                continue
-            log_line(
-                f"chunk {idx}: ✓ Gemma returned in "
-                f"{format_elapsed(time.perf_counter() - t_chunk)}",
-                prefix="    ",
-            )
-            genai_inter_call_pause(None)
-            parsed = parse_policy_analysis_response(result.text or "")
-            chunk_analysis = parsed.get("json_analysis")
-            if isinstance(chunk_analysis, dict):
-                chunk_analysis = enrich_policy_analysis_media_links(
-                    chunk_analysis,
+                primary_media = resolve_media_for_input_file(audio, j.root)
+                all_media = list_media_sources(j.root)
+                modality = (
+                    "video_recording"
+                    if strategy_label == "video_mp4"
+                    else "audio_recording"
+                )
+                media_hint = format_media_context_hint(
                     primary=primary_media,
                     all_sources=all_media,
-                    chunk_start_seconds=idx * 15 * 60,
+                    input_modality=modality,
+                    chunk_index=idx,
+                    chunk_minutes=15,
+                    local_file=chunk_path,
                 )
-            chunk_out.write_text(
-                json.dumps(
-                    {
-                        "chunk_index": idx,
-                        "audio_source": str(chunk_path.name),
-                        "json_analysis": chunk_analysis,
-                        "summary": parsed.get("summary"),
-                        "parse_error": parsed.get("parse_error"),
-                    },
-                    indent=2,
-                    ensure_ascii=False,
-                ),
-                encoding="utf-8",
+                meeting_dir = (
+                    resolve_meeting_dir(audio, ctx.raw_root)
+                    if resolve_meeting_dir and build_meeting_collateral_brief
+                    else None
+                )
+                brief = ""
+                if meeting_dir and build_meeting_collateral_brief:
+                    mk = str(meeting_dir)
+                    if mk not in brief_cache:
+                        brief_cache[mk] = build_meeting_collateral_brief(
+                            meeting_dir,
+                            api_key=ctx.api_key,
+                            model=demo4_model,
+                        )
+                    brief = brief_cache.get(mk) or ""
+                chunk_hint = (
+                    "The attached audio is one 15-minute slice of a longer governance meeting. "
+                    "Apply the deconstruction prompt to what is audible. Use the chunk_index "
+                    "to anchor the timeline and assign consistent subject_id slugs across chunks."
+                )
+                if brief and format_audio_analysis_prompt and build_meeting_collateral_brief:
+                    user_text = format_audio_analysis_prompt(
+                        policy_prompt=ctx.policy_prompt,
+                        meeting_brief=brief,
+                        geo_hint=geo_hint,
+                        chunk_hint=chunk_hint,
+                    )
+                    user_text = f"{media_hint}\n{user_text}"
+                else:
+                    user_text = (
+                        f"{media_hint}\n{ctx.policy_prompt}\n\n---\n{geo_hint}\n\n{chunk_hint}"
+                    )
+                result = None
+                log_line(
+                    f"chunk {idx}: calling {demo4_model} — {chunk_mime} "
+                    f"(often 2–5 min; 429 retries add time)…",
+                    prefix="    ",
+                )
+                t_chunk = time.perf_counter()
+                for try_model in demo4_models_to_try(
+                    demo4_model,
+                    api_key=ctx.api_key,
+                    thinking_model=ctx.thinking_model,
+                    chunk_mime=chunk_mime,
+                ):
+                    try:
+                        result = call_google_genai_multimodal(
+                            api_key=ctx.api_key,
+                            model=try_model,
+                            system_instruction=DEMO4_SYSTEM,
+                            user_text=user_text,
+                            media=[(chunk_path, chunk_mime)],
+                            temperature=0.1,
+                            max_output_tokens=8192,
+                            demo4=True,
+                        )
+                        chunk_model = try_model
+                        if try_model != demo4_model:
+                            log_line(
+                                f"chunk {idx}: via {try_model!r} ({chunk_mime})",
+                                prefix="    ",
+                            )
+                        break
+                    except Exception as e:
+                        if not demo4_uses_huggingface() and is_audio_modality_rejected(e):
+                            continue
+                        log_line(f"! chunk {idx} failed: {e}", prefix="    ")
+                        genai_inter_call_pause(None)
+                        result = None
+                        break
+                if result is None:
+                    tried = demo4_models_to_try(
+                        demo4_model,
+                        api_key=ctx.api_key,
+                        thinking_model=ctx.thinking_model,
+                        chunk_mime=chunk_mime,
+                    )
+                    if not tried:
+                        log_line(
+                            f"! chunk {idx}: no audio model on key — set GOVERNANCE_DEMO4_MODEL "
+                            f"— check HF_TOKEN / GPU (E2B) or §3 Google model list",
+                            prefix="    ",
+                        )
+                    else:
+                        log_line(
+                            f"! chunk {idx}: rejected by {tried!r} — next ingest format if any",
+                            prefix="    ",
+                        )
+                    genai_inter_call_pause(None)
+                    continue
+                log_line(
+                    f"chunk {idx}: ✓ returned in {format_elapsed(time.perf_counter() - t_chunk)}",
+                    prefix="    ",
+                )
+                genai_inter_call_pause(None)
+                parsed = parse_policy_analysis_response(result.text or "")
+                chunk_analysis = parsed.get("json_analysis")
+                if isinstance(chunk_analysis, dict):
+                    chunk_analysis = enrich_policy_analysis_media_links(
+                        chunk_analysis,
+                        primary=primary_media,
+                        all_sources=all_media,
+                        chunk_start_seconds=idx * 15 * 60,
+                    )
+                chunk_out.write_text(
+                    json.dumps(
+                        {
+                            "chunk_index": idx,
+                            "audio_source": str(chunk_path.name),
+                            "ingest_strategy": strategy_label,
+                            "mime_type": chunk_mime,
+                            "json_analysis": chunk_analysis,
+                            "summary": parsed.get("summary"),
+                            "parse_error": parsed.get("parse_error"),
+                        },
+                        indent=2,
+                        ensure_ascii=False,
+                    ),
+                    encoding="utf-8",
+                )
+                strategy_jsons.append(chunk_analysis or {})
+                print(f"    chunk {idx}: → {chunk_out.relative_to(ctx.processed_root)}")
+                progress_tick(f"Demo 4 {audio.name} chunk {idx + 1}/{len(chunk_media)}")
+
+            if strategy_jsons and any(strategy_jsons):
+                chunk_jsons = strategy_jsons
+                ingest_succeeded = True
+                log_line(f"✓ ingest {strategy_label} succeeded", prefix="    ")
+                break
+            log_line(
+                f"ingest {strategy_label}: no chunk JSON — trying next format",
+                prefix="    ",
             )
-            chunk_jsons.append(chunk_analysis or {})
-            print(f"    chunk {idx}: → {chunk_out.relative_to(ctx.processed_root)}")
-            progress_tick(f"Demo 4 {audio.name} chunk {idx + 1}/{len(chunk_media)}")
-        if not chunk_jsons or not any(chunk_jsons):
+
+        if not ingest_succeeded or not chunk_jsons or not any(chunk_jsons):
+            log_line(f"! Demo 4: all ingest formats failed for {audio.name}")
             continue
         if (
             not force

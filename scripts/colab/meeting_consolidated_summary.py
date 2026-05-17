@@ -381,7 +381,8 @@ def build_consolidated_summary_markdown(artifacts: Dict[str, Any]) -> str:
     if artifacts.get("audio_video") and not artifacts.get("demo4_chunks"):
         missing.append(
             "recording present but no Demo 4 chunks — set "
-            "`GOVERNANCE_DEMO4_MODEL=gemma-4-e2b-it` (not 31B), restart runtime, "
+            "`GOVERNANCE_DEMO4_MODEL` set to a model from §3 that accepts audio "
+            "(often `gemini-2.0-flash` when Gemma Edge is not on your key), restart runtime, "
             "re-run §6; MP4→ffmpeg MP3 chunks (Opus conversion not required)"
         )
     if artifacts.get("demo4_chunks") and not artifacts.get("drift_json"):

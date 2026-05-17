@@ -249,10 +249,18 @@ def describe_demo4_file(path: Path, *, demo4_model: str) -> str:
         and model_supports_video_input(demo4_model)
     )
     if use_video_api:
-        return "video/mp4 segments → Gemma"
+        return "video/mp4 segments → API"
     if is_video_file:
-        return "MP4 → 15‑min audio slices → Gemma (audio modality on this model)"
-    return "15‑min audio slices → Gemma"
+        from governance_meeting_llm import demo4_prefer_opus_chunks, demo4_uses_huggingface
+
+        backend = "Hugging Face E2B/E4B" if demo4_uses_huggingface() else "API"
+        if demo4_prefer_opus_chunks():
+            return (
+                f"MP4 → cached/scrape Opus → 15‑min Opus slices → {backend} "
+                f"(then video/mp4 or MP3 if needed)"
+            )
+        return f"MP4 → 15‑min MP3 slices → {backend} (Opus fallback if needed)"
+    return "15‑min audio slices → API"
 
 
 def print_scoped_inventory_line(inv: MeetingInventory, scope: MediaScopeConfig | None = None) -> None:

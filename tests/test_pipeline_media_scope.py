@@ -143,7 +143,7 @@ def test_demo4_labels() -> None:
     os.environ["GOVERNANCE_PIPELINE_MEDIA_SCOPE"] = "video"
     assert "video" in demo4_step_label().lower()
     mp4 = describe_demo4_file(Path("2026_02_18.mp4"), demo4_model="gemma-4-31b-it")
-    assert "MP4" in mp4 and "audio" in mp4.lower()
+    assert "MP4" in mp4 and "opus" in mp4.lower()
     gemini = describe_demo4_file(
         Path("2026_02_18.mp4"),
         demo4_model="gemini-2.0-flash",
