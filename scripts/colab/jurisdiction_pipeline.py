@@ -20,7 +20,11 @@ from typing import Dict, List, Optional
 import gatekeeper_triage
 from colab_demos import DemoContext, JurisdictionDemoReports, run_demos_for_jurisdiction
 from colab_timed_steps import timed_step
-from governance_meeting_llm import MeetingInventory, inventory_for_jurisdiction
+from governance_meeting_llm import (
+    MeetingInventory,
+    format_inventory_media_line,
+    inventory_for_jurisdiction,
+)
 
 _gatekeeper_log_lock = threading.Lock()
 
@@ -274,10 +278,7 @@ def run_one_jurisdiction(
             with timed_step(f"Reload inventory after organize | {label}"):
                 inv = reload_inventory(inv, ctx.raw_root, max_dates=ctx.demo_date_cap)
 
-    print(
-        f"  Demos | pdfs={len(inv.pdfs)} audio={len(inv.audio)} images={len(inv.images)}",
-        flush=True,
-    )
+    print(f"  Demos | {format_inventory_media_line(inv)}", flush=True)
     with timed_step(f"Demos 1–4 | {label}"):
         reports = run_demos_for_jurisdiction(inv, ctx.demo_ctx, brief_cache=brief_cache)
     print(

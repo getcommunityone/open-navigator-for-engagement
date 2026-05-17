@@ -11,7 +11,7 @@ from collections import defaultdict
 from dataclasses import dataclass
 from typing import Dict, List, Optional
 
-from governance_meeting_llm import MeetingInventory, VIDEO_EXTS
+from governance_meeting_llm import MeetingInventory, format_inventory_media_line
 
 ENV_KEY = "GOVERNANCE_DEMO_SCOPE"
 
@@ -214,11 +214,7 @@ def print_scope_plan(
     print(f"  This run: {len(selected)} jurisdiction(s)")
     for inv in selected:
         j = inv.jurisdiction
-        n_video = sum(1 for p in inv.audio if p.suffix.lower() in VIDEO_EXTS)
-        audio_note = f"audio={len(inv.audio)}"
-        if n_video:
-            audio_note += f" ({n_video} mp4/webm — Demo 4 video chunks)"
-        print(f"    • {j.relative_label}  (pdfs={len(inv.pdfs)} {audio_note})")
+        print(f"    • {j.relative_label}  ({format_inventory_media_line(inv)})")
     if len(all_inventories) > len(selected):
         print(
             f"  Skipped: {len(all_inventories) - len(selected)} "

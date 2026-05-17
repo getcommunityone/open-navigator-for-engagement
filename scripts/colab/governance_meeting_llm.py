@@ -237,6 +237,24 @@ class MeetingInventory:
         return bool(self.pdfs or self.audio or self.images)
 
 
+def format_inventory_media_line(inv: MeetingInventory) -> str:
+    """
+    One-line inventory summary for pipeline logs.
+
+    ``inv.audio`` holds both video containers (``.mp4``, …) and pure audio;
+    label them separately when helpful.
+    """
+    n_video = sum(1 for p in inv.audio if p.suffix.lower() in VIDEO_EXTS)
+    n_audio_only = len(inv.audio) - n_video
+    parts = [f"pdfs={len(inv.pdfs)}"]
+    if n_video:
+        parts.append(f"video={n_video}")
+    if n_audio_only:
+        parts.append(f"audio={n_audio_only}")
+    parts.append(f"images={len(inv.images)}")
+    return " ".join(parts)
+
+
 def _iter_files(jurisdiction_root: Path) -> Iterator[Path]:
     """
     Recursive walk that skips scraper-temp folders (`_crawl_html`, `_sitemaps`)
@@ -1734,7 +1752,7 @@ __all__ = [
     "DOCUMENT_BREAK",
     "PDF_EXTS", "AUDIO_EXTS", "VIDEO_EXTS", "VIDEO_CONTAINER_EXTS", "IMAGE_EXTS",
     "TOKEN_BUDGET_HIGH", "TOKEN_BUDGET_MEDIUM", "TOKEN_BUDGET_LOW",
-    "JurisdictionDir", "MeetingInventory",
+    "JurisdictionDir", "MeetingInventory", "format_inventory_media_line",
     "PdfPageRender", "GenAIResult",
     "load_text_file", "chunk_text",
     "parse_policy_analysis_response",
