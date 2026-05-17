@@ -47,6 +47,19 @@ def test_allow_31b_when_prefer_gemma(monkeypatch: pytest.MonkeyPatch) -> None:
     assert model_accepts_demo4_audio_chunks("gemma-4-31b-it") is True
 
 
+def test_a4b_audio_when_try_flag(monkeypatch: pytest.MonkeyPatch) -> None:
+    from governance_meeting_llm import (  # noqa: E402
+        _demo4_allow_a4b_audio,
+        model_supports_audio_video_input,
+    )
+
+    monkeypatch.setenv("GOVERNANCE_DEMO4_TRY_A4B_AUDIO", "1")
+    assert _demo4_allow_a4b_audio() is True
+    assert model_supports_audio_video_input("gemma-4-26b-a4b-it") is True
+    monkeypatch.setenv("GOVERNANCE_DEMO4_TRY_A4B_AUDIO", "0")
+    assert model_supports_audio_video_input("gemma-4-26b-a4b-it") is False
+
+
 def test_block_31b_when_explicitly_disabled(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("GOVERNANCE_DEMO4_ALLOW_31B_AUDIO", "0")
     assert model_accepts_demo4_audio_chunks("gemma-4-31b-it") is False

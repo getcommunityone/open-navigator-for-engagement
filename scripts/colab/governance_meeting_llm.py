@@ -88,14 +88,23 @@ def model_supports_thinking_budget(model: str) -> bool:
     return True
 
 
+def _demo4_allow_a4b_audio() -> bool:
+    """Opt-in: try ``gemma-4-26b-a4b-it`` for meeting audio on AI Studio (often rejected)."""
+    return os.environ.get("GOVERNANCE_DEMO4_TRY_A4B_AUDIO", "0").strip().lower() in (
+        "1",
+        "true",
+        "yes",
+    )
+
+
 def model_supports_audio_video_input(model: str) -> bool:
     """Whether ``generate_content`` may accept audio/video bytes (not PDF-only MoE)."""
     mid = (model or "").lower()
     if mid.startswith("gemini"):
         return True
-    # AI Studio: 26B A4B MoE is used for Demo 1/2 PDFs; it rejects audio on most keys.
+    # AI Studio: 26B A4B MoE is PDF/image-first; audio works on some keys when opted in.
     if "26b" in mid and "a4b" in mid:
-        return False
+        return _demo4_allow_a4b_audio()
     if "gemma-3n" in mid or "gemma-4-e2b" in mid or "gemma-4-e4b" in mid:
         return True
     if "3n-e2b" in mid or "3n-e4b" in mid or "e2b-it" in mid or "e4b-it" in mid:
@@ -252,6 +261,8 @@ def _demo4_model_preference_order(
         return ["gemma-4-31b-it", "gemini-2.0-flash"]
 
     order: List[str] = []
+    if _demo4_allow_a4b_audio():
+        order.append("gemma-4-26b-a4b-it")
     if demo4_prefer_gemma_for_audio():
         tm = (thinking_model or os.environ.get("GOVERNANCE_THINKING_MODEL", "")).strip()
         if tm:
@@ -299,9 +310,8 @@ def format_demo4_no_audio_model_error(available: Iterable[str]) -> str:
         "Demo 4: no audio-capable model on this API key. "
         f"Gemma ids on key: {gemma or '(none)'}. "
         f"Gemini ids on key: {gemini or '(none)'}. "
-        "Set GOVERNANCE_DEMO4_MODEL to gemma-4-31b-it (Opus slices) or a Gemini Flash id, "
-        "or GOVERNANCE_DEMO4_PREFER_GEMMA_AUDIO=0 to prefer Gemini, "
-        "or GOVERNANCE_LLM_BACKEND=huggingface for local audio."
+        "Set GOVERNANCE_DEMO4_MODEL, GOVERNANCE_DEMO4_TRY_A4B_AUDIO=1 for gemma-4-26b-a4b-it, "
+        "or GOVERNANCE_DEMO4_USE_HF=1 (default) for Hugging Face E2B/E4B."
     )
 
 
@@ -1402,6 +1412,14 @@ def chunk_audio_ffmpeg(
 
 
 @dataclass
+class _StreamGenAIResponse:
+    """Collected text from ``generate_content_stream`` (AI Studio streaming hack)."""
+
+    text: str
+    last_chunk: Any = None
+
+
+@dataclass
 class GenAIResult:
     text: str                                  # answer-text concatenated across parts
     thoughts: str                              # reasoning trace when include_thoughts=True
@@ -1527,11 +1545,34 @@ def call_google_genai_multimodal(
 
     from genai_quota_retry import call_with_genai_quota_retry
 
+    use_stream = os.environ.get("GOVERNANCE_GENAI_STREAM", "0").strip().lower() in (
+        "1",
+        "true",
+        "yes",
+    )
+
     def _generate(cfg: Dict[str, Any]):
+        contents = [types.Content(role="user", parts=parts)]
+        gen_cfg = types.GenerateContentConfig(**cfg)
+        if use_stream:
+            stream = client.models.generate_content_stream(
+                model=model,
+                contents=contents,
+                config=gen_cfg,
+            )
+            answer_stream: List[str] = []
+            last_chunk: Any = None
+            for chunk in stream:
+                last_chunk = chunk
+                if getattr(chunk, "text", None):
+                    answer_stream.append(chunk.text)
+            text_joined = "".join(answer_stream)
+            if text_joined:
+                return _StreamGenAIResponse(text_joined, last_chunk)
         return client.models.generate_content(
             model=model,
-            contents=[types.Content(role="user", parts=parts)],
-            config=types.GenerateContentConfig(**cfg),
+            contents=contents,
+            config=gen_cfg,
         )
 
     def _generate_with_thinking_fallback() -> Any:
@@ -1556,6 +1597,13 @@ def call_google_genai_multimodal(
         _generate_with_thinking_fallback, label=f"genai {model}"
     )
 
+    if isinstance(response, _StreamGenAIResponse):
+        return GenAIResult(
+            text=response.text,
+            thoughts="",
+            raw_response=response.last_chunk,
+        )
+
     answer_bits: List[str] = []
     thought_bits: List[str] = []
     for cand in getattr(response, "candidates", None) or []:
@@ -1575,6 +1623,108 @@ def call_google_genai_multimodal(
         thoughts="\n".join(thought_bits).strip(),
         raw_response=response,
     )
+
+
+def probe_google_gemma_studio(
+    api_key: str,
+    *,
+    models: Optional[List[str]] = None,
+    audio_path: Optional[Path] = None,
+    stream_text: bool = True,
+) -> Dict[str, Dict[str, str]]:
+    """
+    Colab diagnostic: text ``generate_content_stream`` (the common blog "hack") plus
+    optional ``Part.from_bytes`` audio on the same model ids.
+
+    Returns ``{model_id: {"text_stream": "ok"|"fail:…", "audio": "ok"|"skip"|"fail:…"}}``.
+    """
+    from google import genai
+    from google.genai import types
+
+    try:
+        from gatekeeper_triage import _list_available_model_ids, _build_genai_client
+
+        client = _build_genai_client(api_key)
+        available = set(_list_available_model_ids(client))
+    except Exception:
+        client = genai.Client(api_key=api_key)
+        available = set()
+
+    candidates = models or [
+        "gemma-4-26b-a4b-it",
+        "gemma-4-e2b-it",
+        "gemma-4-e4b-it",
+        "gemma-4-31b-it",
+        "gemini-2.0-flash",
+    ]
+    if available:
+        candidates = [m for m in candidates if m in available] + [
+            m for m in sorted(available) if "gemma" in m.lower() and m not in candidates
+        ][:3]
+
+    audio_bytes: Optional[bytes] = None
+    audio_mime = ""
+    if audio_path and Path(audio_path).is_file():
+        audio_bytes = Path(audio_path).read_bytes()
+        audio_mime = mime_for(audio_path)
+
+    out: Dict[str, Dict[str, str]] = {}
+    for model in candidates:
+        row: Dict[str, str] = {}
+        if stream_text:
+            try:
+                stream = client.models.generate_content_stream(
+                    model=model,
+                    contents="Reply with exactly: OK",
+                )
+                text = "".join(getattr(c, "text", None) or "" for c in stream)
+                row["text_stream"] = "ok" if text.strip() else "ok (empty)"
+            except Exception as exc:
+                row["text_stream"] = f"fail: {exc}"
+        if audio_bytes:
+            try:
+                resp = client.models.generate_content(
+                    model=model,
+                    contents=[
+                        types.Content(
+                            role="user",
+                            parts=[
+                                types.Part.from_text(
+                                    text="One sentence: what is heard in this clip?"
+                                ),
+                                types.Part.from_bytes(
+                                    data=audio_bytes, mime_type=audio_mime
+                                ),
+                            ],
+                        )
+                    ],
+                )
+                snippet = (getattr(resp, "text", None) or "")[:120]
+                row["audio"] = f"ok: {snippet!r}"
+            except Exception as exc:
+                row["audio"] = f"fail: {exc}"
+        else:
+            row["audio"] = "skip (no audio_path)"
+        out[model] = row
+    return out
+
+
+def print_probe_google_gemma_studio(
+    api_key: str,
+    *,
+    audio_path: Optional[Path] = None,
+    models: Optional[List[str]] = None,
+) -> Dict[str, Dict[str, str]]:
+    """Pretty-print :func:`probe_google_gemma_studio` results."""
+    results = probe_google_gemma_studio(
+        api_key, models=models, audio_path=audio_path
+    )
+    print("Google AI Studio Gemma probe (text stream + optional audio bytes)")
+    for model, row in results.items():
+        print(f"\n  {model}")
+        for key, val in row.items():
+            print(f"    {key}: {val}")
+    return results
 
 
 # ─────────────────────────────────────────────────────────────
@@ -2273,6 +2423,9 @@ __all__ = [
     "demo4_uses_huggingface",
     "demo4_media_work_dir",
     "resolve_scraped_opus_for_media",
+    "probe_google_gemma_studio",
+    "print_probe_google_gemma_studio",
+    "_demo4_allow_a4b_audio",
     "policy_drift_summarize",
     "load_meeting_data_lookup", "load_contacts_lookup",
     "merge_meeting_data_by_jurisdiction", "merge_contacts_by_jurisdiction",
