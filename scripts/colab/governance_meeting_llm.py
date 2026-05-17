@@ -170,6 +170,40 @@ def _genai_error_text(exc: BaseException) -> str:
     return str(exc).lower()
 
 
+def is_audio_modality_rejected(exc: BaseException) -> bool:
+    return "audio input modality" in _genai_error_text(exc)
+
+
+def demo4_models_to_try(primary: str, *, api_key: str = "") -> List[str]:
+    """Ordered models for Demo 4 when the primary id rejects audio on this key."""
+    try:
+        from gatekeeper_triage import (
+            _GEMMA_DEMO4_AUDIO_FALLBACKS,
+            _build_genai_client,
+            _list_available_model_ids,
+        )
+    except ImportError:
+        return [primary] if primary else []
+
+    available: set[str] = set()
+    if api_key:
+        try:
+            available = set(_list_available_model_ids(_build_genai_client(api_key)))
+        except Exception:
+            available = set()
+
+    ordered: List[str] = []
+    for mid in (primary, *_GEMMA_DEMO4_AUDIO_FALLBACKS):
+        m = (mid or "").strip()
+        if not m or m in ordered:
+            continue
+        if available and m not in available:
+            continue
+        if model_supports_audio_video_input(m):
+            ordered.append(m)
+    return ordered or ([primary] if primary else [])
+
+
 # ─────────────────────────────────────────────────────────────
 # Basic text / JSON utilities (kept from the prior helper)
 # ─────────────────────────────────────────────────────────────

@@ -43,6 +43,8 @@ from governance_meeting_llm import (
     render_pdf_pages,
     resolve_demo4_genai_model,
     select_demo4_media,
+    demo4_models_to_try,
+    is_audio_modality_rejected,
     model_supports_audio_video_input,
     model_supports_video_input,
     text_output_complete,
@@ -326,6 +328,9 @@ def run_demo2(inv: MeetingInventory, ctx: DemoContext) -> List[Dict[str, Any]]:
     print(f"\n— Demo 2 | {j.relative_label} — {len(pdfs)} PDF(s)")
     force = force_reprocess_outputs()
     for pdf in pdfs:
+        if not Path(pdf).is_file():
+            print(f"  • {Path(pdf).name}: skip — file not on disk (stale path; re-run §6 after reload)")
+            continue
         print(f"  • {pdf.name}")
         try:
             pages = render_pdf_pages(pdf, dpi=200)
@@ -476,6 +481,9 @@ def _run_demo3_one_pdf(
     audit_fn,
 ) -> None:
     j = inv.jurisdiction
+    if not Path(pdf).is_file():
+        print(f"  • {Path(pdf).name}: skip — file not on disk (stale path; re-run §6 after reload)")
+        return
     print(f"  • {pdf.name}")
     json_out = mirror_output_path(
         input_path=pdf,
@@ -652,6 +660,9 @@ def run_demo4(
     print(f"\n— Demo 4 | {j.relative_label}: {len(audios)} media file(s)")
     force = force_reprocess_outputs()
     for audio in audios:
+        if not Path(audio).is_file():
+            print(f"  • {Path(audio).name}: skip — file not on disk ({audio})")
+            continue
         use_video = (
             audio.suffix.lower() in VIDEO_EXTS
             and demo4_use_video_chunks()
@@ -689,6 +700,7 @@ def run_demo4(
         print(f"    {len(chunk_media)} chunk(s) (cap {ctx.max_audio_chunks})")
         chunk_jsons: List[Dict[str, Any]] = []
         chunks_regenerated = False
+        chunk_model = demo4_model
         for idx, (chunk_path, chunk_mime) in enumerate(chunk_media):
             chunk_out = per_audio_dir / f"chunk_{idx:03d}.json"
             if not force and policy_chunk_output_complete(chunk_out):
@@ -742,18 +754,46 @@ def run_demo4(
                 user_text = f"{media_hint}\n{user_text}"
             else:
                 user_text = f"{media_hint}\n{ctx.policy_prompt}\n\n---\n{geo_hint}\n\n{chunk_hint}"
-            try:
-                result = call_google_genai_multimodal(
-                    api_key=ctx.api_key,
-                    model=demo4_model,
-                    system_instruction=DEMO4_SYSTEM,
-                    user_text=user_text,
-                    media=[(chunk_path, chunk_mime)],
-                    temperature=0.1,
-                    max_output_tokens=8192,
-                )
-            except Exception as e:
-                print(f"    ! chunk {idx} failed: {e}")
+            result = None
+            chunk_model = demo4_model
+            for try_model in demo4_models_to_try(demo4_model, api_key=ctx.api_key):
+                try:
+                    result = call_google_genai_multimodal(
+                        api_key=ctx.api_key,
+                        model=try_model,
+                        system_instruction=DEMO4_SYSTEM,
+                        user_text=user_text,
+                        media=[(chunk_path, chunk_mime)],
+                        temperature=0.1,
+                        max_output_tokens=8192,
+                    )
+                    chunk_model = try_model
+                    if try_model != demo4_model:
+                        print(
+                            f"    chunk {idx}: audio via {try_model!r} "
+                            f"({demo4_model!r} rejects audio on this key)",
+                            flush=True,
+                        )
+                    break
+                except Exception as e:
+                    if is_audio_modality_rejected(e):
+                        continue
+                    print(f"    ! chunk {idx} failed: {e}")
+                    genai_inter_call_pause(None)
+                    result = None
+                    break
+            if result is None:
+                if not demo4_models_to_try(demo4_model, api_key=ctx.api_key):
+                    print(
+                        f"    ! chunk {idx} failed: no audio-capable model on this key",
+                        flush=True,
+                    )
+                else:
+                    print(
+                        f"    ! chunk {idx} failed: audio rejected by "
+                        f"{demo4_models_to_try(demo4_model, api_key=ctx.api_key)}",
+                        flush=True,
+                    )
                 genai_inter_call_pause(None)
                 continue
             genai_inter_call_pause(None)
@@ -795,7 +835,7 @@ def run_demo4(
             drift = policy_drift_summarize(
                 chunk_jsons,
                 api_key=ctx.api_key,
-                model=demo4_model,
+                model=chunk_model,
                 focus_hint=ctx.drift_focus,
                 canonical_prompt_text=ctx.policy_prompt,
             )
@@ -841,6 +881,17 @@ def run_demos_for_jurisdiction(
     brief_cache: Optional[Dict[str, str]] = None,
 ) -> JurisdictionDemoReports:
     """Run demos 1–4 for a single jurisdiction inventory."""
+    try:
+        from meeting_grouping import reconcile_inventory_media_paths
+
+        n = reconcile_inventory_media_paths(inv, ctx.raw_root)
+        if n:
+            print(
+                f"  Remapped {n} stale meeting file path(s) → session/ layout",
+                flush=True,
+            )
+    except ImportError:
+        pass
     reports = JurisdictionDemoReports()
     reports.demo1 = run_demo1(inv, ctx)
     reports.demo2 = run_demo2(inv, ctx)

@@ -275,8 +275,27 @@ def run_one_jurisdiction(
             n_moves = organize_inventory(ctx.raw_root, inv)
         if n_moves:
             print(f"  Organized {n_moves} file(s) into meetings/…", flush=True)
-            with timed_step(f"Reload inventory after organize | {label}"):
-                inv = reload_inventory(inv, ctx.raw_root, max_dates=ctx.demo_date_cap)
+
+    try:
+        from meeting_grouping import (
+            reconcile_inventory_media_paths,
+            repair_duplicate_date_session_folders,
+        )
+
+        repaired = repair_duplicate_date_session_folders(
+            ctx.raw_root, label
+        )
+        with timed_step(f"Reload inventory (pre-demos) | {label}"):
+            inv = reload_inventory(inv, ctx.raw_root, max_dates=ctx.demo_date_cap)
+        n_remapped = reconcile_inventory_media_paths(inv, ctx.raw_root)
+        if repaired or n_remapped:
+            print(
+                f"  Meeting layout: {repaired} duplicate date folder(s) hoisted to "
+                f"session/; {n_remapped} inventory path(s) remapped.",
+                flush=True,
+            )
+    except ImportError:
+        pass
 
     print(f"  Demos | {format_inventory_media_line(inv)}", flush=True)
     with timed_step(f"Demos 1–4 | {label}"):

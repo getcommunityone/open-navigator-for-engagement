@@ -960,6 +960,100 @@ def repair_duplicate_date_session_folders(
     return repaired
 
 
+def remap_path_after_session_repair(path: Path, raw_root: Path) -> Path:
+    """
+    Map legacy ``meetings/2026_02_18/2026-02-18/agenda/file.pdf`` →
+    ``meetings/2026_02_18/session/agenda/file.pdf`` when the latter exists.
+    """
+    try:
+        rel = path.resolve().relative_to(raw_root.resolve())
+    except ValueError:
+        return path
+    parts = list(rel.parts)
+    if MEETINGS_DIRNAME not in parts:
+        return path
+    midx = parts.index(MEETINGS_DIRNAME)
+    if len(parts) < midx + 4:
+        return path
+    date_dir = parts[midx + 1]
+    session_dir = parts[midx + 2]
+    if not _MEETING_DATE_DIR_RE.match(date_dir):
+        return path
+    if not _instance_slug_looks_like_date(session_dir.replace("_", "-")):
+        if session_dir == date_dir:
+            pass  # duplicate underscore date folder name
+        else:
+            return path
+    new_parts = parts[:midx + 2] + ["session"] + parts[midx + 3:]
+    candidate = raw_root.joinpath(*new_parts)
+    if candidate.is_file():
+        return candidate
+    return path
+
+
+def find_meeting_file_by_name(
+    path: Path,
+    raw_root: Path,
+    jurisdiction_root: Path,
+) -> Optional[Path]:
+    """Locate ``path.name`` under ``…/meetings/`` when the stored path is stale."""
+    if path.is_file():
+        return path.resolve()
+    meetings = jurisdiction_root / MEETINGS_DIRNAME
+    if not meetings.is_dir():
+        return None
+    matches = sorted(meetings.rglob(path.name))
+    if not matches:
+        return None
+    if len(matches) == 1:
+        return matches[0].resolve()
+    # Prefer same doc subfolder (agenda/minutes/audio) when possible.
+    try:
+        rel = path.relative_to(raw_root)
+        sub = rel.parts[-2] if len(rel.parts) >= 2 else ""
+    except ValueError:
+        sub = ""
+    if sub:
+        for m in matches:
+            if sub in m.parts:
+                return m.resolve()
+    return matches[0].resolve()
+
+
+def reconcile_inventory_media_paths(inv: Any, raw_root: Path) -> int:
+    """
+    Fix PDF/audio paths after :func:`repair_duplicate_date_session_folders`.
+
+    Returns the number of paths updated.
+    """
+    jur_root = getattr(getattr(inv, "jurisdiction", None), "root", None)
+    if jur_root is None:
+        return 0
+    fixed = 0
+
+    def _fix_list(items: List[Path]) -> List[Path]:
+        nonlocal fixed
+        out: List[Path] = []
+        seen: set[Path] = set()
+        for p in items:
+            candidate = remap_path_after_session_repair(Path(p), raw_root)
+            if not candidate.is_file():
+                found = find_meeting_file_by_name(Path(p), raw_root, jur_root)
+                candidate = found if found is not None else candidate
+            if candidate.is_file():
+                resolved = candidate.resolve()
+                if resolved not in seen:
+                    seen.add(resolved)
+                    out.append(resolved)
+                    if resolved != Path(p).resolve():
+                        fixed += 1
+        return out
+
+    inv.pdfs = _fix_list(list(inv.pdfs))
+    inv.audio = _fix_list(list(inv.audio))
+    return fixed
+
+
 def organize_inventory_into_meeting_folders(
     raw_root: Path,
     inventories: Sequence[Any],
