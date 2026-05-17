@@ -20,6 +20,11 @@ from typing import Dict, List, Optional
 import gatekeeper_triage
 from colab_demos import DemoContext, JurisdictionDemoReports, run_demos_for_jurisdiction
 from colab_timed_steps import timed_step
+from pipeline_logging import (
+    print_demo_run_plan,
+    print_gatekeeper_mode_hint,
+    print_runtime_estimate,
+)
 from governance_meeting_llm import (
     MeetingInventory,
     format_inventory_media_line,
@@ -264,6 +269,7 @@ def run_one_jurisdiction(
 
     with timed_step(f"Gatekeeper | {label}"):
         run_gatekeeper_for_jurisdiction(inv, ctx, stamp=stamp, logs_dir=logs_dir)
+    print_gatekeeper_mode_hint()
     with timed_step(f"Reload inventory | {label}"):
         inv = reload_inventory(inv, ctx.raw_root, max_dates=ctx.demo_date_cap)
     if not inv.has_media:
@@ -298,6 +304,8 @@ def run_one_jurisdiction(
         pass
 
     print(f"  Demos | {format_inventory_media_line(inv)}", flush=True)
+    print_demo_run_plan(inv, ctx.raw_root)
+    print_runtime_estimate(inv, ctx.demo_ctx)
     with timed_step(f"Demos 1–4 | {label}"):
         reports = run_demos_for_jurisdiction(inv, ctx.demo_ctx, brief_cache=brief_cache)
     print(
@@ -354,6 +362,17 @@ def run_governance_pipeline(
     num_states = len(by_state)
     workers = resolve_parallel_state_workers(num_states)
     global_total = len(inventories)
+    try:
+        from demo_scope import get_active_preset
+
+        preset = get_active_preset()
+        print(
+            f"Scope «{preset.key}» preset guide: {preset.eta} for configured caps "
+            f"({global_total} jurisdiction(s) this run).",
+            flush=True,
+        )
+    except ImportError:
+        pass
 
     if workers > 1:
         print(

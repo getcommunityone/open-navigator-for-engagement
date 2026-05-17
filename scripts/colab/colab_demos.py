@@ -18,7 +18,14 @@ from media_playback_links import (
     list_media_sources,
     resolve_media_for_input_file,
 )
+from colab_timed_steps import timed_step
 from genai_quota_retry import genai_inter_call_pause
+from pipeline_logging import (
+    PipelineProgress,
+    build_work_plan,
+    progress_tick,
+    set_pipeline_progress,
+)
 from governance_meeting_llm import (
     TOKEN_BUDGET_HIGH,
     TOKEN_BUDGET_LOW,
@@ -409,6 +416,10 @@ def run_demo2(inv: MeetingInventory, ctx: DemoContext) -> List[Dict[str, Any]]:
                 continue
             genai_inter_call_pause(budget)
             elapsed = time.time() - t0
+            progress_tick(
+                f"Demo 2 {pdf.name} page {page.page_index + 1}/{len(pages)} ({budget})",
+                actual_seconds=elapsed,
+            )
             try:
                 page_json = json.loads(result.text.strip().lstrip("`"))
             except Exception:
@@ -439,7 +450,8 @@ def run_demo2(inv: MeetingInventory, ctx: DemoContext) -> List[Dict[str, Any]]:
             )
             print(
                 f"    page {page.page_index + 1}: {page.classification:>22}  "
-                f"→ {budget:<6} ({elapsed:.1f}s)"
+                f"→ {budget:<6} ({elapsed:.1f}s)",
+                flush=True,
             )
         report_path = per_pdf_dir / "_token_budget_report.json"
         report_path.write_text(json.dumps(pdf_summary, indent=2), encoding="utf-8")
@@ -493,6 +505,7 @@ def _run_demo3_one_pdf(
     )
     if not force_reprocess_outputs() and demo3_thinking_json_complete(json_out):
         print(f"    reuse existing → {json_out.relative_to(ctx.processed_root)}")
+        progress_tick(f"Demo 3 {pdf.name} (cached)")
         report.append(
             {
                 "jurisdiction": j.relative_label,
@@ -595,6 +608,7 @@ def _run_demo3_one_pdf(
             f"    → {thoughts_out.relative_to(ctx.processed_root)} "
             f"(trace: {len(result.thoughts)} chars)"
         )
+    progress_tick(f"Demo 3 {pdf.name} done")
     report.append(
         {
             "jurisdiction": j.relative_label,
@@ -822,6 +836,7 @@ def run_demo4(
             )
             chunk_jsons.append(chunk_analysis or {})
             print(f"    chunk {idx}: → {chunk_out.relative_to(ctx.processed_root)}")
+            progress_tick(f"Demo 4 {audio.name} chunk {idx + 1}/{len(chunk_media)}")
         if not chunk_jsons or not any(chunk_jsons):
             continue
         if (
@@ -855,6 +870,7 @@ def run_demo4(
         print(
             f"    drift: {len(drifted)} subject(s) → {drift_out.relative_to(ctx.processed_root)}"
         )
+        progress_tick(f"Demo 4 drift {audio.name}")
         report.append(
             {
                 "jurisdiction": j.relative_label,
@@ -893,20 +909,38 @@ def run_demos_for_jurisdiction(
     except ImportError:
         pass
     reports = JurisdictionDemoReports()
-    reports.demo1 = run_demo1(inv, ctx)
-    reports.demo2 = run_demo2(inv, ctx)
-    reports.demo3 = run_demo3(inv, ctx)
-    reports.demo4 = run_demo4(inv, ctx, brief_cache=brief_cache)
+    label = inv.jurisdiction.relative_label
+    plan = build_work_plan(inv, ctx)
+    progress = PipelineProgress.from_plan(label, plan)
+    set_pipeline_progress(progress)
     try:
-        from meeting_consolidated_summary import run_consolidated_summaries_for_jurisdiction
+        with timed_step(f"Demo 1 PDF OCR | {label}"):
+            reports.demo1 = run_demo1(inv, ctx)
+            progress_tick("Demo 1 complete")
+        with timed_step(f"Demo 2 PDF pages (token budget) | {label}"):
+            reports.demo2 = run_demo2(inv, ctx)
+            progress_tick("Demo 2 complete")
+        with timed_step(f"Demo 3 policy PDFs | {label}"):
+            reports.demo3 = run_demo3(inv, ctx)
+            progress_tick("Demo 3 complete")
+        with timed_step(f"Demo 4 recordings (audio chunks) | {label}"):
+            reports.demo4 = run_demo4(inv, ctx, brief_cache=brief_cache)
+            progress_tick("Demo 4 complete")
+        try:
+            from meeting_consolidated_summary import run_consolidated_summaries_for_jurisdiction
 
-        run_consolidated_summaries_for_jurisdiction(
-            jurisdiction_root=inv.jurisdiction.root,
-            raw_root=ctx.raw_root,
-            gemma_json_root=ctx.gemma_json_root,
-            summaries_root=ctx.summaries_root,
-            jurisdiction_prefix=inv.jurisdiction.relative_label,
-        )
-    except ImportError:
-        pass
+            with timed_step(f"Consolidated meeting summaries | {label}"):
+                run_consolidated_summaries_for_jurisdiction(
+                    jurisdiction_root=inv.jurisdiction.root,
+                    raw_root=ctx.raw_root,
+                    gemma_json_root=ctx.gemma_json_root,
+                    summaries_root=ctx.summaries_root,
+                    jurisdiction_prefix=inv.jurisdiction.relative_label,
+                )
+                progress_tick("Consolidated summaries complete")
+        except ImportError:
+            pass
+    finally:
+        progress.finish()
+        set_pipeline_progress(None)
     return reports

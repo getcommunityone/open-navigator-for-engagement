@@ -1,6 +1,6 @@
 ---
 displayed_sidebar: developersSidebar
-description: Reference patterns and a checklist for strong “Google for Good”–style hackathon demo videos (CommunityOne / Open Navigator), including flagship pitch hooks (speed-trap revenue, potholes & street repair, TikTok-style issue summaries, required CTA slide, 100k-meeting safety scrub, 100k-decision reasoning & bias audit, jurisdiction website accessibility), plus inspirational civic data talks and case studies.
+description: Reference patterns and a checklist for strong “Google for Good”–style hackathon demo videos (CommunityOne / Open Navigator), including flagship pitch hooks (speed-trap revenue, potholes & street repair, Gapminder-style animated charts, automated interactive annual reports, TikTok-style issue summaries, required CTA slide, 100k-meeting safety scrub, 100k-decision reasoning & bias audit, jurisdiction website accessibility), plus inspirational civic data talks and case studies.
 ---
 
 # Hackathon video submission ideas (reference library)
@@ -39,6 +39,24 @@ Additional context from the same project:
 **Demo path:** Colab `02_run_meeting_llm.ipynb` with `SCOPE = "fast"` (defaults to `AL/county/county_01125`, **2 meeting dates**, up to **6 PDFs**/jurisdiction) → Gatekeeper → budget PDF OCR / drift on any audio → flash **source + year** on screen.
 
 **Caveats for judges:** “Speed trap” is colloquial; audits use **fines and forfeitures** (sometimes bundled with fees). Always cite **fiscal year** and **fund** (general vs. special). Extreme towns are outliers—lead with *your* jurisdiction’s number, then national context.
+
+### Gapminder-style reveal (use this chart pattern)
+
+**Reference video (≈4:47):** [Hans Rosling — *200 Countries, 200 Years, 4 Minutes* (BBC / Gapminder)](https://www.youtube.com/watch?v=jbkSRLYSojo) — full write-up in [§1. The Joy of Stats](#1-the-joy-of-stats--200-countries-200-years-in-minutes) below.
+
+**Why it belongs in *your* demo:** Judges remember **motion**, not another static PDF screenshot. One animated scatter turns “we parsed meetings” into “**your county moved** on this metric vs. peers.”
+
+| Gapminder element | CommunityOne / Open Navigator mapping |
+| --- | --- |
+| **X axis** | e.g. **% of general fund from fines & forfeitures** (Governing bands: >10%, >20%) |
+| **Y axis** | e.g. **violations per homepage** (`bronze_jurisdiction_website_accessibility`) or **median household income** |
+| **Bubble size** | Population (`jurisdiction` dimension) or **# of decisions** scraped |
+| **Color** | State, `primary_theme` majority, or Shield **flag rate** |
+| **Time slider** | **Fiscal year** or meeting `calendar_year` string from warehouse rollups |
+
+**Automation path:** Batch Gemma → `financial_items` + `decisions[]` in bronze → SQL or Python aggregate by `jurisdiction_id` + year → export CSV → **[Flourish](https://flourish.studio/)**, **[Observable Plot](https://observablehq.com/plot/)**, or **Looker Studio** for the animation. Re-run the same notebook each quarter; only the data file changes.
+
+**15s script:** “This dot is Tuscaloosa County. Watch what happens when we add **every Alabama county** we’ve scraped—same chart Rosling used, but for **who funds government through tickets**.”
 
 ### Alternate everyday opener (potholes & street repair)
 
