@@ -161,12 +161,20 @@ def _pick_jurisdiction_for_state(
         for inv in invs:
             if slug in inv.jurisdiction.relative_label:
                 return inv
+    try:
+        from pipeline_media_scope import get_active_media_scope, inventory_richness_for_scope
+
+        scope_key = get_active_media_scope().key
+        richness = lambda i: inventory_richness_for_scope(i, scope_key)
+    except ImportError:
+        richness = lambda i: (len(i.pdfs) + len(i.audio), 0, 0)  # noqa: E731
     ranked = sorted(
         invs,
         key=lambda i: (
-            -(len(i.pdfs) + len(i.audio)),
+            richness(i),
             i.jurisdiction.relative_label,
         ),
+        reverse=True,
     )
     return ranked[0] if ranked else None
 
@@ -212,6 +220,13 @@ def print_scope_plan(
     pref = _preferred_jurisdiction_slug(preset)
     if pref:
         print(f"  Preferred jurisdiction slug: {pref!r} (when present on disk)")
+    try:
+        from pipeline_media_scope import get_active_media_scope
+
+        mscope = get_active_media_scope()
+        print(f"  Media scope: {mscope.key!r} — {mscope.label}")
+    except ImportError:
+        pass
     print(f"  This run: {len(selected)} jurisdiction(s)")
     for inv in selected:
         j = inv.jurisdiction

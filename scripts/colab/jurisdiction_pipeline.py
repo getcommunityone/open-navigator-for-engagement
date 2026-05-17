@@ -19,7 +19,7 @@ from typing import Dict, List, Optional
 
 import gatekeeper_triage
 from colab_demos import DemoContext, JurisdictionDemoReports, run_demos_for_jurisdiction
-from colab_timed_steps import timed_step
+from colab_timed_steps import log_line, timed_step
 from pipeline_logging import (
     print_demo_run_plan,
     print_gatekeeper_mode_hint,
@@ -121,16 +121,22 @@ def scope_inventory(
     *,
     max_dates: Optional[int],
 ) -> MeetingInventory:
-    """Apply DEMO date scope to one inventory."""
-    if max_dates is None:
-        return inv
+    """Apply DEMO date scope, then pipeline media scope (pdf / audio / video)."""
+    if max_dates is not None:
+        try:
+            from meeting_date_scope import filter_inventory_media
+        except ImportError:
+            pass
+        else:
+            inv.pdfs, inv.audio = filter_inventory_media(
+                inv.pdfs, inv.audio, raw_root, inv.jurisdiction.root, max_dates=max_dates
+            )
     try:
-        from meeting_date_scope import filter_inventory_media
+        from pipeline_media_scope import apply_media_scope_to_inventory
+
+        apply_media_scope_to_inventory(inv)
     except ImportError:
-        return inv
-    inv.pdfs, inv.audio = filter_inventory_media(
-        inv.pdfs, inv.audio, raw_root, inv.jurisdiction.root, max_dates=max_dates
-    )
+        pass
     return inv
 
 
@@ -201,6 +207,23 @@ def run_gatekeeper_for_jurisdiction(
                 jurisdiction_root=jur_root,
                 progress_stdout=True,
             )
+            try:
+                from pipeline_media_scope import (
+                    filter_paths_for_media_scope,
+                    get_active_media_scope,
+                )
+
+                scope = get_active_media_scope()
+                if scope.key != "all":
+                    before = len(triage_paths)
+                    triage_paths = filter_paths_for_media_scope(triage_paths, scope)
+                    print(
+                        f"  Gatekeeper | media scope {scope.key!r}: "
+                        f"{before} → {len(triage_paths)} file(s) after filter",
+                        flush=True,
+                    )
+            except ImportError:
+                pass
         print(
             f"  Gatekeeper | {label} | candidates={total} | will_triage={len(triage_paths)}",
             flush=True,
@@ -266,6 +289,14 @@ def run_one_jurisdiction(
     prefix = f"[{state_label}] " if state_label else ""
     banner = f"{'=' * 72}\n  {prefix}[{idx}/{total}] {label}\n{'=' * 72}"
     print(banner, flush=True)
+    try:
+        from pipeline_media_scope import print_media_scope_banner
+
+        print_media_scope_banner()
+    except ImportError:
+        pass
+
+    inv = scope_inventory(inv, ctx.raw_root, max_dates=ctx.demo_date_cap)
 
     with timed_step(f"Gatekeeper | {label}"):
         run_gatekeeper_for_jurisdiction(inv, ctx, stamp=stamp, logs_dir=logs_dir)
@@ -303,14 +334,18 @@ def run_one_jurisdiction(
     except ImportError:
         pass
 
-    print(f"  Demos | {format_inventory_media_line(inv)}", flush=True)
+    try:
+        from pipeline_media_scope import print_scoped_inventory_line
+
+        print_scoped_inventory_line(inv)
+    except ImportError:
+        log_line(f"Demos | {format_inventory_media_line(inv)}")
     print_demo_run_plan(inv, ctx.raw_root)
     print_runtime_estimate(inv, ctx.demo_ctx)
-    with timed_step(f"Demos 1–4 | {label}"):
-        reports = run_demos_for_jurisdiction(inv, ctx.demo_ctx, brief_cache=brief_cache)
-    print(
-        f"\n  ✓ Finished {label} — outputs under {ctx.demo_ctx.processed_root.name}/",
-        flush=True,
+    reports = run_demos_for_jurisdiction(inv, ctx.demo_ctx, brief_cache=brief_cache)
+    log_line(
+        f"✓ Finished {label} — outputs under {ctx.demo_ctx.processed_root.name}/",
+        prefix="",
     )
     return reports
 

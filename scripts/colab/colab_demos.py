@@ -18,7 +18,7 @@ from media_playback_links import (
     list_media_sources,
     resolve_media_for_input_file,
 )
-from colab_timed_steps import timed_step
+from colab_timed_steps import format_elapsed, log_line, timed_step
 from genai_quota_retry import genai_inter_call_pause
 from pipeline_logging import (
     PipelineProgress,
@@ -26,6 +26,18 @@ from pipeline_logging import (
     progress_tick,
     set_pipeline_progress,
 )
+
+try:
+    from pipeline_media_scope import get_active_media_scope
+except ImportError:
+
+    def get_active_media_scope():  # type: ignore[misc]
+        class _All:
+            key = "all"
+            label = "all"
+            run_demo1 = run_demo2 = run_demo3 = run_demo4 = True
+
+        return _All()
 from governance_meeting_llm import (
     TOKEN_BUDGET_HIGH,
     TOKEN_BUDGET_LOW,
@@ -262,7 +274,7 @@ def run_demo1(inv: MeetingInventory, ctx: DemoContext) -> List[Dict[str, Any]]:
     report: List[Dict[str, Any]] = []
     if not pdfs:
         return report
-    print(f"\n— Demo 1 | {j.relative_label} — {len(pdfs)} PDF(s)")
+    log_line(f"\n— Demo 1 | {j.relative_label} — {len(pdfs)} PDF(s)", prefix="")
     force = force_reprocess_outputs()
     for pdf in pdfs:
         out_txt = mirror_output_path(
@@ -272,7 +284,10 @@ def run_demo1(inv: MeetingInventory, ctx: DemoContext) -> List[Dict[str, Any]]:
             suffix=".visual_ocr.txt",
         )
         if not force and text_output_complete(out_txt):
-            print(f"  • {pdf.name}: reuse existing OCR → {out_txt.relative_to(ctx.processed_root)}")
+            log_line(
+                f"• {pdf.name}: reuse existing OCR → "
+                f"{out_txt.relative_to(ctx.processed_root)}"
+            )
             report.append(
                 {
                     "jurisdiction": j.relative_label,
@@ -293,7 +308,12 @@ def run_demo1(inv: MeetingInventory, ctx: DemoContext) -> List[Dict[str, Any]]:
             continue
         scanned = digital_chars < 200
         tag = "SCANNED (dark data)" if scanned else f"digital ({digital_chars} chars)"
-        print(f"  • {pdf.name}: {tag}")
+        log_line(f"• {pdf.name}: {tag}")
+        log_line(
+            f"⏳ Calling {ctx.genai_model} — visual OCR (often 1–3 min)…",
+            prefix="    ",
+        )
+        t0 = time.perf_counter()
         try:
             result = call_google_genai_multimodal(
                 api_key=ctx.api_key,
@@ -306,9 +326,13 @@ def run_demo1(inv: MeetingInventory, ctx: DemoContext) -> List[Dict[str, Any]]:
                 media_resolution=TOKEN_BUDGET_HIGH if scanned else None,
             )
         except Exception as e:
-            print(f"    ! Gemma call failed: {e}")
+            log_line(f"! Gemma call failed: {e}", prefix="    ")
             genai_inter_call_pause(TOKEN_BUDGET_HIGH if scanned else TOKEN_BUDGET_LOW)
             continue
+        log_line(
+            f"✓ Gemma returned in {format_elapsed(time.perf_counter() - t0)}",
+            prefix="    ",
+        )
         genai_inter_call_pause(TOKEN_BUDGET_HIGH if scanned else TOKEN_BUDGET_LOW)
         out_txt.write_text(result.text or "(empty response)", encoding="utf-8")
         report.append(
@@ -322,7 +346,10 @@ def run_demo1(inv: MeetingInventory, ctx: DemoContext) -> List[Dict[str, Any]]:
                 "model_chars": len(result.text or ""),
             }
         )
-        print(f"    → {out_txt.relative_to(ctx.processed_root)} ({len(result.text or '')} chars)")
+        log_line(
+            f"→ {out_txt.relative_to(ctx.processed_root)} ({len(result.text or '')} chars)",
+            prefix="    ",
+        )
     return report
 
 
@@ -332,7 +359,7 @@ def run_demo2(inv: MeetingInventory, ctx: DemoContext) -> List[Dict[str, Any]]:
     report: List[Dict[str, Any]] = []
     if not pdfs:
         return report
-    print(f"\n— Demo 2 | {j.relative_label} — {len(pdfs)} PDF(s)")
+    log_line(f"\n— Demo 2 | {j.relative_label} — {len(pdfs)} PDF(s)", prefix="")
     force = force_reprocess_outputs()
     for pdf in pdfs:
         if not Path(pdf).is_file():
@@ -398,7 +425,11 @@ def run_demo2(inv: MeetingInventory, ctx: DemoContext) -> List[Dict[str, Any]]:
                 continue
             budget = page.token_budget
             user = DEMO2_USER_BY_CLASS.get(page.classification, DEMO2_USER_LOW)
-            t0 = time.time()
+            log_line(
+                f"page {page.page_index + 1}: calling Gemma ({budget})…",
+                prefix="    ",
+            )
+            t0 = time.perf_counter()
             try:
                 result = call_google_genai_multimodal(
                     api_key=ctx.api_key,
@@ -415,7 +446,7 @@ def run_demo2(inv: MeetingInventory, ctx: DemoContext) -> List[Dict[str, Any]]:
                 genai_inter_call_pause(budget)
                 continue
             genai_inter_call_pause(budget)
-            elapsed = time.time() - t0
+            elapsed = time.perf_counter() - t0
             progress_tick(
                 f"Demo 2 {pdf.name} page {page.page_index + 1}/{len(pages)} ({budget})",
                 actual_seconds=elapsed,
@@ -448,10 +479,10 @@ def run_demo2(inv: MeetingInventory, ctx: DemoContext) -> List[Dict[str, Any]]:
                     "elapsed_s": round(elapsed, 2),
                 }
             )
-            print(
-                f"    page {page.page_index + 1}: {page.classification:>22}  "
-                f"→ {budget:<6} ({elapsed:.1f}s)",
-                flush=True,
+            log_line(
+                f"page {page.page_index + 1}: {page.classification:>22}  "
+                f"→ {budget:<6} ({format_elapsed(elapsed)})",
+                prefix="    ",
             )
         report_path = per_pdf_dir / "_token_budget_report.json"
         report_path.write_text(json.dumps(pdf_summary, indent=2), encoding="utf-8")
@@ -473,8 +504,9 @@ def run_demo3(inv: MeetingInventory, ctx: DemoContext) -> List[Dict[str, Any]]:
     if not pdfs:
         return report
     thinking_model = (ctx.thinking_model or ctx.genai_model).strip()
-    print(
-        f"\n— Demo 3 | {j.relative_label}: {len(pdfs)} PDF(s)  (model: {thinking_model})"
+    log_line(
+        f"\n— Demo 3 | {j.relative_label}: {len(pdfs)} PDF(s)  (model: {thinking_model})",
+        prefix="",
     )
     for pdf in pdfs:
         _run_demo3_one_pdf(
@@ -496,7 +528,7 @@ def _run_demo3_one_pdf(
     if not Path(pdf).is_file():
         print(f"  • {Path(pdf).name}: skip — file not on disk (stale path; re-run §6 after reload)")
         return
-    print(f"  • {pdf.name}")
+    log_line(f"• {pdf.name}")
     json_out = mirror_output_path(
         input_path=pdf,
         raw_root=ctx.raw_root,
@@ -504,7 +536,10 @@ def _run_demo3_one_pdf(
         suffix=".thinking.json",
     )
     if not force_reprocess_outputs() and demo3_thinking_json_complete(json_out):
-        print(f"    reuse existing → {json_out.relative_to(ctx.processed_root)}")
+        log_line(
+            f"reuse existing → {json_out.relative_to(ctx.processed_root)}",
+            prefix="    ",
+        )
         progress_tick(f"Demo 3 {pdf.name} (cached)")
         report.append(
             {
@@ -532,6 +567,12 @@ def _run_demo3_one_pdf(
         "The attached PDF contains the meeting record. Apply the full deconstruction "
         "prompt to it. Stick to what is actually in the document."
     )
+    log_line(
+        f"⏳ Calling {thinking_model} — full PDF policy analysis "
+        f"(often 3–8 min per file; 429 retries add time)…",
+        prefix="    ",
+    )
+    t0 = time.perf_counter()
     try:
         result = call_google_genai_multimodal(
             api_key=ctx.api_key,
@@ -546,9 +587,11 @@ def _run_demo3_one_pdf(
             thinking_budget=ctx.thinking_budget,
         )
     except Exception as e:
-        print(f"    ! Gemma call failed: {e}")
+        log_line(f"! Gemma call failed: {e}", prefix="    ")
         genai_inter_call_pause(TOKEN_BUDGET_HIGH)
         return
+    elapsed = time.perf_counter() - t0
+    log_line(f"✓ Gemma returned in {format_elapsed(elapsed)}", prefix="    ")
     genai_inter_call_pause(TOKEN_BUDGET_HIGH)
     parsed = parse_policy_analysis_response(result.text or "")
     if isinstance(parsed.get("json_analysis"), dict):
@@ -608,7 +651,7 @@ def _run_demo3_one_pdf(
             f"    → {thoughts_out.relative_to(ctx.processed_root)} "
             f"(trace: {len(result.thoughts)} chars)"
         )
-    progress_tick(f"Demo 3 {pdf.name} done")
+    progress_tick(f"Demo 3 {pdf.name} done", actual_seconds=elapsed)
     report.append(
         {
             "jurisdiction": j.relative_label,
@@ -671,7 +714,7 @@ def run_demo4(
     report: List[Dict[str, Any]] = []
     if not audios:
         return report
-    print(f"\n— Demo 4 | {j.relative_label}: {len(audios)} media file(s)")
+    log_line(f"\n— Demo 4 | {j.relative_label}: {len(audios)} media file(s)", prefix="")
     force = force_reprocess_outputs()
     for audio in audios:
         if not Path(audio).is_file():
@@ -770,6 +813,12 @@ def run_demo4(
                 user_text = f"{media_hint}\n{ctx.policy_prompt}\n\n---\n{geo_hint}\n\n{chunk_hint}"
             result = None
             chunk_model = demo4_model
+            log_line(
+                f"chunk {idx}: calling {demo4_model} — audio slice "
+                f"(often 2–5 min; 429 retries add time)…",
+                prefix="    ",
+            )
+            t_chunk = time.perf_counter()
             for try_model in demo4_models_to_try(demo4_model, api_key=ctx.api_key):
                 try:
                     result = call_google_genai_multimodal(
@@ -810,6 +859,11 @@ def run_demo4(
                     )
                 genai_inter_call_pause(None)
                 continue
+            log_line(
+                f"chunk {idx}: ✓ Gemma returned in "
+                f"{format_elapsed(time.perf_counter() - t_chunk)}",
+                prefix="    ",
+            )
             genai_inter_call_pause(None)
             parsed = parse_policy_analysis_response(result.text or "")
             chunk_analysis = parsed.get("json_analysis")
@@ -913,19 +967,32 @@ def run_demos_for_jurisdiction(
     plan = build_work_plan(inv, ctx)
     progress = PipelineProgress.from_plan(label, plan)
     set_pipeline_progress(progress)
+    mscope = get_active_media_scope()
     try:
-        with timed_step(f"Demo 1 PDF OCR | {label}"):
-            reports.demo1 = run_demo1(inv, ctx)
-            progress_tick("Demo 1 complete")
-        with timed_step(f"Demo 2 PDF pages (token budget) | {label}"):
-            reports.demo2 = run_demo2(inv, ctx)
-            progress_tick("Demo 2 complete")
-        with timed_step(f"Demo 3 policy PDFs | {label}"):
-            reports.demo3 = run_demo3(inv, ctx)
-            progress_tick("Demo 3 complete")
-        with timed_step(f"Demo 4 recordings (audio chunks) | {label}"):
-            reports.demo4 = run_demo4(inv, ctx, brief_cache=brief_cache)
-            progress_tick("Demo 4 complete")
+        if mscope.run_demo1:
+            with timed_step(f"Demo 1 PDF OCR | {label}"):
+                reports.demo1 = run_demo1(inv, ctx)
+                progress_tick("Demo 1 complete")
+        else:
+            log_line(f"⊘ Demo 1 skipped (media scope: {mscope.key})")
+        if mscope.run_demo2:
+            with timed_step(f"Demo 2 PDF pages (token budget) | {label}"):
+                reports.demo2 = run_demo2(inv, ctx)
+                progress_tick("Demo 2 complete")
+        else:
+            log_line(f"⊘ Demo 2 skipped (media scope: {mscope.key})")
+        if mscope.run_demo3:
+            with timed_step(f"Demo 3 policy PDFs | {label}"):
+                reports.demo3 = run_demo3(inv, ctx)
+                progress_tick("Demo 3 complete")
+        else:
+            log_line(f"⊘ Demo 3 skipped (media scope: {mscope.key})")
+        if mscope.run_demo4:
+            with timed_step(f"Demo 4 recordings (audio chunks) | {label}"):
+                reports.demo4 = run_demo4(inv, ctx, brief_cache=brief_cache)
+                progress_tick("Demo 4 complete")
+        else:
+            log_line(f"⊘ Demo 4 skipped (media scope: {mscope.key})")
         try:
             from meeting_consolidated_summary import run_consolidated_summaries_for_jurisdiction
 

@@ -103,6 +103,12 @@ class WorkPlan:
 
 def build_work_plan(inv: "MeetingInventory", ctx: "DemoContext") -> WorkPlan:
     """Estimate remaining Gemma/API seconds from inventory + existing outputs."""
+    try:
+        from pipeline_media_scope import get_active_media_scope
+
+        mscope = get_active_media_scope()
+    except ImportError:
+        mscope = None
     from colab_demos import pick_demo3_pdfs_for_inventory, select_demo4_media
     from governance_meeting_llm import (
         TOKEN_BUDGET_HIGH,
@@ -119,61 +125,76 @@ def build_work_plan(inv: "MeetingInventory", ctx: "DemoContext") -> WorkPlan:
     cfg = _estimate_config()
     force = force_reprocess_outputs()
     plan = WorkPlan()
-    pdfs = list(inv.pdfs[: ctx.max_pdfs_per_jur])
-
-    for pdf in pdfs:
-        if not pdf.is_file():
-            continue
-        plan.units.append(("Demo 1 OCR (reuse/skipped)", 2.0 if not force else cfg["demo1_pdf"]))
-
-    for pdf in pdfs:
-        if not pdf.is_file():
-            continue
-        n_pages = _pdf_page_count(pdf, ctx.max_pages_per_pdf)
-        per_pdf_dir = mirror_output_path(
-            input_path=pdf,
-            raw_root=ctx.raw_root,
-            processed_root=ctx.gemma_json_root,
-            suffix="",
-        )
-        if not force and demo2_pdf_outputs_complete(per_pdf_dir, expected_pages=n_pages):
-            plan.units.append((f"Demo 2 {pdf.name} ({n_pages} pg, cached)", 1.0))
-            plan.reuse_units += n_pages
-            continue
-        for i in range(n_pages):
-            page_out = per_pdf_dir / f"page_{i + 1:03d}.json"
-            if not force and demo2_page_output_complete(page_out):
-                plan.units.append((f"Demo 2 {pdf.name} p{i + 1} (cached)", 0.5))
-                plan.reuse_units += 1
-                continue
-            # Heuristic: ~30% HIGH budget pages on minutes packets
-            budget_key = "demo2_high" if i == 0 or (n_pages > 4 and i >= n_pages - 2) else "demo2_low"
-            if pdf.name.lower().find("minute") >= 0 and i >= 2:
-                budget_key = "demo2_high" if i % 3 == 2 else "demo2_low"
-            sec = cfg[budget_key] + cfg["inter_call"]
-            plan.units.append((f"Demo 2 {pdf.name} p{i + 1}", sec))
-            plan.api_units += 1
-
-    demo3_pdfs = pick_demo3_pdfs_for_inventory(
-        pdfs, ctx.raw_root, max_per_meeting=2, max_total=ctx.max_pdfs_per_jur
+    pdfs = (
+        list(inv.pdfs[: ctx.max_pdfs_per_jur])
+        if mscope is None or mscope.run_demo1 or mscope.run_demo2 or mscope.run_demo3
+        else []
     )
-    for pdf in demo3_pdfs:
-        if not pdf.is_file():
-            continue
-        json_out = mirror_output_path(
-            input_path=pdf,
-            raw_root=ctx.raw_root,
-            processed_root=ctx.gemma_json_root,
-            suffix=".thinking.json",
-        )
-        if not force and demo3_thinking_json_complete(json_out):
-            plan.units.append((f"Demo 3 {pdf.name} (cached)", 2.0))
-            plan.reuse_units += 1
-        else:
-            plan.units.append((f"Demo 3 {pdf.name}", cfg["demo3_pdf"]))
-            plan.api_units += 1
 
-    videos = select_demo4_media(inv.audio, ctx.raw_root, max_files=ctx.max_audio_per_jur)
+    run_d1 = mscope is None or mscope.run_demo1
+    run_d2 = mscope is None or mscope.run_demo2
+    run_d3 = mscope is None or mscope.run_demo3
+    run_d4 = mscope is None or mscope.run_demo4
+
+    if run_d1:
+        for pdf in pdfs:
+            if not pdf.is_file():
+                continue
+            plan.units.append(("Demo 1 OCR (reuse/skipped)", 2.0 if not force else cfg["demo1_pdf"]))
+
+    if run_d2:
+        for pdf in pdfs:
+            if not pdf.is_file():
+                continue
+            n_pages = _pdf_page_count(pdf, ctx.max_pages_per_pdf)
+            per_pdf_dir = mirror_output_path(
+                input_path=pdf,
+                raw_root=ctx.raw_root,
+                processed_root=ctx.gemma_json_root,
+                suffix="",
+            )
+            if not force and demo2_pdf_outputs_complete(per_pdf_dir, expected_pages=n_pages):
+                plan.units.append((f"Demo 2 {pdf.name} ({n_pages} pg, cached)", 1.0))
+                plan.reuse_units += n_pages
+                continue
+            for i in range(n_pages):
+                page_out = per_pdf_dir / f"page_{i + 1:03d}.json"
+                if not force and demo2_page_output_complete(page_out):
+                    plan.units.append((f"Demo 2 {pdf.name} p{i + 1} (cached)", 0.5))
+                    plan.reuse_units += 1
+                    continue
+                budget_key = "demo2_high" if i == 0 or (n_pages > 4 and i >= n_pages - 2) else "demo2_low"
+                if pdf.name.lower().find("minute") >= 0 and i >= 2:
+                    budget_key = "demo2_high" if i % 3 == 2 else "demo2_low"
+                sec = cfg[budget_key] + cfg["inter_call"]
+                plan.units.append((f"Demo 2 {pdf.name} p{i + 1}", sec))
+                plan.api_units += 1
+
+    if run_d3:
+        demo3_pdfs = pick_demo3_pdfs_for_inventory(
+            pdfs, ctx.raw_root, max_per_meeting=2, max_total=ctx.max_pdfs_per_jur
+        )
+        for pdf in demo3_pdfs:
+            if not pdf.is_file():
+                continue
+            json_out = mirror_output_path(
+                input_path=pdf,
+                raw_root=ctx.raw_root,
+                processed_root=ctx.gemma_json_root,
+                suffix=".thinking.json",
+            )
+            if not force and demo3_thinking_json_complete(json_out):
+                plan.units.append((f"Demo 3 {pdf.name} (cached)", 2.0))
+                plan.reuse_units += 1
+            else:
+                plan.units.append((f"Demo 3 {pdf.name}", cfg["demo3_pdf"]))
+                plan.api_units += 1
+
+    videos = (
+        select_demo4_media(inv.audio, ctx.raw_root, max_files=ctx.max_audio_per_jur)
+        if run_d4
+        else []
+    )
     for media in videos:
         if not media.is_file():
             continue
@@ -244,21 +265,21 @@ class PipelineProgress:
         elapsed = time.perf_counter() - self.t0
         remaining_w = max(0.0, total - self.done_weight)
         eta_s = (remaining_w / self.done_weight * elapsed) if self.done_weight > 0 else remaining_w
-        print(
-            f"  ⏱ Progress [{self.label}]: {pct:.0f}% — {desc} — "
+        from colab_timed_steps import log_line
+
+        log_line(
+            f"⏱ Progress [{self.label}]: {pct:.0f}% — {desc} — "
             f"elapsed {format_duration(elapsed)}, "
             f"ETA ~{format_duration(eta_s)} remaining",
-            flush=True,
         )
 
     def finish(self) -> None:
         if not pipeline_progress_enabled():
             return
         elapsed = time.perf_counter() - self.t0
-        print(
-            f"  ✓ Progress [{self.label}]: 100% — done in {format_duration(elapsed)}",
-            flush=True,
-        )
+        from colab_timed_steps import log_line
+
+        log_line(f"✓ Progress [{self.label}]: 100% — done in {format_duration(elapsed)}")
 
 
 def set_pipeline_progress(progress: Optional[PipelineProgress]) -> None:
@@ -338,39 +359,52 @@ def print_demo_run_plan(inv: "MeetingInventory", raw_root: Path) -> None:
         return
     from governance_meeting_llm import VIDEO_EXTS, format_inventory_media_line
 
-    pdfs = list(inv.pdfs)
+    try:
+        from pipeline_media_scope import get_active_media_scope
+
+        mscope = get_active_media_scope()
+        print(f"  Media scope: {mscope.key!r} — {mscope.label}", flush=True)
+    except ImportError:
+        mscope = None
+
+    pdfs = list(inv.pdfs) if mscope is None or mscope.run_demo1 or mscope.run_demo2 or mscope.run_demo3 else []
     videos = [p for p in inv.audio if p.suffix.lower() in VIDEO_EXTS]
     audio_only = [p for p in inv.audio if p.suffix.lower() not in VIDEO_EXTS]
 
+    run_d4 = mscope is None or mscope.run_demo4
     print("  ── Pipeline plan (this jurisdiction) ──", flush=True)
     print(f"  Inventory: {format_inventory_media_line(inv)}", flush=True)
-    print(
-        "  Demo 1 — PDF visual OCR (scanned pages only; digital text skipped)",
-        flush=True,
-    )
-    for line in _rel_names(pdfs, raw_root):
-        print(f"      • {line}", flush=True)
-    print(
-        "  Demo 2 — PDF per-page token budget (HIGH/LOW images to Gemma) — not video",
-        flush=True,
-    )
-    print(
-        "  Demo 3 — full policy_analysis on agenda/minutes PDFs (thinking model)",
-        flush=True,
-    )
-    print(
-        "  Demo 4 — meeting recordings only (ffmpeg → audio chunks → Gemma):",
-        flush=True,
-    )
-    if videos:
-        for line in _rel_names(videos, raw_root):
+    if mscope is None or mscope.run_demo1:
+        print(
+            "  Demo 1 — PDF visual OCR (scanned pages only; digital text skipped)",
+            flush=True,
+        )
+        for line in _rel_names(pdfs, raw_root):
             print(f"      • {line}", flush=True)
-    else:
-        print("      (no video/audio in inventory — Demo 4 will skip)", flush=True)
-    if audio_only:
-        print("  Also audio files:", flush=True)
-        for line in _rel_names(audio_only, raw_root):
-            print(f"      • {line}", flush=True)
+    if mscope is None or mscope.run_demo2:
+        print(
+            "  Demo 2 — PDF per-page token budget (HIGH/LOW images to Gemma) — not video",
+            flush=True,
+        )
+    if mscope is None or mscope.run_demo3:
+        print(
+            "  Demo 3 — full policy_analysis on agenda/minutes PDFs (thinking model)",
+            flush=True,
+        )
+    if run_d4:
+        print(
+            "  Demo 4 — meeting recordings (ffmpeg → chunks → Gemma):",
+            flush=True,
+        )
+        if videos:
+            for line in _rel_names(videos, raw_root):
+                print(f"      • {line}", flush=True)
+        if audio_only:
+            print("  Also audio files:", flush=True)
+            for line in _rel_names(audio_only, raw_root):
+                print(f"      • {line}", flush=True)
+        if not videos and not audio_only:
+            print("      (no video/audio in scoped inventory — Demo 4 will skip)", flush=True)
     print(
         "  Then: consolidated _meeting_summary.md per session under meetings/…/session/",
         flush=True,
