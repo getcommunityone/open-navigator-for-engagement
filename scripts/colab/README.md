@@ -158,6 +158,8 @@ Scraped meetings mirror is **step 1** above ([`01_copy_scraped_meetings_cache_to
 | `GOVERNANCE_GATEKEEPER_FORCE_HF` | Set `1` to load [google/gemma-4-E2B](https://huggingface.co/google/gemma-4-E2B) locally (~10GB; needs `HF_TOKEN` + `transformers>=5.5.0`). |
 | `GOVERNANCE_HF_ONLY_MODELS` | Optional comma-separated demo model ids to route to HF. |
 | `GOVERNANCE_GATEKEEPER_API_TIMEOUT_SECONDS` | Per-file Gemma triage timeout (default `120`). |
+| `GOVERNANCE_GATEKEEPER_SOCKET_ALARM` | `1` (default on Linux/Colab): `SIGALRM` aborts frozen HTTP sockets (`timeout` + buffer). `0` to disable. |
+| `GOVERNANCE_GATEKEEPER_SOCKET_ALARM_BUFFER_SECONDS` | Added to API timeout for wall clock (default `30` → 150s when timeout is 120). |
 | `GOVERNANCE_GATEKEEPER_ENABLED` | `0` to skip the triage step inside the notebook. |
 | `GOVERNANCE_GATEKEEPER_DRY_RUN` | `1` to log triage verdicts without moving files. |
 | `GOVERNANCE_GATEKEEPER_KINDS` | Comma-separated kinds — `pdf`, `audio`, or both (default both). |

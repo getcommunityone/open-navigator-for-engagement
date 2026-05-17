@@ -45,6 +45,7 @@ import logging
 import os
 import re
 import shutil
+import signal
 import subprocess
 import sys
 import tempfile
@@ -107,6 +108,65 @@ DEFAULT_TEXT_TRIAGE_MIN_CHARS = 80           # page-1 text layer ≥ this → sk
 DEFAULT_TEXT_TRIAGE_MAX_CHARS = 12_000       # cap excerpt sent to the model
 
 DEFAULT_TRIAGE_MAX_OUTPUT_TOKENS = 512      # strict JSON only — keep cheap
+DEFAULT_SOCKET_ALARM_BUFFER_SECONDS = 30    # wall clock = API timeout + this buffer
+
+
+class NetworkDeadlockError(Exception):
+    """LLM HTTP client hung past SIGALRM wall clock (socket freeze)."""
+
+
+def gatekeeper_socket_alarm_enabled() -> bool:
+    """When true (default on Linux/Colab), SIGALRM aborts stuck SDK sockets."""
+    raw = os.environ.get("GOVERNANCE_GATEKEEPER_SOCKET_ALARM", "").strip().lower()
+    if raw in ("0", "false", "no"):
+        return False
+    if raw in ("1", "true", "yes"):
+        return True
+    return hasattr(signal, "SIGALRM")
+
+
+def gatekeeper_socket_alarm_seconds(api_timeout_seconds: int) -> int:
+    """Hard wall-clock limit: expected SDK timeout + network buffer."""
+    buffer = int(
+        os.environ.get(
+            "GOVERNANCE_GATEKEEPER_SOCKET_ALARM_BUFFER_SECONDS",
+            str(DEFAULT_SOCKET_ALARM_BUFFER_SECONDS),
+        )
+    )
+    return max(1, int(api_timeout_seconds) + max(0, buffer))
+
+
+@contextmanager
+def gatekeeper_socket_freeze_guard(api_timeout_seconds: int):
+    """
+    Abort if ``generate_content`` blocks the process past api_timeout + buffer.
+
+    ThreadPoolExecutor timeouts do not always unblock a frozen HTTP socket; SIGALRM
+    on the main thread does (Colab / Linux only).
+    """
+    if (
+        not gatekeeper_socket_alarm_enabled()
+        or api_timeout_seconds <= 0
+        or not hasattr(signal, "SIGALRM")
+    ):
+        yield
+        return
+
+    alarm_sec = gatekeeper_socket_alarm_seconds(api_timeout_seconds)
+
+    def _on_alarm(signum: int, frame: Any) -> None:
+        raise NetworkDeadlockError(
+            f"OS-level catch: LLM API call frozen past {alarm_sec}s wall clock "
+            f"(sdk timeout={api_timeout_seconds}s)."
+        )
+
+    prev_handler = signal.signal(signal.SIGALRM, _on_alarm)
+    signal.alarm(alarm_sec)
+    try:
+        yield
+    finally:
+        signal.alarm(0)
+        signal.signal(signal.SIGALRM, prev_handler)
 
 
 def gatekeeper_text_first_enabled() -> bool:
@@ -802,17 +862,18 @@ def call_gemma_triage(
 
         if use_huggingface_for_model(model, gatekeeper=True):
             resolution = "HIGH" if media_resolution_high else "LOW"
-            hf = call_gemma_hf_multimodal(
-                model=model,
-                system_instruction=system_instruction + "\n\nRespond with strict JSON only.",
-                user_text=user_text,
-                media=media,
-                temperature=0.0,
-                max_output_tokens=max_output_tokens,
-                media_resolution=resolution,
-                include_thoughts=False,
-                thinking_budget=thinking_budget if thinking_budget else None,
-            )
+            with gatekeeper_socket_freeze_guard(timeout_seconds):
+                hf = call_gemma_hf_multimodal(
+                    model=model,
+                    system_instruction=system_instruction + "\n\nRespond with strict JSON only.",
+                    user_text=user_text,
+                    media=media,
+                    temperature=0.0,
+                    max_output_tokens=max_output_tokens,
+                    media_resolution=resolution,
+                    include_thoughts=False,
+                    thinking_budget=thinking_budget if thinking_budget else None,
+                )
             raw_text = hf.text or ""
             return _safe_parse_triage_json(raw_text), raw_text
     except ImportError:
@@ -880,15 +941,21 @@ def call_gemma_triage(
 
     from concurrent.futures import ThreadPoolExecutor, TimeoutError as FuturesTimeoutError
 
-    with ThreadPoolExecutor(max_workers=1) as pool:
-        future = pool.submit(_generate)
-        try:
-            response = future.result(timeout=timeout_seconds or None)
-        except FuturesTimeoutError as exc:
-            raise TimeoutError(
-                f"Gemma triage timed out after {timeout_seconds}s (model={model!r}). "
-                "Try GOVERNANCE_GATEKEEPER_MODEL=gemma-3n-e2b-it or a smaller listed id."
-            ) from exc
+    try:
+        with gatekeeper_socket_freeze_guard(timeout_seconds):
+            with ThreadPoolExecutor(max_workers=1) as pool:
+                future = pool.submit(_generate)
+                try:
+                    response = future.result(timeout=timeout_seconds or None)
+                except FuturesTimeoutError as exc:
+                    raise TimeoutError(
+                        f"Gemma triage timed out after {timeout_seconds}s (model={model!r}). "
+                        "Try GOVERNANCE_GATEKEEPER_MODEL=gemma-3n-e2b-it or a smaller listed id."
+                    ) from exc
+    except NetworkDeadlockError as exc:
+        raise TimeoutError(
+            f"Gemma triage socket freeze (model={model!r}): {exc}"
+        ) from exc
 
     raw_bits: List[str] = []
     for cand in getattr(response, "candidates", None) or []:
