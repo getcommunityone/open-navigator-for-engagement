@@ -115,7 +115,7 @@ def resolve_demo4_genai_model(
 ) -> str:
     """
     Model for Demo 4 chunks. ``gemma-4-26b-a4b-it`` is vision/PDF-first on many keys;
-    default to ``GOVERNANCE_DEMO4_MODEL`` or ``GOVERNANCE_GATEKEEPER_MODEL`` when set.
+    use ``GOVERNANCE_DEMO4_MODEL`` or ``GOVERNANCE_GATEKEEPER_MODEL`` (``gemma-3n-e2b-it``).
     """
     explicit = os.environ.get("GOVERNANCE_DEMO4_MODEL", "").strip()
     if explicit:
@@ -125,6 +125,11 @@ def resolve_demo4_genai_model(
         return gk
     if model_supports_audio_video_input(genai_model):
         return genai_model
+    fallback = os.environ.get(
+        "GOVERNANCE_DEMO4_FALLBACK_MODEL", "gemma-3n-e2b-it"
+    ).strip()
+    if fallback and model_supports_audio_video_input(fallback):
+        return fallback
     return gk or genai_model
 
 
@@ -727,24 +732,40 @@ def chunk_meeting_media_for_demo4(
     *,
     out_dir: Path,
     chunk_minutes: int = 15,
+    prefer_video: Optional[bool] = None,
 ) -> List[Tuple[Path, str]]:
     """
     Return ``(path, mime_type)`` segments for Demo 4.
 
-    Video containers (``.mp4``, …) default to ``video/mp4`` chunks when
-    :func:`demo4_use_video_chunks` is true; otherwise audio is extracted and
-    chunked as MP3 (legacy path).
+    MP4/WebM may use ``video/mp4`` segments when enabled; on ffmpeg failure,
+    falls back to extracted **audio/mp3** chunks (required for Gemma 3n / E2B).
     """
     source_path = source_path.resolve()
-    if source_path.suffix.lower() in VIDEO_EXTS and demo4_use_video_chunks():
-        paths = _chunk_video_ffmpeg(
-            source_path, out_dir=out_dir, chunk_minutes=chunk_minutes
-        )
-        return [(p, "video/mp4") for p in paths]
+    use_video = (
+        demo4_use_video_chunks()
+        if prefer_video is None
+        else bool(prefer_video)
+    )
+    if source_path.suffix.lower() in VIDEO_EXTS and use_video:
+        try:
+            paths = _chunk_video_ffmpeg(
+                source_path, out_dir=out_dir, chunk_minutes=chunk_minutes
+            )
+            return [(p, "video/mp4") for p in paths]
+        except RuntimeError as exc:
+            print(
+                f"   ℹ️  {source_path.name}: video segment failed ({exc}) — "
+                "using audio/mp3 chunks instead.",
+                flush=True,
+            )
     paths = chunk_audio_ffmpeg(
         source_path, out_dir=out_dir, chunk_minutes=chunk_minutes, fmt="mp3"
     )
-    return [(p, mime_for(p)) for p in paths]
+    out: List[Tuple[Path, str]] = []
+    for p in paths:
+        mime = "audio/mpeg" if p.suffix.lower() == ".mp3" else mime_for(p)
+        out.append((p, mime))
+    return out
 
 
 # ─────────────────────────────────────────────────────────────

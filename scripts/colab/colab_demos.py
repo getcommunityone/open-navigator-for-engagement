@@ -43,6 +43,7 @@ from governance_meeting_llm import (
     render_pdf_pages,
     resolve_demo4_genai_model,
     select_demo4_media,
+    model_supports_audio_video_input,
     model_supports_video_input,
     text_output_complete,
 )
@@ -619,15 +620,26 @@ def run_demo4(
         brief_cache = {}
 
     j = inv.jurisdiction
+    import os
+
     demo4_model = resolve_demo4_genai_model(
         ctx.genai_model,
         gatekeeper_model=ctx.gatekeeper_model or ctx.demo4_model,
     )
-    if demo4_model != ctx.genai_model:
+    if not model_supports_audio_video_input(demo4_model):
+        print(
+            f"  ⚠ Demo 4 model {demo4_model!r} does not accept audio on this API key. "
+            "Set GOVERNANCE_DEMO4_MODEL=gemma-3n-e2b-it (or GOVERNANCE_GATEKEEPER_MODEL).",
+            flush=True,
+        )
+    elif demo4_model != ctx.genai_model:
         print(
             f"  Demo 4 model: {demo4_model!r} "
-            f"(audio/video — {ctx.genai_model!r} is PDF/image-only on this API key)"
+            f"(recordings — {ctx.genai_model!r} is PDF/image-only)",
+            flush=True,
         )
+    else:
+        print(f"  Demo 4 model: {demo4_model!r}", flush=True)
     audios = select_demo4_media(
         inv.audio,
         ctx.raw_root,
@@ -664,7 +676,10 @@ def run_demo4(
         else:
             try:
                 chunk_media = chunk_meeting_media_for_demo4(
-                    audio, out_dir=scratch, chunk_minutes=15
+                    audio,
+                    out_dir=scratch,
+                    chunk_minutes=15,
+                    prefer_video=use_video,
                 )
             except Exception as e:
                 print(f"    ! ffmpeg chunking failed: {e}")
