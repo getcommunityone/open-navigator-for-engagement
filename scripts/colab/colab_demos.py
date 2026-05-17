@@ -856,16 +856,19 @@ def run_demo4(
                     result = None
                     break
             if result is None:
-                if not demo4_models_to_try(demo4_model, api_key=ctx.api_key):
-                    print(
-                        f"    ! chunk {idx} failed: no audio-capable model on this key",
-                        flush=True,
+                tried = demo4_models_to_try(demo4_model, api_key=ctx.api_key)
+                if not tried:
+                    log_line(
+                        f"! chunk {idx} failed: no audio-capable model on this API key "
+                        f"(enable gemma-4-e2b-it or gemma-4-e4b-it in AI Studio)",
+                        prefix="    ",
                     )
                 else:
-                    print(
-                        f"    ! chunk {idx} failed: audio rejected by "
-                        f"{demo4_models_to_try(demo4_model, api_key=ctx.api_key)}",
-                        flush=True,
+                    log_line(
+                        f"! chunk {idx} failed: audio rejected by {tried!r}. "
+                        f"Set GOVERNANCE_DEMO4_MODEL=gemma-4-e2b-it in §2 "
+                        f"(31B is for Demo 3 PDFs, not meeting audio on most keys).",
+                        prefix="    ",
                     )
                 genai_inter_call_pause(None)
                 continue

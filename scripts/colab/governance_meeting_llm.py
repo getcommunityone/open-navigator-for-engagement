@@ -129,9 +129,9 @@ def resolve_demo4_genai_model(
     (``gemma-4-31b-it``) → Gemma 4 Edge (E2B/E4B). Never ``gemma-4-26b-a4b-it``.
     """
     explicit = os.environ.get("GOVERNANCE_DEMO4_MODEL", "").strip()
-    thinking = (thinking_model or os.environ.get("GOVERNANCE_THINKING_MODEL", "")).strip()
     gk = (gatekeeper_model or os.environ.get("GOVERNANCE_GATEKEEPER_MODEL", "")).strip()
-    requested = explicit or thinking or "gemma-4-31b-it"
+    # Demo 4 = audio bytes. Do not default to THINKING_MODEL (31B) — PDF/thinking only on many keys.
+    requested = explicit or gk or "gemma-4-e4b-it"
     if not model_supports_audio_video_input(requested):
         requested = "gemma-4-e2b-it"
 
@@ -156,14 +156,14 @@ def resolve_demo4_genai_model(
         except Exception:
             pass
 
-    for cand in (requested, thinking, gk, "gemma-4-e4b-it", "gemma-4-e2b-it", "gemma-4-31b-it"):
+    for cand in (requested, "gemma-4-e4b-it", "gemma-4-e2b-it", gk, "gemma-4-31b-it"):
         c = (cand or "").strip()
         if c and model_supports_audio_video_input(c):
             return c
     env_fb = os.environ.get("GOVERNANCE_DEMO4_FALLBACK_MODEL", "").strip()
     if env_fb and model_supports_audio_video_input(env_fb):
         return env_fb
-    return thinking or gk or "gemma-4-31b-it"
+    return gk or "gemma-4-e2b-it"
 
 
 def _genai_error_text(exc: BaseException) -> str:
