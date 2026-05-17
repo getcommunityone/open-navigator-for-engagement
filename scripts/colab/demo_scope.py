@@ -9,7 +9,7 @@ from __future__ import annotations
 import os
 from collections import defaultdict
 from dataclasses import dataclass
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 from governance_meeting_llm import MeetingInventory
 
@@ -30,12 +30,13 @@ class DemoScopePreset:
     max_audio_chunks: int
     parallel_states: int
     max_images_per_jur: int
+    preferred_jurisdiction_slug: Optional[str] = None
 
 
 PRESETS: Dict[str, DemoScopePreset] = {
     "fast": DemoScopePreset(
         key="fast",
-        label="Fast (1 state, 1 jurisdiction)",
+        label="Fast (1 state, 1 jurisdiction — Tuscaloosa County)",
         eta="~15–25 min",
         max_states=1,
         max_jurisdictions=1,
@@ -46,6 +47,7 @@ PRESETS: Dict[str, DemoScopePreset] = {
         max_audio_chunks=2,
         parallel_states=1,
         max_images_per_jur=0,
+        preferred_jurisdiction_slug="county_01125",
     ),
     "medium": DemoScopePreset(
         key="medium",
@@ -122,6 +124,10 @@ def apply_preset_to_environ(preset: DemoScopePreset) -> None:
                 (preset.max_pdfs_per_jur + preset.max_audio_per_jur) * preset.meeting_dates,
             )
         )
+    if preset.preferred_jurisdiction_slug:
+        os.environ["GOVERNANCE_DEMO_JURISDICTION_SLUG"] = preset.preferred_jurisdiction_slug
+    else:
+        os.environ.pop("GOVERNANCE_DEMO_JURISDICTION_SLUG", None)
 
 
 def apply_scope(scope: str) -> DemoScopePreset:
@@ -132,11 +138,41 @@ def apply_scope(scope: str) -> DemoScopePreset:
     return preset
 
 
+def _preferred_jurisdiction_slug(preset: DemoScopePreset) -> Optional[str]:
+    env = os.environ.get("GOVERNANCE_DEMO_JURISDICTION_SLUG", "").strip()
+    if env:
+        return env
+    return preset.preferred_jurisdiction_slug
+
+
+def _pick_jurisdiction_for_state(
+    invs: List[MeetingInventory],
+    preset: DemoScopePreset,
+) -> Optional[MeetingInventory]:
+    """Prefer ``preset.preferred_jurisdiction_slug`` when present on disk."""
+    slug = _preferred_jurisdiction_slug(preset)
+    if slug:
+        for inv in invs:
+            if inv.jurisdiction.slug == slug:
+                return inv
+        for inv in invs:
+            if slug in inv.jurisdiction.relative_label:
+                return inv
+    ranked = sorted(
+        invs,
+        key=lambda i: (
+            -(len(i.pdfs) + len(i.audio)),
+            i.jurisdiction.relative_label,
+        ),
+    )
+    return ranked[0] if ranked else None
+
+
 def filter_inventories_for_scope(
     inventories: List[MeetingInventory],
     preset: DemoScopePreset,
 ) -> List[MeetingInventory]:
-    """One jurisdiction per state (richest media first), up to preset limits."""
+    """One jurisdiction per state (preferred slug, else richest media), up to preset limits."""
     by_state: Dict[str, List[MeetingInventory]] = defaultdict(list)
     for inv in inventories:
         by_state[inv.jurisdiction.state_code].append(inv)
@@ -148,15 +184,9 @@ def filter_inventories_for_scope(
         states_so_far = {inv.jurisdiction.state_code for inv in selected}
         if state not in states_so_far and len(states_so_far) >= preset.max_states:
             continue
-        invs = sorted(
-            by_state[state],
-            key=lambda i: (
-                -(len(i.pdfs) + len(i.audio)),
-                i.jurisdiction.relative_label,
-            ),
-        )
-        if invs:
-            selected.append(invs[0])
+        pick = _pick_jurisdiction_for_state(by_state[state], preset)
+        if pick is not None:
+            selected.append(pick)
     return selected[: preset.max_jurisdictions]
 
 
@@ -174,6 +204,9 @@ def print_scope_plan(
         f"{preset.max_pdfs_per_jur} PDF(s)/jur, {preset.max_audio_chunks} audio chunk(s)"
     )
     print(f"  On disk: {len(all_inventories)} jurisdiction(s) with media")
+    pref = _preferred_jurisdiction_slug(preset)
+    if pref:
+        print(f"  Preferred jurisdiction slug: {pref!r} (when present on disk)")
     print(f"  This run: {len(selected)} jurisdiction(s)")
     for inv in selected:
         j = inv.jurisdiction

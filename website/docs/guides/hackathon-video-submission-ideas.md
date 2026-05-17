@@ -1,11 +1,46 @@
 ---
 displayed_sidebar: developersSidebar
-description: Reference patterns and a checklist for strong “Google for Good”–style hackathon demo videos (CommunityOne / Open Navigator), plus a catalog of short inspirational civic data and visualization talks and case studies.
+description: Reference patterns and a checklist for strong “Google for Good”–style hackathon demo videos (CommunityOne / Open Navigator), including the flagship “speed trap revenue” pitch hook, plus inspirational civic data talks and case studies.
 ---
 
 # Hackathon video submission ideas (reference library)
 
 Short guide for a **CommunityOne** (or similar civic-data) submission where the **video** has to carry the “wow” as much as the product. These notes distill reference talks and pitch formats that bridge **complex data → real-world utility**.
+
+## 2026 Gemma 4 Good — flagship question
+
+**Pitch hook:** *What percentage of a small town’s revenue comes from speed traps?*
+
+Use this as the **15-second opener** and the **reveal** your demo answers—not a tour of models or folders.
+
+### National baseline (not every town is the same)
+
+Governing’s [**Addicted to Fines**](https://www.governing.com/archive/gov-addicted-to-fines.html) analysis of local-government audits (primarily FY 2017–18; see [methodology](https://www.governing.com/archive/local-government-fines-revenue-methodology.html)) found:
+
+| Share of general-fund revenue from fines & forfeitures | Approx. # of U.S. jurisdictions |
+| --- | --- |
+| **More than 10%** | **~600** |
+| **More than 20%** | **~284** |
+| **More than half** | **dozens** (extreme outliers) |
+
+Additional context from the same project:
+
+- **720+** localities reported **more than $100 per adult resident** per year from fines.
+- Dependence is concentrated in parts of the **South** (e.g. AR, GA, LA, OK, TX) and some communities in **NY**—often places with a **weak property-tax base** where ticketing substitutes for ordinary revenue.
+
+**How to say it on camera:** “Nationwide, hundreds of small governments get **double-digit shares** of their budget from fines—not taxes. Your town might be **5%** or **50%**—the point is we can’t see that from a headline. We need **budgets + meeting records** in one place.”
+
+### What CommunityOne / Open Navigator adds
+
+1. **Local answer:** Pull **fines & forfeitures** (and court/municipal fee lines) from the jurisdiction’s **annual financial report** or state audit extract.
+2. **Meeting context:** Use **county commission / city council** agendas and minutes (e.g. Tuscaloosa County `county_01125`) so Gemma can tie **enforcement, courts, or revenue** discussion to the budget line—not just a static percentage.
+3. **Reveal beat:** Map or one chart—**% of general fund from fines** for *this* place vs. the national “>10% / >20%” bands above.
+
+**Demo path:** Colab `02_run_meeting_llm.ipynb` with `SCOPE = "fast"` (defaults to `AL/county/county_01125`) → Gatekeeper → budget PDF OCR / drift on any audio → flash **source + year** on screen.
+
+**Caveats for judges:** “Speed trap” is colloquial; audits use **fines and forfeitures** (sometimes bundled with fees). Always cite **fiscal year** and **fund** (general vs. special). Extreme towns are outliers—lead with *your* jurisdiction’s number, then national context.
+
+---
 
 ## Why this matters
 
@@ -201,9 +236,10 @@ Short talks, product stories, and case studies that show how **data + maps + hum
 
 ## Applying this to Open Navigator / CommunityOne
 
-- **One jurisdiction, one story:** Pick a single city or region and **one user goal** (e.g. “find my officials + next election” or “see nonprofit + government spend context”).
-- **Source credibility:** Flash **citations or source names** on screen for a second—reinforces “real data,” not a mockup.
-- **End on a CTA:** What should a viewer **do tomorrow** with CommunityOne (sign up, explore a map, open a report)?
+- **One jurisdiction, one story:** Default hackathon run: **Tuscaloosa County, AL** (`county_01125`) and the question **“what share of revenue is fines?”** for that place—then compare to national bands (>10%, >20%) from Governing.
+- **Other goals still work:** Officials lookup, nonprofit + government spend context, meeting drift—but keep **one** primary hook per video.
+- **Source credibility:** Flash **audit year**, **fund name**, and **Governing / state comptroller** on screen for a second—reinforces “real data,” not a mockup.
+- **End on a CTA:** What should a viewer **do tomorrow**—open their county’s folder, run the Colab notebook, or look up their town’s fine-revenue %?
 
 ---
 
