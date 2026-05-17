@@ -9,7 +9,7 @@ from __future__ import annotations
 import os
 from collections import defaultdict
 from dataclasses import dataclass
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 from governance_meeting_llm import MeetingInventory, format_inventory_media_line
 
@@ -158,6 +158,36 @@ def apply_scope(scope: str) -> DemoScopePreset:
     preset = PRESETS[key]
     apply_preset_to_environ(preset)
     return preset
+
+
+def resolve_media_scope_key(
+    preset: DemoScopePreset,
+    media_scope: Optional[str] = None,
+) -> str:
+    """
+    Notebook §2 helper: ``media_scope=None`` uses the preset's ``default_media_scope`` (fast → ``all``).
+    """
+    if isinstance(media_scope, str) and media_scope.strip():
+        return media_scope.strip()
+    return (preset.default_media_scope or "all").strip()
+
+
+def apply_scope_and_media(
+    scope: str,
+    media_scope: Optional[str] = None,
+) -> Tuple[DemoScopePreset, str, Any]:
+    """Apply demo scope + media scope; return ``(preset, media_key, media_config)``."""
+    from pipeline_media_scope import SCOPES as MEDIA_SCOPES, apply_media_scope, normalize_media_scope_key
+
+    preset = apply_scope(scope)
+    media = resolve_media_scope_key(preset, media_scope)
+    media_key = normalize_media_scope_key(media)
+    if media_key not in MEDIA_SCOPES:
+        raise ValueError(
+            f"MEDIA_SCOPE must be one of {list(MEDIA_SCOPES)} (or *_only) — got {media!r}"
+        )
+    active_media = apply_media_scope(media)
+    return preset, media, active_media
 
 
 def _preferred_jurisdiction_slug(preset: DemoScopePreset) -> Optional[str]:
