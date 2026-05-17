@@ -1,6 +1,6 @@
 ---
 displayed_sidebar: developersSidebar
-description: Reference patterns and a checklist for strong “Google for Good”–style hackathon demo videos (CommunityOne / Open Navigator), including the flagship “speed trap revenue” pitch hook, plus inspirational civic data talks and case studies.
+description: Reference patterns and a checklist for strong “Google for Good”–style hackathon demo videos (CommunityOne / Open Navigator), including flagship pitch hooks (speed-trap revenue, jurisdiction website accessibility), plus inspirational civic data talks and case studies.
 ---
 
 # Hackathon video submission ideas (reference library)
