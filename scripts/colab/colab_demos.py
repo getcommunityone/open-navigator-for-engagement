@@ -12,6 +12,12 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
+from media_playback_links import (
+    enrich_policy_analysis_media_links,
+    format_media_context_hint,
+    list_media_sources,
+    resolve_media_for_input_file,
+)
 from governance_meeting_llm import (
     TOKEN_BUDGET_HIGH,
     TOKEN_BUDGET_LOW,
@@ -96,7 +102,9 @@ DEMO3_SYSTEM = (
     "You are an expert political scientist and data architect specializing in "
     "local governance. Follow the user's instructions exactly. Document 1 must be "
     "raw JSON starting with `{` (no markdown fences, no markdown-only reply). "
-    "COFOG codes belong on each decision via primary_theme_cofog / secondary_theme_cofog."
+    "COFOG codes belong on each decision via primary_theme_cofog / secondary_theme_cofog. "
+    "When MEDIA CONTEXT lists recordings, populate meeting.media_sources and per-decision "
+    "media_citation timestamps (elapsed from recording start)."
 )
 
 _PRIORITY_PATTERNS = (
@@ -117,8 +125,9 @@ DEMO4_SYSTEM = (
     "You are an expert political scientist analyzing one chunk of a long meeting. "
     "Follow the user's instructions exactly. Document 1 must be raw JSON starting with "
     "`{` (no markdown fences, no markdown-only reply). COFOG codes belong on each "
-    "decision. The chunk_index tells you which 15-minute slice of the meeting this "
-    "audio covers."
+    "decision. Use MEDIA CONTEXT for recording URLs; timestamp decisions from the full "
+    "recording start (add chunk_start_seconds). The chunk_index tells you which "
+    "15-minute slice you are hearing."
 )
 
 
@@ -354,8 +363,15 @@ def run_demo3(inv: MeetingInventory, ctx: DemoContext) -> List[Dict[str, Any]]:
         f"scope={j.scope}, fips_or_place_id={j.fips or 'unknown'}. "
         "Use this when populating county_fips / county / postal_code in each decision."
     )
+    all_media = list_media_sources(j.root)
+    media_hint = format_media_context_hint(
+        primary=all_media[0] if all_media else None,
+        all_sources=all_media,
+        input_modality="pdf_minutes",
+        local_file=pdf,
+    )
     user_text = (
-        f"{ctx.policy_prompt}\n\n---\n{geo_hint}\n\n"
+        f"{media_hint}\n{ctx.policy_prompt}\n\n---\n{geo_hint}\n\n"
         "The attached PDF contains the meeting record. Apply the full deconstruction "
         "prompt to it. Stick to what is actually in the document."
     )
@@ -376,6 +392,12 @@ def run_demo3(inv: MeetingInventory, ctx: DemoContext) -> List[Dict[str, Any]]:
         print(f"  ! Gemma call failed: {e}")
         return report
     parsed = parse_policy_analysis_response(result.text or "")
+    if isinstance(parsed.get("json_analysis"), dict):
+        parsed["json_analysis"] = enrich_policy_analysis_media_links(
+            parsed["json_analysis"],
+            primary=all_media[0] if all_media else None,
+            all_sources=all_media,
+        )
     raw_out = mirror_output_path(
         input_path=pdf,
         raw_root=ctx.raw_root,
@@ -488,7 +510,18 @@ def run_demo4(
             chunks_regenerated = True
             geo_hint = (
                 f"Geography hint: state_code={j.state_code}, scope={j.scope}, "
-                f"fips_or_place_id={j.fips or 'unknown'}. chunk_index={idx} of {len(chunks)}."
+                f"fips_or_place_id={j.fips or 'unknown'}. chunk_index={idx} of {len(chunk_media)}."
+            )
+            primary_media = resolve_media_for_input_file(audio, j.root)
+            all_media = list_media_sources(j.root)
+            modality = "video_recording" if use_video else "audio_recording"
+            media_hint = format_media_context_hint(
+                primary=primary_media,
+                all_sources=all_media,
+                input_modality=modality,
+                chunk_index=idx,
+                chunk_minutes=15,
+                local_file=chunk_path,
             )
             meeting_dir = (
                 resolve_meeting_dir(audio, ctx.raw_root)
@@ -518,8 +551,9 @@ def run_demo4(
                     geo_hint=geo_hint,
                     chunk_hint=chunk_hint,
                 )
+                user_text = f"{media_hint}\n{user_text}"
             else:
-                user_text = f"{ctx.policy_prompt}\n\n---\n{geo_hint}\n\n{chunk_hint}"
+                user_text = f"{media_hint}\n{ctx.policy_prompt}\n\n---\n{geo_hint}\n\n{chunk_hint}"
             try:
                 result = call_google_genai_multimodal(
                     api_key=ctx.api_key,
@@ -534,12 +568,20 @@ def run_demo4(
                 print(f"    ! chunk {idx} failed: {e}")
                 continue
             parsed = parse_policy_analysis_response(result.text or "")
+            chunk_analysis = parsed.get("json_analysis")
+            if isinstance(chunk_analysis, dict):
+                chunk_analysis = enrich_policy_analysis_media_links(
+                    chunk_analysis,
+                    primary=primary_media,
+                    all_sources=all_media,
+                    chunk_start_seconds=idx * 15 * 60,
+                )
             chunk_out.write_text(
                 json.dumps(
                     {
                         "chunk_index": idx,
                         "audio_source": str(chunk_path.name),
-                        "json_analysis": parsed.get("json_analysis"),
+                        "json_analysis": chunk_analysis,
                         "summary": parsed.get("summary"),
                         "parse_error": parsed.get("parse_error"),
                     },
@@ -548,7 +590,7 @@ def run_demo4(
                 ),
                 encoding="utf-8",
             )
-            chunk_jsons.append(parsed.get("json_analysis") or {})
+            chunk_jsons.append(chunk_analysis or {})
             print(f"    chunk {idx}: → {chunk_out.relative_to(ctx.processed_root)}")
         if not chunk_jsons or not any(chunk_jsons):
             continue

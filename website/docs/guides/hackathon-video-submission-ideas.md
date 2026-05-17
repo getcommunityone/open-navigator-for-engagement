@@ -1,6 +1,6 @@
 ---
 displayed_sidebar: developersSidebar
-description: Reference patterns and a checklist for strong “Google for Good”–style hackathon demo videos (CommunityOne / Open Navigator), including flagship pitch hooks (speed-trap revenue, 100k-meeting safety scrub, jurisdiction website accessibility), plus inspirational civic data talks and case studies.
+description: Reference patterns and a checklist for strong “Google for Good”–style hackathon demo videos (CommunityOne / Open Navigator), including flagship pitch hooks (speed-trap revenue, potholes & street repair, TikTok-style issue summaries, required CTA slide, 100k-meeting safety scrub, jurisdiction website accessibility), plus inspirational civic data talks and case studies.
 ---
 
 # Hackathon video submission ideas (reference library)
@@ -39,6 +39,16 @@ Additional context from the same project:
 **Demo path:** Colab `02_run_meeting_llm.ipynb` with `SCOPE = "fast"` (defaults to `AL/county/county_01125`, **2 meeting dates**, up to **6 PDFs**/jurisdiction) → Gatekeeper → budget PDF OCR / drift on any audio → flash **source + year** on screen.
 
 **Caveats for judges:** “Speed trap” is colloquial; audits use **fines and forfeitures** (sometimes bundled with fees). Always cite **fiscal year** and **fund** (general vs. special). Extreme towns are outliers—lead with *your* jurisdiction’s number, then national context.
+
+### Alternate everyday opener (potholes & street repair)
+
+**Pitch hook:** *Your council approved road money last month—so why is your block still full of potholes?*
+
+Pairs the same pipeline with **Infrastructure and Capital Projects** / **Transportation and Mobility** themes: capital budget lines, paving contracts, ARPA or gas-tax allocations, and **public comment** on neglected streets in minutes or audio.
+
+**Reveal beat:** One chart or table—**$ approved for streets** (from `financial_items` or budget PDF) next to **what was actually discussed** (deferral, change order, contractor dispute) from `policy_analysis_v1` JSON.
+
+**How to say it on camera:** “Residents don’t live inside the audit PDF—they drive the road. We connect **the vote** to **the dollar** and the **timestamp** where they debated your street.”
 
 ---
 
@@ -125,6 +135,72 @@ LIMIT 20;
 - Complements the **Gemma meeting pipeline**: meetings are useless if residents cannot **reach** them online.
 
 **Caveats:** Automated tools catch many but not all barriers; say “axe/Pa11y flags” vs. “fully ADA compliant.” Homepage-only scans miss deep pages unless you extend the crawler.
+
+---
+
+## Hackathon idea: TikTok-style meeting summaries (issue-first, everyday user)
+
+**Pitch hook:** *Your city council voted on your money last Tuesday—would you watch a 4-hour stream, or a 45-second clip that says what changed for **you**?*
+
+Turn **official meeting intelligence** into **short-form, shareable stories** for residents who will never read minutes—framed around **issues they already care about**, not procedural jargon.
+
+### Why this lands
+
+- **Distribution:** TikTok, Reels, and Shorts are where **younger and working residents** get news; `.gov` livestreams are not.
+- **Issue hook, not “government TV”:** Lead with **speed traps / fine revenue**, **potholes & paving**, **rent or zoning**, **school cuts**, **water bills**, **sheriff contracts**—the same hooks as the fines-revenue opener, not “Item 7 on the consent agenda.”
+- **Trust through receipts:** Pair each clip with **source links**—budget line, agenda PDF page, or **`playback_url`** at `timestamp_start` from `policy_analysis_v1.md` + `media_playback_links.py` so viewers can jump to the moment in the recording.
+- **“For good” angle:** Informed neighbors show up prepared; journalists and advocates get **pre-digested** frames with dissent and tradeoffs preserved (not rage-bait summaries).
+
+### What to generate (one “card” per issue)
+
+| Output | Purpose |
+| --- | --- |
+| **Hook (≤3s text on screen)** | “This town gets **18%** of its budget from tickets.” |
+| **So-what (15–30s voiceover)** | Smart Brevity from `decision.headline` + `tradeoffs` / `narrative_analysis` |
+| **Receipt (5s)** | QR or URL: fines % chart, Shield-clean summary, or **Watch at 1:05:30** deep link |
+| **CTA (final 3–5s)** | Dedicated slide—see [Call to action slide](#call-to-action-slide-required-closing-beat) below |
+
+**Tone rules for scripts (prompt or post-process):**
+
+- Second person (“your taxes,” “your commute”)—not “the commission adopted…”
+- One **concrete number** or **named place** per clip when the JSON has it
+- Name **who won and who lost** in plain language (`tradeoff_analysis`, dissenting frame)—avoid false balance, but don’t invent conflict
+- **No legal advice**; end with “read the minutes” / “verify on the city site”
+
+### Example issue templates (rotate by jurisdiction)
+
+1. **Speed traps & fines** — `% of general fund from fines` (Governing baseline) + council/audio line on enforcement or court fees → ties to flagship hook above.
+2. **Potholes & street repair** — hook: “They approved **$X** for roads—your street wasn’t on the list.” Pull paving / capital outlay from `financial_items`; `primary_theme` Infrastructure or Transportation; clip resident comment or engineer report from `playback_url`.
+3. **Housing & rent** — zoning vote, demolition, or landlord registry debate from minutes + `primary_theme` Zoning / Housing.
+4. **Public safety spend** — sheriff contract, new patrol cars, or diversion program; show **vote tally** on screen.
+5. **Schools & kids** — board cuts, bus routes, discipline policy; NTEE **Education / Youth** tags from analysis JSON.
+6. **Utilities & bills** — rate hike hearing; flash **$ / month** from `financial_items`.
+7. **Access fail** — “They want your fine paid online” + same jurisdiction’s **axe violation** on the payment portal (combine with accessibility track).
+
+### Pipeline sketch (builds on what exists)
+
+```text
+Scrape → Gatekeeper → Gemma policy_analysis_v1 (JSON + media_citation)
+    → issue picker (theme / COFOG / fines % / keyword)
+    → Gemma or template: 45–60s script + on-screen captions
+    → optional: ffmpeg clip from SuiteOne/YouTube using timestamp_start_seconds
+    → publish: vertical 9:16 + pinned source URL
+```
+
+**Demo path (hackathon):** One Tuscaloosa County decision with a clear **financial_items** or **fines** angle → show **JSON headline** → generated **TikTok script** → open **`playback_url`** at the cited timestamp in the browser (even if seek is manual on SuiteOne).
+
+### How to say it on camera (15s + reveal)
+
+- **Problem:** “Council meetings are public but invisible—unless you have four hours and a law degree.”
+- **Reveal:** Play a **vertical mock** (CapCut template or slide): hook text → 20s plain-English outcome → “Source: county budget FY24 + meeting at 1:05:30.”
+- **Close:** Hold the **[CTA slide](#call-to-action-slide-required-closing-beat)** for a full **3–5 seconds**—do not fade out over the demo UI.
+- **Scale:** “Same Gemma pass that powers **100k meeting safety scrub** also powers **100k clips**—one per issue residents actually search for.”
+
+### Caveats for judges
+
+- Short-form **compresses** nuance; always show **link to full JSON / minutes** and label **AI-generated script**.
+- Don’t imply endorsement by the city or platform; use **public record** framing.
+- **Platform policy:** automated posting to TikTok is out of scope for a hackathon MVP—ship **scripts + captioned storyboards** or manual upload.
 
 ---
 
@@ -320,11 +396,13 @@ Short talks, product stories, and case studies that show how **data + maps + hum
 | **Demo over deck** | Prefer **screen capture** (e.g. OBS, Loom) of a **happy path** over architecture diagrams. |
 | **Data action** | Explicitly say what became **actionable** (find, compare, contact, plan) that wasn’t before. |
 | **Accessibility reveal** | Show a **scanner result** next to the live `.gov` page (axe/Pa11y violation → same element on screen). |
+| **TikTok beat** | One **vertical** clip: hook stat → 20s plain English → **source URL + timestamp** on the last frame. |
 
 ## Applying this to Open Navigator / CommunityOne
 
 - **One jurisdiction, one story:** Default Gemma run: **Tuscaloosa County, AL** (`county_01125`) with **`SCOPE=fast`** (**2 meetings**, **6 PDFs**)—fines %, Feb+May meetings, and Shield review in one pass.
 - **Killer scale story:** Pilot on county_01125 → slide to **100k meetings** safety scrub (Shield + Gemma) as the national vision.
+- **Short-form branch:** Same JSON → one **issue-focused 45s script** (speed trap / fine % is the default hook) + optional clip at `media_citation.playback_url`.
 - **Combine tracks (advanced):** Fines % + accessibility score + safety `_summary.json` for the same `jurisdiction_id`.
 - **Other goals still work:** Officials lookup, nonprofit + government spend context, meeting drift—but keep **one** primary hook per video.
 - **Source credibility:** Flash **audit year**, **fund name**, and **Governing / state comptroller** on screen for a second—reinforces “real data,” not a mockup.

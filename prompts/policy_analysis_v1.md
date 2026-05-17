@@ -17,6 +17,24 @@ Apply Smart Brevity discipline to every text field: open with a headline that fr
 ## Scope
 This prompt must work across any type of governance meeting regardless of jurisdiction size, body type, formality level, or subject matter — including but not limited to city councils, fire district budget hearings, school boards, county commissions, planning boards, utility authorities, and special district meetings. Adapt gracefully: if a field is not applicable to the meeting type set it to null rather than forcing a value that does not fit.
 
+## Video and Audio Sources
+When the input is a **recording** (video or audio) rather than a written agenda/minutes PDF, treat timecodes as first-class evidence.
+
+- Set `meeting.input_modality` to `video_recording`, `audio_recording`, or `mixed` when applicable; use `pdf_minutes`, `pdf_agenda`, or `transcript_text` for document-only inputs.
+- Populate `meeting.media_sources[]` from the **MEDIA CONTEXT** block when provided (one row per distinct recording). Do not invent URLs — copy `canonical_url`, `page_url`, and `platform` exactly.
+- For **each decision** heard in the recording, populate `media_citation` with:
+  - `media_source_id` — which recording (e.g. `MS001`)
+  - `timestamp_start` / `timestamp_end` — **elapsed time from the start of that recording** as `HH:MM` or `H:MM:SS` (wall-clock meeting time only if the recording states it)
+  - Leave `playback_url`, `timestamp_start_seconds`, and `timestamp_end_seconds` as **null** (the pipeline computes deep links from timestamps)
+- When analyzing a **chunk** of a longer file, timestamps must still be **recording elapsed from t=0 of the full meeting**, not offset within the chunk alone (add the chunk's start offset from MEDIA CONTEXT).
+- Attribute quotes and votes to the timestamp where they occur; use `timestamp_end` when a debate spans multiple minutes.
+
+**Platform notes (for humans reading Document 2):**
+- **YouTube** — share links with `&t=…s` from `playback_url`
+- **Vimeo** — `#t=…s` on the video page
+- **SuiteOne / Granicus-style portals** — prefer `page_url` (event page); seek inside the embedded player to `timestamp_start`
+- **Direct MP4** — fragment links may not seek in all browsers; portal URL is preferred when available
+
 ## Entity Identification and Cross-Query Linking
 For every person, organization, legislation, financial item, and decision subject extracted from the transcript, generate stable cross-query identifiers so that entities can be linked across multiple meeting analyses without ambiguity.
 
@@ -215,6 +233,7 @@ After the first break token, output a human-readable markdown document that **re
 
 **Meeting Overview**
 - Meeting identification (body name, type, date, location)
+- Input modality (video, audio, PDF, mixed) and primary recording link if present
 - Attendance summary
 - Session context if multi-part
 
@@ -223,6 +242,7 @@ For each decision provide:
 - **Decision ID:** [decision_id]
 - **Topic headline** (from decision.headline field)
 - **Themes:** Primary: [primary_theme] ([primary_theme_cofog]); Secondary: [secondary_theme] ([secondary_theme_cofog]) or none
+- **Watch / listen:** [playback_url at timestamp_start, or "recording not linked"] — include `timestamp_start`–`timestamp_end` when known
 - **Location:** [city name, county name if present, postal_code if present, or "jurisdiction-wide"]
 - **Outcome:** [APPROVED/DENIED/etc] via [decision method]
 - **Vote:** [if formal vote, summarize tally and note dissenting members]
@@ -277,6 +297,19 @@ This is the final output — no additional document breaks or timeline sections 
     "members_present": ["string"],
     "members_absent": ["string"],
     "source_url": "string or null",
+    "input_modality": "one of: video_recording, audio_recording, transcript_text, pdf_minutes, pdf_agenda, mixed, unknown",
+    "primary_media_source_id": "string or null — must match media_sources[].media_source_id",
+    "media_sources": [
+      {
+        "media_source_id": "string — sequential e.g. MS001",
+        "platform": "one of: youtube, vimeo, suiteone_s3_mp4, suiteone_portal, archive_org, direct_mp4, direct_audio, unknown",
+        "canonical_url": "string — direct file or watch URL from MEDIA CONTEXT",
+        "page_url": "string or null — event portal (SuiteOne, Granicus) when different from canonical_url",
+        "mime_type": "string or null — e.g. video/mp4, audio/opus",
+        "is_primary": "boolean",
+        "local_relative_path": "string or null — path under jurisdiction folder when known"
+      }
+    ],
     "producer": "string or null",
     "jurisdiction": "string",
     "jurisdiction_type": "one of: Municipal, County, State, Federal, Special District, Fire District, School District, Unknown",
@@ -373,8 +406,17 @@ This is the final output — no additional document breaks or timeline sections 
       "decision_id": "string — sequential e.g. D001",
       "subject_id": "string — must match a subject_id",
       "agenda_item": "string or null",
-      "timestamp_start": "HH:MM or null",
+      "timestamp_start": "HH:MM or null — elapsed from recording start (duplicate of media_citation for legacy queries)",
       "timestamp_end": "HH:MM or null",
+      "media_citation": {
+        "media_source_id": "string or null — must match meeting.media_sources",
+        "timestamp_start": "HH:MM or null",
+        "timestamp_end": "HH:MM or null",
+        "timestamp_start_seconds": "integer or null — leave null; pipeline fills",
+        "timestamp_end_seconds": "integer or null — leave null; pipeline fills",
+        "playback_url": "string or null — leave null; pipeline fills",
+        "playback_url_note": "string or null — leave null; pipeline fills"
+      },
       "decision_date": "YYYY-MM-DD",
       "postal_code": "string or null — 5-digit ZIP code of the city/location associated with this decision",
       "county_fips": "string or null — 5-digit FIPS code for the county associated with this decision",
@@ -702,6 +744,12 @@ Assign `lineage_type` as:
 
 ### URL and External References
 - Where an official legislation or municipal code URL is determinable from context include it in the `url` field
+
+### Media Citation Rules
+- When `meeting.input_modality` is `video_recording` or `audio_recording`, every decision discussed in the recording must include `media_citation.timestamp_start` when the moment can be estimated
+- Copy `timestamp_start` / `timestamp_end` to the top-level decision fields for backward compatibility
+- Do not fabricate `playback_url` — set to null in Document 1
+- `media_source_id` must reference a row in `meeting.media_sources` or null when no recording is linked
 
 ### Diagram Requirements
 - Every decision must include both `diagram_timeline` and `diagram_mindmap` fields
