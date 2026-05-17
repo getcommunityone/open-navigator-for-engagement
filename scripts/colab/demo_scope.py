@@ -162,7 +162,7 @@ def scope_banner_html(preset: DemoScopePreset) -> str:
         '<tr style="background:#f5f5f5"><th align="left" style="padding:6px 8px">Setting</th>'
         '<th align="left" style="padding:6px 8px">Value</th></tr>'
         f"{tr}</table>"
-        '<p style="margin:10px 0 0;color:#555;font-size:12px">Re-run §3 → §5 after changing. '
+        '<p style="margin:10px 0 0;color:#555;font-size:12px">Re-run §4 → §6 after changing. '
         "<b>Run all</b> defaults to Fast.</p></div>"
     )
 
