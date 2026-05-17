@@ -1,8 +1,9 @@
 """
-Per-meeting consolidated summary for judges: agenda/minutes/video/audio in one place.
+Per-meeting consolidated summary for judges: agenda, minutes, video, decisions, people.
 
-Writes ``03_human_summaries/.../meetings/{date}/{slug}/_meeting_summary.md`` plus
-copies ``policy_drift.mmd`` beside it when Demo 4 ran on that meeting's recording.
+Writes ``_meeting_summary.md`` under ``03_human_summaries/…`` and (by default) beside
+the raw ``meetings/{date}/{slug}/`` folder so it appears in the same Drive tree as
+agenda/minutes.
 """
 
 from __future__ import annotations
@@ -13,8 +14,15 @@ import shutil
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
-from governance_meeting_llm import mirror_output_path, read_json_file
+from governance_meeting_llm import (
+    VIDEO_EXTS,
+    mirror_output_path,
+    read_json_file,
+)
 from theme_audit import audit_decision_themes, format_theme_audit_markdown
+
+_AUDIO_EXTS = {".mp3", ".wav", ".m4a", ".opus", ".aac", ".flac"}
+_MEDIA_EXTS = _AUDIO_EXTS | VIDEO_EXTS
 
 
 def _rel_under(root: Path, path: Path) -> str:
@@ -30,17 +38,123 @@ def _find_under(root: Path, pattern: str) -> List[Path]:
     return sorted(root.glob(pattern))
 
 
+def _meeting_calendar_date(meeting_dir: Path) -> Optional[str]:
+    """``YYYY-MM-DD`` from parent ``meetings/2026_05_06/…`` folder name."""
+    import re
+
+    for part in reversed(meeting_dir.parts):
+        m = re.match(r"^(20\d{2})_(\d{2})_(\d{2})$", part)
+        if m:
+            return f"{m.group(1)}-{m.group(2)}-{m.group(3)}"
+    return None
+
+
+def _flat_recordings_for_meeting(
+    meeting_dir: Path,
+    jurisdiction_root: Path,
+) -> List[Path]:
+    """MP4/MP3 at jurisdiction root (pre-organize) matching this meeting's date."""
+    date_s = _meeting_calendar_date(meeting_dir)
+    if not date_s or not jurisdiction_root.is_dir():
+        return []
+    underscored = date_s.replace("-", "_")
+    found: List[Path] = []
+    for p in sorted(jurisdiction_root.iterdir()):
+        if not p.is_file() or p.suffix.lower() not in _MEDIA_EXTS:
+            continue
+        stem = p.stem
+        if underscored in stem or date_s in stem:
+            found.append(p)
+    return found
+
+
+def _doc_label(pdf: Path) -> str:
+    name = pdf.name.lower()
+    if "minute" in name:
+        return "Minutes"
+    if "agenda" in name:
+        return "Agenda"
+    return "PDF"
+
+
+def format_people_markdown(
+    meeting: Dict[str, Any],
+    people: List[Any],
+) -> str:
+    lines = ["## People", ""]
+    members = meeting.get("members_present") or []
+    absent = meeting.get("members_absent") or []
+    if members:
+        lines.append("**Members present:** " + ", ".join(str(m) for m in members))
+    if absent:
+        lines.append("**Members absent:** " + ", ".join(str(m) for m in absent))
+    if members or absent:
+        lines.append("")
+    if not isinstance(people, list) or not people:
+        if not members and not absent:
+            lines.append("_No people extracted._")
+        return "\n".join(lines) + "\n"
+
+    lines.extend(
+        [
+            "| Name | Role | Appeared as | Party | Lobbyist |",
+            "|---|---|---|---|---|",
+        ]
+    )
+    for p in people:
+        if not isinstance(p, dict):
+            continue
+        lines.append(
+            f"| {p.get('full_name') or '—'} | {p.get('role') or '—'} | "
+            f"{p.get('appeared_as') or '—'} | {p.get('party_affiliation') or '—'} | "
+            f"{'yes' if p.get('is_lobbyist') else '—'} |"
+        )
+    lines.append("")
+    return "\n".join(lines)
+
+
+def format_decisions_markdown(decisions: List[Any], *, heading: str) -> str:
+    if not isinstance(decisions, list) or not decisions:
+        return f"### {heading}\n\n_No decisions extracted._\n\n"
+    lines = [f"### {heading}", ""]
+    for d in decisions:
+        if not isinstance(d, dict):
+            continue
+        did = d.get("decision_id") or "?"
+        topic = (d.get("topic") or d.get("agenda_item") or "—").strip()
+        headline = (d.get("headline") or "").strip()
+        statement = (d.get("decision_statement") or "").strip()
+        theme = d.get("primary_theme") or "—"
+        cofog = d.get("primary_theme_cofog") or "—"
+        lines.append(f"#### {did} — {topic}")
+        if headline:
+            lines.append(f"- **Headline:** {headline}")
+        if statement:
+            lines.append(f"- **Decision:** {statement}")
+        lines.append(f"- **Theme:** {theme} ({cofog})")
+        rationale = (d.get("primary_theme_rationale") or "").strip()
+        if rationale:
+            lines.append(f"- **Why this theme:** {rationale}")
+        vote = d.get("vote") or d.get("vote_result")
+        if vote:
+            lines.append(f"- **Vote:** {vote}")
+        lines.append("")
+    return "\n".join(lines)
+
+
 def _gather_meeting_artifacts(
     meeting_dir: Path,
     *,
     raw_root: Path,
     gemma_json_root: Path,
     summaries_root: Path,
+    jurisdiction_root: Optional[Path] = None,
 ) -> Dict[str, Any]:
     """Collect paths and parsed JSON for one ``meetings/{date}/{slug}/`` folder."""
     rel = _rel_under(raw_root, meeting_dir)
     out: Dict[str, Any] = {
         "meeting_dir": rel,
+        "meeting_path": meeting_dir,
         "agenda_pdfs": [],
         "minutes_pdfs": [],
         "audio_video": [],
@@ -52,19 +166,31 @@ def _gather_meeting_artifacts(
         "drift_mmd": None,
         "transcripts": [],
         "human_summaries": [],
+        "thoughts_md": [],
+        "meeting_brief": None,
     }
     for sub, key in (("agenda", "agenda_pdfs"), ("minutes", "minutes_pdfs")):
         d = meeting_dir / sub
         if d.is_dir():
             out[key] = sorted(d.glob("*.pdf"))
+
     av = meeting_dir / "audio"
     if av.is_dir():
-        exts = {".mp3", ".wav", ".m4a", ".mp4", ".webm", ".mov", ".mkv", ".opus"}
         out["audio_video"] = sorted(
-            p for p in av.rglob("*") if p.is_file() and p.suffix.lower() in exts
+            p for p in av.rglob("*") if p.is_file() and p.suffix.lower() in _MEDIA_EXTS
         )
 
+    if jurisdiction_root is not None:
+        for p in _flat_recordings_for_meeting(meeting_dir, jurisdiction_root):
+            if p.resolve() not in {x.resolve() for x in out["audio_video"]}:
+                out["audio_video"].append(p)
+
+    brief_path = meeting_dir / "meeting_brief.txt"
+    if brief_path.is_file():
+        out["meeting_brief"] = brief_path
+
     for pdf in out["agenda_pdfs"] + out["minutes_pdfs"]:
+        label = _doc_label(pdf)
         stem = mirror_output_path(
             input_path=pdf,
             raw_root=raw_root,
@@ -73,7 +199,9 @@ def _gather_meeting_artifacts(
         )
         if stem.is_file():
             data = read_json_file(stem) or {}
-            out["demo3"].append({"pdf": pdf, "json_path": stem, "analysis": data})
+            out["demo3"].append(
+                {"pdf": pdf, "label": label, "json_path": stem, "analysis": data}
+            )
         ocr = mirror_output_path(
             input_path=pdf,
             raw_root=raw_root,
@@ -97,7 +225,16 @@ def _gather_meeting_artifacts(
             suffix=".thinking.summary.md",
         )
         if sm.is_file():
-            out["human_summaries"].append(sm)
+            out["human_summaries"].append({"path": sm, "label": label})
+
+        thoughts = mirror_output_path(
+            input_path=pdf,
+            raw_root=raw_root,
+            processed_root=gemma_json_root,
+            suffix=".thinking.thoughts.md",
+        )
+        if thoughts.is_file():
+            out["thoughts_md"].append({"path": thoughts, "label": label})
 
     for media in out["audio_video"]:
         per = mirror_output_path(
@@ -106,60 +243,70 @@ def _gather_meeting_artifacts(
             processed_root=gemma_json_root,
             suffix="",
         )
-        out["demo4_chunks"].extend(_find_under(per, "chunk_*.json"))
+        for chunk_path in _find_under(per, "chunk_*.json"):
+            chunk_data = read_json_file(chunk_path) or {}
+            out["demo4_chunks"].append({"path": chunk_path, "data": chunk_data})
         drift = per / "policy_drift.json"
-        if drift.is_file():
+        if drift.is_file() and out["drift_json"] is None:
             out["drift_json"] = drift
         mmd = per / "policy_drift.mmd"
-        if mmd.is_file():
+        if mmd.is_file() and out["drift_mmd"] is None:
             out["drift_mmd"] = mmd
-
-    for media in out["audio_video"]:
-        per = mirror_output_path(
-            input_path=media,
-            raw_root=raw_root,
-            processed_root=gemma_json_root,
-            suffix="",
-        )
         out["transcripts"].extend(_find_under(per, "transcript.*.txt"))
 
     return out
 
 
+def _read_text(path: Path, *, max_chars: int) -> str:
+    try:
+        body = path.read_text(encoding="utf-8", errors="replace").strip()
+    except OSError:
+        return f"_Could not read {path.name}_"
+    if len(body) <= max_chars:
+        return body
+    return body[:max_chars] + "\n\n… _(truncated)_"
+
+
 def build_consolidated_summary_markdown(artifacts: Dict[str, Any]) -> str:
+    max_body = int(os.environ.get("GOVERNANCE_CONSOLIDATED_MAX_CHARS", "80000"))
+
     lines: List[str] = [
         f"# Meeting summary — `{artifacts.get('meeting_dir', '')}`",
         "",
-        "Consolidated view of pipeline outputs for this session "
-        "(agenda, minutes, recordings, drift). Re-run with "
+        "Single file for judges: **people**, **decisions** (agenda + minutes + audio), "
+        "narrative summaries, and recording analysis. Re-run with "
         "`GOVERNANCE_FORCE_REPROCESS=1` after prompt or scope changes.",
         "",
         "## Sources on disk",
         "",
+        f"- **Agenda PDFs:** {len(artifacts.get('agenda_pdfs') or [])}",
+        f"- **Minutes PDFs:** {len(artifacts.get('minutes_pdfs') or [])}",
+        f"- **Audio / video:** {len(artifacts.get('audio_video') or [])}",
+        f"- **Demo 3 analyses:** {len(artifacts.get('demo3') or [])}",
+        f"- **Demo 4 chunks:** {len(artifacts.get('demo4_chunks') or [])}",
+        f"- **Transcripts:** {len(artifacts.get('transcripts') or [])}",
+        "",
     ]
-    lines.append(f"- **Agenda PDFs:** {len(artifacts.get('agenda_pdfs') or [])}")
-    lines.append(f"- **Minutes PDFs:** {len(artifacts.get('minutes_pdfs') or [])}")
-    lines.append(f"- **Audio / video:** {len(artifacts.get('audio_video') or [])}")
-    lines.append(f"- **Demo 3 analyses:** {len(artifacts.get('demo3') or [])}")
-    lines.append(f"- **Demo 4 chunks:** {len(artifacts.get('demo4_chunks') or [])}")
-    lines.append(f"- **Transcripts:** {len(artifacts.get('transcripts') or [])}")
-    lines.append("")
 
     missing: List[str] = []
-    if artifacts.get("agenda_pdfs") and not artifacts.get("demo3"):
-        missing.append("agenda present but no Demo 3 `.thinking.json` (policy analysis not run or failed)")
-    if artifacts.get("minutes_pdfs") and len(artifacts.get("demo3") or []) < 2:
+    if artifacts.get("agenda_pdfs") and not any(
+        (i.get("label") == "Agenda" for i in (artifacts.get("demo3") or []))
+    ):
+        missing.append("agenda PDF present but no Demo 3 analysis for it")
+    if artifacts.get("minutes_pdfs") and not any(
+        (i.get("label") == "Minutes" for i in (artifacts.get("demo3") or []))
+    ):
         missing.append(
-            "minutes PDF present but not analyzed — Demo 3 defaults to one PDF per jurisdiction "
-            "(agenda first); set `GOVERNANCE_DEMO3_MAX_PDFS=2` or run medium/full scope"
+            "minutes PDF present but no Demo 3 analysis — re-run Demo 3 "
+            "(per-meeting agenda+minutes is enabled in current code)"
         )
     if artifacts.get("audio_video") and not artifacts.get("demo4_chunks"):
         missing.append(
-            "recording present but no Demo 4 chunks — check `GOVERNANCE_DEMO_MAX_AUDIO_PER_JUR`, "
-            "429 quota, or Gatekeeper exclusions"
+            "recording present but no Demo 4 chunks — use audio-capable model "
+            "(`GOVERNANCE_DEMO4_MODEL` / `GOVERNANCE_GATEKEEPER_MODEL`)"
         )
     if artifacts.get("demo4_chunks") and not artifacts.get("drift_json"):
-        missing.append("chunks exist but no `policy_drift.json` (drift pass failed or skipped)")
+        missing.append("chunks exist but no `policy_drift.json`")
     if missing:
         lines.append("## Gaps")
         lines.append("")
@@ -167,50 +314,128 @@ def build_consolidated_summary_markdown(artifacts: Dict[str, Any]) -> str:
             lines.append(f"- ⚠ {m}")
         lines.append("")
 
-    for item in artifacts.get("demo3") or []:
-        pdf = item.get("pdf")
-        analysis = item.get("analysis") or {}
-        lines.append(f"## Policy analysis — `{pdf.name if pdf else '?'}`")
+    brief = artifacts.get("meeting_brief")
+    if brief and isinstance(brief, Path) and brief.is_file():
+        lines.append("## Meeting brief (agenda + minutes → names & topics)")
         lines.append("")
-        meeting = analysis.get("meeting") if isinstance(analysis, dict) else {}
-        if isinstance(meeting, dict):
-            lines.append(
-                f"- **Body:** {meeting.get('body_name') or '—'} | "
-                f"**Date:** {meeting.get('meeting_date') or '—'} | "
-                f"**Modality:** {meeting.get('input_modality') or '—'}"
-            )
-            sources = meeting.get("media_sources") or []
-            if sources:
-                lines.append("- **Media sources:**")
-                for ms in sources[:6]:
-                    if isinstance(ms, dict):
-                        lines.append(
-                            f"  - {ms.get('media_source_id')}: {ms.get('platform') or '—'} "
-                            f"{ms.get('canonical_url') or ms.get('page_url') or ''}"
-                        )
-        lines.append("")
-        decisions = analysis.get("decisions") if isinstance(analysis, dict) else []
-        if isinstance(decisions, list) and decisions:
-            lines.append(format_theme_audit_markdown(audit_decision_themes(decisions)))
+        lines.append(_read_text(brief, max_chars=min(8000, max_body // 10)))
         lines.append("")
 
-    for sm in artifacts.get("human_summaries") or []:
-        lines.append(f"## Narrative summary (Demo 3 markdown)")
+    all_decisions: List[Dict[str, Any]] = []
+    meeting_meta: Dict[str, Any] = {}
+    all_people: List[Any] = []
+
+    for item in artifacts.get("demo3") or []:
+        analysis = item.get("analysis") or {}
+        if not isinstance(analysis, dict):
+            continue
+        meeting = analysis.get("meeting") if isinstance(analysis.get("meeting"), dict) else {}
+        if meeting and not meeting_meta:
+            meeting_meta = meeting
+        people = analysis.get("people") or []
+        if isinstance(people, list):
+            all_people.extend(people)
+        decisions = analysis.get("decisions") or []
+        if isinstance(decisions, list):
+            all_decisions.extend(decisions)
+
+    if meeting_meta or all_people:
+        lines.append("## Meeting metadata")
         lines.append("")
-        try:
-            body = sm.read_text(encoding="utf-8").strip()
-            lines.append(body[:12_000] + ("…" if len(body) > 12_000 else ""))
-        except OSError:
-            lines.append(f"_Could not read {sm.name}_")
+        if meeting_meta:
+            lines.append(
+                f"- **Body:** {meeting_meta.get('body_name') or '—'} | "
+                f"**Date:** {meeting_meta.get('meeting_date') or '—'} | "
+                f"**Type:** {meeting_meta.get('meeting_type') or '—'}"
+            )
+            loc = meeting_meta.get("location")
+            if loc:
+                lines.append(f"- **Location:** {loc}")
         lines.append("")
+        lines.append(format_people_markdown(meeting_meta, all_people))
+
+    if all_decisions:
+        lines.append(format_theme_audit_markdown(audit_decision_themes(all_decisions)))
+        lines.append(format_decisions_markdown(all_decisions, heading="All decisions (agenda + minutes)"))
+
+    for item in artifacts.get("demo3") or []:
+        pdf = item.get("pdf")
+        label = item.get("label") or "PDF"
+        analysis = item.get("analysis") or {}
+        lines.append(f"## Policy analysis — {label}: `{pdf.name if pdf else '?'}`")
+        lines.append("")
+        meeting = analysis.get("meeting") if isinstance(analysis, dict) else {}
+        if isinstance(meeting, dict) and meeting.get("body_name"):
+            lines.append(
+                f"- **Body:** {meeting.get('body_name')} | "
+                f"**Modality:** {meeting.get('input_modality') or '—'}"
+            )
+            lines.append("")
+        decisions = analysis.get("decisions") if isinstance(analysis, dict) else []
+        if isinstance(decisions, list) and decisions:
+            lines.append(
+                format_decisions_markdown(decisions, heading=f"Decisions ({label})")
+            )
+
+    for entry in artifacts.get("human_summaries") or []:
+        sm = entry.get("path")
+        label = entry.get("label") or "PDF"
+        lines.append(f"## Narrative summary — {label} (Demo 3 markdown)")
+        lines.append("")
+        if sm and isinstance(sm, Path):
+            lines.append(_read_text(sm, max_chars=max_body // 4))
+        lines.append("")
+
+    for entry in artifacts.get("thoughts_md") or []:
+        th = entry.get("path")
+        label = entry.get("label") or "PDF"
+        lines.append(f"## Reasoning trace — {label} (Demo 3 thinking)")
+        lines.append("")
+        if th and isinstance(th, Path):
+            lines.append(_read_text(th, max_chars=max_body // 6))
+        lines.append("")
+
+    if artifacts.get("demo4_chunks"):
+        lines.append("## Audio / video — chunk analyses (Demo 4)")
+        lines.append("")
+        for entry in artifacts.get("demo4_chunks") or []:
+            chunk_path = entry.get("path")
+            data = entry.get("data") or {}
+            idx = data.get("chunk_index", "?")
+            lines.append(f"### Chunk {idx} — `{chunk_path.name if chunk_path else '?'}`")
+            lines.append("")
+            summary = (data.get("summary") or "").strip()
+            if summary:
+                lines.append(summary)
+                lines.append("")
+            analysis = data.get("json_analysis")
+            if isinstance(analysis, dict):
+                ch_decisions = analysis.get("decisions") or []
+                if ch_decisions:
+                    lines.append(
+                        format_decisions_markdown(
+                            ch_decisions,
+                            heading=f"Decisions in chunk {idx}",
+                        )
+                    )
+                ch_people = analysis.get("people") or []
+                if ch_people:
+                    ch_meeting = analysis.get("meeting") if isinstance(analysis.get("meeting"), dict) else {}
+                    lines.append(format_people_markdown(ch_meeting, ch_people))
+            elif data.get("parse_error"):
+                lines.append(f"_Parse error: {data.get('parse_error')}_")
+            lines.append("")
 
     if artifacts.get("drift_json"):
         drift = read_json_file(artifacts["drift_json"]) or {}
         mls = drift.get("meeting_level_summary") or {}
-        lines.append("## Audio / video — policy drift (Demo 4)")
+        lines.append("## Audio / video — policy drift (Demo 4 consolidated)")
         lines.append("")
         if mls.get("headline"):
             lines.append(f"**{mls['headline']}**")
+            lines.append("")
+        if mls.get("summary"):
+            lines.append(str(mls["summary"]))
             lines.append("")
         lines.append(
             f"- Subjects tracked: {mls.get('subjects_tracked', '—')} | "
@@ -218,34 +443,34 @@ def build_consolidated_summary_markdown(artifacts: Dict[str, Any]) -> str:
         )
         tensions = mls.get("emergent_value_tensions") or []
         if tensions:
-            lines.append("- Emergent tensions: " + "; ".join(str(t) for t in tensions[:8]))
+            lines.append("- Emergent tensions: " + "; ".join(str(t) for t in tensions[:12]))
+        subjects = drift.get("subjects") or drift.get("drifted_subjects") or []
+        for s in subjects[:12]:
+            if not isinstance(s, dict):
+                continue
+            label = s.get("subject_label") or s.get("subject_id") or "subject"
+            narrative = (s.get("narrative_summary") or s.get("summary") or "").strip()
+            if narrative:
+                lines.append(f"\n**{label}:** {narrative[:2000]}")
         lines.append("")
 
     if artifacts.get("drift_mmd"):
         lines.append("## Mermaid — narrative drift timelines")
         lines.append("")
         lines.append(
-            f"Full diagram file: `{artifacts['drift_mmd'].name}` "
-            "(also copied next to this summary). Paste into https://mermaid.live or a Mermaid preview."
+            f"Full diagram: `{artifacts['drift_mmd'].name}` "
+            "(copied next to this summary). Paste into https://mermaid.live"
         )
         lines.append("")
         lines.append("```mermaid")
-        try:
-            mmd_body = artifacts["drift_mmd"].read_text(encoding="utf-8").strip()
-            lines.append(mmd_body[:14_000])
-        except OSError:
-            lines.append("%% unreadable")
+        lines.append(_read_text(artifacts["drift_mmd"], max_chars=20_000))
         lines.append("```")
         lines.append("")
 
     for tr in artifacts.get("transcripts") or []:
         lines.append(f"## Transcript — `{tr.name}`")
         lines.append("")
-        try:
-            t = tr.read_text(encoding="utf-8", errors="replace").strip()
-            lines.append(t[:4000] + ("…" if len(t) > 4000 else ""))
-        except OSError:
-            lines.append("_unreadable_")
+        lines.append(_read_text(tr, max_chars=max_body // 5))
         lines.append("")
 
     return "\n".join(lines)
@@ -257,26 +482,42 @@ def write_meeting_consolidated_summary(
     raw_root: Path,
     gemma_json_root: Path,
     summaries_root: Path,
+    jurisdiction_root: Optional[Path] = None,
 ) -> Tuple[Path, Optional[Path]]:
-    """Write ``_meeting_summary.md`` and copy ``policy_drift.mmd`` under summaries mirror."""
+    """Write ``_meeting_summary.md`` (and optional copy beside raw meeting folder)."""
     artifacts = _gather_meeting_artifacts(
         meeting_dir,
         raw_root=raw_root,
         gemma_json_root=gemma_json_root,
         summaries_root=summaries_root,
+        jurisdiction_root=jurisdiction_root,
     )
+    body = build_consolidated_summary_markdown(artifacts)
     rel = Path(artifacts["meeting_dir"])
     out_dir = summaries_root / rel
     out_dir.mkdir(parents=True, exist_ok=True)
     summary_path = out_dir / "_meeting_summary.md"
-    summary_path.write_text(
-        build_consolidated_summary_markdown(artifacts), encoding="utf-8"
-    )
+    summary_path.write_text(body, encoding="utf-8")
+
+    if os.environ.get("GOVERNANCE_CONSOLIDATED_SUMMARY_IN_RAW", "1").strip().lower() not in (
+        "0",
+        "false",
+        "no",
+    ):
+        raw_summary = meeting_dir / "_meeting_summary.md"
+        raw_summary.write_text(body, encoding="utf-8")
+
     mmd_copy: Optional[Path] = None
     src_mmd = artifacts.get("drift_mmd")
     if src_mmd and src_mmd.is_file():
         mmd_copy = out_dir / "policy_drift.mmd"
         shutil.copy2(src_mmd, mmd_copy)
+        if os.environ.get("GOVERNANCE_CONSOLIDATED_SUMMARY_IN_RAW", "1").strip().lower() not in (
+            "0",
+            "false",
+            "no",
+        ):
+            shutil.copy2(src_mmd, meeting_dir / "policy_drift.mmd")
     return summary_path, mmd_copy
 
 
@@ -286,6 +527,7 @@ def run_consolidated_summaries_for_jurisdiction(
     raw_root: Path,
     gemma_json_root: Path,
     summaries_root: Path,
+    jurisdiction_prefix: str = "",
 ) -> List[Path]:
     """Build one consolidated summary per ``meetings/{date}/{slug}/`` session."""
     if os.environ.get("GOVERNANCE_CONSOLIDATED_SUMMARY", "1").strip().lower() in (
@@ -295,15 +537,23 @@ def run_consolidated_summaries_for_jurisdiction(
     ):
         return []
     try:
-        from meeting_grouping import iter_meeting_dirs, jurisdiction_prefix_from_relative
+        from meeting_grouping import (
+            iter_meeting_dirs,
+            jurisdiction_prefix_from_relative,
+            repair_duplicate_date_session_folders,
+        )
     except ImportError:
         return []
 
     try:
         rel = jurisdiction_root.resolve().relative_to(raw_root.resolve())
-        jur_prefix = rel.as_posix()
+        jur_prefix = jurisdiction_prefix or rel.as_posix()
     except ValueError:
-        jur_prefix = jurisdiction_prefix_from_relative(str(jurisdiction_root))
+        jur_prefix = jurisdiction_prefix or jurisdiction_prefix_from_relative(
+            str(jurisdiction_root)
+        )
+
+    repair_duplicate_date_session_folders(raw_root, jur_prefix)
 
     written: List[Path] = []
     for meeting_dir in iter_meeting_dirs(raw_root, jur_prefix):
@@ -312,10 +562,14 @@ def run_consolidated_summaries_for_jurisdiction(
             raw_root=raw_root,
             gemma_json_root=gemma_json_root,
             summaries_root=summaries_root,
+            jurisdiction_root=jurisdiction_root,
         )
         written.append(summary_path)
+        raw_copy = meeting_dir / "_meeting_summary.md"
+        dest = raw_copy if raw_copy.is_file() else summary_path
         print(
-            f"  → consolidated summary: {summary_path.relative_to(summaries_root)}",
+            f"  → consolidated summary: {dest.relative_to(raw_root)} "
+            f"(mirror: {summary_path.relative_to(summaries_root)})",
             flush=True,
         )
     return written

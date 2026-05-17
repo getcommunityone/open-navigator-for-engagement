@@ -61,14 +61,7 @@ TOKEN_BUDGET_LOW = "LOW"     # ~64 tokens per image — standard text-heavy minu
 
 
 def model_supports_thinking(model: str) -> bool:
-    """Whether the model accepts ``thinking_config`` (``thinking_budget`` /
-    ``include_thoughts``).
-
-    The ``gemma-4-26b-a4b-it`` MoE alias often returns ``400`` for thinking.
-    ``gemma-4-31b-it`` (dense 31B) is enabled when its id contains ``31b``.
-    Other ``gemma*`` ids are skipped unless ``GOVERNANCE_FORCE_THINKING=1``.
-    Non-Gemma models (Gemini 2.5+) accept it.
-    """
+    """Whether to attach any ``thinking_config`` (``include_thoughts`` / budget)."""
     import os
     if os.environ.get("GOVERNANCE_FORCE_THINKING", "0") == "1":
         return True
@@ -76,6 +69,67 @@ def model_supports_thinking(model: str) -> bool:
     if mid.startswith("gemma"):
         return "31b" in mid
     return True
+
+
+def model_supports_thinking_budget(model: str) -> bool:
+    """
+    Whether ``thinking_budget`` may be set on ``thinking_config``.
+
+    AI Studio Gemma 4 ids (including ``gemma-4-31b-it`` on many keys) return
+    ``400 Thinking budget is not supported for this model`` — use
+    ``include_thoughts`` only, or omit thinking entirely.
+    """
+    import os
+    if os.environ.get("GOVERNANCE_FORCE_THINKING", "0") == "1":
+        return True
+    mid = (model or "").lower()
+    if mid.startswith("gemma"):
+        return False
+    return True
+
+
+def model_supports_audio_video_input(model: str) -> bool:
+    """Whether ``generate_content`` accepts audio/video bytes (not just PDF/images)."""
+    mid = (model or "").lower()
+    if mid.startswith("gemini"):
+        return True
+    if "gemma-3n" in mid or "gemma-4-e2b" in mid or "gemma-4-e4b" in mid:
+        return True
+    if "3n-e2b" in mid or "3n-e4b" in mid:
+        return True
+    return False
+
+
+def model_supports_video_input(model: str) -> bool:
+    """Whether ``video/mp4`` chunks are accepted (vs audio-only extraction)."""
+    mid = (model or "").lower()
+    if mid.startswith("gemini"):
+        return True
+    return False
+
+
+def resolve_demo4_genai_model(
+    genai_model: str,
+    *,
+    gatekeeper_model: str = "",
+) -> str:
+    """
+    Model for Demo 4 chunks. ``gemma-4-26b-a4b-it`` is vision/PDF-first on many keys;
+    default to ``GOVERNANCE_DEMO4_MODEL`` or ``GOVERNANCE_GATEKEEPER_MODEL`` when set.
+    """
+    explicit = os.environ.get("GOVERNANCE_DEMO4_MODEL", "").strip()
+    if explicit:
+        return explicit
+    gk = (gatekeeper_model or os.environ.get("GOVERNANCE_GATEKEEPER_MODEL", "")).strip()
+    if gk and model_supports_audio_video_input(gk):
+        return gk
+    if model_supports_audio_video_input(genai_model):
+        return genai_model
+    return gk or genai_model
+
+
+def _genai_error_text(exc: BaseException) -> str:
+    return str(exc).lower()
 
 
 # ─────────────────────────────────────────────────────────────
@@ -1038,13 +1092,14 @@ def call_google_genai_multimodal(
             tc_kwargs: Dict[str, Any] = {}
             if include_thoughts:
                 tc_kwargs["include_thoughts"] = True
-            if thinking_budget is not None:
+            if (
+                thinking_budget is not None
+                and model_supports_thinking_budget(model)
+            ):
                 tc_kwargs["thinking_budget"] = thinking_budget
-            config_kwargs["thinking_config"] = ThinkingConfig(**tc_kwargs)
+            if tc_kwargs:
+                config_kwargs["thinking_config"] = ThinkingConfig(**tc_kwargs)
     elif include_thoughts or thinking_budget is not None:
-        # Model rejects thinking_config server-side (Gemma 4 returns 400
-        # INVALID_ARGUMENT: "Thinking budget is not supported for this model").
-        # Run the prompt as a normal generation; thoughts will come back empty.
         print(
             f"   ℹ️  Skipping thinking_config: {model!r} does not support it. "
             "Demo 3's `.thoughts.md` may be empty — set "
@@ -1054,14 +1109,34 @@ def call_google_genai_multimodal(
 
     from genai_quota_retry import call_with_genai_quota_retry
 
-    def _generate():
+    def _generate(cfg: Dict[str, Any]):
         return client.models.generate_content(
             model=model,
             contents=[types.Content(role="user", parts=parts)],
-            config=types.GenerateContentConfig(**config_kwargs),
+            config=types.GenerateContentConfig(**cfg),
         )
 
-    response = call_with_genai_quota_retry(_generate, label=f"genai {model}")
+    def _generate_with_thinking_fallback() -> Any:
+        try:
+            return _generate(config_kwargs)
+        except Exception as exc:
+            if "thinking budget" not in _genai_error_text(exc):
+                raise
+            stripped = {
+                k: v
+                for k, v in config_kwargs.items()
+                if k != "thinking_config"
+            }
+            print(
+                f"   ℹ️  {model!r}: thinking_budget rejected — retrying without "
+                "thinking_config.",
+                flush=True,
+            )
+            return _generate(stripped)
+
+    response = call_with_genai_quota_retry(
+        _generate_with_thinking_fallback, label=f"genai {model}"
+    )
 
     answer_bits: List[str] = []
     thought_bits: List[str] = []
@@ -1772,6 +1847,10 @@ __all__ = [
     "embed_text_with_gemma", "cosine_similarity_matrix",
     "shield_review_text", "SHIELD_HARM_CATEGORIES",
     "model_supports_thinking",
+    "model_supports_thinking_budget",
+    "model_supports_audio_video_input",
+    "model_supports_video_input",
+    "resolve_demo4_genai_model",
     "policy_drift_summarize",
     "load_meeting_data_lookup", "load_contacts_lookup",
     "merge_meeting_data_by_jurisdiction", "merge_contacts_by_jurisdiction",

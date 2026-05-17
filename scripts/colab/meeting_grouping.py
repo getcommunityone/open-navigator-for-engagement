@@ -882,6 +882,84 @@ def apply_path_moves_to_inventories(
         inv.audio = _map_list(list(inv.audio))
 
 
+def repair_duplicate_date_session_folders(
+    raw_root: Path,
+    jurisdiction_prefix: str,
+    *,
+    dry_run: bool = False,
+) -> int:
+    """
+    Hoist ``meetings/2026_05_06/2026-05-06/{agenda,minutes,audio}/`` into
+    ``meetings/2026_05_06/session/`` (legacy Gatekeeper date-as-slug layout).
+    """
+    base = raw_root / Path(jurisdiction_prefix) / MEETINGS_DIRNAME
+    if not base.is_dir():
+        return 0
+    repaired = 0
+    for date_dir in sorted(base.iterdir()):
+        if not date_dir.is_dir() or not _MEETING_DATE_DIR_RE.match(date_dir.name):
+            continue
+        for inner in sorted(list(date_dir.iterdir())):
+            if not inner.is_dir():
+                continue
+            inner_norm = inner.name.replace("_", "-")
+            parent_norm = date_dir.name.replace("_", "-")
+            if not (
+                _instance_slug_looks_like_date(inner_norm)
+                or inner.name == date_dir.name
+                or inner_norm == parent_norm
+            ):
+                continue
+            if inner.name == "session":
+                continue
+            target = date_dir / "session"
+            if dry_run:
+                logger.info(
+                    "would repair duplicate date folder %s → %s",
+                    inner.relative_to(raw_root),
+                    target.relative_to(raw_root),
+                )
+                repaired += 1
+                continue
+            target.mkdir(parents=True, exist_ok=True)
+            for child in list(inner.iterdir()):
+                dest = target / child.name
+                if child.is_dir() and dest.is_dir():
+                    for f in sorted(child.rglob("*")):
+                        if not f.is_file():
+                            continue
+                        rel_f = f.relative_to(child)
+                        d = dest / rel_f
+                        d.parent.mkdir(parents=True, exist_ok=True)
+                        if d.exists():
+                            stem, suf = d.stem, d.suffix
+                            n = 2
+                            while d.exists():
+                                d = d.with_name(f"{stem}_dup{n}{suf}")
+                                n += 1
+                        shutil.move(str(f), str(d))
+                elif dest.exists() and child.is_file():
+                    stem, suf = dest.stem, dest.suffix
+                    n = 2
+                    while dest.exists():
+                        dest = dest.with_name(f"{stem}_dup{n}{suf}")
+                        n += 1
+                    shutil.move(str(child), str(dest))
+                else:
+                    dest.parent.mkdir(parents=True, exist_ok=True)
+                    shutil.move(str(child), str(dest))
+            try:
+                inner.rmdir()
+            except OSError:
+                logger.warning("could not remove empty folder after repair: %s", inner)
+            logger.info(
+                "repaired duplicate date folder → %s",
+                target.relative_to(raw_root),
+            )
+            repaired += 1
+    return repaired
+
+
 def organize_inventory_into_meeting_folders(
     raw_root: Path,
     inventories: Sequence[Any],
@@ -891,6 +969,18 @@ def organize_inventory_into_meeting_folders(
     model: Optional[str] = None,
 ) -> List[Tuple[Path, Path]]:
     """Organize all inventoried PDFs/audio; refresh inventory paths in place."""
+    for inv in inventories:
+        label = getattr(getattr(inv, "jurisdiction", None), "relative_label", "") or ""
+        if label:
+            n = repair_duplicate_date_session_folders(
+                raw_root, label, dry_run=dry_run
+            )
+            if n:
+                logger.info(
+                    "repaired %d duplicate date session folder(s) under %s",
+                    n,
+                    label,
+                )
     paths: List[Path] = []
     for inv in inventories:
         paths.extend(inv.pdfs)
@@ -1062,6 +1152,11 @@ def build_meeting_collateral_brief(
 
     try:
         from gatekeeper_triage import call_gemma_triage
+
+        if client is None:
+            from google import genai
+
+            client = genai.Client(api_key=api_key)
 
         parsed, _raw = call_gemma_triage(
             client=client,

@@ -41,7 +41,9 @@ from governance_meeting_llm import (
     policy_drift_summarize,
     read_json_file,
     render_pdf_pages,
+    resolve_demo4_genai_model,
     select_demo4_media,
+    model_supports_video_input,
     text_output_complete,
 )
 
@@ -57,6 +59,8 @@ class DemoContext:
     scratch_audio_root: Path
     policy_prompt: str
     thinking_model: str = ""
+    demo4_model: str = ""
+    gatekeeper_model: str = ""
     max_pdfs_per_jur: int = 3
     max_pages_per_pdf: int = 8
     max_audio_per_jur: int = 1
@@ -153,7 +157,7 @@ def pick_representative_pdf(pdfs: List[Path]) -> Optional[Path]:
 
 
 def pick_demo3_pdfs(pdfs: List[Path], *, max_pdfs: int = 2) -> List[Path]:
-    """Prefer agenda then minutes so both get policy analysis when present."""
+    """Prefer agenda then minutes (legacy: jurisdiction-wide cap only)."""
     import os
 
     cap = max(1, int(os.environ.get("GOVERNANCE_DEMO3_MAX_PDFS", str(max_pdfs))))
@@ -173,6 +177,73 @@ def pick_demo3_pdfs(pdfs: List[Path], *, max_pdfs: int = 2) -> List[Path]:
         return ordered
     one = pick_representative_pdf(pdfs)
     return [one] if one else []
+
+
+def pick_demo3_pdfs_for_inventory(
+    pdfs: List[Path],
+    raw_root: Path,
+    *,
+    max_per_meeting: int = 2,
+    max_total: Optional[int] = None,
+) -> List[Path]:
+    """
+    Pick agenda + minutes **per meeting session**, not only N PDFs for the whole jurisdiction.
+
+    ``GOVERNANCE_DEMO3_MAX_PDFS_PER_MEETING`` (default 2) × each session under
+    ``meetings/``; optional jurisdiction cap via ``max_total`` / ``GOVERNANCE_DEMO3_MAX_PDFS_TOTAL``.
+    """
+    import os
+    from collections import defaultdict
+
+    if not pdfs:
+        return []
+
+    per_meeting = max(
+        1,
+        int(
+            os.environ.get(
+                "GOVERNANCE_DEMO3_MAX_PDFS_PER_MEETING",
+                str(max_per_meeting),
+            )
+        ),
+    )
+    total_cap = max_total
+    if total_cap is None:
+        env_total = os.environ.get("GOVERNANCE_DEMO3_MAX_PDFS_TOTAL", "").strip()
+        if env_total:
+            total_cap = max(1, int(env_total))
+
+    try:
+        from meeting_grouping import meeting_dir_for_media_file, resolve_meeting_dir
+    except ImportError:
+        return pick_demo3_pdfs(pdfs, max_pdfs=per_meeting if total_cap is None else total_cap)
+
+    buckets: Dict[str, List[Path]] = defaultdict(list)
+    for p in pdfs:
+        session = meeting_dir_for_media_file(p, raw_root)
+        if session is None:
+            session = resolve_meeting_dir(p, raw_root)
+        if session is not None:
+            key = str(session.resolve())
+        else:
+            try:
+                from meeting_date_scope import infer_meeting_date_for_file
+
+                d = infer_meeting_date_for_file(p, raw_root) or "undated"
+            except ImportError:
+                d = "undated"
+            key = f"date:{d}"
+        buckets[key].append(p)
+
+    selected: List[Path] = []
+    for _key in sorted(buckets.keys()):
+        group = pick_demo3_pdfs(buckets[_key], max_pdfs=per_meeting)
+        for p in group:
+            if p not in selected:
+                selected.append(p)
+            if total_cap is not None and len(selected) >= total_cap:
+                return selected
+    return selected
 
 
 def run_demo1(inv: MeetingInventory, ctx: DemoContext) -> List[Dict[str, Any]]:
@@ -374,7 +445,12 @@ def run_demo3(inv: MeetingInventory, ctx: DemoContext) -> List[Dict[str, Any]]:
     from theme_audit import audit_decision_themes
 
     j = inv.jurisdiction
-    pdfs = pick_demo3_pdfs(inv.pdfs[: ctx.max_pdfs_per_jur])
+    pdfs = pick_demo3_pdfs_for_inventory(
+        inv.pdfs[: ctx.max_pdfs_per_jur],
+        ctx.raw_root,
+        max_per_meeting=2,
+        max_total=ctx.max_pdfs_per_jur,
+    )
     report: List[Dict[str, Any]] = []
     if not pdfs:
         return report
@@ -543,6 +619,15 @@ def run_demo4(
         brief_cache = {}
 
     j = inv.jurisdiction
+    demo4_model = resolve_demo4_genai_model(
+        ctx.genai_model,
+        gatekeeper_model=ctx.gatekeeper_model or ctx.demo4_model,
+    )
+    if demo4_model != ctx.genai_model:
+        print(
+            f"  Demo 4 model: {demo4_model!r} "
+            f"(audio/video — {ctx.genai_model!r} is PDF/image-only on this API key)"
+        )
     audios = select_demo4_media(
         inv.audio,
         ctx.raw_root,
@@ -554,7 +639,11 @@ def run_demo4(
     print(f"\n— Demo 4 | {j.relative_label}: {len(audios)} media file(s)")
     force = force_reprocess_outputs()
     for audio in audios:
-        use_video = audio.suffix.lower() in VIDEO_EXTS and demo4_use_video_chunks()
+        use_video = (
+            audio.suffix.lower() in VIDEO_EXTS
+            and demo4_use_video_chunks()
+            and model_supports_video_input(demo4_model)
+        )
         kind = "video/mp4 chunks" if use_video else "audio chunks"
         print(f"  • {audio.name}  ({kind})")
         per_audio_dir = mirror_output_path(
@@ -619,8 +708,7 @@ def run_demo4(
                     brief_cache[mk] = build_meeting_collateral_brief(
                         meeting_dir,
                         api_key=ctx.api_key,
-                        model=ctx.genai_model,
-                        client=None,
+                        model=demo4_model,
                     )
                 brief = brief_cache.get(mk) or ""
             chunk_hint = (
@@ -641,7 +729,7 @@ def run_demo4(
             try:
                 result = call_google_genai_multimodal(
                     api_key=ctx.api_key,
-                    model=ctx.genai_model,
+                    model=demo4_model,
                     system_instruction=DEMO4_SYSTEM,
                     user_text=user_text,
                     media=[(chunk_path, chunk_mime)],
@@ -691,7 +779,7 @@ def run_demo4(
             drift = policy_drift_summarize(
                 chunk_jsons,
                 api_key=ctx.api_key,
-                model=ctx.genai_model,
+                model=demo4_model,
                 focus_hint=ctx.drift_focus,
                 canonical_prompt_text=ctx.policy_prompt,
             )
@@ -750,6 +838,7 @@ def run_demos_for_jurisdiction(
             raw_root=ctx.raw_root,
             gemma_json_root=ctx.gemma_json_root,
             summaries_root=ctx.summaries_root,
+            jurisdiction_prefix=inv.jurisdiction.relative_label,
         )
     except ImportError:
         pass

@@ -109,6 +109,7 @@ def apply_preset_to_environ(preset: DemoScopePreset) -> None:
     os.environ["GOVERNANCE_DEMO_YEAR_SCOPE"] = "1"
     os.environ["GOVERNANCE_DEMO_MEETING_DATES"] = str(preset.meeting_dates)
     os.environ["GOVERNANCE_DEMO_MAX_PDFS_PER_JUR"] = str(preset.max_pdfs_per_jur)
+    os.environ.setdefault("GOVERNANCE_DEMO3_MAX_PDFS_PER_MEETING", "2")
     os.environ["GOVERNANCE_DEMO_MAX_PAGES_PER_PDF"] = str(preset.max_pages_per_pdf)
     os.environ["GOVERNANCE_DEMO_MAX_AUDIO_PER_JUR"] = str(preset.max_audio_per_jur)
     os.environ["GOVERNANCE_DEMO_MAX_AUDIO_CHUNKS"] = str(preset.max_audio_chunks)
